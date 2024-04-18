@@ -1,0 +1,73 @@
+site_name: BA_Package Documentation
+site_url: ""
+use_directory_urls: false
+
+theme:
+  name: material
+  features:
+    - content.code.copy
+    - toc.integrate
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+
+plugins:
+  - mkdocstrings:
+      default_handler: python
+      handlers:
+        python:
+          paths: [../]
+          load_external_modules: false
+          options:
+            show_source: false
+            show_root_heading: true
+            heading_level: 2
+            docstring_style: numpy
+            merge_init_into_class: true
+            modernize_annotations: true
+  - search
+  - offline
+
+nav:
+  - index.md
+  - Installing and Running:
+      - Installing:
+          - installation/installing/conda_mac.md
+          - installation/installing/conda_windows.md
+          - installation/installing/conda_linux.md
+        # - installation/installing/docker.md
+      - Updating:
+          - installation/updating/conda.md
+        # - installation/updating/docker.md
+      - Uninstalling:
+          - installation/uninstalling/conda_mac.md
+          - installation/uninstalling/conda_windows.md
+          - installation/uninstalling/conda_linux.md
+        # - installation/uninstalling/docker.md
+      - Running:
+          - installation/running/conda.md
+  - Tutorials:
+      - tutorials/explanation.md
+      - tutorials/setup.md
+      # - installation/running/conda.md
+      - Configs Setup:
+          - tutorials/configs_setup/configs_setup.md
+          - tutorials/configs_setup/configs_update.md
+          - tutorials/configs_setup/configs_OF.md
+      - Usage Examples:
+          - tutorials/usage_examples/one_experiment.md
+          - tutorials/usage_examples/many_experiments.md
+          - tutorials/usage_examples/one_project.md
+  - Diagnostics Messages:
+      - diagnostics_messages/diagnostics_messages.md
+  - Program Reference:
+      - reference/ba_package.md
+      - reference/ba_project.md
+      - reference/ba_experiment.md
+      - reference/ba_processes.md
