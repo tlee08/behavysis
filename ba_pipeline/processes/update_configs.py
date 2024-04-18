@@ -18,9 +18,8 @@ str
 
 from typing import Literal, Type
 
-from pydantic import BaseModel, ValidationError
-
-from ba_pipeline.utils.funcs import read_configs, write_configs
+from ba_core.data_models.experiment_configs import ExperimentConfigs
+from pydantic import ValidationError
 
 
 class UpdateConfigs:
@@ -31,7 +30,6 @@ class UpdateConfigs:
         configs_fp: str,
         default_configs_fp: str,
         overwrite: Literal["user", "all"],
-        model_class: Type[BaseModel],
     ) -> str:
         """
         Initialises the config files with the given `default_configs`.
@@ -58,11 +56,11 @@ class UpdateConfigs:
         outcome = ""
         # Parsing in the experiment's existing JSON configs
         try:
-            configs = read_configs(configs_fp, model_class)
+            configs = ExperimentConfigs.read_json(configs_fp)
         except (FileNotFoundError, ValidationError):
-            configs = model_class()
+            configs = ExperimentConfigs()
         # Reading in the new configs from the given configs_fp
-        default_configs = read_configs(default_configs_fp, model_class)
+        default_configs = ExperimentConfigs.read_json(default_configs_fp)
         # Overwriting the configs file (with given method)
         if overwrite == "user":
             configs.user = default_configs.user
@@ -76,5 +74,5 @@ class UpdateConfigs:
                 + 'The value must be either "user", or "all".'
             )
         # Writing new configs to JSON file
-        write_configs(configs, configs_fp)
+        configs.write_json(configs_fp)
         return outcome

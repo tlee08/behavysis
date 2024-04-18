@@ -21,19 +21,10 @@ str
     The outcome of the process.
 """
 
-import os
-import re
-from typing import Optional
+from typing import Union
 
 import pandas as pd
-
-from ba_pipeline.utils.funcs import (
-    get_cpid,
-    get_name,
-    read_configs,
-    warning_msg,
-    write_feather,
-)
+from ba_core.mixins.subprocess_mixin import SubprocessMixin
 
 #####################################################################
 #               DLC ANALYSE VIDEO
@@ -48,12 +39,13 @@ class RunDLC:
         in_fp: str,
         out_fp: str,
         configs_fp: str,
-        gputouse: Optional[int],
+        gputouse: Union[int, None],
         overwrite: bool,
     ) -> str:
         """
         Running custom DLC script to generate a DLC keypoints dataframe from a video.
         """
+        outcome = ""
         cmd = [
             "conda",
             "run",
@@ -68,6 +60,8 @@ class RunDLC:
             # f"{gputouse}",
             f"{overwrite}",
         ]
+        SubprocessMixin.run_subprocess_fstream(cmd)
+        return outcome
 
 
 # class RunDLC:
@@ -117,7 +111,7 @@ class RunDLC:
 
 #         # If overwrite is False, checking if we should skip processing
 #         if not overwrite and os.path.exists(out_fp):
-#             return warning_msg()
+#             return DiagnosticsMixin.warning_msg()
 
 #         # Getting necessary config parameters
 #         configs = read_configs(configs_fp)
@@ -220,7 +214,7 @@ class RunDLC:
 #     outcome = ""
 #     # Renaming files corresponding to the experiment
 #     destfolder = os.path.abspath(os.path.split(out_fp)[0])
-#     name = get_name(out_fp)
+#     name = IOMixin.get_name(out_fp)
 #     # Iterating through all files in the outpur directory
 #     for fp in os.listdir(destfolder):
 #         # Looking at only files corresponding to the experiment (by name)
@@ -228,7 +222,7 @@ class RunDLC:
 #             if re.search(r"\.h5$", fp):
 #                 # copying file to dlc folder
 #                 df = pd.DataFrame(pd.read_hdf(os.path.join(destfolder, fp)))
-#                 write_feather(df, os.path.join(destfolder, f"{name}.feather"))
+#                 DFIOMixin.write_feather(df, os.path.join(destfolder, f"{name}.feather"))
 #             # Deleting original DLC file
 #             os.remove(os.path.join(destfolder, fp))
 #     outcome += (

@@ -13,18 +13,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
-from ba_pipeline.simba_classifier.simba_classifier_configs import SimbaClassifierConfigs
-from ba_pipeline.utils.constants import (
+from ba_core.mixins.df_io_mixin import DFIOMixin
+from ba_core.utils.constants import (
     BEHAV_ACTUAL_COL,
     BEHAV_COLUMN_NAMES,
     BEHAV_PRED_COL,
     BEHAV_PROB_COL,
-)
-from ba_pipeline.utils.funcs import (
-    read_configs,
-    read_feather,
-    write_configs,
-    write_feather,
 )
 from imblearn.under_sampling import RandomUnderSampler
 from matplotlib.figure import Figure
@@ -35,6 +29,8 @@ from sklearn.metrics import (
     confusion_matrix,
     precision_recall_fscore_support,
 )
+
+from ba_pipeline.simba_classifier.simba_classifier_configs import SimbaClassifierConfigs
 
 if TYPE_CHECKING:
     from ba_pipeline.pipeline.project import BAProject
@@ -66,11 +62,11 @@ class SimbaClassifier:
         # Trying to read in configs json
         if configs is None:
             try:
-                configs = read_configs(self.configs_fp, SimbaClassifierConfigs)
+                configs = SimbaClassifierConfigs.read_json(self.configs_fp)
             except FileNotFoundError:
                 configs = SimbaClassifierConfigs()
         # Saving configs
-        write_configs(configs, self.configs_fp)
+        configs.write_json(self.configs_fp)
 
     @classmethod
     def from_baproject(cls, proj: BAProject) -> SimbaClassifier:
@@ -98,10 +94,10 @@ class SimbaClassifier:
     @property
     def configs(self) -> SimbaClassifierConfigs:
         """Returns the config model from the expected config file."""
-        return read_configs(self.configs_fp, SimbaClassifierConfigs)
+        return SimbaClassifierConfigs.read_json(self.configs_fp)
 
     @property
-    def root_dir(self) -> SimbaClassifierConfigs:
+    def root_dir(self) -> str:
         """Returns the model's root directory"""
         return os.path.split(self.configs_fp)[0]
 
@@ -139,9 +135,9 @@ class SimbaClassifier:
             # Copying X dataframes
             shutil.copyfile(self.get_df_fp(f"x_{i}"), behav_clf.get_df_fp(f"x_{i}"))
             # Selecing y dataframe behav cols and saving to model behav dir
-            y_df = read_feather(self.get_df_fp(f"y_{i}"))
+            y_df = DFIOMixin.read_feather(self.get_df_fp(f"y_{i}"))
             y_df = y_df.loc[:, behav]
-            write_feather(y_df, behav_clf.get_df_fp(f"y_{i}"))
+            DFIOMixin.write_feather(y_df, behav_clf.get_df_fp(f"y_{i}"))
         # Returning SimbaClassfier instance of new subdir
         return behav_clf
 
@@ -192,7 +188,7 @@ class SimbaClassifier:
         Checks if the given behaviour string exists as a behaviour label
         in the `y_all` dataframe.
         """
-        y_all = read_feather(self.get_df_fp("y_all"))
+        y_all = DFIOMixin.read_feather(self.get_df_fp("y_all"))
         behavs_ls = y_all.columns.unique("behaviours")
         if behav not in behavs_ls:
             raise ValueError(f"{behav} is not in the `y_all` dataframe.")
@@ -229,10 +225,10 @@ class SimbaClassifier:
         x_all = x_all[x_all.index.isin(y_all.index)]
         y_all = y_all[y_all.index.isin(x_all.index)]
         # Sorting index and saving to output
-        write_feather(x_all.sort_index(), self.get_df_fp("x_all"))
-        write_feather(y_all.sort_index(), self.get_df_fp("y_all"))
+        DFIOMixin.write_feather(x_all.sort_index(), self.get_df_fp("x_all"))
+        DFIOMixin.write_feather(y_all.sort_index(), self.get_df_fp("y_all"))
 
-    def _combine_dfs(self, in_dir: str, names_ls: tuple[str]) -> pd.DataFrame:
+    def _combine_dfs(self, in_dir: str, names_ls: list[str]) -> pd.DataFrame:
         """
         Combine a list of dataframes into a single dataframe.
         The experiment ID is added as a level to the index.
@@ -247,7 +243,9 @@ class SimbaClassifier:
 
     def _combine_dfs_worker(self, fp: str, name: str) -> pd.DataFrame:
         """Add the name of the experiment to the index of the dataframe."""
-        return pd.concat([read_feather(fp)], keys=[name], names=["experiments"], axis=0)
+        return pd.concat(
+            [DFIOMixin.read_feather(fp)], keys=[name], names=["experiments"], axis=0
+        )
 
     #################################################
     #         MAKING TRAIN TEST SPLITS
@@ -260,16 +258,16 @@ class SimbaClassifier:
         # Making train/test fraction lists in configs json
         self._init_train_test_split()
         # Loading _all dfs
-        x_all = read_feather(self.get_df_fp("x_all"))
-        y_all = read_feather(self.get_df_fp("y_all"))
+        x_all = DFIOMixin.read_feather(self.get_df_fp("x_all"))
+        y_all = DFIOMixin.read_feather(self.get_df_fp("y_all"))
         # Making train/test split
         x_train, x_test = self._make_train_test_split(x_all)
         y_train, y_test = self._make_train_test_split(y_all)
         # Sorting index and saving each train/test file
-        write_feather(x_train.sort_index(), self.get_df_fp("x_train"))
-        write_feather(x_test.sort_index(), self.get_df_fp("x_test"))
-        write_feather(y_train.sort_index(), self.get_df_fp("y_train"))
-        write_feather(y_test.sort_index(), self.get_df_fp("y_test"))
+        DFIOMixin.write_feather(x_train.sort_index(), self.get_df_fp("x_train"))
+        DFIOMixin.write_feather(x_test.sort_index(), self.get_df_fp("x_test"))
+        DFIOMixin.write_feather(y_train.sort_index(), self.get_df_fp("y_train"))
+        DFIOMixin.write_feather(y_test.sort_index(), self.get_df_fp("y_test"))
 
     def _init_train_test_split(self):
         """Making train and test split experiments lists in the configs."""
@@ -283,7 +281,7 @@ class SimbaClassifier:
         configs.test_ls = np.array(self.configs.all_ls)[
             ~np.isin(self.configs.all_ls, self.configs.train_ls)
         ].tolist()
-        write_configs(configs, self.configs_fp)
+        configs.write_json(self.configs_fp)
 
     def _make_train_test_split(
         self, all_df: pd.DataFrame
@@ -333,8 +331,8 @@ class SimbaClassifier:
             x_df = x_df.loc[index]
             y_df = y_df.loc[index]
             # Selecting subsampled index ID rows, sorting, and saving
-            write_feather(x_df.sort_index(), self.get_df_fp(f"x_{i}_subs"))
-            write_feather(y_df.sort_index(), self.get_df_fp(f"y_{i}_subs"))
+            DFIOMixin.write_feather(x_df.sort_index(), self.get_df_fp(f"x_{i}_subs"))
+            DFIOMixin.write_feather(y_df.sort_index(), self.get_df_fp(f"y_{i}_subs"))
 
     #################################################
     #       MAKE, TRAIN, RUN SCIKIT CLASSIFIER
@@ -368,7 +366,7 @@ class SimbaClassifier:
         configs = self.configs
         configs.model_type = str(type(model))
         configs.model_params = model.get_params()
-        write_configs(configs, self.configs_fp)
+        configs.write_json(self.configs_fp)
 
     def train_behav_classifier(self):
         """
@@ -378,8 +376,8 @@ class SimbaClassifier:
         # Training model on _all data
         for i in ["all", "train"]:
             # Loading in X/y dfs
-            x_df = read_feather(self.get_df_fp(f"x_{i}_subs"))
-            y_df = read_feather(self.get_df_fp(f"y_{i}_subs"))
+            x_df = DFIOMixin.read_feather(self.get_df_fp(f"x_{i}_subs"))
+            y_df = DFIOMixin.read_feather(self.get_df_fp(f"y_{i}_subs"))
             y_vals = y_df[(self.configs.name, BEHAV_ACTUAL_COL)].values
             # Making model
             model = GradientBoostingClassifier(**self.configs.model_params)
@@ -449,17 +447,17 @@ class SimbaClassifier:
         ```
         """
         # Loading test X data
-        x_test = read_feather(self.get_df_fp("x_test"))
+        x_test = DFIOMixin.read_feather(self.get_df_fp("x_test"))
         # Getting model predictions for evaluation
         eval_df = self.model_predict(x_test, model_name="model_train")
         # Adding actual y labels
-        y_test = read_feather(self.get_df_fp("y_test"))
+        y_test = DFIOMixin.read_feather(self.get_df_fp("y_test"))
         eval_df[(self.configs.name, BEHAV_ACTUAL_COL)] = y_test[
             (self.configs.name, BEHAV_ACTUAL_COL)
         ].values
         # Saving eval df to file
         eval_fp = os.path.join(self.root_dir, "eval", "eval_df.feather")
-        write_feather(eval_df, eval_fp)
+        DFIOMixin.write_feather(eval_df, eval_fp)
         # Making pcutoff metrics plot
         fig = self.model_eval_plot_metrics(eval_df)
         fig.savefig(os.path.join(self.root_dir, "eval", "pcutoff_metrics.png"))
@@ -836,7 +834,7 @@ class SimbaClassifier:
 #     """
 #     For each behaviour, plotting the actual label and the ML probability result on a subplot
 #     """
-#     name = get_name(eval_fp)
+#     name = IOMixin.get_name(eval_fp)
 #     # Reading the eval csv
 #     df = pd.read_csv(eval_fp, header=0, index_col=0)
 #     # Initialising the plot
@@ -878,7 +876,7 @@ class SimbaClassifier:
 #     silent_remove(os.path.join(eval_dir, "TOTAL.csv"))
 #     df = pd.DataFrame()
 #     for fp in os.listdir(eval_dir):
-#         name = get_name(fp)
+#         name = IOMixin.get_name(fp)
 #         df = pd.concat(
 #             (
 #                 df,

@@ -60,7 +60,7 @@ class FormatVid:
             return DiagnosticsMixin.warning_msg()
 
         # Finding all necessary config parameters for video formatting
-        configs = ExperimentConfigs.read_configs(configs_fp)
+        configs = ExperimentConfigs.read_json(configs_fp)
         configs_filt = configs.user.format_vid
         width_px = configs_filt.width_px
         height_px = configs_filt.height_px
@@ -106,12 +106,12 @@ class FormatVid:
         outcome = ""
 
         # Saving video metadata to configs dict
-        configs = ExperimentConfigs.read_configs(configs_fp)
+        configs = ExperimentConfigs.read_json(configs_fp)
         for ftype, fp in (("raw_vid", raw_vid_fp), ("formatted_vid", formatted_vid_fp)):
             try:
                 setattr(configs.auto, ftype, ProcessVidMixin.get_vid_metadata(fp))
             except ValueError as e:
                 outcome += f"WARNING: {str(e)}\n"
         outcome += "Video metadata stored in config file.\n"
-        configs.write_configs(configs_fp)
+        configs.write_json(configs_fp)
         return outcome

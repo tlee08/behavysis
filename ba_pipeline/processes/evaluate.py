@@ -34,9 +34,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
-from tqdm import trange
-
-from ba_pipeline.utils.constants import (
+from ba_core.data_models.experiment_configs import ExperimentConfigs
+from ba_core.mixins.df_io_mixin import DFIOMixin
+from ba_core.mixins.diagnostics_mixin import DiagnosticsMixin
+from ba_core.mixins.io_mixin import IOMixin
+from ba_core.mixins.keypoints_mixin import KeypointsMixin
+from ba_core.utils.constants import (
     BEHAV_ACTUAL_COL,
     BEHAV_COLUMN_NAMES,
     BEHAV_PRED_COL,
@@ -45,14 +48,7 @@ from ba_pipeline.utils.constants import (
     PLOT_STYLE,
     PROCESS_COL,
 )
-from ba_pipeline.utils.funcs import (
-    clean_dlc_headings,
-    get_dlc_headings,
-    get_name,
-    read_configs,
-    read_feather,
-    warning_msg,
-)
+from tqdm import trange
 
 #####################################################################
 #               INITIALISE MPL PLOTTING PARAMETERS
@@ -84,18 +80,18 @@ class Evaluate:
         Make keypoints evaluation plot of likelihood of each bodypart through time.
         """
         outcome = ""
-        name = get_name(dlc_fp)
+        name = IOMixin.get_name(dlc_fp)
         out_dir = os.path.join(out_dir, Evaluate.keypoints_plot.__name__)
         out_fp = os.path.join(out_dir, f"{name}.png")
         os.makedirs(out_dir, exist_ok=True)
         # If overwrite is False, checking if we should skip processing
         if not overwrite and os.path.exists(out_fp):
-            return warning_msg()
+            return DiagnosticsMixin.warning_msg()
         # Getting necessary config parameters
         # Read the file
-        dlc_df = clean_dlc_headings(read_feather(dlc_fp))
+        dlc_df = KeypointsMixin.clean_headings(DFIOMixin.read_feather(dlc_fp))
         # Getting indivs and bpts list
-        _, bpts = get_dlc_headings(dlc_df)
+        _, bpts = KeypointsMixin.get_headings(dlc_df)
         cols_to_keep = dlc_df.columns.get_level_values("bodyparts").isin(bpts)
         # Making data-long ways
         dlc_df = (
@@ -143,15 +139,15 @@ class Evaluate:
         """
 
         outcome = ""
-        name = get_name(vid_fp)
+        name = IOMixin.get_name(vid_fp)
         out_dir = os.path.join(out_dir, Evaluate.eval_vid.__name__)
         out_fp = os.path.join(out_dir, f"{name}.mp4")
         os.makedirs(out_dir, exist_ok=True)
         # If overwrite is False, checking if we should skip processing
         if not overwrite and os.path.exists(out_fp):
-            return warning_msg()
+            return DiagnosticsMixin.warning_msg()
         # Getting necessary config parameters
-        configs = read_configs(configs_fp)
+        configs = ExperimentConfigs.read_json(configs_fp)
         configs_filt = configs.user.evaluate.eval_vid
         funcs_names = configs_filt.funcs
         pcutoff = configs_filt.pcutoff
@@ -160,7 +156,7 @@ class Evaluate:
         cmap = configs_filt.cmap
 
         # Modifying dlc_df and making list of how to select dlc_df components to optimise processing
-        dlc_df = clean_dlc_headings(read_feather(dlc_fp))
+        dlc_df = KeypointsMixin.clean_headings(DFIOMixin.read_feather(dlc_fp))
         # Filtering out PROCESS_COL columns
         if PROCESS_COL in dlc_df.columns.unique("individuals"):
             dlc_df.drop(columns=PROCESS_COL, level="individuals")
@@ -184,7 +180,7 @@ class Evaluate:
 
         # Getting behavs df
         try:
-            behav_df = read_feather(behav_fp)
+            behav_df = DFIOMixin.read_feather(behav_fp)
         except Exception:
             outcome += (
                 "WARNING: behavs file not found or could not be loaded."
@@ -315,7 +311,7 @@ def annot_johansson(frame: np.ndarray) -> np.ndarray:
 
 def annot_keypoints(
     frame: np.ndarray,
-    row: pd.Series,
+    row: pd.Series | pd.DataFrame,
     indivs_bpts_ls: Sequence[tuple[str, str]],
     colours: Sequence[tuple[float, float, float, float]],
     pcutoff: float,
@@ -360,7 +356,7 @@ def annot_keypoints(
 def annot_behav(
     frame: np.ndarray,
     row: pd.Series,
-    behavs_ls: Sequence[str],
+    behavs_ls: Sequence[str] | pd.Index,
 ) -> np.ndarray:
     """
     Annotates a text table in the top-left corner, with the format:

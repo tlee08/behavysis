@@ -6,30 +6,26 @@ from __future__ import annotations
 
 import os
 import shutil
-from typing import TYPE_CHECKING, Any, Callable
+from typing import Any, Callable
 
 import numpy as np
 import pandas as pd
-
-from ba_pipeline.pipeline.experiment_configs import ExperimentConfigs
-from ba_pipeline.processes import (
-    ClassifyBehaviours,
-    ExtractFeatures,
-    RunDLC,
-    UpdateConfigs,
-)
-from ba_pipeline.utils.constants import (
+from ba_core.data_models.experiment_configs import ExperimentConfigs
+from ba_core.mixins.df_io_mixin import DFIOMixin
+from ba_core.mixins.diagnostics_mixin import DiagnosticsMixin
+from ba_core.utils.constants import (
     ANALYSIS_DIR,
     EVALUATE_DIR,
     FOLDERS,
     STR_DIV,
     TEMP_DIR,
 )
-from ba_pipeline.utils.funcs import (
-    read_feather,
-    success_msg,
-    warning_msg,
-    write_feather,
+
+from ba_pipeline.processes import (
+    ClassifyBehaviours,
+    ExtractFeatures,
+    RunDLC,
+    UpdateConfigs,
 )
 
 
@@ -178,7 +174,7 @@ class BAExperiment:
             # Running each func and saving outcome
             try:
                 dd[f.__name__] = f(*args, **kwargs)
-                dd[f.__name__] += f"SUCCESS: {success_msg()}\n"
+                dd[f.__name__] += f"SUCCESS: {DiagnosticsMixin.success_msg()}\n"
             except Exception as e:
                 dd[f.__name__] = f"ERROR: {e}"
             # Printing outcome
@@ -339,8 +335,8 @@ class BAExperiment:
         # If there is an error, then makes the diagnostics dict
         # where all function outcomes have the error message
         try:
-            df = read_feather(self.get_fp("3_dlc"))
-            write_feather(df, self.get_fp("4_preprocessed"))
+            df = DFIOMixin.read_feather(self.get_fp("3_dlc"))
+            DFIOMixin.write_feather(df, self.get_fp("4_preprocessed"))
         except Exception as e:
             dd = {f.__name__: str(e) for f in funcs}
             dd["experiment"] = self.name
@@ -408,7 +404,7 @@ class BAExperiment:
         )
         # If overwrite is False, checking if we should skip processing
         if not overwrite and os.path.exists(out_fp):
-            dd["aggregate_analysis"] = warning_msg()
+            dd["aggregate_analysis"] = DiagnosticsMixin.warning_msg()
             return dd
         # Making total_df to store all frame-by-frame analysis for the experiment
         total_df = pd.DataFrame()
@@ -421,7 +417,7 @@ class BAExperiment:
             )
             if os.path.isfile(in_fp):
                 # Reading exp fbf df
-                df = read_feather(in_fp)
+                df = DFIOMixin.read_feather(in_fp)
                 # Asserting that the index is the same (frames, timestamps)
                 if total_df.shape[0] > 0:
                     assert np.all(total_df.index == df.index)
@@ -429,7 +425,7 @@ class BAExperiment:
                 df = pd.concat([df], keys=[analysis_subdir], names=["analysis"], axis=1)
                 # Concatenating total_df with df
                 total_df = pd.concat([total_df, df], axis=1)
-        write_feather(total_df, out_fp)
+        DFIOMixin.write_feather(total_df, out_fp)
         return dd
 
     #####################################################################
@@ -503,7 +499,7 @@ class BAExperiment:
         """
         dd = {"experiment": self.name}
         if not overwrite and os.path.exists(self.get_fp("7_scored_behavs")):
-            dd["export_behaviours"] = warning_msg()
+            dd["export_behaviours"] = DiagnosticsMixin.warning_msg()
             return dd
         shutil.copyfile(
             self.get_fp("6_predicted_behavs"),
@@ -535,7 +531,7 @@ class BAExperiment:
         dict
             _description_
         """
-        df = read_feather(self.get_fp(in_dir))
+        df = DFIOMixin.read_feather(self.get_fp(in_dir))
         df.to_csv(os.path.join(out_dir, f"{self.name}.csv"))
         return {
             "experiment": self.name,

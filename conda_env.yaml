@@ -14,5 +14,3 @@ dependencies:
   # GPU packages (for deeplabcut) # TODO: move to dlc_subproc_wrapper
   # - cudatoolkit
   # - cudnn
-  # - pip:
-  #     - -e "."

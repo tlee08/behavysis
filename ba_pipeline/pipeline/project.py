@@ -10,17 +10,19 @@ from typing import Any, Callable
 
 import numpy as np
 import pandas as pd
-from natsort import natsort_keygen, natsorted
-
-from ba_pipeline.pipeline.experiment import BAExperiment
-from ba_pipeline.utils.constants import (
+from ba_core.data_models.experiment_configs import ExperimentConfigs
+from ba_core.mixins.df_io_mixin import DFIOMixin
+from ba_core.mixins.io_mixin import IOMixin
+from ba_core.utils.constants import (
     ANALYSIS_DIR,
     DIAGNOSTICS_DIR,
     FOLDERS,
     PROCS,
     STR_DIV,
 )
-from ba_pipeline.utils.funcs import get_name, read_configs, read_feather, write_feather
+from natsort import natsort_keygen, natsorted
+
+from ba_pipeline.pipeline.experiment import BAExperiment
 
 
 class BAProject:
@@ -388,7 +390,7 @@ class BAProject:
                 for j in natsorted(os.listdir(dir_folder)):
                     if j[0] == ".":  # do not add hidden files
                         continue
-                    name = get_name(j)
+                    name = IOMixin.get_name(j)
                     try:
                         if self.import_experiment(name):
                             imported.append(name)
@@ -436,7 +438,9 @@ class BAProject:
         # AGGREGATING BINNED DATA
         # NOTE: need a more robust way of getting the list of bin sizes
         analysis_dir = os.path.join(self.root_dir, ANALYSIS_DIR)
-        configs = read_configs(self.get_experiments()[0].get_fp("0_configs"))
+        configs = ExperimentConfigs.read_json(
+            self.get_experiments()[0].get_fp("0_configs")
+        )
         bin_sizes_sec = configs.user.analyse.bins_sec
         bin_sizes_sec = np.append(bin_sizes_sec, "custom")
         # Searching through all the analysis sub-folders
@@ -453,14 +457,14 @@ class BAProject:
                     )
                     if os.path.isfile(in_fp):
                         # Reading exp summary df
-                        df = read_feather(in_fp)
+                        df = DFIOMixin.read_feather(in_fp)
                         # Prepending experiment name to column MultiIndex
                         df = pd.concat(
                             [df], keys=[exp.name], names=["experiment"], axis=1
                         )
                         # Concatenating total_df with df across columns
                         total_df = pd.concat([total_df, df], axis=1)
-                    write_feather(total_df, out_fp)
+                    DFIOMixin.write_feather(total_df, out_fp)
 
     def combine_analysis_summary(self) -> None:
         """
@@ -491,9 +495,9 @@ class BAProject:
                 in_fp = os.path.join(analysis_subdir, "summary", f"{exp.name}.feather")
                 if os.path.isfile(in_fp):
                     # Reading exp summary df
-                    df = read_feather(in_fp)
+                    df = DFIOMixin.read_feather(in_fp)
                     # Prepending experiment name to index MultiIndex
                     df = pd.concat([df], keys=[exp.name], names=["experiment"], axis=0)
                     # Concatenating total_df with df down rows
                     total_df = pd.concat([total_df, df], axis=0)
-            write_feather(total_df, out_fp)
+            DFIOMixin.write_feather(total_df, out_fp)

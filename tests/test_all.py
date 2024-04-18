@@ -4,7 +4,8 @@ import pytest
 
 from ba_pipeline import BAProject
 from ba_pipeline.processes import *
-from ba_pipeline.utils.constants import *
+
+# from ba_core.utils.constants import *
 
 
 @pytest.fixture(scope="session", autouse=True)

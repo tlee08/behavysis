@@ -6,16 +6,12 @@ import os
 import shutil
 
 import pandas as pd
-
-from ba_pipeline.utils.funcs import (
-    check_bpts_exist,
-    get_name,
-    read_configs,
-    read_feather,
-    run_subprocess_fstream,
-    warning_msg,
-    write_feather,
-)
+from ba_core.data_models.experiment_configs import ExperimentConfigs
+from ba_core.mixins.df_io_mixin import DFIOMixin
+from ba_core.mixins.diagnostics_mixin import DiagnosticsMixin
+from ba_core.mixins.io_mixin import IOMixin
+from ba_core.mixins.keypoints_mixin import KeypointsMixin
+from ba_core.mixins.subprocess_mixin import SubprocessMixin
 
 # Order of bodyparts is from
 # - https://github.com/sgoldenlab/simba/blob/master/docs/Multi_animal_pose.md
@@ -66,9 +62,9 @@ class ExtractFeatures:
         outcome = ""
         # If overwrite is False, checking if we should skip processing
         if not overwrite and os.path.exists(out_fp):
-            return warning_msg()
+            return DiagnosticsMixin.warning_msg()
         # Getting directory and file paths
-        name = get_name(dlc_fp)
+        name = IOMixin.get_name(dlc_fp)
         configs_dir = os.path.split(configs_fp)[0]
         simba_in_dir = os.path.join(temp_dir, "input")
         simba_dir = os.path.join(temp_dir, "simba_proj")
@@ -80,7 +76,7 @@ class ExtractFeatures:
         simba_in_fp = os.path.join(simba_in_dir, f"{name}.csv")
         # TODO: order mousemarked and mouseunmarked correctly as 1 and 2
         # Selecting bodyparts for SimBA (8 bpts, 2 indivs)
-        df = read_feather(dlc_fp)
+        df = DFIOMixin.read_feather(dlc_fp)
         df = select_cols(df, configs_fp)
         # Saving dlc frame to place in the SimBA features extraction df
         index = df.index
@@ -94,7 +90,7 @@ class ExtractFeatures:
         # Setting index to same as dlc preprocessed df
         df.index = index
         # Saving SimBA extracted features df as feather
-        write_feather(df, out_fp)
+        DFIOMixin.write_feather(df, out_fp)
         # Removing temp dir
         if remove_temp:
             shutil.rmtree(temp_dir, ignore_errors=True)
@@ -127,12 +123,12 @@ def select_cols(
         DLC dataframe with selected columns.
     """
     # Getting necessary config parameters
-    configs = read_configs(configs_fp)
+    configs = ExperimentConfigs.read_json(configs_fp)
     configs_filt = configs.user.extract_features
     indivs = configs_filt.individuals
     bpts = configs_filt.bodyparts
     # Checking that the bodyparts are all valid
-    check_bpts_exist(bpts, df)
+    KeypointsMixin.check_bpts_exist(df, bpts)
     # Selecting given columns
     idx = pd.IndexSlice
     df = df.loc[:, idx[:, indivs, bpts]]
@@ -176,7 +172,8 @@ def run_extract_features_script(
         dlc_dir,
         configs_dir,
     ]
-    run_subprocess_fstream(cmd)
+    SubprocessMixin.run_subprocess_fstream(cmd)
+    return "Ran SimBA feature extraction script.\n"
 
 
 def remove_bpts_cols(

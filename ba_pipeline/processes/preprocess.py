@@ -23,19 +23,16 @@ import os
 
 import numpy as np
 import pandas as pd
-
-from ba_pipeline.utils.constants import BODYCENTRE, SINGLE_COL
-from ba_pipeline.utils.funcs import (
-    check_bpts_exist,
-    get_dlc_headings,
-    read_configs,
-    read_feather,
-    warning_msg,
-    write_feather,
-)
+from ba_core.data_models.experiment_configs import ExperimentConfigs
+from ba_core.mixins.df_io_mixin import DFIOMixin
+from ba_core.mixins.diagnostics_mixin import DiagnosticsMixin
+from ba_core.mixins.keypoints_mixin import KeypointsMixin
+from ba_core.utils.constants import BODYCENTRE, SINGLE_COL
 
 
 class Preprocess:
+    """_summary_"""
+
     @staticmethod
     def start_stop_trim(
         in_fp: str,
@@ -61,17 +58,17 @@ class Preprocess:
         outcome = ""
         # If overwrite is False, checking if we should skip processing
         if not overwrite and os.path.exists(out_fp):
-            return warning_msg()
+            return DiagnosticsMixin.warning_msg()
         # Getting necessary config parameters
-        configs = read_configs(configs_fp)
+        configs = ExperimentConfigs.read_json(configs_fp)
         start_frame = configs.auto.start_frame
         stop_frame = configs.auto.stop_frame
         # Reading file
-        df = read_feather(in_fp)
+        df = DFIOMixin.read_feather(in_fp)
         # Trimming dataframe
         df = df.loc[start_frame:stop_frame, :]
         # Writing file
-        write_feather(df, out_fp)
+        DFIOMixin.write_feather(df, out_fp)
         return outcome
 
     @staticmethod
@@ -100,13 +97,13 @@ class Preprocess:
         outcome = ""
         # If overwrite is False, checking if we should skip processing
         if not overwrite and os.path.exists(out_fp):
-            return warning_msg()
+            return DiagnosticsMixin.warning_msg()
         # Getting necessary config parameters
-        configs = read_configs(configs_fp)
+        configs = ExperimentConfigs.read_json(configs_fp)
         configs_filt = configs.user.preprocess.interpolate_points
         pcutoff = configs_filt.pcutoff
         # Reading file
-        df = read_feather(in_fp)
+        df = DFIOMixin.read_feather(in_fp)
         # Gettings the unique groups of (individual, bodypart) groups.
         unique_cols = df.columns.droplevel(["coords"]).unique()
         # Setting low-likelihood points to Nan to later interpolate
@@ -123,7 +120,7 @@ class Preprocess:
         # linearly interpolating Nan x and y points. Also backfilling points at the start.
         df = df.interpolate(method="linear", axis=0).bfill()
         # Writing file
-        write_feather(df, out_fp)
+        DFIOMixin.write_feather(df, out_fp)
         return outcome
 
     @staticmethod
@@ -152,17 +149,17 @@ class Preprocess:
         outcome = ""
         # If overwrite is False, checking if we should skip processing
         if not overwrite and os.path.exists(out_fp):
-            return warning_msg()
+            return DiagnosticsMixin.warning_msg()
         # Reading file
-        df = read_feather(in_fp)
+        df = DFIOMixin.read_feather(in_fp)
         # Getting indivs and bpts list
-        indivs, _ = get_dlc_headings(df)
+        indivs, _ = KeypointsMixin.get_headings(df)
         # Getting necessary config parameters
-        configs = read_configs(configs_fp)
+        configs = ExperimentConfigs.read_json(configs_fp)
         configs_filt = configs.user.preprocess.bodycentre
         bpts = configs_filt.bodyparts
         # Checking that the bodyparts are all valid
-        check_bpts_exist(bpts, df)
+        KeypointsMixin.check_bpts_exist(df, bpts)
         # Calculating the body centre in each frame for each individual
         l0 = df.columns.unique(0)[0]
         idx = pd.IndexSlice
@@ -172,7 +169,7 @@ class Preprocess:
                     :, idx[l0, indiv, bpts, coord]
                 ].apply(np.nanmean, axis=1)
         # Writing file
-        write_feather(df, out_fp)
+        DFIOMixin.write_feather(df, out_fp)
         return outcome
 
     @staticmethod
@@ -200,15 +197,15 @@ class Preprocess:
         outcome = ""
         # If overwrite is False, checking if we should skip processing
         if not overwrite and os.path.exists(out_fp):
-            return warning_msg()
+            return DiagnosticsMixin.warning_msg()
         # Reading file
-        df = read_feather(in_fp)
+        df = DFIOMixin.read_feather(in_fp)
         # Getting necessary config parameters
-        configs = read_configs(configs_fp)
+        configs = ExperimentConfigs.read_json(configs_fp)
         configs_filt = configs.user.preprocess.refine_identities
-        bpts = (
-            configs_filt.bodyparts
-        )  # TODO: need to implement the body_centre function again
+        # bpts = (
+        #     configs_filt.bodyparts
+        # )  # TODO: need to implement the body_centre function again
         marked = configs_filt.marked
         unmarked = configs_filt.unmarked
         marking = configs_filt.marking
@@ -235,7 +232,7 @@ class Preprocess:
         # Updating df with the switched values
         df_switched = switch_identities(df, df_switch[metric], marked, unmarked)
         # Writing to file
-        write_feather(df_switched, out_fp)
+        DFIOMixin.write_feather(df_switched, out_fp)
         return outcome
 
 

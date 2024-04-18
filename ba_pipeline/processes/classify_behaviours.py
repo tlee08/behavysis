@@ -6,16 +6,13 @@ import os
 
 import numpy as np
 import pandas as pd
+from ba_core.data_models.experiment_configs import ExperimentConfigs
+from ba_core.mixins.behaviour_mixin import BehaviourMixin
+from ba_core.mixins.df_io_mixin import DFIOMixin
+from ba_core.mixins.diagnostics_mixin import DiagnosticsMixin
+from ba_core.utils.constants import BEHAV_COLUMN_NAMES, BEHAV_PRED_COL
 
 from ba_pipeline.simba_classifier.simba_classifier import SimbaClassifier
-from ba_pipeline.utils.constants import BEHAV_COLUMN_NAMES, BEHAV_PRED_COL
-from ba_pipeline.utils.funcs import (
-    read_configs,
-    read_feather,
-    vect_to_bouts,
-    warning_msg,
-    write_feather,
-)
 
 
 class ClassifyBehaviours:
@@ -61,14 +58,14 @@ class ClassifyBehaviours:
         outcome = ""
         # If overwrite is False, checking if we should skip processing
         if not overwrite and os.path.exists(out_fp):
-            return warning_msg()
+            return DiagnosticsMixin.warning_msg()
         # Getting necessary config parameters
-        configs = read_configs(configs_fp)
+        configs = ExperimentConfigs.read_json(configs_fp)
         configs_filt = configs.user.classify_behaviours
         models_ls = configs_filt.models
         min_window_frames = configs_filt.min_window_frames
         # Getting features data
-        features_df = read_feather(features_fp)
+        features_df = DFIOMixin.read_feather(features_fp)
         # Initialising y_preds df
         # Getting predictions for each classifier model and saving
         # in a list of pd.DataFrames
@@ -83,7 +80,7 @@ class ClassifyBehaviours:
         # Concatenating predictions to a single dataframe
         behav_preds = pd.concat(behav_preds_ls, axis=1)
         # Saving behav_preds df
-        write_feather(behav_preds, out_fp)
+        DFIOMixin.write_feather(behav_preds, out_fp)
         # Returning outcome
         return outcome
 
@@ -112,7 +109,7 @@ def merge_bouts(
     # Merging short non-behav bouts for each behaviour column
     for behav in df.columns.unique(BEHAV_COLUMN_NAMES[0]):
         # Getting start, stop, and duration of each non-behav bout
-        nonbouts_df = vect_to_bouts(df[(behav, BEHAV_PRED_COL)] == 0)
+        nonbouts_df = BehaviourMixin.vect_2_bouts(df[(behav, BEHAV_PRED_COL)] == 0)
         # For each non-behav bout, if it is less than min_window_frames, then
         # call it a behav
         for _, row in nonbouts_df.iterrows():
