@@ -17,13 +17,13 @@ str
 import numpy as np
 import pandas as pd
 
-from ba_package.utils.constants import SINGLE_COL
-from ba_package.utils.funcs import (
+from ba_pipeline.utils.constants import SINGLE_COL
+from ba_pipeline.utils.funcs import (
     check_bpts_exist,
     clean_dlc_headings,
     get_dlc_headings,
-    read_feather,
     read_configs,
+    read_feather,
     write_configs,
 )
 

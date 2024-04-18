@@ -7,9 +7,9 @@ import os
 import numpy as np
 import pandas as pd
 
-from ba_package.simba_classifier.simba_classifier import SimbaClassifier
-from ba_package.utils.constants import BEHAV_COLUMN_NAMES, BEHAV_PRED_COL
-from ba_package.utils.funcs import (
+from ba_pipeline.simba_classifier.simba_classifier import SimbaClassifier
+from ba_pipeline.utils.constants import BEHAV_COLUMN_NAMES, BEHAV_PRED_COL
+from ba_pipeline.utils.funcs import (
     read_configs,
     read_feather,
     vect_to_bouts,

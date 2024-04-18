@@ -4,8 +4,8 @@ import os
 import shutil
 import sys
 
-from ba_package import *
-from ba_package.processes import *
+from ba_pipeline import *
+from ba_pipeline.processes import *
 
 if __name__ == "__main__":
     overwrite = True
@@ -22,7 +22,7 @@ if __name__ == "__main__":
     proj.format_vid(
         (
             FormatVid.format_vid,
-            FormatVid.vid_metadata,
+            FormatVid.get_vid_metadata,
         ),
         overwrite=overwrite,
     )

@@ -36,7 +36,7 @@ import pandas as pd
 import seaborn as sns
 from tqdm import trange
 
-from ba_package.utils.constants import (
+from ba_pipeline.utils.constants import (
     BEHAV_ACTUAL_COL,
     BEHAV_COLUMN_NAMES,
     BEHAV_PRED_COL,
@@ -45,7 +45,7 @@ from ba_package.utils.constants import (
     PLOT_STYLE,
     PROCESS_COL,
 )
-from ba_package.utils.funcs import (
+from ba_pipeline.utils.funcs import (
     clean_dlc_headings,
     get_dlc_headings,
     get_name,

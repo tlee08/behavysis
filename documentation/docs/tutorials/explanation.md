@@ -1,10 +1,10 @@
 # Explanation
 
-The BA_Package (Behavioural Analysis) is used to analyse raw mp4 footage of lab mice. Analysis can include:
+The ba_pipeline (Behavioural Analysis) is used to analyse raw mp4 footage of lab mice. Analysis can include:
 
 - Open Field
-    - Subject thigmotaxis
-    - Subject speed
+  - Subject thigmotaxis
+  - Subject speed
 - Choice (need to implement)
 - etc.
 

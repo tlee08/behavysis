@@ -1,3 +1,3 @@
-# ba_package
+# ba_pipeline
 
-::: ba_package
+<!-- ::: ba_pipeline -->

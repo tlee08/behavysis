@@ -20,7 +20,7 @@ from typing import Literal, Type
 
 from pydantic import BaseModel, ValidationError
 
-from ba_package.utils.funcs import read_configs, write_configs
+from ba_pipeline.utils.funcs import read_configs, write_configs
 
 
 class UpdateConfigs:

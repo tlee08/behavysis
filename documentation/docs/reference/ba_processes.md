@@ -1,19 +1,19 @@
-# ba_package Processes
+# ba_pipeline Processes
 
-:::ba_package.processes.Analyse
+:::ba_pipeline.processes
 
-:::ba_package.processes.CalculateParams
+<!-- :::ba_pipeline.processes.CalculateParams
 
-:::ba_package.processes.ClassifyBehaviours
+:::ba_pipeline.processes.ClassifyBehaviours
 
-:::ba_package.processes.Evaluate
+:::ba_pipeline.processes.Evaluate
 
-:::ba_package.processes.ExtractFeatures
+:::ba_pipeline.processes.ExtractFeatures
 
-:::ba_package.processes.FormatVid
+:::ba_pipeline.processes.FormatVid
 
-:::ba_package.processes.Preprocess
+:::ba_pipeline.processes.Preprocess
 
-:::ba_package.processes.RunDLC
+:::ba_pipeline.processes.RunDLC
 
-:::ba_package.processes.UpdateConfigs
+:::ba_pipeline.processes.UpdateConfigs -->

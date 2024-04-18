@@ -3,7 +3,7 @@
 ## Loading in all relevant packages
 
 ```python
-from BA_Package import *
+from ba_pipeline import *
 ```
 
 ## Making the Experiments
@@ -14,7 +14,7 @@ The process of analysing multiple experiments is just analysing each experiment 
 
 For more information on how to structure a project directory, please see [setup](../setup.md).
 
-For more information on how a `BA_Experiment` works, please see [BA_Experiment](../../reference/BA_Experiment.md).
+For more information on how a `BAExperiment` works, please see [BAExperiment](../../reference/BAExperiment.md).
 
 ```python
 proj_dir = "./project"
@@ -22,7 +22,7 @@ experiment_names = exp_name = ["experiment1", "experiment2", "experiment3"]
 experiments = list()
 
 for name in experiment_names:
-    exp = BA_Experiment(name, proj_dir)
+    exp = BAExperiment(name, proj_dir)
     experiments.append(exp)
 ```
 

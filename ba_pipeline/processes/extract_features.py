@@ -7,7 +7,7 @@ import shutil
 
 import pandas as pd
 
-from ba_package.utils.funcs import (
+from ba_pipeline.utils.funcs import (
     check_bpts_exist,
     get_name,
     read_configs,
@@ -168,10 +168,10 @@ def run_extract_features_script(
         "conda",
         "run",
         "-n",
-        "simba_env",
+        "simba_wrapper_env",
         "python",
         "-m",
-        "simba_package.extract_features",
+        "simba_pipeline.extract_features",
         simba_dir,
         dlc_dir,
         configs_dir,

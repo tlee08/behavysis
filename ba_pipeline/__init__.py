@@ -21,4 +21,4 @@ warnings.filterwarnings("ignore")
 #         IMPORTING MODULES (INCL. RELATIVE AND 3RD PARTY)
 #####################################################################
 
-from ba_package.pipeline import BAExperiment, BAProject
+from ba_pipeline.pipeline import BAExperiment, BAProject

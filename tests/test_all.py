@@ -2,9 +2,9 @@ import os
 
 import pytest
 
-from ba_package import BAProject
-from ba_package.processes import *
-from ba_package.utils.constants import *
+from ba_pipeline import BAProject
+from ba_pipeline.processes import *
+from ba_pipeline.utils.constants import *
 
 
 @pytest.fixture(scope="session", autouse=True)

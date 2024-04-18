@@ -1,3 +1,3 @@
 # BAExperiment
 
-::: ba_package.BAExperiment
+<!-- ::: ba_pipeline.BAExperiment -->

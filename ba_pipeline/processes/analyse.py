@@ -26,7 +26,7 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 
-from ba_package.utils.constants import (
+from ba_pipeline.utils.constants import (
     ANALYSIS_COLUMN_NAMES,
     ANALYSIS_INDEX_NAMES,
     BODYCENTRE,
@@ -34,7 +34,7 @@ from ba_package.utils.constants import (
     PLOT_STYLE,
     SINGLE_COL,
 )
-from ba_package.utils.funcs import (
+from ba_pipeline.utils.funcs import (
     check_bpts_exist,
     clean_dlc_headings,
     get_dlc_headings,
@@ -45,9 +45,8 @@ from ba_package.utils.funcs import (
     write_feather,
 )
 
-
 if TYPE_CHECKING:
-    from ba_package.pipeline.experiment_configs import ExperimentConfigs
+    from ba_pipeline.pipeline.experiment_configs import ExperimentConfigs
 
 #####################################################################
 #               INITIALISE MPL PLOTTING PARAMETERS

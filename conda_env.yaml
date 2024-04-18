@@ -1,36 +1,18 @@
-# install: conda env create -f ba_package_dev.yaml
-# update: conda env update -f ba_package_dev.yaml --prune
+# install: conda env create -f conda_env.yaml
+# update: conda env update -f conda_env.yaml --prune
 
 name: ba_pipeline_env
 channels:
   - conda-forge
   - defaults
 dependencies:
-  - python=3.9
-  - setuptools
+  - python
   - pip
   - ipykernel
   - nb_conda
-  - pydantic
   - ffmpeg
-  - numpy
-  - pandas
-  - scipy
-  - pyarrow
-  - opencv
-  - matplotlib
-  - seaborn
-  - scikit-learn
-  - imbalanced-learn
-  - natsort
-  - tqdm
-  - cudatoolkit
-  - cudnn
-  # dev packages
-  - black
-  - pytest
-  - mkdocs-material
-  - mkdocstrings-python
-  - pip:
-      - -e "../ba_core/"
-      - -e "."
+  # GPU packages (for deeplabcut) # TODO: move to dlc_subproc_wrapper
+  # - cudatoolkit
+  # - cudnn
+  # - pip:
+  #     - -e "."

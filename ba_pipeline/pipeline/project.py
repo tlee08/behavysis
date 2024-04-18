@@ -12,15 +12,15 @@ import numpy as np
 import pandas as pd
 from natsort import natsort_keygen, natsorted
 
-from ba_package.pipeline.experiment import BAExperiment
-from ba_package.utils.constants import (
+from ba_pipeline.pipeline.experiment import BAExperiment
+from ba_pipeline.utils.constants import (
     ANALYSIS_DIR,
     DIAGNOSTICS_DIR,
     FOLDERS,
     PROCS,
     STR_DIV,
 )
-from ba_package.utils.funcs import get_name, read_configs, read_feather, write_feather
+from ba_pipeline.utils.funcs import get_name, read_configs, read_feather, write_feather
 
 
 class BAProject:
@@ -207,7 +207,7 @@ class BAProject:
 
     def get_experiments(self) -> list[BAExperiment]:
         """
-        Gets the ordered (natsorted) list of BA_Experiment instances in the BA_Project.
+        Gets the ordered (natsorted) list of Experiment instances in the BAProject.
 
         Returns
         -------
@@ -238,7 +238,7 @@ class BAProject:
         Parameters
         ----------
         func : Callable
-            The experiment method (in BA_Experiment) to run.
+            The experiment method (in BAExperiment) to run.
 
         Notes
         -----
@@ -283,7 +283,7 @@ class BAProject:
         Parameters
         ----------
         func : Callable
-            The experiment method (in BA_Experiment) to run.
+            The experiment method (in BAExperiment) to run.
 
         Notes
         -----
@@ -376,7 +376,7 @@ class BAProject:
         """
         Add all experiments in the project folder to the experiments dict.
         The key of each experiment in the .experiments dict is "name".
-        Refer to BA_Project.addExperiment() for details about how each experiment is added.
+        Refer to BAProject.addExperiment() for details about how each experiment is added.
         """
         print(f"Searching project folder: {self.root_dir}\n")
         # Adding all experiments within given project dir

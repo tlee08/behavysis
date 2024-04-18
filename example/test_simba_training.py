@@ -1,8 +1,8 @@
 import os
 
-from ba_package import BAExperiment
-from ba_package.processes import FormatVid, CalculateParams, Preprocess
-from ba_package.simba_classifier import SimbaClassifier
+from ba_pipeline import BAExperiment
+from ba_pipeline.processes import CalculateParams, FormatVid, Preprocess
+from ba_pipeline.simba_classifier import SimbaClassifier
 
 if __name__ == "__main__":
     overwrite = True

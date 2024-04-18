@@ -11,21 +11,26 @@ from typing import TYPE_CHECKING, Any, Callable
 import numpy as np
 import pandas as pd
 
-from ba_package.pipeline.experiment_configs import ExperimentConfigs
-from ba_package.processes import (
+from ba_pipeline.pipeline.experiment_configs import ExperimentConfigs
+from ba_pipeline.processes import (
     ClassifyBehaviours,
     ExtractFeatures,
     RunDLC,
     UpdateConfigs,
 )
-from ba_package.utils.constants import (
+from ba_pipeline.utils.constants import (
     ANALYSIS_DIR,
     EVALUATE_DIR,
     FOLDERS,
     STR_DIV,
     TEMP_DIR,
 )
-from ba_package.utils.funcs import read_feather, success_msg, warning_msg, write_feather
+from ba_pipeline.utils.funcs import (
+    read_feather,
+    success_msg,
+    warning_msg,
+    write_feather,
+)
 
 
 class BAExperiment:
@@ -311,7 +316,7 @@ class BAExperiment:
         A preprocessing pipeline method to convert raw DLC data into preprocessed
         DLC data that is ready for ML analysis.
         All functs passed in must have the format func(df, dict) -> df. Possible funcs
-        are given in BA_Preprocessing.py
+        are given in preprocessing.py
         The preprocessed data is saved to the project's preprocessed folder.
 
         Parameters
@@ -357,7 +362,7 @@ class BAExperiment:
     def analyse(self, funcs: tuple[Callable, ...]) -> dict:
         """
         An ML pipeline method to analyse the preprocessed DLC data.
-        Possible funcs are given in BA_Analysis.py.
+        Possible funcs are given in analysis.py.
         The preprocessed data is saved to the project's analysis folder.
 
         Parameters

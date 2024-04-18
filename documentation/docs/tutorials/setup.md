@@ -1,6 +1,6 @@
 # Setup
 
-Before running the BA_Package analysises, the files that we want to analyse must be set up a certain way for the BA_Package program to recognise them.
+Before running the ba_pipeline analysises, the files that we want to analyse must be set up a certain way for the ba_pipeline program to recognise them.
 
 There are three important guidelines to set up the project:
 
@@ -28,7 +28,7 @@ The config file for an experiment stores all the parameters for how the experime
 
 An example of a config file is shown in [The Configs File](configs_setup/configs_setup.md) page.
 
-# Running BA_Package
+# Running ba_pipeline
 
-To install `BA_Package`, follow [these](../installation/installing/conda_windows.md) instructions.
-To run `BA_Package`, follow these [these](../installation/running/conda.md) instructions.
+To install `ba_pipeline`, follow [these](../installation/installing/conda_windows.md) instructions.
+To run `ba_pipeline`, follow these [these](../installation/running/conda.md) instructions.

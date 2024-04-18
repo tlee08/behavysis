@@ -27,21 +27,20 @@ from typing import Optional
 
 import pandas as pd
 
-from ba_package.utils.funcs import (
+from ba_pipeline.utils.funcs import (
+    get_cpid,
     get_name,
     read_configs,
     warning_msg,
     write_feather,
-    get_cpid,
 )
-
 
 #####################################################################
 #               DLC ANALYSE VIDEO
 #####################################################################
 
 
-class RunDLD:
+class RunDLC:
     """_summary_"""
 
     @staticmethod

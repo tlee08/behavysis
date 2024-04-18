@@ -1,2 +1,3 @@
-## Uninstalling BA_Package and Docker
+## Uninstalling ba_pipeline and Docker
+
 TODO

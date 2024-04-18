@@ -3,7 +3,7 @@
 ## Loading in all relevant packages
 
 ```python
-from BA_Package import *
+from ba_pipeline import *
 ```
 
 ## Making the project and importing all experiments
@@ -12,11 +12,11 @@ The directory path of the project must be specified and must contain the experim
 
 For more information on how to structure a project directory, please see [setup](../setup.md).
 
-For more information on how a `BA_Experiment` works, please see [BA_Project](../../reference/BA_Project.md).
+For more information on how a `BAExperiment` works, please see [BAProject](../../reference/BAProject.md).
 
 ```python
 proj_dir = "./project"
-proj = BA_Project(proj_dir)
+proj = BAProject(proj_dir)
 
 proj.importExperiments()
 ```

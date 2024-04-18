@@ -24,11 +24,11 @@ import os
 import numpy as np
 import pandas as pd
 
-from ba_package.utils.constants import BODYCENTRE, SINGLE_COL
-from ba_package.utils.funcs import (
+from ba_pipeline.utils.constants import BODYCENTRE, SINGLE_COL
+from ba_pipeline.utils.funcs import (
     check_bpts_exist,
-    read_configs,
     get_dlc_headings,
+    read_configs,
     read_feather,
     warning_msg,
     write_feather,
