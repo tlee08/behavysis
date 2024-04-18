@@ -21,8 +21,6 @@ str
     The outcome of the process.
 """
 
-from typing import Union
-
 import pandas as pd
 from ba_core.mixins.subprocess_mixin import SubprocessMixin
 
@@ -39,7 +37,7 @@ class RunDLC:
         in_fp: str,
         out_fp: str,
         configs_fp: str,
-        gputouse: Union[int, None],
+        gputouse: int | None,
         overwrite: bool,
     ) -> str:
         """
@@ -57,7 +55,7 @@ class RunDLC:
             in_fp,
             out_fp,
             configs_fp,
-            # f"{gputouse}",
+            f"{gputouse}",
             f"{overwrite}",
         ]
         SubprocessMixin.run_subprocess_fstream(cmd)

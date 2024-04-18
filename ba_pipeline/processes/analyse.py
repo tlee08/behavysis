@@ -19,7 +19,6 @@ str
 from __future__ import annotations
 
 import os
-from typing import Union
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -441,7 +440,7 @@ def get_analysis_configs(
 
     Returns
     -------
-    tuple[ Union[int, float], float, float, float, list, list, ]
+    tuple[ int, float, float, float, list, list, ]
         _description_
     """
     return (
@@ -454,9 +453,7 @@ def get_analysis_configs(
     )
 
 
-def init_fbf_analysis_df(
-    frame_vect: Union[pd.Series, pd.Index], fps: int
-) -> pd.DataFrame:
+def init_fbf_analysis_df(frame_vect: pd.Series | pd.Index, fps: int) -> pd.DataFrame:
     """
     Returning a frame-by-frame analysis_df with the frame number (according to original video)
     and timestamps as the MultiIndex index, according to when the "experiment" begins
@@ -465,7 +462,7 @@ def init_fbf_analysis_df(
 
     Parameters
     ----------
-    frame_vect : Union[pd.Series, pd.Index]
+    frame_vect : pd.Series | pd.Index
         _description_
     fps : int
         _description_
@@ -636,7 +633,7 @@ def _make_summary_behaviour(analysis_df: pd.DataFrame, out_fp: str) -> str:
 def _make_binned(
     analysis_df: pd.DataFrame,
     out_fp: str,
-    bins: Union[float, list],
+    bins: float | list,
 ) -> str:
     """
     Generates the binned data and line graph for the given analysis_df, and given bin_sec.
@@ -650,7 +647,7 @@ def _make_binned(
         _description_
     out_fp : str
         _description_
-    bins : Union[float, list]
+    bins : float | list
         _description_
 
     Returns
