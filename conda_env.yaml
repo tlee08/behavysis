@@ -11,6 +11,3 @@ dependencies:
   - ipykernel
   - nb_conda
   - ffmpeg
-  # GPU packages (for deeplabcut) # TODO: move to dlc_subproc_wrapper
-  # - cudatoolkit
-  # - cudnn

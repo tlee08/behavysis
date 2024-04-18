@@ -12,8 +12,6 @@ python = "^3.9"
 seaborn = "^0.13.2"
 scikit-learn = "^1.4.2"
 imbalanced-learn = "^0.12.2"
-
-# deeplabcut = { extras = ["tf"], version = "^2.3.9" }
 # ba_core = "^0.1.0"
 ba_core = { path = "../ba_core", develop = true }
 
