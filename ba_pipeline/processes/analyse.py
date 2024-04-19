@@ -80,7 +80,7 @@ class Analyse:
         configs = ExperimentConfigs.read_json(configs_fp)
         fps, _, _, px_per_mm, bins_ls, custom_bins_ls = get_analysis_configs(configs)
         configs_filt = configs.user.analyse.thigmotaxis
-        thresh_mm = float(configs_filt.threshold_mm)
+        thresh_mm = float(configs_filt.thresh_mm)
         # Calculating more parameters
         thresh_px = thresh_mm / px_per_mm
         # Loading in dataframe
@@ -155,7 +155,7 @@ class Analyse:
         configs = ExperimentConfigs.read_json(configs_fp)
         fps, _, _, px_per_mm, bins_ls, custom_bins_ls = get_analysis_configs(configs)
         configs_filt = configs.user.analyse.center_crossing
-        thresh_mm = float(configs_filt.threshold_mm)
+        thresh_mm = float(configs_filt.thresh_mm)
         # Calculating more parameters
         thresh_px = thresh_mm / px_per_mm
         # Loading in dataframe

@@ -88,10 +88,10 @@
     },
     "analyse": {
       "thigmotaxis": {
-        "threshold_mm": 50
+        "thresh_mm": 50
       },
       "center_crossing": {
-        "threshold_mm": 125
+        "thresh_mm": 125
       },
       "speed": {
         "smoothing_sec": 1
@@ -101,7 +101,7 @@
       },
       "freezing": {
         "window_sec": 2,
-        "threshold_mm": 5,
+        "thresh_mm": 5,
         "smoothing_sec": 0.2
       },
       "bins_sec": [30, 60, 120, 300],
