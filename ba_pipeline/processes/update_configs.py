@@ -18,8 +18,9 @@ str
 
 from typing import Literal, Type
 
-from ba_core.data_models.experiment_configs import ExperimentConfigs
 from pydantic import ValidationError
+
+from ba_pipeline.pipeline.experiment_configs import ExperimentConfigs
 
 
 class UpdateConfigs:
@@ -75,4 +76,5 @@ class UpdateConfigs:
             )
         # Writing new configs to JSON file
         configs.write_json(configs_fp)
+        return outcome
         return outcome

@@ -6,12 +6,12 @@ import os
 
 import numpy as np
 import pandas as pd
-from ba_core.data_models.experiment_configs import ExperimentConfigs
 from ba_core.mixins.behaviour_mixin import BehaviourMixin
 from ba_core.mixins.df_io_mixin import DFIOMixin
 from ba_core.mixins.diagnostics_mixin import DiagnosticsMixin
 from ba_core.utils.constants import BEHAV_COLUMN_NAMES, BEHAV_PRED_COL
 
+from ba_pipeline.pipeline.experiment_configs import ExperimentConfigs
 from ba_pipeline.simba_classifier.simba_classifier import SimbaClassifier
 
 

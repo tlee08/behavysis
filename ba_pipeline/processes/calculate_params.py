@@ -16,10 +16,11 @@ str
 
 import numpy as np
 import pandas as pd
-from ba_core.data_models.experiment_configs import ExperimentConfigs
 from ba_core.mixins.df_io_mixin import DFIOMixin
 from ba_core.mixins.keypoints_mixin import KeypointsMixin
 from ba_core.utils.constants import SINGLE_COL
+
+from ba_pipeline.pipeline.experiment_configs import ExperimentConfigs
 
 
 class CalculateParams:
@@ -118,8 +119,8 @@ class CalculateParams:
         # Make a warning if the use-specified dur_sec is larger than the duration of the video.
         if stop_frame > auto_stop_frame:
             outcome += (
-                "WARNING: The user specified dur_sec in the configs file is greater"
-                + "than the actual length of the video. Please check to see if this video is"
+                "WARNING: The user specified dur_sec in the configs file is greater "
+                + "than the actual length of the video. Please check to see if this video is "
                 + "too short or if the dur_sec value is incorrect.\n"
             )
         configs = ExperimentConfigs.read_json(configs_fp)
@@ -179,4 +180,5 @@ class CalculateParams:
         configs = ExperimentConfigs.read_json(configs_fp)
         configs.auto.px_per_mm = px_per_mm
         configs.write_json(configs_fp)
+        return outcome
         return outcome

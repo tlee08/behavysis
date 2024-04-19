@@ -15,6 +15,8 @@ if __name__ == "__main__":
     proj.import_experiments()
     # exp = proj.get_experiments()[1]
 
+    # proj.nprocs = 4
+
     proj.update_configs(
         os.path.join(proj_dir, "default.json"),
         overwrite="all",

@@ -34,7 +34,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
-from ba_core.data_models.experiment_configs import ExperimentConfigs
 from ba_core.mixins.df_io_mixin import DFIOMixin
 from ba_core.mixins.diagnostics_mixin import DiagnosticsMixin
 from ba_core.mixins.io_mixin import IOMixin
@@ -49,6 +48,8 @@ from ba_core.utils.constants import (
     PROCESS_COL,
 )
 from tqdm import trange
+
+from ba_pipeline.pipeline.experiment_configs import ExperimentConfigs
 
 #####################################################################
 #               INITIALISE MPL PLOTTING PARAMETERS
@@ -210,14 +211,14 @@ class Evaluate:
                 new_func: Callable[[np.ndarray, int], np.ndarray] = (
                     lambda frame, i: annot_johansson(frame)
                 )
-            if f_name == "keypoints":
+            elif f_name == "keypoints":
                 outcome += f"Added {f_name} to video. \n"
                 new_func: Callable[[np.ndarray, int], np.ndarray] = (
                     lambda frame, i: annot_keypoints(
                         frame, dlc_df.loc[i], indivs_bpts_ls, colours, pcutoff, radius
                     )
                 )
-            if f_name == "behavs":
+            elif f_name == "behavs":
                 outcome += f"Added {f_name} to video. \n"
                 new_func: Callable[[np.ndarray, int], np.ndarray] = (
                     lambda frame, i: annot_behav(frame, behav_df.loc[i], behavs_ls)

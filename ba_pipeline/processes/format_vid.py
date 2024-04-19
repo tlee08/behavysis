@@ -20,9 +20,10 @@ str
 
 import os
 
-from ba_core.data_models.experiment_configs import ExperimentConfigs
 from ba_core.mixins.diagnostics_mixin import DiagnosticsMixin
 from ba_core.mixins.process_vid_mixin import ProcessVidMixin
+
+from ba_pipeline.pipeline.experiment_configs import ExperimentConfigs
 
 
 class FormatVid:
@@ -62,15 +63,16 @@ class FormatVid:
         # Finding all necessary config parameters for video formatting
         configs = ExperimentConfigs.read_json(configs_fp)
         configs_filt = configs.user.format_vid
-        width_px = configs_filt.width_px
-        height_px = configs_filt.height_px
-        fps = configs_filt.fps
-        start_sec = configs_filt.start_sec
-        stop_sec = configs_filt.stop_sec
 
         # Processing the video
         outcome += ProcessVidMixin.process_vid(
-            raw_vid_fp, formatted_vid_fp, height_px, width_px, fps, start_sec, stop_sec
+            in_fp=raw_vid_fp,
+            out_fp=formatted_vid_fp,
+            height_px=configs_filt.height_px,
+            width_px=configs_filt.width_px,
+            fps=configs_filt.fps,
+            start_sec=configs_filt.start_sec,
+            stop_sec=configs_filt.stop_sec,
         )
 
         # Saving video metadata to configs dict
@@ -114,4 +116,5 @@ class FormatVid:
                 outcome += f"WARNING: {str(e)}\n"
         outcome += "Video metadata stored in config file.\n"
         configs.write_json(configs_fp)
+        return outcome
         return outcome

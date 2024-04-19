@@ -24,7 +24,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
-from ba_core.data_models.experiment_configs import ExperimentConfigs
 from ba_core.mixins.behaviour_mixin import BehaviourMixin
 from ba_core.mixins.df_io_mixin import DFIOMixin
 from ba_core.mixins.io_mixin import IOMixin
@@ -37,6 +36,8 @@ from ba_core.utils.constants import (
     PLOT_STYLE,
     SINGLE_COL,
 )
+
+from ba_pipeline.pipeline.experiment_configs import ExperimentConfigs
 
 #####################################################################
 #               INITIALISE MPL PLOTTING PARAMETERS

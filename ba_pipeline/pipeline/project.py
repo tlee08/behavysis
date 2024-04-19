@@ -10,19 +10,13 @@ from typing import Any, Callable
 
 import numpy as np
 import pandas as pd
-from ba_core.data_models.experiment_configs import ExperimentConfigs
 from ba_core.mixins.df_io_mixin import DFIOMixin
 from ba_core.mixins.io_mixin import IOMixin
-from ba_core.utils.constants import (
-    ANALYSIS_DIR,
-    DIAGNOSTICS_DIR,
-    FOLDERS,
-    PROCS,
-    STR_DIV,
-)
+from ba_core.utils.constants import ANALYSIS_DIR, DIAGNOSTICS_DIR, FOLDERS, STR_DIV
 from natsort import natsort_keygen, natsorted
 
 from ba_pipeline.pipeline.experiment import BAExperiment
+from ba_pipeline.pipeline.experiment_configs import ExperimentConfigs
 
 
 class BAProject:
@@ -155,9 +149,9 @@ class BAProject:
             )
         self.root_dir = root_dir
         self.experiments = {}
+        self.nprocs = 4
 
-        # Making batch processing methods dynamically
-        # Batch processing methods are for BAExperiment
+        # Making batch processing methods dynamically for BAExperiment methods
         self.process_scaffold = self.process_scaffold_mp
         method_names_ls = [i for i in dir(BAExperiment) if not re.search(r"^_", i)]
         for method_name in method_names_ls:
@@ -179,7 +173,7 @@ class BAProject:
         setattr(self, method_name, batch_process)
 
     #####################################################################
-    #               GETTER FUNCTIONS
+    #               GETTER METHODS
     #####################################################################
 
     def get_experiment(self, name: str) -> BAExperiment:
@@ -224,31 +218,31 @@ class BAProject:
 
     @staticmethod
     def _process_scaffold_worker(args_tuple: tuple):
-        func, exp, args, kwargs = args_tuple
-        return func(exp, *args, **kwargs)
+        method, exp, args, kwargs = args_tuple
+        return method(exp, *args, **kwargs)
 
     def process_scaffold_mp(
         self,
-        func: Callable,
+        method: Callable,
         *args: Any,
         **kwargs: Any,
     ) -> None:
         """
-        Processes an experiment with the given function and records the diagnostics of the
-        process in a MULTI-PROCESSING way.
+        Processes an experiment with the given `BAExperiment` method and records the diagnostics
+        of the process in a MULTI-PROCESSING way.
 
         Parameters
         ----------
-        func : Callable
-            The experiment method (in BAExperiment) to run.
+        method : Callable
+            The `BAExperiment` method to run.
 
         Notes
         -----
-        Can call any functions from `BAExperiment` instance.
-        Effectively, `func` gets called with:
+        Can call any `BAExperiment` methods instance.
+        Effectively, `method` gets called with:
         ```
         # exp is a BAExperiment instance
-        func(exp, *args, **kwargs)
+        method(exp, *args, **kwargs)
         ```
         """
         # Initialising diagnostics dataframe
@@ -256,11 +250,11 @@ class BAProject:
 
         # TODO: maybe have a try-except-finally block to ensure that the diagnostics file is saved
         # Create a Pool of processes
-        with Pool(processes=PROCS) as p:
-            # Apply func to each experiment in self.get_experiments() in parallel
+        with Pool(processes=self.nprocs) as p:
+            # Apply method to each experiment in self.get_experiments() in parallel
             results = p.map(
                 BAProject._process_scaffold_worker,
-                [(func, exp, args, kwargs) for exp in self.get_experiments()],
+                [(method, exp, args, kwargs) for exp in self.get_experiments()],
             )
 
         # Processing all experiments
@@ -270,30 +264,30 @@ class BAProject:
             # Adding outcomes dict to diagnostics dataframe
             df = pd.concat([df, dd], axis=0).sort_index(key=natsort_keygen())
             # Updating the diagnostics file at each step
-            self.save_diagnostics(func.__name__, df)
+            self.save_diagnostics(method.__name__, df)
 
     def process_scaffold_sp(
         self,
-        func: Callable,
+        method: Callable,
         *args: Any,
         **kwargs: Any,
     ) -> None:
         """
-        Processes an experiment with the given function and records the diagnostics of the
-        process in a SINGLE-PROCESSING way.
+        Processes an experiment with the given `BAExperiment` method and records the diagnostics
+        of the process in a SINGLE-PROCESSING way.
 
         Parameters
         ----------
-        func : Callable
-            The experiment method (in BAExperiment) to run.
+        method : Callable
+            The experiment `BAExperiment` method to run.
 
         Notes
         -----
-        Can call any functions from `BAExperiment` instance.
-        Effectively, `func` gets called with:
+        Can call any `BAExperiment` instance method.
+        Effectively, `method` gets called with:
         ```
         # exp is a BAExperiment instance
-        func(exp, *args, **kwargs)
+        method(exp, *args, **kwargs)
         ```
         """
         # Initialising diagnostics dataframe
@@ -301,13 +295,13 @@ class BAProject:
         # Processing all experiments
         for exp in self.get_experiments():
             # Processing and storing process outcomes as dict
-            dd = func(exp, *args, **kwargs)
+            dd = method(exp, *args, **kwargs)
             # Converting outcomes dict to dataframe
             dd = pd.DataFrame(pd.Series(dd)).transpose().set_index("experiment")
             # Adding outcomes dict to diagnostics dataframe
             df = pd.concat([df, dd], axis=0).sort_index(key=natsort_keygen())
             # Updating the diagnostics file at each step
-            self.save_diagnostics(func.__name__, df)
+            self.save_diagnostics(method.__name__, df)
 
     #####################################################################
     #               DIAGNOSTICS DICT METHODS
@@ -500,4 +494,5 @@ class BAProject:
                     df = pd.concat([df], keys=[exp.name], names=["experiment"], axis=0)
                     # Concatenating total_df with df down rows
                     total_df = pd.concat([total_df, df], axis=0)
+            DFIOMixin.write_feather(total_df, out_fp)
             DFIOMixin.write_feather(total_df, out_fp)

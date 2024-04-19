@@ -2,11 +2,11 @@
 _summary_
 """
 
-from ba_core.mixins.pydantic_model_mixin import PydanticModelMixin
-from pydantic import BaseModel, ConfigDict
+from ba_core.data_models.pydantic_base_model import PydanticBaseModel
+from pydantic import ConfigDict
 
 
-class SimbaClassifierConfigs(PydanticModelMixin):
+class SimbaClassifierConfigs(PydanticBaseModel):
     """_summary_"""
 
     model_config = ConfigDict(extra="forbid")

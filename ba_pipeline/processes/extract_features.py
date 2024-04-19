@@ -6,12 +6,13 @@ import os
 import shutil
 
 import pandas as pd
-from ba_core.data_models.experiment_configs import ExperimentConfigs
 from ba_core.mixins.df_io_mixin import DFIOMixin
 from ba_core.mixins.diagnostics_mixin import DiagnosticsMixin
 from ba_core.mixins.io_mixin import IOMixin
 from ba_core.mixins.keypoints_mixin import KeypointsMixin
 from ba_core.mixins.subprocess_mixin import SubprocessMixin
+
+from ba_pipeline.pipeline.experiment_configs import ExperimentConfigs
 
 # Order of bodyparts is from
 # - https://github.com/sgoldenlab/simba/blob/master/docs/Multi_animal_pose.md
@@ -161,8 +162,9 @@ def run_extract_features_script(
         For each DLC dataframe file, there should be a config file with the same name.
     """
     cmd = [
-        "conda",
+        os.environ["CONDA_EXE"],
         "run",
+        "--no-capture-output",
         "-n",
         "simba_wrapper_env",
         "python",
@@ -172,7 +174,8 @@ def run_extract_features_script(
         dlc_dir,
         configs_dir,
     ]
-    SubprocessMixin.run_subprocess_fstream(cmd)
+    # SubprocessMixin.run_subprocess_fstream(cmd)
+    SubprocessMixin.run_subprocess_console(cmd)
     return "Ran SimBA feature extraction script.\n"
 
 
@@ -197,4 +200,5 @@ def remove_bpts_cols(
     bpts_n = 8
     coords_n = 3
     n = indivs_n * bpts_n * coords_n
+    return df.iloc[:, n:]
     return df.iloc[:, n:]
