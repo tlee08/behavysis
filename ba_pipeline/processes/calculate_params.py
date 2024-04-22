@@ -54,6 +54,7 @@ class CalculateParams:
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
         configs_filt = configs.user.calculate_params.start_frame
+        bpts = configs_filt.bodyparts
         window_sec = configs_filt.window_sec
         pcutoff = configs_filt.pcutoff
         fps = configs.auto.formatted_vid.fps
@@ -61,8 +62,6 @@ class CalculateParams:
         window_frames = int(np.round(fps * window_sec, 0))  # for rounding
         # Loading dataframe
         dlc_df = DFIOMixin.read_feather(dlc_fp)
-        # Getting indivs and bpts list
-        _, bpts = KeypointsMixin.get_headings(dlc_df)
         # Calculating likelihood of subject existing.
         idx = pd.IndexSlice
         df_lhoods = pd.DataFrame(index=dlc_df.index)

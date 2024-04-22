@@ -11,7 +11,17 @@
     "calculate_params": {
       "start_frame": {
         "window_sec": 3,
-        "pcutoff": 0.9
+        "pcutoff": 0.9,
+        "bodyparts": [
+          "LeftEar",
+          "RightEar",
+          "Nose",
+          "BodyCentre",
+          "LeftFlankMid",
+          "RightFlankMid",
+          "TailBase1",
+          "TailTip4"
+        ]
       },
       "stop_frame": {
         "dur_sec": 600
