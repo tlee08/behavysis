@@ -55,7 +55,6 @@ class FormatVid:
             Description of the function's outcome.
         """
         outcome = ""
-
         # If overwrite is False, checking if we should skip processing
         if not overwrite and os.path.exists(formatted_vid_fp):
             return DiagnosticsMixin.warning_msg()
