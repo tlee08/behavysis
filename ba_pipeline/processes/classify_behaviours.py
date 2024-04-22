@@ -11,8 +11,8 @@ from ba_core.mixins.df_io_mixin import DFIOMixin
 from ba_core.mixins.diagnostics_mixin import DiagnosticsMixin
 from ba_core.utils.constants import BEHAV_COLUMN_NAMES, BEHAV_PRED_COL
 
+from ba_pipeline.behav_classifier import BehavClassifier
 from ba_pipeline.pipeline.experiment_configs import ExperimentConfigs
-from ba_pipeline.simba_classifier.simba_classifier import SimbaClassifier
 
 
 class ClassifyBehaviours:
@@ -26,7 +26,7 @@ class ClassifyBehaviours:
         overwrite: bool,
     ) -> str:
         """
-        Given model config files in the SimbaClassifier format, generates beahviour predidctions
+        Given model config files in the BehavClassifier format, generates beahviour predidctions
         on the given extracted features dataframe.
 
         Parameters
@@ -73,7 +73,7 @@ class ClassifyBehaviours:
         for i, model in enumerate(models_ls):
             # Getting classifier predictions and filling in small non-behav bouts
             behav_preds_ls[i] = merge_bouts(
-                SimbaClassifier(model).model_predict(features_df), min_window_frames
+                BehavClassifier(model).model_predict(features_df), min_window_frames
             )
             # Logging outcome
             outcome += f"Completed {model} classification,\n"

@@ -1,8 +1,8 @@
 import os
 
 from ba_pipeline import BAExperiment
+from ba_pipeline.behav_classifier import BehavClassifier
 from ba_pipeline.processes import CalculateParams, FormatVid, Preprocess
-from ba_pipeline.simba_classifier import SimbaClassifier
 
 if __name__ == "__main__":
     overwrite = True
@@ -71,26 +71,26 @@ if __name__ == "__main__":
     #         * Annotated video with predicted vs actual behavs.
 
     # Making root classifier folder (stores all classifiers and data)
-    root_clf = SimbaClassifier.from_baproject(proj)
-    # Combining dfs into x_all and y_all
-    root_clf.combine_dfs(
-        os.path.join(proj.dir, "5_features_extracted"),
-        os.path.join(proj.dir, "7_scored_behavs"),
-    )
-    # Making train/test split
-    root_clf.make_train_test_split()
-    # Making individual behav classifiers
-    behav_ls = ["fight", "marked_fight", "unmarked_fight"]
-    behav_clf_ls = [root_clf.make_behav_model_subdir(behav) for behav in behav_ls]
-    for behav_clf in behav_clf_ls:
-        # Undersampling majority class (helps a LOT with classifying positive behaviour)
-        behav_clf.make_random_undersample()
-        # Initialising and preparing classifiers
-        behav_clf.init_behav_classifier()
-        # Training classifiers
-        behav_clf.train_behav_classifier()
-        # Evaluating classifiers
-        behav_clf.model_eval()
+    # root_clf = BehavClassifier.from_baproject(proj)
+    # # Combining dfs into x_all and y_all
+    # root_clf.combine_dfs(
+    #     os.path.join(proj.dir, "5_features_extracted"),
+    #     os.path.join(proj.dir, "7_scored_behavs"),
+    # )
+    # # Making train/test split
+    # root_clf.make_train_test_split()
+    # # Making individual behav classifiers
+    # behav_ls = ["fight", "marked_fight", "unmarked_fight"]
+    # behav_clf_ls = [root_clf.make_behav_model_subdir(behav) for behav in behav_ls]
+    # for behav_clf in behav_clf_ls:
+    #     # Undersampling majority class (helps a LOT with classifying positive behaviour)
+    #     behav_clf.make_random_undersample()
+    #     # Initialising and preparing classifiers
+    #     behav_clf.init_behav_classifier()
+    #     # Training classifiers
+    #     behav_clf.train_behav_classifier()
+    #     # Evaluating classifiers
+    #     behav_clf.model_eval()
 
     # Evaluate in ba_viewer
 

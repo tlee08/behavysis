@@ -12,20 +12,11 @@ import numpy as np
 import pandas as pd
 from ba_core.mixins.df_io_mixin import DFIOMixin
 from ba_core.mixins.diagnostics_mixin import DiagnosticsMixin
-from ba_core.utils.constants import (
-    ANALYSIS_DIR,
-    EVALUATE_DIR,
-    FOLDERS,
-    STR_DIV,
-    TEMP_DIR,
-)
+from ba_core.utils.constants import (ANALYSIS_DIR, EVALUATE_DIR, FOLDERS,
+                                     STR_DIV, TEMP_DIR)
 
-from ba_pipeline.processes import (
-    ClassifyBehaviours,
-    ExtractFeatures,
-    RunDLC,
-    UpdateConfigs,
-)
+from ba_pipeline.processes import (ClassifyBehaviours, ExtractFeatures, RunDLC,
+                                   UpdateConfigs)
 
 
 class BAExperiment:
@@ -460,7 +451,7 @@ class BAExperiment:
 
     def classify_behaviours(self, overwrite: bool) -> dict:
         """
-        Given model config files in the SimbaClassifier format, generates beahviour predidctions
+        Given model config files in the BehavClassifier format, generates beahviour predidctions
         on the given extracted features dataframe.
 
         Parameters
