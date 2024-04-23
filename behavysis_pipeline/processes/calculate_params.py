@@ -66,7 +66,7 @@ class CalculateParams:
         idx = pd.IndexSlice
         df_lhoods = pd.DataFrame(index=dlc_df.index)
         df_lhoods["current"] = dlc_df.loc[:, idx[:, :, bpts, "likelihood"]].apply(
-            np.nanmedian, axis=1
+            np.nanmean, axis=1
         )
         # Calculating likelihood of subject existing over time window
         df_lhoods["rolling"] = (
