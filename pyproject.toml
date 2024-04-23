@@ -12,10 +12,10 @@ python = "^3.9"
 seaborn = "^0.13.2"
 scikit-learn = "^1.4.2"
 imbalanced-learn = "^0.12.2"
-# behavysis_core = "^0.1.0"
-behavysis_core = { path = "../behavysis_core", develop = true }
+behavysis_core = "^0.1.0"
 
 [tool.poetry.group.dev.dependencies]
+behavysis_core = { path = "../behavysis_core", develop = true }
 black = "^24.4.0"
 pytest = "^8.1.1"
 mkdocs-material = "^9.5.18"

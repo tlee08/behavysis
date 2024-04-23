@@ -11,7 +11,17 @@
     "calculate_params": {
       "start_frame": {
         "window_sec": 3,
-        "pcutoff": 0.9
+        "pcutoff": 0.9,
+        "bodyparts": [
+          "LeftEar",
+          "RightEar",
+          "Nose",
+          "BodyCentre",
+          "LeftFlankMid",
+          "RightFlankMid",
+          "TailBase1",
+          "TailTip4"
+        ]
       },
       "stop_frame": {
         "dur_sec": 600
@@ -103,6 +113,14 @@
         "window_sec": 2,
         "thresh_mm": 5,
         "smoothing_sec": 0.2
+      },
+      "in_roi": {
+        "thresh_mm": 5,
+        "roi_top_left": "SCTopLeft",
+        "roi_top_right": "SCTopRight",
+        "roi_bottom_left": "SCBottomLeft",
+        "roi_bottom_right": "SCBottomRight",
+        "bodyparts": ["Nose"]
       },
       "bins_sec": [30, 60, 120, 300],
       "custom_bins_sec": [60, 120, 300, 600]

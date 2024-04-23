@@ -5,8 +5,7 @@ import pytest
 from behavysis_pipeline import BehavysisProject
 from behavysis_pipeline.processes import *
 
-# from behavysis_core.utils.constants import *
-
+import shutil
 
 @pytest.fixture(scope="session", autouse=True)
 def proj_dir():
@@ -16,28 +15,25 @@ def proj_dir():
 @pytest.fixture(scope="session", autouse=True)
 def cleanup(request, proj_dir):
     # Setup: code here will run before your tests
+    
+    yield # this is where the testing happens
 
-    def remove_files():
-        # Teardown: code here will run after your tests
-        # For example, to remove a directory:
-        import shutil
-
-        for i in [
-            "0_configs",
-            "2_formatted_vid",
-            "3_dlc",
-            "4_preprocessed",
-            "5_features_extracted",
-            "6_predicted_behavs",
-            "7_scored_behavs",
-            "analysis",
-            "diagnostics",
-            "evaluate",
-        ]:
-            if os.path.exists(os.path.join(proj_dir, i)):
-                shutil.rmtree(os.path.join(proj_dir, i))
-
-    request.addfinalizer(remove_files)
+    # Teardown
+    for i in [
+        "0_configs",
+        "2_formatted_vid",
+        "3_dlc",
+        "4_preprocessed",
+        "5_features_extracted",
+        "6_predicted_behavs",
+        "7_scored_behavs",
+        "analysis",
+        "diagnostics",
+        "evaluate",
+        ".temp",
+    ]:
+        if os.path.exists(os.path.join(proj_dir, i)):
+            shutil.rmtree(os.path.join(proj_dir, i))
 
 
 def test_BehavysisProject(proj_dir):

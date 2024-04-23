@@ -419,6 +419,89 @@ class Analyse:
             DFIOMixin.read_feather(fbf_fp), out_dir, name, bins_ls, custom_bins_ls, True
         )
         return outcome
+    
+    @staticmethod
+    def in_roi(
+        dlc_fp: str,
+        analysis_dir: str,
+        configs_fp: str,
+    ) -> str:
+        """
+        Determines the frames in which the subject's nose is inside the cage.
+
+        Takes DLC data as input and returns the following analysis output:
+
+        - a feather file with the following columns for each video frame (row).
+        - a feather file with the summary statistics (sum, mean, std, min, median, Q1, median,
+        Q3, max) for DeltaMMperSec, and DeltaMMperSecSmoothed
+        - Each row `is_frozen`, and bout number.
+        """
+        outcome = ""
+        name = IOMixin.get_name(dlc_fp)
+        out_dir = os.path.join(analysis_dir, Analyse.in_roi.__name__)
+        # Calculating the deltas (changes in body position) between each frame for the subject
+        configs = ExperimentConfigs.read_json(configs_fp)
+        fps, _, _, px_per_mm, bins_ls, custom_bins_ls = get_analysis_configs(configs)
+        configs_filt = configs.user.analyse.in_roi
+        thresh_mm = configs_filt.thresh_mm
+        tl_label = configs_filt.roi_top_left
+        tr_label = configs_filt.roi_top_right
+        bl_label = configs_filt.roi_bottom_left
+        br_label = configs_filt.roi_bottom_right
+        bpts = configs_filt.bodyparts
+        # Calculating more parameters
+        thresh_px = thresh_mm / px_per_mm
+        # Loading in dataframe
+        dlc_df = KeypointsMixin.clean_headings(DFIOMixin.read_feather(dlc_fp))
+        # Getting indivs and bpts list
+        indivs, bpts = KeypointsMixin.get_headings(dlc_df)
+        # Checking body-centre bodypart exists
+        KeypointsMixin.check_bpts_exist(dlc_df, ["Nose"])
+
+        # Getting average corner coordinates. Assumes arena does not move.
+        tl = dlc_df[(SINGLE_COL, tl_label)].mean()
+        tr = dlc_df[(SINGLE_COL, tr_label)].mean()
+        bl = dlc_df[(SINGLE_COL, bl_label)].mean()
+        br = dlc_df[(SINGLE_COL, br_label)].mean()
+        # Making boundary functions
+        top = hline_factory(tl, tr)
+        bottom = hline_factory(bl, br)
+        left = vline_factory(tl, bl)
+        right = vline_factory(tr, br)
+
+        analysis_df = init_fbf_analysis_df(dlc_df.index, fps)
+        dlc_df.index = analysis_df.index
+        idx = pd.IndexSlice
+        for indiv in indivs:
+            indiv_x = dlc_df.loc[:, idx[indiv, bpts, "x"]].mean(axis=1)
+            indiv_y = dlc_df.loc[:, idx[indiv, bpts, "y"]].mean(axis=1)
+            # Determining if the indiv is inside of the box region (with the thresh_px buffer)
+            analysis_df[(indiv, "in_roi")] = (
+                (indiv_y >= top(indiv_x) - thresh_px)
+                & (indiv_y <= bottom(indiv_x) + thresh_px)
+                & (indiv_x >= left(indiv_y) - thresh_px)
+                & (indiv_x <= right(indiv_y) + thresh_px)
+            ).astype(np.int8)
+        # Saving analysis_df
+        fbf_fp = os.path.join(out_dir, "fbf", f"{name}.feather")
+        DFIOMixin.write_feather(analysis_df, fbf_fp)
+
+        # Generating scatterplot
+        # Adding bodypoint x and y coords
+        for indiv in indivs:
+            analysis_df[(indiv, "x")] = dlc_df.loc[:, idx[indiv, bpts, "x"]].mean(axis=1)
+            analysis_df[(indiv, "y")] = dlc_df.loc[:, idx[indiv, bpts, "y"]].mean(axis=1)
+        # making corners_df
+        corners_df = pd.DataFrame([tl, tr, bl, br])
+        plot_fp = os.path.join(out_dir, "scatter_plot", f"{name}.png")
+        make_location_scatterplot(analysis_df, corners_df, plot_fp, "in_roi")
+
+        # Summarising and binning analysis_df
+        make_summary_binned(
+            DFIOMixin.read_feather(fbf_fp), out_dir, name, bins_ls, custom_bins_ls, True
+        )
+        return outcome
+        
 
 
 def get_analysis_configs(
@@ -457,8 +540,7 @@ def get_analysis_configs(
 def init_fbf_analysis_df(frame_vect: pd.Series | pd.Index, fps: int) -> pd.DataFrame:
     """
     Returning a frame-by-frame analysis_df with the frame number (according to original video)
-    and timestamps as the MultiIndex index, according to when the "experiment" begins
-    (i.e., the first frame in the frame_vect).
+    and timestamps as the MultiIndex index, relative to the first element of frame_vect.
     Note that that the frame number can thus begin on a non-zero number.
 
     Parameters

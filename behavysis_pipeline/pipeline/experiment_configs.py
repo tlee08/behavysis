@@ -95,11 +95,13 @@ class ConfigsAnalyse(BaseModel):
     bins_sec: list[int] = [30, 60, 120]
     custom_bins_sec: list[int] = [60, 120, 300, 600]
 
-    thigmotaxis: ConfigsUnitProcess = ConfigsUnitProcess()
-    center_crossing: ConfigsUnitProcess = ConfigsUnitProcess()
-    speed: ConfigsUnitProcess = ConfigsUnitProcess()
-    social_distance: ConfigsUnitProcess = ConfigsUnitProcess()
-    freezing: ConfigsUnitProcess = ConfigsUnitProcess()
+    thigmotaxis: Optional[ConfigsUnitProcess] = None
+    center_crossing: Optional[ConfigsUnitProcess] = None
+    speed: Optional[ConfigsUnitProcess] = None
+    social_distance: Optional[ConfigsUnitProcess] = None
+    freezing: Optional[ConfigsUnitProcess] = None
+    in_roi: Optional[ConfigsUnitProcess] = None
+    
 
 
 class ConfigsEvalKeypointsPlot(BaseModel):
