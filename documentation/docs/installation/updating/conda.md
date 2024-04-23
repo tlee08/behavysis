@@ -1,14 +1,14 @@
-# Updating ba_pipeline
+# Updating behavysis_pipeline
 
 **Step 1:**
-In the terminal, navigate to the `ba_pipeline` folder:
+In the terminal, navigate to the `behavysis_pipeline` folder:
 
 ```zsh
-cd <path/to/ba_pipeline>
+cd <path/to/behavysis_pipeline>
 ```
 
 **Step 2:**
-Run the following command to update `ba_pipeline`:
+Run the following command to update `behavysis_pipeline`:
 
 ```zsh
 conda env update -f conda_env.yaml --prune

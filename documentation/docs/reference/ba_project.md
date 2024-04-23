@@ -1,3 +1,3 @@
 # BAProject
 
-<!-- ::: ba_pipeline.BAProject -->
+<!-- ::: behavysis_pipeline.BAProject -->

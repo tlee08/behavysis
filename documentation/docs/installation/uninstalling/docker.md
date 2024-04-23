@@ -1,3 +1,3 @@
-## Uninstalling ba_pipeline and Docker
+## Uninstalling behavysis_pipeline and Docker
 
 TODO

@@ -8,9 +8,9 @@ from typing import Optional
 import matplotlib.pyplot as plt
 from pydantic import BaseModel, ConfigDict, FilePath, field_validator
 
-from ba_core.data_models.pydantic_base_model import PydanticBaseModel
-from ba_core.data_models.vid_metadata import VidMetadata
-from ba_core.utils.constants import DLC_COLUMN_NAMES
+from behavysis_core.data_models.pydantic_base_model import PydanticBaseModel
+from behavysis_core.data_models.vid_metadata import VidMetadata
+from behavysis_core.utils.constants import DLC_COLUMN_NAMES
 
 
 class ConfigsUnitProcess(BaseModel):

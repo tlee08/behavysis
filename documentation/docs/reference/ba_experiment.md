@@ -1,3 +1,3 @@
 # BAExperiment
 
-::: ba_pipeline.BAExperiment
+::: behavysis_pipeline.BAExperiment

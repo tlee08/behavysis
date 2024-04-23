@@ -13,8 +13,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
-from ba_core.mixins.df_io_mixin import DFIOMixin
-from ba_core.utils.constants import (
+from behavysis_core.mixins.df_io_mixin import DFIOMixin
+from behavysis_core.utils.constants import (
     BEHAV_ACTUAL_COL,
     BEHAV_COLUMN_NAMES,
     BEHAV_PRED_COL,
@@ -30,10 +30,10 @@ from sklearn.metrics import (
     precision_recall_fscore_support,
 )
 
-from ba_pipeline.behav_classifier.behav_classifier_configs import BehavClassifierConfigs
+from behavysis_pipeline.behav_classifier.behav_classifier_configs import BehavClassifierConfigs
 
 if TYPE_CHECKING:
-    from ba_pipeline.pipeline.project import BAProject
+    from behavysis_pipeline.pipeline.project import BAProject
 
 
 class BehavClassifier:

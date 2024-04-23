@@ -1,6 +1,6 @@
-# ba_pipeline
+# behavysis_pipeline
 
-[Documentation](https://tlee08.github.io/ba_pipeline/)
+[Documentation](https://tlee08.github.io/behavysis_pipeline/)
 
 ## Installation
 
@@ -8,7 +8,7 @@
 
 ```bash
 conda env create -f conda_env.yaml
-conda activate ba_pipeline_env
+conda activate behavysis_pipeline_env
 pip install poetry
 poetry install
 ```

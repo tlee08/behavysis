@@ -1,8 +1,8 @@
 import os
 
-from ba_pipeline import BAExperiment
-from ba_pipeline.behav_classifier import BehavClassifier
-from ba_pipeline.processes import CalculateParams, FormatVid, Preprocess
+from behavysis_pipeline import BAExperiment
+from behavysis_pipeline.behav_classifier import BehavClassifier
+from behavysis_pipeline.processes import CalculateParams, FormatVid, Preprocess
 
 if __name__ == "__main__":
     overwrite = True

@@ -3,7 +3,7 @@
 ## Loading in all relevant packages
 
 ```python
-from ba_pipeline import *
+from behavysis_pipeline import *
 ```
 
 ## Making the Experiments

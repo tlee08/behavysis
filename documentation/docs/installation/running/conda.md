@@ -1,4 +1,4 @@
-# Running ba_pipeline
+# Running behavysis_pipeline
 
 **Step 1:**
 
@@ -37,7 +37,7 @@ jupyter-lab
 ```
 
 **Step 5:**
-To access the Jupyter-Lab server to interact with the `ba_pipeline` program, open a browser (e.g., Chrome, Safari, FireFox, Brave, Opera) and enter the following URL:
+To access the Jupyter-Lab server to interact with the `behavysis_pipeline` program, open a browser (e.g., Chrome, Safari, FireFox, Brave, Opera) and enter the following URL:
 
 ```zsh
 http://127.0.0.1:8888/lab
@@ -61,4 +61,4 @@ To change the notebook's kernel to "ba_env", select "Kernel" > "Change Kernel...
 </p>
 
 **Step 7:**
-You can now use the `ba_pipeline` program through a Jupyter Notebook. For how to use this, please see the [tutorials](../../tutorials/usage_examples/one_project.md).
+You can now use the `behavysis_pipeline` program through a Jupyter Notebook. For how to use this, please see the [tutorials](../../tutorials/usage_examples/one_project.md).

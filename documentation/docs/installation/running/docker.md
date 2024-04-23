@@ -1,4 +1,4 @@
-# Running ba_pipeline with Docker
+# Running behavysis_pipeline with Docker
 
 **Step 1:**
 Open the Docker Desktop application. This can be found in the applications folder of the computer once Docker has been downloaded.
@@ -36,10 +36,10 @@ An example of using this command to navigate to the "example" folder that was fo
 </p>
 
 **Step 5:**
-To run the `ba_pipeline` program, enter the following command into the terminal:
+To run the `behavysis_pipeline` program, enter the following command into the terminal:
 
 ```zsh
-docker run --name ba_pipeline_container -it --rm -p 8888:8888 -v "${PWD}":/app ba_pipeline:core
+docker run --name behavysis_pipeline_container -it --rm -p 8888:8888 -v "${PWD}":/app behavysis_pipeline:core
 ```
 
 The terminal should output something similar to the figure below.
@@ -49,7 +49,7 @@ The terminal should output something similar to the figure below.
 </p>
 
 **Step 6:**
-To access the Jupyter-Lab server to interact with the `ba_pipeline` program, open a browser (e.g., Chrome, Safari, FireFox, Brave, Opera) and enter the following URL:
+To access the Jupyter-Lab server to interact with the `behavysis_pipeline` program, open a browser (e.g., Chrome, Safari, FireFox, Brave, Opera) and enter the following URL:
 
 ```zsh
 http://127.0.0.1:8888/lab
@@ -62,4 +62,4 @@ An example of how the Jupyter Notebook should look like is shown in the figure b
 </p>
 
 **Step 7:**
-You can now use the `ba_pipeline` program through a Jupyter Notebook. For how to use this, please see the [tutorials](../../tutorials/usage_examples/one_project.md).
+You can now use the `behavysis_pipeline` program through a Jupyter Notebook. For how to use this, please see the [tutorials](../../tutorials/usage_examples/one_project.md).

@@ -1,19 +1,19 @@
-# ba_pipeline Processes
+# behavysis_pipeline Processes
 
-:::ba_pipeline.processes
+:::behavysis_pipeline.processes
 
-<!-- :::ba_pipeline.processes.CalculateParams
+<!-- :::behavysis_pipeline.processes.CalculateParams
 
-:::ba_pipeline.processes.ClassifyBehaviours
+:::behavysis_pipeline.processes.ClassifyBehaviours
 
-:::ba_pipeline.processes.Evaluate
+:::behavysis_pipeline.processes.Evaluate
 
-:::ba_pipeline.processes.ExtractFeatures
+:::behavysis_pipeline.processes.ExtractFeatures
 
-:::ba_pipeline.processes.FormatVid
+:::behavysis_pipeline.processes.FormatVid
 
-:::ba_pipeline.processes.Preprocess
+:::behavysis_pipeline.processes.Preprocess
 
-:::ba_pipeline.processes.RunDLC
+:::behavysis_pipeline.processes.RunDLC
 
-:::ba_pipeline.processes.UpdateConfigs -->
+:::behavysis_pipeline.processes.UpdateConfigs -->

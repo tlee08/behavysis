@@ -45,29 +45,29 @@ conda install nb_conda nb_conda_kernels
 ```
 
 **Step 5:**
-Download the `ba_pipeline` source code from [here](https://github.com/tlee08/ba_pipeline)
+Download the `behavysis_pipeline` source code from [here](https://github.com/tlee08/behavysis_pipeline)
 
 **Step 6:**
-In the terminal, navigate to the `ba_pipeline` folder:
+In the terminal, navigate to the `behavysis_pipeline` folder:
 
 ```zsh
-cd <path/to/ba_pipeline>
+cd <path/to/behavysis_pipeline>
 ```
 
 **Step 7:**
-Run the following commands to install `ba_pipeline` to your computer:
+Run the following commands to install `behavysis_pipeline` to your computer:
 
 ```zsh
 conda env create -f conda_env.yaml
 ```
 
-This will create a conda virtual environment named `ba_pipeline_env`, with the `ba_pipeline` program.
+This will create a conda virtual environment named `behavysis_pipeline_env`, with the `behavysis_pipeline` program.
 
 **Step 8:**
-Verify that `ba_pipeline` has been correctly installed by running:
+Verify that `behavysis_pipeline` has been correctly installed by running:
 
 ```zsh
 conda env list
 ```
 
-You should see `ba_pipeline_env` listed in the terminal.
+You should see `behavysis_pipeline_env` listed in the terminal.

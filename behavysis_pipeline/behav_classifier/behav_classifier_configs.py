@@ -2,7 +2,7 @@
 _summary_
 """
 
-from ba_core.data_models.pydantic_base_model import PydanticBaseModel
+from behavysis_core.data_models.pydantic_base_model import PydanticBaseModel
 from pydantic import ConfigDict
 
 

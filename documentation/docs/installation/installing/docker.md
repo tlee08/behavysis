@@ -4,9 +4,9 @@
 
 Follow the instructions from the [Docker website](https://www.docker.com/products/docker-desktop/).
 
-## Installing ba_pipeline
+## Installing behavysis_pipeline
 
-The `ba_pipeline` program will both be stored in, and run by Docker.
+The `behavysis_pipeline` program will both be stored in, and run by Docker.
 To download the program into Docker, follow the instructions below:
 
 **Step 1:**
@@ -25,13 +25,13 @@ Navigate to the following folder in the terminal with the following command. An 
 For Mac/Linux
 
 ```zsh
-cd /Volumes/PRJ-BowenLab/TimLee/releases/ba_pipeline
+cd /Volumes/PRJ-BowenLab/TimLee/releases/behavysis_pipeline
 ```
 
 For Windows
 
 ```zsh
-cd Z:\PRJ-BowenLab\TimLee\releases\ba_pipeline
+cd Z:\PRJ-BowenLab\TimLee\releases\behavysis_pipeline
 ```
 
 <p align="center">
@@ -39,14 +39,14 @@ cd Z:\PRJ-BowenLab\TimLee\releases\ba_pipeline
 </p>
 
 **Step 4:**
-Install the `ba_pipeline` program into the system by running the following terminal command. This may take around 10 minutes.
+Install the `behavysis_pipeline` program into the system by running the following terminal command. This may take around 10 minutes.
 
 ```zsh
-docker load -i ba_pipeline.tar.gz
+docker load -i behavysis_pipeline.tar.gz
 ```
 
 **Step 5:**
-To verify that the program has been correctly installed, you can open the Docker Desktop application and select "Images" on the left hand pane. There should be a row named `ba_pipeline` with the tag, `core`. An image of this is shown below.
+To verify that the program has been correctly installed, you can open the Docker Desktop application and select "Images" on the left hand pane. There should be a row named `behavysis_pipeline` with the tag, `core`. An image of this is shown below.
 
 <p align="center">
     <img src="../../figures/docker_window.png" alt="docker_window" title="docker_window" style="width:70%">

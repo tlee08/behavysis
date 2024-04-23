@@ -2,10 +2,10 @@ import os
 
 import pytest
 
-from ba_pipeline import BAProject
-from ba_pipeline.processes import *
+from behavysis_pipeline import BAProject
+from behavysis_pipeline.processes import *
 
-# from ba_core.utils.constants import *
+# from behavysis_core.utils.constants import *
 
 
 @pytest.fixture(scope="session", autouse=True)
