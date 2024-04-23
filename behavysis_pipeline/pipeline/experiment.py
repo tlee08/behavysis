@@ -227,7 +227,7 @@ class BehavysisExperiment:
 
         Notes
         -----
-        Can call any methods from [`FormatVid`](/reference/behavysis_processes.html#behavysis_pipeline.processes.FormatVid).
+        Can call any methods from `FormatVid`.
         """
         return self._process_scaffold(
             funcs,
@@ -260,7 +260,7 @@ class BehavysisExperiment:
 
         Notes
         -----
-        Can call any methods from [`RunDLC`](/reference/behavysis_processes.html#behavysis_pipeline.processes.RunDLC).
+        Can call any methods from `RunDLC`.
         """
         return self._process_scaffold(
             (RunDLC.ma_dlc_analyse,),
@@ -288,7 +288,7 @@ class BehavysisExperiment:
 
         Notes
         -----
-        Can call any methods from [`CalculateParams`](/reference/behavysis_processes.html#behavysis_pipeline.processes.CalculateParams).
+        Can call any methods from `CalculateParams`.
         """
         return self._process_scaffold(
             funcs,
@@ -318,7 +318,7 @@ class BehavysisExperiment:
 
         Notes
         -----
-        Can call any methods from [`Preprocess`](/reference/behavysis_processes.html#behavysis_pipeline.processes.Preprocess).
+        Can call any methods from `Preprocess`.
         """
         # Exporting 3_dlc df to 4_preprocessed folder
         # If there is an error, then makes the diagnostics dict
@@ -362,7 +362,7 @@ class BehavysisExperiment:
 
         Notes
         -----
-        Can call any methods from [`Analyse`](/reference/behavysis_processes.html#behavysis_pipeline.processes.Analyse).
+        Can call any methods from `Analyse`.
         """
         return self._process_scaffold(
             funcs,
