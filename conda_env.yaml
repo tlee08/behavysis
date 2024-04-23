@@ -11,3 +11,5 @@ dependencies:
   - ipykernel
   - nb_conda
   - ffmpeg
+  - pip:
+      - "."

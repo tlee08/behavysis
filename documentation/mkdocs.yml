@@ -38,9 +38,7 @@ nav:
   - index.md
   - Installing and Running:
       - Installing:
-          - installation/installing/conda_mac.md
-          - installation/installing/conda_windows.md
-          - installation/installing/conda_linux.md
+          - installation/installing/conda.md
         # - installation/installing/docker.md
       - Updating:
           - installation/updating/conda.md
