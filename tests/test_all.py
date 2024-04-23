@@ -2,7 +2,7 @@ import os
 
 import pytest
 
-from behavysis_pipeline import BAProject
+from behavysis_pipeline import BehavysisProject
 from behavysis_pipeline.processes import *
 
 # from behavysis_core.utils.constants import *
@@ -40,19 +40,19 @@ def cleanup(request, proj_dir):
     request.addfinalizer(remove_files)
 
 
-def test_BAProject(proj_dir):
-    proj = BAProject(proj_dir)
-    assert isinstance(proj, BAProject)
+def test_BehavysisProject(proj_dir):
+    proj = BehavysisProject(proj_dir)
+    assert isinstance(proj, BehavysisProject)
 
 
 def test_import_experiments(proj_dir):
-    proj = BAProject(proj_dir)
+    proj = BehavysisProject(proj_dir)
     proj.import_experiments()
     assert len(proj.get_experiments()) > 0
 
 
 def test_update_configs(proj_dir):
-    proj = BAProject(proj_dir)
+    proj = BehavysisProject(proj_dir)
     proj.update_configs(
         default_configs_fp=os.path.join(proj_dir, "default.json"),
         overwrite="user",
@@ -62,7 +62,7 @@ def test_update_configs(proj_dir):
 
 # def test_format_vid():
 #     proj_dir = os.path.join(".")
-#     proj = BAProject(proj_dir)
+#     proj = BehavysisProject(proj_dir)
 #     proj.format_vid(
 #         funcs=(
 #             FormatVid.format_vid,
@@ -75,7 +75,7 @@ def test_update_configs(proj_dir):
 
 # def test_run_dlc():
 #     proj_dir = os.path.join(".")
-#     proj = BAProject(proj_dir)
+#     proj = BehavysisProject(proj_dir)
 #     proj.run_dlc(
 #         gputouse=None,
 #         overwrite=True,
@@ -85,7 +85,7 @@ def test_update_configs(proj_dir):
 
 # def test_calculate_params():
 #     proj_dir = os.path.join(".")
-#     proj = BAProject(proj_dir)
+#     proj = BehavysisProject(proj_dir)
 #     proj.calculate_params(
 #         (
 #             CalculateParams.start_frame,
@@ -98,7 +98,7 @@ def test_update_configs(proj_dir):
 
 # def test_preprocess():
 #     proj_dir = os.path.join(".")
-#     proj = BAProject(proj_dir)
+#     proj = BehavysisProject(proj_dir)
 #     proj.preprocess(
 #         (
 #             Preprocess.start_stop_trim,

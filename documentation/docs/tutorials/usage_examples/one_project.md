@@ -12,11 +12,11 @@ The directory path of the project must be specified and must contain the experim
 
 For more information on how to structure a project directory, please see [setup](../setup.md).
 
-For more information on how a `BAExperiment` works, please see [BAProject](../../reference/BAProject.md).
+For more information on how a `BehavysisExperiment` works, please see [BehavysisProject](../../reference/BehavysisProject.md).
 
 ```python
 proj_dir = "./project"
-proj = BAProject(proj_dir)
+proj = BehavysisProject(proj_dir)
 
 proj.importExperiments()
 ```

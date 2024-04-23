@@ -19,7 +19,7 @@ from behavysis_pipeline.processes import (ClassifyBehaviours, ExtractFeatures, R
                                    UpdateConfigs)
 
 
-class BAExperiment:
+class BehavysisExperiment:
     """
     Behavioral Analysis Pipeline class for a single experiment.
 
@@ -46,7 +46,7 @@ class BAExperiment:
 
     def __init__(self, name: str, root_dir: str) -> None:
         """
-        Make a BAExperiment instance.
+        Make a BehavysisExperiment instance.
         """
         # Assertion: root_dir mus† exist
         if not os.path.isdir(root_dir):
@@ -227,7 +227,7 @@ class BAExperiment:
 
         Notes
         -----
-        Can call any functions from inside `FormatVid`
+        Can call any methods from [`FormatVid`](/reference/behavysis_processes.html#behavysis_pipeline.processes.FormatVid).
         """
         return self._process_scaffold(
             funcs,
@@ -260,7 +260,7 @@ class BAExperiment:
 
         Notes
         -----
-        Can call any functions from inside `RunDLC`
+        Can call any methods from [`RunDLC`](/reference/behavysis_processes.html#behavysis_pipeline.processes.RunDLC).
         """
         return self._process_scaffold(
             (RunDLC.ma_dlc_analyse,),
@@ -288,7 +288,7 @@ class BAExperiment:
 
         Notes
         -----
-        Can call any functions from inside `CalculateParams`
+        Can call any methods from [`CalculateParams`](/reference/behavysis_processes.html#behavysis_pipeline.processes.CalculateParams).
         """
         return self._process_scaffold(
             funcs,
@@ -318,7 +318,7 @@ class BAExperiment:
 
         Notes
         -----
-        Can call any functions from inside `Preprocess`
+        Can call any methods from [`Preprocess`](/reference/behavysis_processes.html#behavysis_pipeline.processes.Preprocess).
         """
         # Exporting 3_dlc df to 4_preprocessed folder
         # If there is an error, then makes the diagnostics dict
@@ -362,7 +362,7 @@ class BAExperiment:
 
         Notes
         -----
-        Can call any functions from inside `Analyse`
+        Can call any methods from [`Analyse`](/reference/behavysis_processes.html#behavysis_pipeline.processes.Analyse).
         """
         return self._process_scaffold(
             funcs,

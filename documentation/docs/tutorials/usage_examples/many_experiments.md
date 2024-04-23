@@ -14,7 +14,7 @@ The process of analysing multiple experiments is just analysing each experiment 
 
 For more information on how to structure a project directory, please see [setup](../setup.md).
 
-For more information on how a `BAExperiment` works, please see [BAExperiment](../../reference/BAExperiment.md).
+For more information on how a `BehavysisExperiment` works, please see [BehavysisExperiment](../../reference/BehavysisExperiment.md).
 
 ```python
 proj_dir = "./project"
@@ -22,7 +22,7 @@ experiment_names = exp_name = ["experiment1", "experiment2", "experiment3"]
 experiments = list()
 
 for name in experiment_names:
-    exp = BAExperiment(name, proj_dir)
+    exp = BehavysisExperiment(name, proj_dir)
     experiments.append(exp)
 ```
 

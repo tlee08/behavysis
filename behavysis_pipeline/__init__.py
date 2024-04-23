@@ -21,4 +21,4 @@ warnings.filterwarnings("ignore")
 #         IMPORTING MODULES (INCL. RELATIVE AND 3RD PARTY)
 #####################################################################
 
-from behavysis_pipeline.pipeline import BAExperiment, BAProject
+from behavysis_pipeline.pipeline import BehavysisExperiment, BehavysisProject

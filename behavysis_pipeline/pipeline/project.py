@@ -15,11 +15,11 @@ from behavysis_core.mixins.io_mixin import IOMixin
 from behavysis_core.utils.constants import ANALYSIS_DIR, DIAGNOSTICS_DIR, FOLDERS, STR_DIV
 from natsort import natsort_keygen, natsorted
 
-from behavysis_pipeline.pipeline.experiment import BAExperiment
+from behavysis_pipeline.pipeline.experiment import BehavysisExperiment
 from behavysis_pipeline.pipeline.experiment_configs import ExperimentConfigs
 
 
-class BAProject:
+class BehavysisProject:
     """
     A project is used to process and analyse many experiments at the same time.
 
@@ -138,7 +138,7 @@ class BAProject:
 
     def __init__(self, root_dir: str) -> None:
         """
-        Make a BAProject instance.
+        Make a BehavysisProject instance.
         """
         # Assertion: project directory must exist
         if not os.path.isdir(root_dir):
@@ -151,14 +151,14 @@ class BAProject:
         self.experiments = {}
         self.nprocs = 4
 
-        # Making batch processing methods dynamically for BAExperiment methods
+        # Making batch processing methods dynamically for BehavysisExperiment methods
         self.process_scaffold = self.process_scaffold_mp
-        method_names_ls = [i for i in dir(BAExperiment) if not re.search(r"^_", i)]
+        method_names_ls = [i for i in dir(BehavysisExperiment) if not re.search(r"^_", i)]
         for method_name in method_names_ls:
             self._batch_process_factory(method_name)
 
     def _batch_process_factory(self, method_name: str):
-        method = getattr(BAExperiment, method_name)
+        method = getattr(BehavysisExperiment, method_name)
 
         @functools.wraps(method)
         def batch_process(*args, **kwargs):
@@ -176,7 +176,7 @@ class BAProject:
     #               GETTER METHODS
     #####################################################################
 
-    def get_experiment(self, name: str) -> BAExperiment:
+    def get_experiment(self, name: str) -> BehavysisExperiment:
         """
         Gets the experiment with the given name
 
@@ -187,7 +187,7 @@ class BAProject:
 
         Returns
         -------
-        BAExperiment
+        BehavysisExperiment
             The experiment.
 
         Raises
@@ -201,14 +201,14 @@ class BAProject:
             f'Experiment with the name "{name}" does not exist in the project.'
         )
 
-    def get_experiments(self) -> list[BAExperiment]:
+    def get_experiments(self) -> list[BehavysisExperiment]:
         """
-        Gets the ordered (natsorted) list of Experiment instances in the BAProject.
+        Gets the ordered (natsorted) list of Experiment instances in the BehavysisProject.
 
         Returns
         -------
-        list[BAExperiment]
-            The list of all BAExperiment instances stored in the BAProject instance.
+        list[BehavysisExperiment]
+            The list of all BehavysisExperiment instances stored in the BehavysisProject instance.
         """
         return [self.experiments[i] for i in natsorted(self.experiments)]
 
@@ -228,20 +228,20 @@ class BAProject:
         **kwargs: Any,
     ) -> None:
         """
-        Processes an experiment with the given `BAExperiment` method and records the diagnostics
+        Processes an experiment with the given `BehavysisExperiment` method and records the diagnostics
         of the process in a MULTI-PROCESSING way.
 
         Parameters
         ----------
         method : Callable
-            The `BAExperiment` method to run.
+            The `BehavysisExperiment` method to run.
 
         Notes
         -----
-        Can call any `BAExperiment` methods instance.
+        Can call any `BehavysisExperiment` methods instance.
         Effectively, `method` gets called with:
         ```
-        # exp is a BAExperiment instance
+        # exp is a BehavysisExperiment instance
         method(exp, *args, **kwargs)
         ```
         """
@@ -253,7 +253,7 @@ class BAProject:
         with Pool(processes=self.nprocs) as p:
             # Apply method to each experiment in self.get_experiments() in parallel
             results = p.map(
-                BAProject._process_scaffold_worker,
+                BehavysisProject._process_scaffold_worker,
                 [(method, exp, args, kwargs) for exp in self.get_experiments()],
             )
 
@@ -273,20 +273,20 @@ class BAProject:
         **kwargs: Any,
     ) -> None:
         """
-        Processes an experiment with the given `BAExperiment` method and records the diagnostics
+        Processes an experiment with the given `BehavysisExperiment` method and records the diagnostics
         of the process in a SINGLE-PROCESSING way.
 
         Parameters
         ----------
         method : Callable
-            The experiment `BAExperiment` method to run.
+            The experiment `BehavysisExperiment` method to run.
 
         Notes
         -----
-        Can call any `BAExperiment` instance method.
+        Can call any `BehavysisExperiment` instance method.
         Effectively, `method` gets called with:
         ```
-        # exp is a BAExperiment instance
+        # exp is a BehavysisExperiment instance
         method(exp, *args, **kwargs)
         ```
         """
@@ -364,7 +364,7 @@ class BAProject:
             True if imported, False if not.
         """
         if not name in self.experiments:
-            self.experiments[name] = BAExperiment(name, self.root_dir)
+            self.experiments[name] = BehavysisExperiment(name, self.root_dir)
             return True
         return False
 
@@ -372,7 +372,7 @@ class BAProject:
         """
         Add all experiments in the project folder to the experiments dict.
         The key of each experiment in the .experiments dict is "name".
-        Refer to BAProject.addExperiment() for details about how each experiment is added.
+        Refer to BehavysisProject.addExperiment() for details about how each experiment is added.
         """
         print(f"Searching project folder: {self.root_dir}\n")
         # Adding all experiments within given project dir

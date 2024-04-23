@@ -11,7 +11,7 @@ if __name__ == "__main__":
     overwrite = True
 
     proj_dir = os.path.join(".")
-    proj = BAProject(proj_dir)
+    proj = BehavysisProject(proj_dir)
     proj.import_experiments()
     # exp = proj.get_experiments()[1]
 

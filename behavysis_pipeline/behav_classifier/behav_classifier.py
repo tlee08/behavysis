@@ -33,7 +33,7 @@ from sklearn.metrics import (
 from behavysis_pipeline.behav_classifier.behav_classifier_configs import BehavClassifierConfigs
 
 if TYPE_CHECKING:
-    from behavysis_pipeline.pipeline.project import BAProject
+    from behavysis_pipeline.pipeline.project import BehavysisProject
 
 
 class BehavClassifier:
@@ -69,14 +69,14 @@ class BehavClassifier:
         configs.write_json(self.configs_fp)
 
     @classmethod
-    def from_baproject(cls, proj: BAProject) -> BehavClassifier:
+    def from_BehavysisProject(cls, proj: BehavysisProject) -> BehavClassifier:
         """
-        Loading classifier from given BAProject instance.
+        Loading classifier from given BehavysisProject instance.
 
         Parameters
         ----------
-        proj : BAProject
-            The BAProject instance.
+        proj : BehavysisProject
+            The BehavysisProject instance.
 
         Returns
         -------

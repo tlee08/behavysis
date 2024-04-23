@@ -12,12 +12,12 @@ The directory path of the project must be specified and must contain the experim
 
 For more information on how to structure a project directory, please see [setup](../setup.md).
 
-For more information on how a `BAExperiment` works, please see [BAExperiment](../../reference/BAExperiment.md).
+For more information on how a `BehavysisExperiment` works, please see [BehavysisExperiment](../../reference/BehavysisExperiment.md).
 
 ```python
 proj_dir = "./project"
 exp_name = "experiment1"
-exp = BAExperiment(exp_name, proj_dir)
+exp = BehavysisExperiment(exp_name, proj_dir)
 ```
 
 ### ALTERNATIVE: Selecting an experiment from a Project
@@ -27,7 +27,7 @@ The name of an experiment is given by the name of its corresponding files (e.g.,
 
 ```python
 # Making a project and importing experiments into the project
-proj = BAProject(proj_dir)
+proj = BehavysisProject(proj_dir)
 proj.importExperiments()
 
 # Showing the names of all experiments that have been imported to the project

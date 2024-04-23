@@ -66,6 +66,6 @@ nav:
       - diagnostics_messages/diagnostics_messages.md
   - Program Reference:
       - reference/behavysis_pipeline.md
-      - reference/ba_project.md
-      - reference/ba_experiment.md
-      - reference/ba_processes.md
+      - reference/behavysis_project.md
+      - reference/behavysis_experiment.md
+      - reference/behavysis_processes.md
