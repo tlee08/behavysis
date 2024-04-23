@@ -92,7 +92,7 @@ if __name__ == "__main__":
     #     # Evaluating classifiers
     #     behav_clf.model_eval()
 
-    # Evaluate in ba_viewer
+    # Evaluate in behavysis_viewer
 
     # import shutil
     # import os

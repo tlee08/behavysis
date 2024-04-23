@@ -496,7 +496,7 @@ class BehavysisExperiment:
         )
         dd["export"] = (
             "Copied predicted_behavs dataframe to 7_scored_behavs folder. "
-            + "Ready for ba_viewer scoring!"
+            + "Ready for behavysis_viewer scoring!"
         )
         return dd
 

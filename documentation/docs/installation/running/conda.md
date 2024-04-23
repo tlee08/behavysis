@@ -18,7 +18,7 @@
 Activate the program environment with the following command:
 
 ```zsh
-conda activate ba_env
+conda activate behavysis_pipeline_env
 ```
 
 **Step 3:**
@@ -50,8 +50,8 @@ An example of how the Jupyter Notebook should look like is shown in the figure b
 </p>
 
 **Step 6:**
-Please ensure that it the "ba_env" kernel is used.
-To change the notebook's kernel to "ba_env", select "Kernel" > "Change Kernel..." in the top left menu bar. Then select the "ba_env" from the prompt.
+Please ensure that it the "behavysis_pipeline_env" kernel is used.
+To change the notebook's kernel to "behavysis_pipeline_env", select "Kernel" > "Change Kernel..." in the top left menu bar. Then select the "behavysis_pipeline_env" from the prompt.
 
 <p align="center">
     <img src="../../figures/jupyter_kernel1.png" alt="terminal_jupyter" title="terminal_jupyter" style="width:70%">
