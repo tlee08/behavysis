@@ -12,4 +12,4 @@ dependencies:
   - nb_conda
   - ffmpeg
   - pip:
-      - "."
+      - behavysis_pipeline
