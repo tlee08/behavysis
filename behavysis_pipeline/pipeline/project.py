@@ -12,11 +12,19 @@ import numpy as np
 import pandas as pd
 from behavysis_core.mixins.df_io_mixin import DFIOMixin
 from behavysis_core.mixins.io_mixin import IOMixin
-from behavysis_core.utils.constants import ANALYSIS_DIR, DIAGNOSTICS_DIR, FOLDERS, STR_DIV
+from behavysis_core.mixins.multiproc_mixin import MultiprocMixin
+from behavysis_core.utils.constants import (
+    ANALYSIS_DIR,
+    DIAGNOSTICS_DIR,
+    FOLDERS,
+    STR_DIV,
+    TEMP_DIR,
+)
 from natsort import natsort_keygen, natsorted
 
 from behavysis_pipeline.pipeline.experiment import BehavysisExperiment
 from behavysis_pipeline.pipeline.experiment_configs import ExperimentConfigs
+from behavysis_pipeline.processes.run_dlc import RunDLC
 
 
 class BehavysisProject:
@@ -147,15 +155,19 @@ class BehavysisProject:
                 + "Please specify a folder that exists. Ensure you have the correct"
                 + "forward-slashes or back-slashes for the path name."
             )
-        self.root_dir = root_dir
+        self.root_dir = os.path.abspath(root_dir)
         self.experiments = {}
         self.nprocs = 4
 
         # Making batch processing methods dynamically for BehavysisExperiment methods
         self.process_scaffold = self.process_scaffold_mp
-        method_names_ls = [i for i in dir(BehavysisExperiment) if not re.search(r"^_", i)]
+        method_names_ls = [
+            i for i in dir(BehavysisExperiment) if not re.search(r"^_", i)
+        ]
         for method_name in method_names_ls:
             self._batch_process_factory(method_name)
+        # Setting custom batch processing methods
+        self.run_dlc = self._run_dlc
 
     def _batch_process_factory(self, method_name: str):
         method = getattr(BehavysisExperiment, method_name)
@@ -304,6 +316,43 @@ class BehavysisProject:
             self.save_diagnostics(method.__name__, df)
 
     #####################################################################
+    #               CUSTOM BATCH DLC PROCESSING METHOD
+    #####################################################################
+
+    def _run_dlc(self, gputouse: int = None, overwrite: bool = False) -> None:
+        """
+        Custom batch processing function for DLC.
+        """
+        nprocs = len(MultiprocMixin.get_gpu_ids())
+        # nprocs = 1
+        # Splitting the experiments into batches
+        exp_batches_ls = np.array_split(self.get_experiments(), nprocs)
+        with Pool(processes=nprocs) as p:
+            p.starmap(
+                RunDLC.ma_dlc_analyse_batch,
+                [
+                    (
+                        [exp.get_fp("2_formatted_vid") for exp in exp_batch],
+                        os.path.join(self.root_dir, "3_dlc"),
+                        os.path.join(self.root_dir, "0_configs"),
+                        os.path.join(self.root_dir, TEMP_DIR),
+                        gputouse,
+                        overwrite,
+                    )
+                    for exp_batch in exp_batches_ls
+                ],
+            )
+
+        # RunDLC.ma_dlc_analyse_batch(
+        #     in_fp_ls=[exp.get_fp("2_formatted_vid") for exp in self.get_experiments()],
+        #     out_dir=os.path.join(self.root_dir, "3_dlc"),
+        #     configs_dir=os.path.join(self.root_dir, "0_configs"),
+        #     temp_dir=os.path.join(self.root_dir, TEMP_DIR),
+        #     gputouse=gputouse,
+        #     overwrite=overwrite,
+        # )
+
+    #####################################################################
     #               DIAGNOSTICS DICT METHODS
     #####################################################################
 
@@ -405,9 +454,10 @@ class BehavysisProject:
         dd_df = pd.DataFrame(
             index=list(self.experiments.keys()), columns=list(FOLDERS.keys())
         )
-        for exp in self.get_experiments():
-            for folder in FOLDERS:
-                dd_df.loc[exp.name, folder] = exp.check_fp(folder)
+        # TODO: MAKE FASTER
+        # for exp in self.get_experiments():
+        #     for folder in FOLDERS:
+        #         dd_df.loc[exp.name, folder] = exp.check_fp(folder)
         self.save_diagnostics("importExperiments.csv", dd_df)
 
     #####################################################################

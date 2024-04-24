@@ -109,15 +109,12 @@ class Preprocess:
         unique_cols = df.columns.droplevel(["coords"]).unique()
         # Setting low-likelihood points to Nan to later interpolate
         for scorer, indiv, bp in unique_cols:
-            try:
-                # Imputing Nan likelihood points with 0
-                df[(scorer, indiv, bp, "likelihood")].fillna(value=0, inplace=True)
-                # Setting x and y coordinates of points that have low likelihood to Nan
-                to_remove = df[(scorer, indiv, bp, "likelihood")] < pcutoff
-                df.loc[to_remove, (scorer, indiv, bp, "x")] = np.nan
-                df.loc[to_remove, (scorer, indiv, bp, "y")] = np.nan
-            except KeyError:
-                pass
+            # Imputing Nan likelihood points with 0
+            df[(scorer, indiv, bp, "likelihood")].fillna(value=0, inplace=True)
+            # Setting x and y coordinates of points that have low likelihood to Nan
+            to_remove = df[(scorer, indiv, bp, "likelihood")] < pcutoff
+            df.loc[to_remove, (scorer, indiv, bp, "x")] = np.nan
+            df.loc[to_remove, (scorer, indiv, bp, "y")] = np.nan
         # linearly interpolating Nan x and y points. Also backfilling points at the start.
         df = df.interpolate(method="linear", axis=0).bfill()
         # Writing file

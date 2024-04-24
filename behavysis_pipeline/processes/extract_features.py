@@ -10,7 +10,7 @@ from behavysis_core.mixins.df_io_mixin import DFIOMixin
 from behavysis_core.mixins.diagnostics_mixin import DiagnosticsMixin
 from behavysis_core.mixins.io_mixin import IOMixin
 from behavysis_core.mixins.keypoints_mixin import KeypointsMixin
-from behavysis_core.mixins.subprocess_mixin import SubprocessMixin
+from behavysis_core.mixins.subproc_mixin import SubprocMixin
 
 from behavysis_pipeline.pipeline.experiment_configs import ExperimentConfigs
 
@@ -174,8 +174,8 @@ def run_extract_features_script(
         dlc_dir,
         configs_dir,
     ]
-    # SubprocessMixin.run_subprocess_fstream(cmd)
-    SubprocessMixin.run_subprocess_console(cmd)
+    # SubprocMixin.run_subproc_fstream(cmd)
+    SubprocMixin.run_subproc_console(cmd)
     return "Ran SimBA feature extraction script.\n"
 
 
@@ -200,5 +200,4 @@ def remove_bpts_cols(
     bpts_n = 8
     coords_n = 3
     n = indivs_n * bpts_n * coords_n
-    return df.iloc[:, n:]
     return df.iloc[:, n:]

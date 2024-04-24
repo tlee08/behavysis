@@ -12,11 +12,20 @@ import numpy as np
 import pandas as pd
 from behavysis_core.mixins.df_io_mixin import DFIOMixin
 from behavysis_core.mixins.diagnostics_mixin import DiagnosticsMixin
-from behavysis_core.utils.constants import (ANALYSIS_DIR, EVALUATE_DIR, FOLDERS,
-                                     STR_DIV, TEMP_DIR)
+from behavysis_core.utils.constants import (
+    ANALYSIS_DIR,
+    EVALUATE_DIR,
+    FOLDERS,
+    STR_DIV,
+    TEMP_DIR,
+)
 
-from behavysis_pipeline.processes import (ClassifyBehaviours, ExtractFeatures, RunDLC,
-                                   UpdateConfigs)
+from behavysis_pipeline.processes import (
+    ClassifyBehaviours,
+    ExtractFeatures,
+    RunDLC,
+    UpdateConfigs,
+)
 
 
 class BehavysisExperiment:
@@ -263,10 +272,11 @@ class BehavysisExperiment:
         Can call any methods from `RunDLC`.
         """
         return self._process_scaffold(
-            (RunDLC.ma_dlc_analyse,),
+            (RunDLC.ma_dlc_analyse_single,),
             in_fp=self.get_fp("2_formatted_vid"),
             out_fp=self.get_fp("3_dlc"),
             configs_fp=self.get_fp("0_configs"),
+            temp_dir=os.path.join(self.root_dir, TEMP_DIR),
             gputouse=gputouse,
             overwrite=overwrite,
         )

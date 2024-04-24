@@ -89,10 +89,10 @@ class Analyse:
         indivs, _ = KeypointsMixin.get_headings(dlc_df)
 
         # Getting average corner coordinates. Assumes arena does not move.
-        tl = dlc_df[(SINGLE_COL, "TopLeft")].mean()
-        tr = dlc_df[(SINGLE_COL, "TopRight")].mean()
-        bl = dlc_df[(SINGLE_COL, "BottomLeft")].mean()
-        br = dlc_df[(SINGLE_COL, "BottomRight")].mean()
+        tl = dlc_df[(SINGLE_COL, "TopLeft")].apply(np.nanmean)
+        tr = dlc_df[(SINGLE_COL, "TopRight")].apply(np.nanmean)
+        bl = dlc_df[(SINGLE_COL, "BottomLeft")].apply(np.nanmean)
+        br = dlc_df[(SINGLE_COL, "BottomRight")].apply(np.nanmean)
         # Making boundary functions
         top = hline_factory(tl, tr)
         bottom = hline_factory(bl, br)
@@ -164,10 +164,10 @@ class Analyse:
         indivs, _ = KeypointsMixin.get_headings(dlc_df)
 
         # Getting average corner coordinates. NOTE: assumes arena does not move.
-        tl = dlc_df[(SINGLE_COL, "TopLeft")].mean()
-        tr = dlc_df[(SINGLE_COL, "TopRight")].mean()
-        bl = dlc_df[(SINGLE_COL, "BottomLeft")].mean()
-        br = dlc_df[(SINGLE_COL, "BottomRight")].mean()
+        tl = dlc_df[(SINGLE_COL, "TopLeft")].apply(np.nanmean)
+        tr = dlc_df[(SINGLE_COL, "TopRight")].apply(np.nanmean)
+        bl = dlc_df[(SINGLE_COL, "BottomLeft")].apply(np.nanmean)
+        br = dlc_df[(SINGLE_COL, "BottomRight")].apply(np.nanmean)
         # Making boundary functions
         top = hline_factory(tl, tr)
         bottom = hline_factory(bl, br)
@@ -419,7 +419,7 @@ class Analyse:
             DFIOMixin.read_feather(fbf_fp), out_dir, name, bins_ls, custom_bins_ls, True
         )
         return outcome
-    
+
     @staticmethod
     def in_roi(
         dlc_fp: str,
@@ -459,10 +459,10 @@ class Analyse:
         KeypointsMixin.check_bpts_exist(dlc_df, ["Nose"])
 
         # Getting average corner coordinates. Assumes arena does not move.
-        tl = dlc_df[(SINGLE_COL, tl_label)].mean()
-        tr = dlc_df[(SINGLE_COL, tr_label)].mean()
-        bl = dlc_df[(SINGLE_COL, bl_label)].mean()
-        br = dlc_df[(SINGLE_COL, br_label)].mean()
+        tl = dlc_df[(SINGLE_COL, tl_label)].apply(np.nanmean)
+        tr = dlc_df[(SINGLE_COL, tr_label)].apply(np.nanmean)
+        bl = dlc_df[(SINGLE_COL, bl_label)].apply(np.nanmean)
+        br = dlc_df[(SINGLE_COL, br_label)].apply(np.nanmean)
         # Making boundary functions
         top = hline_factory(tl, tr)
         bottom = hline_factory(bl, br)
@@ -473,8 +473,8 @@ class Analyse:
         dlc_df.index = analysis_df.index
         idx = pd.IndexSlice
         for indiv in indivs:
-            indiv_x = dlc_df.loc[:, idx[indiv, bpts, "x"]].mean(axis=1)
-            indiv_y = dlc_df.loc[:, idx[indiv, bpts, "y"]].mean(axis=1)
+            indiv_x = dlc_df.loc[:, idx[indiv, bpts, "x"]].apply(np.nanmean, axis=1)
+            indiv_y = dlc_df.loc[:, idx[indiv, bpts, "y"]].apply(np.nanmean, axis=1)
             # Determining if the indiv is inside of the box region (with the thresh_px buffer)
             analysis_df[(indiv, "in_roi")] = (
                 (indiv_y >= top(indiv_x) - thresh_px)
@@ -489,8 +489,12 @@ class Analyse:
         # Generating scatterplot
         # Adding bodypoint x and y coords
         for indiv in indivs:
-            analysis_df[(indiv, "x")] = dlc_df.loc[:, idx[indiv, bpts, "x"]].mean(axis=1)
-            analysis_df[(indiv, "y")] = dlc_df.loc[:, idx[indiv, bpts, "y"]].mean(axis=1)
+            analysis_df[(indiv, "x")] = dlc_df.loc[:, idx[indiv, bpts, "x"]].apply(
+                np.nanmean, axis=1
+            )
+            analysis_df[(indiv, "y")] = dlc_df.loc[:, idx[indiv, bpts, "y"]].apply(
+                np.nanmean, axis=1
+            )
         # making corners_df
         corners_df = pd.DataFrame([tl, tr, bl, br])
         plot_fp = os.path.join(out_dir, "scatter_plot", f"{name}.png")
@@ -501,7 +505,6 @@ class Analyse:
             DFIOMixin.read_feather(fbf_fp), out_dir, name, bins_ls, custom_bins_ls, True
         )
         return outcome
-        
 
 
 def get_analysis_configs(
@@ -716,7 +719,7 @@ def _make_summary_behaviour(analysis_df: pd.DataFrame, out_fp: str) -> str:
 def _make_binned(
     analysis_df: pd.DataFrame,
     out_fp: str,
-    bins: float | list,
+    bins: list,
 ) -> str:
     """
     Generates the binned data and line graph for the given analysis_df, and given bin_sec.
@@ -730,7 +733,7 @@ def _make_binned(
         _description_
     out_fp : str
         _description_
-    bins : float | list
+    bins : list
         _description_
 
     Returns
@@ -741,10 +744,6 @@ def _make_binned(
     # For each column, displays the mean of each binned group.
     outcome = ""
     timestamps = analysis_df.index.get_level_values("timestamp")
-    # If bins is a float, then making even-interval bins list.
-    # Otherwise, using the bins list given
-    if isinstance(bins, float):
-        bins = np.arange(np.min(timestamps), np.max(timestamps) + bins, bins)
     # Ensuring all bins are included (start frame and end frame)
     if np.min(bins) > 0:  # If 0 is not included
         bins = np.append(0, bins)
@@ -852,12 +851,15 @@ def make_summary_binned(
         outcome += _make_summary_behaviour(analysis_df, summary_fp)
     else:
         outcome += _make_summary_quantitative(analysis_df, summary_fp)
+    # Getting timestamps index
+    timestamps = analysis_df.index.get_level_values("timestamp")
     # Binning analysis_df
     for bin_sec in bins_ls:
         binned_fp = os.path.join(out_dir, f"binned_{bin_sec}", f"{name}.feather")
         binned_plot_fp = os.path.join(out_dir, f"binned_{bin_sec}_plot", f"{name}.png")
         # Making binned df
-        outcome += _make_binned(analysis_df, binned_fp, bin_sec)
+        bins = np.arange(np.min(timestamps), np.max(timestamps) + bin_sec, bin_sec)
+        outcome += _make_binned(analysis_df, binned_fp, bins)
         # Making binned plots
         outcome += _make_binned_plot(
             DFIOMixin.read_feather(binned_fp), binned_plot_fp, is_bool

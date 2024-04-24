@@ -62,6 +62,10 @@ class CalculateParams:
         window_frames = int(np.round(fps * window_sec, 0))  # for rounding
         # Loading dataframe
         dlc_df = DFIOMixin.read_feather(dlc_fp)
+        # Imputing missing values with 0 (only really relevant for "likelihood" columns)
+        dlc_df = dlc_df.fillna(0)
+        # Checking that the two reference points are valid
+        KeypointsMixin.check_bpts_exist(dlc_df, bpts)
         # Calculating likelihood of subject existing.
         idx = pd.IndexSlice
         df_lhoods = pd.DataFrame(index=dlc_df.index)
@@ -159,15 +163,24 @@ class CalculateParams:
         configs_filt = configs.user.calculate_params.px_per_mm
         pt_a = configs_filt.pt_a
         pt_b = configs_filt.pt_b
+        pcutoff = configs_filt.pcutoff
         dist_mm = configs_filt.dist_mm
         # Loading dataframe
         dlc_df = KeypointsMixin.clean_headings(DFIOMixin.read_feather(dlc_fp))
+        # Imputing missing values with 0 (only really relevant for "likelihood" columns)
+        dlc_df = dlc_df.fillna(0)
         # Checking that the two reference points are valid
         KeypointsMixin.check_bpts_exist(dlc_df, [pt_a, pt_b])
         # Finding the arena height and width in pixels
         pt_a_df = dlc_df[SINGLE_COL, pt_a]
         pt_b_df = dlc_df[SINGLE_COL, pt_b]
-        dist_px = np.mean(
+        # Interpolating points
+        pt_a_df[pt_a_df["likelihood"] < pcutoff] = np.nan
+        pt_a_df = pt_a_df.interpolate(method="linear", axis=0).bfill()
+        pt_b_df[pt_b_df["likelihood"] < pcutoff] = np.nan
+        pt_b_df = pt_a_df.interpolate(method="linear", axis=0).bfill()
+        # Getting distances
+        dist_px = np.nanmean(
             np.sqrt(
                 np.square(pt_a_df["x"] - pt_b_df["x"])
                 + np.square(pt_a_df["y"] - pt_b_df["y"])
@@ -179,5 +192,4 @@ class CalculateParams:
         configs = ExperimentConfigs.read_json(configs_fp)
         configs.auto.px_per_mm = px_per_mm
         configs.write_json(configs_fp)
-        return outcome
         return outcome

@@ -55,6 +55,7 @@ if __name__ == "__main__":
             Analyse.speed,
             Analyse.social_distance,
             Analyse.freezing,
+            Analyse.in_roi,
         )
     )
     proj.combine_analysis_binned()
