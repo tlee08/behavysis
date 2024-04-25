@@ -622,6 +622,7 @@ def make_location_scatterplot(
     # Saving fig
     os.makedirs(os.path.split(out_fp)[0], exist_ok=True)
     g.savefig(out_fp)
+    g.figure.clf()
 
 
 def _make_summary_quantitative(
@@ -810,6 +811,8 @@ def _make_binned_plot(
     # Saving fig
     os.makedirs(os.path.split(out_fp)[0], exist_ok=True)
     g.savefig(out_fp)
+    g.figure.clf()
+    # Returning outcome
     return outcome
 
 

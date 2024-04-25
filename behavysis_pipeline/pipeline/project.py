@@ -21,9 +21,10 @@ from behavysis_core.utils.constants import (
     TEMP_DIR,
 )
 from natsort import natsort_keygen, natsorted
+import seaborn as sns
 
 from behavysis_pipeline.pipeline.experiment import BehavysisExperiment
-from behavysis_pipeline.pipeline.experiment_configs import ExperimentConfigs
+from behavysis_pipeline.pipeline.experiment_configs import ExperimentConfigs, ConfigsAuto
 from behavysis_pipeline.processes.run_dlc import RunDLC
 
 
@@ -396,6 +397,41 @@ class BehavysisProject:
         os.makedirs(os.path.split(fp)[0], exist_ok=True)
         # Writing diagnostics file
         df.to_csv(fp)
+        
+    #####################################################################
+    #                CONFIGS DIAGONOSTICS METHODS
+    #####################################################################
+    
+    def collate_configs_auto(self) -> None:
+        """
+        Collates the auto fields of the configs of all experiments into a DataFrame.
+        """
+        # Getting all the auto field keys
+        auto_field_keys = ConfigsAuto.get_field_names(ConfigsAuto)
+        # Making a DataFrame to store all the auto fields for each experiment
+        df_configs = pd.DataFrame(
+            index=[exp.name for exp in self.get_experiments()],
+            # columns=ConfigsAuto.model_fields.keys(),
+            columns=["_".join(i) for i in auto_field_keys],
+        )
+        # Collating all the auto fields for each experiment
+        for exp in self.get_experiments():
+            configs = ExperimentConfigs.read_json(exp.get_fp("0_configs"))
+            for i in auto_field_keys:
+                val = configs.auto
+                for j in i:
+                    val = getattr(val, j)
+                df_configs.loc[exp.name, "_".join(i)] = val
+        # Saving the collated auto fields DataFrame to diagnostics folder
+        self.save_diagnostics("collated_configs_auto", df_configs)
+        
+        # Making and saving histogram plots of all the auto fields
+        g = sns.FacetGrid(data=df_configs.melt(), col="variable", sharex=False, col_wrap=4)
+        g.map(sns.histplot, "value", bins=20)
+        g.set_titles("{col_name}")
+        g.savefig(os.path.join(self.root_dir, DIAGNOSTICS_DIR, "collated_configs_auto_hist.png"))
+        g.figure.clf()
+                
 
     #####################################################################
     #               IMPORT EXPERIMENTS METHODS
@@ -464,7 +500,7 @@ class BehavysisProject:
         # for exp in self.get_experiments():
         #     for folder in FOLDERS:
         #         dd_df.loc[exp.name, folder] = exp.check_fp(folder)
-        self.save_diagnostics("importExperiments.csv", dd_df)
+        self.save_diagnostics("import_experiments", dd_df)
 
     #####################################################################
     #            COMBINING ANALYSIS DATA ACROSS EXPS METHODS

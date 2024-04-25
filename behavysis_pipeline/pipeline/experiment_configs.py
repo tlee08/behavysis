@@ -169,13 +169,14 @@ class ConfigsUser(BaseModel):
     evaluate: ConfigsEvaluate = ConfigsEvaluate()
 
 
-class ConfigsAuto(BaseModel):
+class ConfigsAuto(PydanticBaseModel, BaseModel):
     """_summary_"""
 
     model_config = ConfigDict(extra="forbid")
 
     raw_vid: VidMetadata = VidMetadata()
     formatted_vid: VidMetadata = VidMetadata()
+    
     px_per_mm: Optional[float] = None
     start_frame: Optional[int] = None
     stop_frame: Optional[int] = None

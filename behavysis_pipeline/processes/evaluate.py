@@ -117,6 +117,7 @@ class Evaluate:
         g.add_legend()
         # Saving plot
         g.savefig(out_fp)
+        g.figure.clf()
         # Returning outcome string
         return outcome
 

@@ -458,9 +458,11 @@ class BehavClassifier:
         # Making pcutoff metrics plot
         fig = self.model_eval_plot_metrics(eval_df)
         fig.savefig(os.path.join(self.root_dir, "eval", "pcutoff_metrics.png"))
+        fig.clf()
         # Making logistic results plot
         fig = self.model_eval_plot_results(eval_df)
         fig.savefig(os.path.join(self.root_dir, "eval", "logistic_results.png"))
+        fig.clf()
 
     #################################################
     #         EVALUATE MODEL PREDICTIONS
