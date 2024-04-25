@@ -33,7 +33,6 @@ class ExtractFeatures:
         out_fp: str,
         configs_fp: str,
         temp_dir: str,
-        remove_temp: bool,
         overwrite: bool,
     ) -> str:
         """
@@ -50,8 +49,6 @@ class ExtractFeatures:
             Configs JSON filepath.
         temp_dir : str
             Temporary directory path. Used during intermediate SimBA processes.
-        remove_temp : bool
-            Whether to remove the temp directory.
         overwrite : bool
             Whether to overwrite the out_fp file (if it exists).
 
@@ -92,9 +89,6 @@ class ExtractFeatures:
         df.index = index
         # Saving SimBA extracted features df as feather
         DFIOMixin.write_feather(df, out_fp)
-        # Removing temp dir
-        if remove_temp:
-            shutil.rmtree(temp_dir, ignore_errors=True)
         # Returning outcome
         return outcome
 

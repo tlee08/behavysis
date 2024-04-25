@@ -175,10 +175,10 @@ class CalculateParams:
         pt_a_df = dlc_df[SINGLE_COL, pt_a]
         pt_b_df = dlc_df[SINGLE_COL, pt_b]
         # Interpolating points
-        pt_a_df[pt_a_df["likelihood"] < pcutoff] = np.nan
+        pt_a_df.loc[pt_a_df["likelihood"] < pcutoff] = np.nan
         pt_a_df = pt_a_df.interpolate(method="linear", axis=0).bfill()
-        pt_b_df[pt_b_df["likelihood"] < pcutoff] = np.nan
-        pt_b_df = pt_a_df.interpolate(method="linear", axis=0).bfill()
+        pt_b_df.loc[pt_b_df["likelihood"] < pcutoff] = np.nan
+        pt_b_df = pt_b_df.interpolate(method="linear", axis=0).bfill()
         # Getting distances
         dist_px = np.nanmean(
             np.sqrt(

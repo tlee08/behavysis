@@ -325,8 +325,14 @@ class BehavysisProject:
         """
         nprocs = len(MultiprocMixin.get_gpu_ids())
         # nprocs = 1
+        # Getting the experiments to run DLC on
+        exp_ls = self.get_experiments()
+        # If overwrite is false, filtering for only experiments that need to be run
+        if not overwrite:
+            exp_ls = [exp for exp in exp_ls if not exp.check_fp("3_dlc")]
         # Splitting the experiments into batches
-        exp_batches_ls = np.array_split(self.get_experiments(), nprocs)
+        exp_batches_ls = np.array_split(exp_ls, nprocs)
+        # Running DLC on each batch of experiments
         with Pool(processes=nprocs) as p:
             p.starmap(
                 RunDLC.ma_dlc_analyse_batch,

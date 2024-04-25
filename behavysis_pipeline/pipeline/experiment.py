@@ -431,7 +431,7 @@ class BehavysisExperiment:
     #                 SIMBA BEHAVIOUR CLASSIFICATION METHODS
     #####################################################################
 
-    def extract_features(self, remove_temp: bool, overwrite: bool) -> dict:
+    def extract_features(self, overwrite: bool) -> dict:
         """
         Extracts features from the preprocessed dlc file to generate many more features.
         This dataframe of derived features will be input for a ML classifier to detect
@@ -439,8 +439,6 @@ class BehavysisExperiment:
 
         Parameters
         ----------
-        remove_temp : bool
-            Whether to remove the temp directory.
         overwrite : bool
             Whether to overwrite the output file (if it exists).
 
@@ -455,7 +453,6 @@ class BehavysisExperiment:
             out_fp=self.get_fp("5_features_extracted"),
             configs_fp=self.get_fp("0_configs"),
             temp_dir=os.path.join(self.root_dir, TEMP_DIR),
-            remove_temp=remove_temp,
             overwrite=overwrite,
         )
 

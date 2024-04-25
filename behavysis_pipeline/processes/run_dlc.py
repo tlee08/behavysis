@@ -86,9 +86,6 @@ class RunDLC:
         # Cleaning up the DLC files
         clean_raw_dlc_files(in_fp, dlc_out_dir, out_dir)
 
-        # Removing temp dir
-        shutil.rmtree(temp_dir, ignore_errors=True)
-
         return outcome
 
     @staticmethod
@@ -136,9 +133,6 @@ class RunDLC:
         # Cleaning up the DLC files
         for in_fp in in_fp_ls:
             clean_raw_dlc_files(in_fp, dlc_out_dir, out_dir)
-
-        # Removing temp dir
-        shutil.rmtree(temp_dir, ignore_errors=True)
 
         return outcome
 
