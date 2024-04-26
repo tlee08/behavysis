@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import os
 
+import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -32,23 +33,10 @@ from behavysis_core.utils.constants import (
     ANALYSIS_COLUMN_NAMES,
     ANALYSIS_INDEX_NAMES,
     BODYCENTRE,
-    PLOT_DPI,
-    PLOT_STYLE,
     SINGLE_COL,
 )
 
 from behavysis_pipeline.pipeline.experiment_configs import ExperimentConfigs
-
-#####################################################################
-#               INITIALISE MPL PLOTTING PARAMETERS
-#####################################################################
-
-
-sns.set_theme(style=PLOT_STYLE)
-
-plt.rcParams["figure.dpi"] = PLOT_DPI
-plt.rcParams["savefig.dpi"] = PLOT_DPI
-
 
 #####################################################################
 #               ANALYSIS API FUNCS

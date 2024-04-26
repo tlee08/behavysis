@@ -51,16 +51,6 @@ from tqdm import trange
 
 from behavysis_pipeline.pipeline.experiment_configs import ExperimentConfigs
 
-#####################################################################
-#               INITIALISE MPL PLOTTING PARAMETERS
-#####################################################################
-
-
-sns.set_theme(style=PLOT_STYLE)
-
-plt.rcParams["figure.dpi"] = PLOT_DPI
-plt.rcParams["savefig.dpi"] = PLOT_DPI
-
 
 #####################################################################
 #               MAKE KEYPOINTS PLOTS
