@@ -1,6 +1,6 @@
 import os
 
-from behavysis_pipeline import BehavysisExperiment
+from behavysis_pipeline import Experiment
 from behavysis_pipeline.behav_classifier import BehavClassifier
 from behavysis_pipeline.processes import CalculateParams, FormatVid, Preprocess
 

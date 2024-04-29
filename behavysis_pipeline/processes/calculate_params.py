@@ -16,11 +16,14 @@ str
 
 import numpy as np
 import pandas as pd
+from behavysis_core.data_models.experiment_configs import (
+    ConfigsCalculateParams,
+    ExperimentConfigs,
+)
+from behavysis_core.data_models.pydantic_base_model import PydanticBaseModel
 from behavysis_core.mixins.df_io_mixin import DFIOMixin
 from behavysis_core.mixins.keypoints_mixin import KeypointsMixin
 from behavysis_core.utils.constants import SINGLE_COL
-
-from behavysis_pipeline.pipeline.experiment_configs import ExperimentConfigs
 
 
 class CalculateParams:
@@ -193,3 +196,31 @@ class CalculateParams:
         configs.auto.px_per_mm = px_per_mm
         configs.write_json(configs_fp)
         return outcome
+
+
+class Model_start_frame(PydanticBaseModel):
+    """_summary_"""
+
+    window_sec: float
+    pcutoff: float
+    bodyparts: list[str]
+
+
+class Model_stop_frame(PydanticBaseModel):
+    """_summary_"""
+
+    dur_sec: float
+
+
+class Model_px_per_mm(PydanticBaseModel):
+    """_summary_"""
+
+    px_per_mm: float
+    start_frame: int
+    stop_frame: int
+
+
+class ConfigsCalculateParams(ConfigsCalculateParams):
+    start_frame: Model_start_frame
+    stop_frame: Model_stop_frame
+    px_per_mm: Model_px_per_mm

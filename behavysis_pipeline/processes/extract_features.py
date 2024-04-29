@@ -6,13 +6,12 @@ import os
 import shutil
 
 import pandas as pd
+from behavysis_core.data_models.experiment_configs import ExperimentConfigs
 from behavysis_core.mixins.df_io_mixin import DFIOMixin
 from behavysis_core.mixins.diagnostics_mixin import DiagnosticsMixin
 from behavysis_core.mixins.io_mixin import IOMixin
 from behavysis_core.mixins.keypoints_mixin import KeypointsMixin
 from behavysis_core.mixins.subproc_mixin import SubprocMixin
-
-from behavysis_pipeline.pipeline.experiment_configs import ExperimentConfigs
 
 # Order of bodyparts is from
 # - https://github.com/sgoldenlab/simba/blob/master/docs/Multi_animal_pose.md

@@ -18,9 +18,8 @@ str
 
 from typing import Literal, Type
 
+from behavysis_core.data_models.experiment_configs import ExperimentConfigs
 from pydantic import ValidationError
-
-from behavysis_pipeline.pipeline.experiment_configs import ExperimentConfigs
 
 
 class UpdateConfigs:

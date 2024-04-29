@@ -2,5 +2,5 @@
 _summary_
 """
 
-from behavysis_pipeline.pipeline.experiment import BehavysisExperiment
-from behavysis_pipeline.pipeline.project import BehavysisProject
+from behavysis_pipeline.pipeline.experiment import Experiment
+from behavysis_pipeline.pipeline.project import Project

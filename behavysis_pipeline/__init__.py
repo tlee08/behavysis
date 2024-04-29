@@ -21,17 +21,17 @@ warnings.filterwarnings("ignore")
 #         IMPORTING MODULES (INCL. RELATIVE AND 3RD PARTY)
 #####################################################################
 
-from behavysis_pipeline.pipeline import BehavysisExperiment, BehavysisProject
+import matplotlib
+import matplotlib.pyplot as plt
+import seaborn as sns
+from behavysis_core.utils.constants import PLOT_DPI, PLOT_STYLE
+
+from behavysis_pipeline.pipeline import Experiment, Project
 
 #####################################################################
 #           INITIALISE MPL PLOTTING PARAMETERS
 #####################################################################
 
-import matplotlib
-import matplotlib.pyplot as plt
-import seaborn as sns
-
-from behavysis_core.utils.constants import PLOT_DPI, PLOT_STYLE
 
 # Makes graphs non-interactive (saves memory)
 matplotlib.use("Agg")

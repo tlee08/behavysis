@@ -1,11 +1,11 @@
 import os
+import shutil
 
 import pytest
 
-from behavysis_pipeline import BehavysisProject
+from behavysis_pipeline import Project
 from behavysis_pipeline.processes import *
 
-import shutil
 
 @pytest.fixture(scope="session", autouse=True)
 def proj_dir():
@@ -15,8 +15,8 @@ def proj_dir():
 @pytest.fixture(scope="session", autouse=True)
 def cleanup(request, proj_dir):
     # Setup: code here will run before your tests
-    
-    yield # this is where the testing happens
+
+    yield  # this is where the testing happens
 
     # Teardown
     for i in [
@@ -37,18 +37,18 @@ def cleanup(request, proj_dir):
 
 
 def test_BehavysisProject(proj_dir):
-    proj = BehavysisProject(proj_dir)
-    assert isinstance(proj, BehavysisProject)
+    proj = Project(proj_dir)
+    assert isinstance(proj, Project)
 
 
 def test_import_experiments(proj_dir):
-    proj = BehavysisProject(proj_dir)
+    proj = Project(proj_dir)
     proj.import_experiments()
     assert len(proj.get_experiments()) > 0
 
 
 def test_update_configs(proj_dir):
-    proj = BehavysisProject(proj_dir)
+    proj = Project(proj_dir)
     proj.update_configs(
         default_configs_fp=os.path.join(proj_dir, "default.json"),
         overwrite="user",

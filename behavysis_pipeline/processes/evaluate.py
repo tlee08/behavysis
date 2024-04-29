@@ -34,6 +34,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
+from behavysis_core.data_models.experiment_configs import ExperimentConfigs
 from behavysis_core.mixins.df_io_mixin import DFIOMixin
 from behavysis_core.mixins.diagnostics_mixin import DiagnosticsMixin
 from behavysis_core.mixins.io_mixin import IOMixin
@@ -48,9 +49,6 @@ from behavysis_core.utils.constants import (
     PROCESS_COL,
 )
 from tqdm import trange
-
-from behavysis_pipeline.pipeline.experiment_configs import ExperimentConfigs
-
 
 #####################################################################
 #               MAKE KEYPOINTS PLOTS

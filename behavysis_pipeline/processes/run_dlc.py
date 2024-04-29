@@ -28,13 +28,12 @@ from typing import Optional
 
 import numpy as np
 import pandas as pd
+from behavysis_core.data_models.experiment_configs import ExperimentConfigs
 from behavysis_core.mixins.df_io_mixin import DFIOMixin
 from behavysis_core.mixins.diagnostics_mixin import DiagnosticsMixin
 from behavysis_core.mixins.io_mixin import IOMixin
 from behavysis_core.mixins.multiproc_mixin import MultiprocMixin
 from behavysis_core.mixins.subproc_mixin import SubprocMixin
-
-from behavysis_pipeline.pipeline.experiment_configs import ExperimentConfigs
 
 # from tensorflow.config import list_physical_devices
 
@@ -205,6 +204,7 @@ def clean_raw_dlc_files(in_fp, dlc_out_dir, out_dir: str) -> str:
     for fp in os.listdir(dlc_out_dir):
         # Looking at only files corresponding to the experiment (by name)
         if re.search(rf"^{name}DLC", fp):
+            # If the file is a .h5 file
             if re.search(r"\.h5$", fp):
                 # copying file to dlc folder
                 df = pd.DataFrame(pd.read_hdf(os.path.join(dlc_out_dir, fp)))
@@ -214,5 +214,4 @@ def clean_raw_dlc_files(in_fp, dlc_out_dir, out_dir: str) -> str:
     outcome += (
         "DLC output files have been renamed and placed in corresponding folders.\n"
     )
-    return outcome
     return outcome

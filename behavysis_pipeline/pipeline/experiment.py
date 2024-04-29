@@ -23,12 +23,13 @@ from behavysis_core.utils.constants import (
 from behavysis_pipeline.processes import (
     ClassifyBehaviours,
     ExtractFeatures,
+    Preprocess,
     RunDLC,
     UpdateConfigs,
 )
 
 
-class BehavysisExperiment:
+class Experiment:
     """
     Behavioral Analysis Pipeline class for a single experiment.
 
@@ -64,11 +65,11 @@ class BehavysisExperiment:
                 + "Please specify a folder that exists."
             )
         # Assertion: name must correspond to at least one file in root_dir
-        folder_fp_ls = [
-            os.path.join(root_dir, folder, f"{name}{ext}")
+        file_exists_ls = [
+            os.path.isfile(os.path.join(root_dir, folder, f"{name}{ext}"))
             for folder, ext in FOLDERS.items()
         ]
-        if not np.any([os.path.isfile(i) for i in folder_fp_ls]):
+        if not np.any(file_exists_ls):
             raise ValueError(
                 f'No files named "{name}" exist in "{root_dir}".\n'
                 + f'Please specify a file that exists in "{root_dir}", in one of the'
@@ -117,23 +118,6 @@ class BehavysisExperiment:
         # Returning filepath
         return fp
 
-    def check_fp(self, folder: str) -> bool:
-        """
-        Returns whether the corresponding experiment file exists in the given folder.
-
-        Parameters
-        ----------
-        folder : str
-            The folder to check the experiment document's filepath for.
-
-        Returns
-        -------
-        bool
-            Boolean outcome of whether the corresponding file exists.
-        """
-        fp = self.get_fp(folder)
-        return os.path.isfile(fp)
-
     #####################################################################
     #               EXPERIMENT PROCESSING SCAFFOLD METHODS
     #####################################################################
@@ -143,7 +127,7 @@ class BehavysisExperiment:
         funcs: tuple[Callable, ...],
         *args: Any,
         **kwargs: Any,
-    ) -> dict:
+    ) -> dict[str, str]:
         """
         All processing runs through here.
         This method ensures that the stdout and diagnostics dict are correctly generated.
@@ -155,7 +139,7 @@ class BehavysisExperiment:
 
         Returns
         -------
-        dict
+        dict[str, str]
             Diagnostics dictionary, with description of each function's outcome.
 
         Notes
@@ -165,9 +149,9 @@ class BehavysisExperiment:
         func(*args, **kwargs)
         ```
         """
+        print(f"Processing experiment: {self.name}")
         # Setting up diagnostics dict
         dd = {"experiment": self.name}
-        print(f"Processing experiment: {self.name}")
         # Running functions and saving outcome to diagnostics dict
         for f in funcs:
             # Running each func and saving outcome
@@ -331,16 +315,17 @@ class BehavysisExperiment:
         Can call any methods from `Preprocess`.
         """
         # Exporting 3_dlc df to 4_preprocessed folder
+        dd = self._process_scaffold(
+            (Preprocess.import_keypoints_df,),
+            in_fp=self.get_fp("3_dlc"),
+            out_fp=self.get_fp("4_preprocessed"),
+            configs_fp=self.get_fp("0_configs"),
+            overwrite=overwrite,
+        )
         # If there is an error, then makes the diagnostics dict
-        # where all function outcomes have the error message
-        try:
-            df = DFIOMixin.read_feather(self.get_fp("3_dlc"))
-            DFIOMixin.write_feather(df, self.get_fp("4_preprocessed"))
-        except Exception as e:
-            dd = {f.__name__: str(e) for f in funcs}
-            dd["experiment"] = self.name
+        res = dd["import_keypoints_df"]
+        if res.startswith("ERROR") or res.startswith("WARNING"):
             return dd
-
         # Feeding through preprocessing functions
         return self._process_scaffold(
             funcs,

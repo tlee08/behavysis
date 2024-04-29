@@ -23,16 +23,35 @@ import os
 
 import numpy as np
 import pandas as pd
+from behavysis_core.data_models.experiment_configs import ExperimentConfigs
 from behavysis_core.mixins.df_io_mixin import DFIOMixin
 from behavysis_core.mixins.diagnostics_mixin import DiagnosticsMixin
 from behavysis_core.mixins.keypoints_mixin import KeypointsMixin
 from behavysis_core.utils.constants import BODYCENTRE, SINGLE_COL
 
-from behavysis_pipeline.pipeline.experiment_configs import ExperimentConfigs
-
 
 class Preprocess:
     """_summary_"""
+
+    @staticmethod
+    def import_keypoints_df(
+        in_fp: str,
+        out_fp: str,
+        configs_fp: str,
+        overwrite: bool,
+    ) -> str:
+        """ """
+        outcome = ""
+        # If overwrite is False, checking if we should skip processing
+        if not overwrite and os.path.exists(out_fp):
+            return DiagnosticsMixin.warning_msg()
+        # Reading file
+        df = DFIOMixin.read_feather(in_fp)
+        # Writing file
+        DFIOMixin.write_feather(df, out_fp)
+        # Returning outcome
+        outcome += "Imported keypoints dataframe."
+        return outcome
 
     @staticmethod
     def start_stop_trim(

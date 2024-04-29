@@ -1,11 +1,11 @@
 import os
+import shutil
 
 import pytest
 
-from behavysis_pipeline import BehavysisProject
+from behavysis_pipeline import Project
 from behavysis_pipeline.processes import *
 
-import shutil
 
 @pytest.fixture(scope="session", autouse=True)
 def proj_dir():
@@ -15,8 +15,8 @@ def proj_dir():
 @pytest.fixture(scope="session", autouse=True)
 def cleanup(request, proj_dir):
     # Setup: code here will run before your tests
-    
-    yield # this is where the testing happens
+
+    yield  # this is where the testing happens
 
     # Teardown
     for i in [
@@ -38,15 +38,15 @@ def cleanup(request, proj_dir):
 
 def test_pipeline_run(proj_dir):
     overwrite = True
-    
-    proj = BehavysisProject(proj_dir)
+
+    proj = Project(proj_dir)
     proj.import_experiments()
-    
+
     proj.update_configs(
         default_configs_fp=os.path.join(proj_dir, "default.json"),
         overwrite="user",
     )
-    
+
     proj.format_vid(
         (
             FormatVid.format_vid,
@@ -54,14 +54,14 @@ def test_pipeline_run(proj_dir):
         ),
         overwrite=overwrite,
     )
-    
+
     proj.nprocs = 1
     proj.run_dlc(
         gputouse=None,
         overwrite=overwrite,
     )
     proj.nprocs = 4
-    
+
     proj.calculate_params(
         (
             CalculateParams.start_frame,
@@ -69,7 +69,7 @@ def test_pipeline_run(proj_dir):
             CalculateParams.px_per_mm,
         )
     )
-    
+
     proj.preprocess(
         (
             Preprocess.start_stop_trim,
@@ -79,7 +79,7 @@ def test_pipeline_run(proj_dir):
         ),
         overwrite=overwrite,
     )
-    
+
     proj.analyse(
         (
             Analyse.thigmotaxis,
@@ -89,16 +89,16 @@ def test_pipeline_run(proj_dir):
             Analyse.freezing,
         )
     )
-    
+
     proj.combine_analysis_binned()
-    
+
     proj.combine_analysis_summary()
-    
+
     # proj.extract_features(True, True)
     # proj.classify_behaviours(True)
     # proj.export_behaviours(True)
     # proj.export_feather("7_scored_behavs", "./scored_csv")
-    
+
     proj.evaluate(
         (
             Evaluate.eval_vid,
@@ -106,7 +106,6 @@ def test_pipeline_run(proj_dir):
         ),
         overwrite=overwrite,
     )
-
 
 
 # def test_format_vid():

@@ -10,6 +10,8 @@ from typing import Any, Callable
 
 import numpy as np
 import pandas as pd
+import seaborn as sns
+from behavysis_core.data_models.experiment_configs import ConfigsAuto, ExperimentConfigs
 from behavysis_core.mixins.df_io_mixin import DFIOMixin
 from behavysis_core.mixins.io_mixin import IOMixin
 from behavysis_core.mixins.multiproc_mixin import MultiprocMixin
@@ -21,14 +23,12 @@ from behavysis_core.utils.constants import (
     TEMP_DIR,
 )
 from natsort import natsort_keygen, natsorted
-import seaborn as sns
 
-from behavysis_pipeline.pipeline.experiment import BehavysisExperiment
-from behavysis_pipeline.pipeline.experiment_configs import ExperimentConfigs, ConfigsAuto
+from behavysis_pipeline.pipeline.experiment import Experiment
 from behavysis_pipeline.processes.run_dlc import RunDLC
 
 
-class BehavysisProject:
+class Project:
     """
     A project is used to process and analyse many experiments at the same time.
 
@@ -145,6 +145,10 @@ class BehavysisProject:
         ValueError: The givendir filepath does not exist.
     """
 
+    root_dir: str
+    experiments: dict[str, Experiment]
+    nprocs: int
+
     def __init__(self, root_dir: str) -> None:
         """
         Make a BehavysisProject instance.
@@ -161,24 +165,19 @@ class BehavysisProject:
         self.nprocs = 4
 
         # Making batch processing methods dynamically for BehavysisExperiment methods
-        self.process_scaffold = self.process_scaffold_mp
-        method_names_ls = [
-            i for i in dir(BehavysisExperiment) if not re.search(r"^_", i)
-        ]
+        method_names_ls = [i for i in dir(Experiment) if not re.search(r"^_", i)]
         for method_name in method_names_ls:
             self._batch_process_factory(method_name)
-        # Setting custom batch processing methods
-        self.run_dlc = self._run_dlc
 
     def _batch_process_factory(self, method_name: str):
-        method = getattr(BehavysisExperiment, method_name)
+        method = getattr(Experiment, method_name)
 
         @functools.wraps(method)
         def batch_process(*args, **kwargs):
             # Starting
             print(f"Running {method_name}")
             # Running
-            self.process_scaffold(method, *args, **kwargs)
+            self._process_scaffold(method, *args, **kwargs)
             # Finishing
             print(f"Finished {method_name}!")
             print(f"{STR_DIV}\n{STR_DIV}\n")
@@ -189,7 +188,7 @@ class BehavysisProject:
     #               GETTER METHODS
     #####################################################################
 
-    def get_experiment(self, name: str) -> BehavysisExperiment:
+    def get_experiment(self, name: str) -> Experiment:
         """
         Gets the experiment with the given name
 
@@ -214,7 +213,7 @@ class BehavysisProject:
             f'Experiment with the name "{name}" does not exist in the project.'
         )
 
-    def get_experiments(self) -> list[BehavysisExperiment]:
+    def get_experiments(self) -> list[Experiment]:
         """
         Gets the ordered (natsorted) list of Experiment instances in the BehavysisProject.
 
@@ -230,19 +229,14 @@ class BehavysisProject:
     #####################################################################
 
     @staticmethod
-    def _process_scaffold_worker(args_tuple: tuple):
+    def _process_scaffold_mp_worker(args_tuple: tuple):
         method, exp, args, kwargs = args_tuple
         return method(exp, *args, **kwargs)
 
-    def process_scaffold_mp(
-        self,
-        method: Callable,
-        *args: Any,
-        **kwargs: Any,
-    ) -> None:
+    def _process_scaffold_mp(self, method: Callable, *args: Any, **kwargs: Any) -> None:
         """
-        Processes an experiment with the given `BehavysisExperiment` method and records the diagnostics
-        of the process in a MULTI-PROCESSING way.
+        Processes an experiment with the given `BehavysisExperiment` method and records
+        the diagnostics of the process in a MULTI-PROCESSING way.
 
         Parameters
         ----------
@@ -266,7 +260,7 @@ class BehavysisProject:
         with Pool(processes=self.nprocs) as p:
             # Apply method to each experiment in self.get_experiments() in parallel
             results = p.map(
-                BehavysisProject._process_scaffold_worker,
+                Project._process_scaffold_mp_worker,
                 [(method, exp, args, kwargs) for exp in self.get_experiments()],
             )
 
@@ -279,15 +273,10 @@ class BehavysisProject:
             # Updating the diagnostics file at each step
             self.save_diagnostics(method.__name__, df)
 
-    def process_scaffold_sp(
-        self,
-        method: Callable,
-        *args: Any,
-        **kwargs: Any,
-    ) -> None:
+    def _process_scaffold_sp(self, method: Callable, *args: Any, **kwargs: Any) -> None:
         """
-        Processes an experiment with the given `BehavysisExperiment` method and records the diagnostics
-        of the process in a SINGLE-PROCESSING way.
+        Processes an experiment with the given `BehavysisExperiment` method and records
+        the diagnostics of the process in a SINGLE-PROCESSING way.
 
         Parameters
         ----------
@@ -316,21 +305,50 @@ class BehavysisProject:
             # Updating the diagnostics file at each step
             self.save_diagnostics(method.__name__, df)
 
+    def _process_scaffold(self, method: Callable, *args: Any, **kwargs: Any) -> None:
+        """
+        Runs the given method on all experiments in the project.
+        """
+        # Choosing whether to run the scaffold function in single or multi-processing mode
+        if self.nprocs == 1:
+            scaffold_func = self._process_scaffold_sp
+        else:
+            scaffold_func = self._process_scaffold_mp
+
+        # Running the scaffold function
+        # Starting
+        print(f"Running {method.__name__}")
+        # Running
+        scaffold_func(method, *args, **kwargs)
+        # Finishing
+        print(f"Finished {method.__name__}!")
+        print(f"{STR_DIV}\n{STR_DIV}\n")
+
     #####################################################################
-    #               CUSTOM BATCH DLC PROCESSING METHOD
+    #               BATCH PROCESSING METHODS
     #####################################################################
 
-    def _run_dlc(self, gputouse: int = None, overwrite: bool = False) -> None:
-        """
-        Custom batch processing function for DLC.
-        """
-        nprocs = len(MultiprocMixin.get_gpu_ids())
-        # nprocs = 1
+    @functools.wraps(Experiment.update_configs)
+    def update_configs(self, *args, **kwargs) -> None:
+        """ """
+        method = Experiment.update_configs.__name__
+        self._process_scaffold(method, *args, **kwargs)
+
+    @functools.wraps(Experiment.format_vid)
+    def format_vid(self, *args, **kwargs) -> None:
+        """ """
+        method = Experiment.format_vid.__name__
+        self._process_scaffold(method, *args, **kwargs)
+
+    @functools.wraps(Experiment.run_dlc)
+    def run_dlc(self, gputouse: int = None, overwrite: bool = False) -> None:
+        """ """
+        nprocs = len(MultiprocMixin.get_gpu_ids()) if gputouse is None else 1
         # Getting the experiments to run DLC on
         exp_ls = self.get_experiments()
         # If overwrite is false, filtering for only experiments that need to be run
         if not overwrite:
-            exp_ls = [exp for exp in exp_ls if not exp.check_fp("3_dlc")]
+            exp_ls = [exp for exp in exp_ls if not os.path.isfile(exp.get_fp("3_dlc"))]
         # Splitting the experiments into batches
         exp_batches_ls = np.array_split(exp_ls, nprocs)
         # Running DLC on each batch of experiments
@@ -350,14 +368,35 @@ class BehavysisProject:
                 ],
             )
 
-        # RunDLC.ma_dlc_analyse_batch(
-        #     in_fp_ls=[exp.get_fp("2_formatted_vid") for exp in self.get_experiments()],
-        #     out_dir=os.path.join(self.root_dir, "3_dlc"),
-        #     configs_dir=os.path.join(self.root_dir, "0_configs"),
-        #     temp_dir=os.path.join(self.root_dir, TEMP_DIR),
-        #     gputouse=gputouse,
-        #     overwrite=overwrite,
-        # )
+    @functools.wraps(Experiment.calculate_params)
+    def calculate_params(self, *args, **kwargs) -> None:
+        """ """
+        method = Experiment.calculate_params.__name__
+        self._process_scaffold(method, *args, **kwargs)
+
+    @functools.wraps(Experiment.preprocess)
+    def preprocess(self, *args, **kwargs) -> None:
+        """ """
+        method = Experiment.preprocess.__name__
+        self._process_scaffold(method, *args, **kwargs)
+
+    @functools.wraps(Experiment.extract_features)
+    def extract_features(self, *args, **kwargs) -> None:
+        """ """
+        method = Experiment.extract_features.__name__
+        self._process_scaffold(method, *args, **kwargs)
+
+    @functools.wraps(Experiment.classify_behaviours)
+    def classify_behaviours(self, *args, **kwargs) -> None:
+        """ """
+        method = Experiment.classify_behaviours.__name__
+        self._process_scaffold(method, *args, **kwargs)
+
+    @functools.wraps(Experiment.analyse)
+    def analyse(self, *args, **kwargs) -> None:
+        """ """
+        method = Experiment.analyse.__name__
+        self._process_scaffold(method, *args, **kwargs)
 
     #####################################################################
     #               DIAGNOSTICS DICT METHODS
@@ -397,11 +436,11 @@ class BehavysisProject:
         os.makedirs(os.path.split(fp)[0], exist_ok=True)
         # Writing diagnostics file
         df.to_csv(fp)
-        
+
     #####################################################################
     #                CONFIGS DIAGONOSTICS METHODS
     #####################################################################
-    
+
     def collate_configs_auto(self) -> None:
         """
         Collates the auto fields of the configs of all experiments into a DataFrame.
@@ -424,14 +463,19 @@ class BehavysisProject:
                 df_configs.loc[exp.name, "_".join(i)] = val
         # Saving the collated auto fields DataFrame to diagnostics folder
         self.save_diagnostics("collated_configs_auto", df_configs)
-        
+
         # Making and saving histogram plots of all the auto fields
-        g = sns.FacetGrid(data=df_configs.melt(), col="variable", sharex=False, col_wrap=4)
+        g = sns.FacetGrid(
+            data=df_configs.melt(), col="variable", sharex=False, col_wrap=4
+        )
         g.map(sns.histplot, "value", bins=20)
         g.set_titles("{col_name}")
-        g.savefig(os.path.join(self.root_dir, DIAGNOSTICS_DIR, "collated_configs_auto_hist.png"))
+        g.savefig(
+            os.path.join(
+                self.root_dir, DIAGNOSTICS_DIR, "collated_configs_auto_hist.png"
+            )
+        )
         g.figure.clf()
-                
 
     #####################################################################
     #               IMPORT EXPERIMENTS METHODS
@@ -455,7 +499,7 @@ class BehavysisProject:
             True if imported, False if not.
         """
         if not name in self.experiments:
-            self.experiments[name] = BehavysisExperiment(name, self.root_dir)
+            self.experiments[name] = Experiment(name, self.root_dir)
             return True
         return False
 
@@ -467,39 +511,41 @@ class BehavysisProject:
         """
         print(f"Searching project folder: {self.root_dir}\n")
         # Adding all experiments within given project dir
-        imported = []
         failed = []
         for i in FOLDERS:
-            dir_folder = os.path.join(self.root_dir, i)
-            if os.path.isdir(dir_folder):
-                for j in natsorted(os.listdir(dir_folder)):
-                    if j[0] == ".":  # do not add hidden files
-                        continue
-                    name = IOMixin.get_name(j)
-                    try:
-                        if self.import_experiment(name):
-                            imported.append(name)
-                    except ValueError as e:  # do not add invalid files
-                        print(f"failed: {i}    --    {j}")
-                        print(e)
-                        failed.append(name)
+            i = list(FOLDERS.keys())[i]
+            folder = os.path.join(self.root_dir, i)
+            # If folder does not exist, skip
+            if not os.path.isdir(folder):
+                continue
+            # For each file in the folder
+            for j in natsorted(os.listdir(folder)):
+                if re.search(r"^\.", j):  # do not add hidden files
+                    continue
+                name = IOMixin.get_name(j)
+                try:
+                    self.import_experiment(name)
+                except ValueError as e:  # do not add invalid files
+                    print(f"failed: {i}    --    {j}:\n{e}")
+                    failed.append(name)
         # Printing outcome of imported and failed experiments
         print("Experiments imported successfully:")
-        for i in imported:
-            print(f"    - {i}")
-        print("")
+        print("\n".join([f"    - {i}" for i in self.experiments]), end="\n\n")
         print("Experiments failed to import:")
-        for i in failed:
-            print(f"    - {i}")
-        print("")
+        print("\n".join([f"    - {i}" for i in failed]), end="\n\n")
         # Making diagnostics DataFrame of all the files associated with each experiment that exists
-        dd_df = pd.DataFrame(
-            index=list(self.experiments.keys()), columns=list(FOLDERS.keys())
-        )
         # TODO: MAKE FASTER
-        # for exp in self.get_experiments():
-        #     for folder in FOLDERS:
-        #         dd_df.loc[exp.name, folder] = exp.check_fp(folder)
+        cols_ls = list(FOLDERS)
+        rows_ls = list(self.experiments)
+        shape = (len(rows_ls), len(cols_ls))
+        dd_arr = np.apply_along_axis(
+            lambda i: os.path.isfile(self.experiments[i[1]].get_fp(i[0])),
+            axis=0,
+            arr=np.array(np.meshgrid(cols_ls, rows_ls)).reshape((2, np.prod(shape))),
+        ).reshape(shape)
+        # Creating the diagnostics DataFrame
+        dd_df = pd.DataFrame(dd_arr, index=rows_ls, columns=cols_ls)
+        # Saving the diagnostics DataFrame
         self.save_diagnostics("import_experiments", dd_df)
 
     #####################################################################

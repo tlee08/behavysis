@@ -20,10 +20,9 @@ str
 
 import os
 
+from behavysis_core.data_models.experiment_configs import ExperimentConfigs
 from behavysis_core.mixins.diagnostics_mixin import DiagnosticsMixin
 from behavysis_core.mixins.process_vid_mixin import ProcessVidMixin
-
-from behavysis_pipeline.pipeline.experiment_configs import ExperimentConfigs
 
 
 class FormatVid:

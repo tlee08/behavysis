@@ -30,10 +30,12 @@ from sklearn.metrics import (
     precision_recall_fscore_support,
 )
 
-from behavysis_pipeline.behav_classifier.behav_classifier_configs import BehavClassifierConfigs
+from behavysis_pipeline.behav_classifier.behav_classifier_configs import (
+    BehavClassifierConfigs,
+)
 
 if TYPE_CHECKING:
-    from behavysis_pipeline.pipeline.project import BehavysisProject
+    from behavysis_pipeline.pipeline.project import Project
 
 
 class BehavClassifier:
@@ -69,7 +71,7 @@ class BehavClassifier:
         configs.write_json(self.configs_fp)
 
     @classmethod
-    def from_BehavysisProject(cls, proj: BehavysisProject) -> BehavClassifier:
+    def from_BehavysisProject(cls, proj: Project) -> BehavClassifier:
         """
         Loading classifier from given BehavysisProject instance.
 

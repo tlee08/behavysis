@@ -6,13 +6,13 @@ import os
 
 import numpy as np
 import pandas as pd
+from behavysis_core.data_models.experiment_configs import ExperimentConfigs
 from behavysis_core.mixins.behaviour_mixin import BehaviourMixin
 from behavysis_core.mixins.df_io_mixin import DFIOMixin
 from behavysis_core.mixins.diagnostics_mixin import DiagnosticsMixin
 from behavysis_core.utils.constants import BEHAV_COLUMN_NAMES, BEHAV_PRED_COL
 
 from behavysis_pipeline.behav_classifier import BehavClassifier
-from behavysis_pipeline.pipeline.experiment_configs import ExperimentConfigs
 
 
 class ClassifyBehaviours:

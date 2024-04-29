@@ -25,6 +25,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
+from behavysis_core.data_models.experiment_configs import ExperimentConfigs
 from behavysis_core.mixins.behaviour_mixin import BehaviourMixin
 from behavysis_core.mixins.df_io_mixin import DFIOMixin
 from behavysis_core.mixins.io_mixin import IOMixin
@@ -35,8 +36,6 @@ from behavysis_core.utils.constants import (
     BODYCENTRE,
     SINGLE_COL,
 )
-
-from behavysis_pipeline.pipeline.experiment_configs import ExperimentConfigs
 
 #####################################################################
 #               ANALYSIS API FUNCS
