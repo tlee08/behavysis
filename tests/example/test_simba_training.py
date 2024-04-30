@@ -38,7 +38,6 @@ if __name__ == "__main__":
         (
             Preprocess.start_stop_trim,
             Preprocess.interpolate_points,
-            Preprocess.bodycentre,
             Preprocess.refine_identities,
         ),
         overwrite=overwrite,

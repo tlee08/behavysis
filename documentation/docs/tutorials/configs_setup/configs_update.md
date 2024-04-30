@@ -30,3 +30,7 @@ There are three settings for how the experiment config files are updated:
 configs_fp = "path/to/default_configs.json"
 proj.updateConfigFiles(configs_fp, overwrite="add") # overwrite can also be "set" or "reset"
 ```
+
+```json title="configs_OF.json"
+--8<-- "docs/tutorials/configs_setup/configs_OF.json"
+```

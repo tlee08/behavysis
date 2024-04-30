@@ -2,6 +2,8 @@
 _summary_
 """
 
+from behavysis_core.data_models import experiment_configs
+
 from .analyse import Analyse
 from .calculate_params import CalculateParams
 from .classify_behaviours import ClassifyBehaviours

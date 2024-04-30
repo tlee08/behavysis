@@ -80,11 +80,10 @@ exp.calculateParams(getVideoMetadata, calcStartFrame, calcEndFrame, calcPXPerMM)
 
 - `trimToStartEnd`: Trims the csv data between the experiment start and end frames, which are either defined by the user or from `calculateParams`.
 - `interpolatePoints`: Linearly interpolates subject points that have an accuracy below a user-defined pcutoff.
-- `calcBodyCentre`: Calculate the average "centre" of the subject, based on the user-defined list of body parts and name these $(x,y)$ points with a user-defined name. This $(x,y)$ data is added as a column to the raw data.
 - `mapTimestamps`: adds a column to the dataframe which is the time (in seconds) from the beginning of the video for each frame.
 
 ```python
-exp.preprocess(trimToStartEnd, interpolatePoints, calcBodyCentre, mapTimestamps)
+exp.preprocess(trimToStartEnd, interpolatePoints, mapTimestamps)
 ```
 
 `analyse` analyses the preprocessed csv data to extract useful analysis and results. The analyses performed are:

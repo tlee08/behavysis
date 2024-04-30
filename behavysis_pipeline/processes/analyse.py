@@ -20,8 +20,6 @@ from __future__ import annotations
 
 import os
 
-import matplotlib
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
@@ -33,9 +31,9 @@ from behavysis_core.mixins.keypoints_mixin import KeypointsMixin
 from behavysis_core.utils.constants import (
     ANALYSIS_COLUMN_NAMES,
     ANALYSIS_INDEX_NAMES,
-    BODYCENTRE,
     SINGLE_COL,
 )
+from pydantic import BaseModel
 
 #####################################################################
 #               ANALYSIS API FUNCS
@@ -43,6 +41,8 @@ from behavysis_core.utils.constants import (
 
 
 class Analyse:
+    """__summary__"""
+
     @staticmethod
     def thigmotaxis(
         dlc_fp: str,
@@ -66,20 +66,23 @@ class Analyse:
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
         fps, _, _, px_per_mm, bins_ls, custom_bins_ls = get_analysis_configs(configs)
-        configs_filt = configs.user.analyse.thigmotaxis
-        thresh_mm = float(configs_filt.thresh_mm)
+        configs_filt = Model_in_roi(**configs.user.analyse.thigmotaxis)
+        bpts = configs_filt.bodyparts
         # Calculating more parameters
-        thresh_px = thresh_mm / px_per_mm
+        thresh_px = configs_filt.thresh_mm / px_per_mm
+
         # Loading in dataframe
         dlc_df = KeypointsMixin.clean_headings(DFIOMixin.read_feather(dlc_fp))
+        # Checking df
+        KeypointsMixin.check_df(dlc_df)
         # Getting indivs and bpts list
         indivs, _ = KeypointsMixin.get_headings(dlc_df)
 
         # Getting average corner coordinates. Assumes arena does not move.
-        tl = dlc_df[(SINGLE_COL, "TopLeft")].apply(np.nanmean)
-        tr = dlc_df[(SINGLE_COL, "TopRight")].apply(np.nanmean)
-        bl = dlc_df[(SINGLE_COL, "BottomLeft")].apply(np.nanmean)
-        br = dlc_df[(SINGLE_COL, "BottomRight")].apply(np.nanmean)
+        tl = dlc_df[(SINGLE_COL, configs_filt.roi_top_left)].mean()
+        tr = dlc_df[(SINGLE_COL, configs_filt.roi_top_right)].mean()
+        bl = dlc_df[(SINGLE_COL, configs_filt.roi_bottom_left)].mean()
+        br = dlc_df[(SINGLE_COL, configs_filt.roi_bottom_right)].mean()
         # Making boundary functions
         top = hline_factory(tl, tr)
         bottom = hline_factory(bl, br)
@@ -88,9 +91,10 @@ class Analyse:
 
         analysis_df = init_fbf_analysis_df(dlc_df.index, fps)
         dlc_df.index = analysis_df.index
+        idx = pd.IndexSlice
         for indiv in indivs:
-            indiv_x = dlc_df[(indiv, BODYCENTRE, "x")]
-            indiv_y = dlc_df[(indiv, BODYCENTRE, "y")]
+            indiv_x = dlc_df.loc[:, idx[indiv, bpts, "x"]].mean(axis=1)
+            indiv_y = dlc_df.loc[:, idx[indiv, bpts, "y"]].mean(axis=1)
             # Determining if the indiv is outside of the boundaries (with the thresh_px buffer)
             analysis_df[(indiv, "thigmotaxis")] = (
                 (indiv_y <= top(indiv_x) + thresh_px)
@@ -105,8 +109,8 @@ class Analyse:
         # Generating scatterplot
         # Adding bodypoint x and y coords
         for indiv in indivs:
-            analysis_df[(indiv, "x")] = dlc_df[(indiv, BODYCENTRE, "x")]
-            analysis_df[(indiv, "y")] = dlc_df[(indiv, BODYCENTRE, "y")]
+            indiv_x = dlc_df.loc[:, idx[indiv, bpts, "x"]].mean(axis=1)
+            indiv_y = dlc_df.loc[:, idx[indiv, bpts, "y"]].mean(axis=1)
         # making corners_df
         corners_df = pd.DataFrame([tl, tr, bl, br])
         plot_fp = os.path.join(out_dir, "scatter_plot", f"{name}.png")
@@ -141,20 +145,23 @@ class Analyse:
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
         fps, _, _, px_per_mm, bins_ls, custom_bins_ls = get_analysis_configs(configs)
-        configs_filt = configs.user.analyse.center_crossing
-        thresh_mm = float(configs_filt.thresh_mm)
+        configs_filt = Model_in_roi(**configs.user.analyse.center_crossing)
+        bpts = configs_filt.bodyparts
         # Calculating more parameters
-        thresh_px = thresh_mm / px_per_mm
+        thresh_px = configs_filt.thresh_mm / px_per_mm
+
         # Loading in dataframe
         dlc_df = KeypointsMixin.clean_headings(DFIOMixin.read_feather(dlc_fp))
+        # Checking df
+        KeypointsMixin.check_df(dlc_df)
         # Getting indivs and bpts list
         indivs, _ = KeypointsMixin.get_headings(dlc_df)
 
-        # Getting average corner coordinates. NOTE: assumes arena does not move.
-        tl = dlc_df[(SINGLE_COL, "TopLeft")].apply(np.nanmean)
-        tr = dlc_df[(SINGLE_COL, "TopRight")].apply(np.nanmean)
-        bl = dlc_df[(SINGLE_COL, "BottomLeft")].apply(np.nanmean)
-        br = dlc_df[(SINGLE_COL, "BottomRight")].apply(np.nanmean)
+        # Getting average corner coordinates. Assumes arena does not move.
+        tl = dlc_df[(SINGLE_COL, configs_filt.roi_top_left)].mean()
+        tr = dlc_df[(SINGLE_COL, configs_filt.roi_top_right)].mean()
+        bl = dlc_df[(SINGLE_COL, configs_filt.roi_bottom_left)].mean()
+        br = dlc_df[(SINGLE_COL, configs_filt.roi_bottom_right)].mean()
         # Making boundary functions
         top = hline_factory(tl, tr)
         bottom = hline_factory(bl, br)
@@ -163,15 +170,16 @@ class Analyse:
 
         analysis_df = init_fbf_analysis_df(dlc_df.index, fps)
         dlc_df.index = analysis_df.index
+        idx = pd.IndexSlice
         for indiv in indivs:
-            indiv_x = dlc_df[(indiv, BODYCENTRE, "x")]
-            indiv_y = dlc_df[(indiv, BODYCENTRE, "y")]
+            indiv_x = dlc_df.loc[:, idx[indiv, bpts, "x"]].mean(axix=1)
+            indiv_y = dlc_df.loc[:, idx[indiv, bpts, "y"]].mean(axix=1)
             # Determining if the indiv is outside of the boundaries (with the thresh_px buffer)
             analysis_df[(indiv, "in_center")] = (
-                (indiv_y > top(indiv_x) + thresh_px)
-                & (indiv_y < bottom(indiv_x) - thresh_px)
-                & (indiv_x > left(indiv_y) + thresh_px)
-                & (indiv_x < right(indiv_y) - thresh_px)
+                (indiv_y >= top(indiv_x) + thresh_px)
+                & (indiv_y <= bottom(indiv_x) - thresh_px)
+                & (indiv_x >= left(indiv_y) + thresh_px)
+                & (indiv_x <= right(indiv_y) - thresh_px)
             ).astype(np.int8)
         # Saving analysis_df
         fbf_fp = os.path.join(out_dir, "fbf", f"{name}.feather")
@@ -180,12 +188,97 @@ class Analyse:
         # Generating scatterplot
         # Adding bodypoint x and y coords
         for indiv in indivs:
-            analysis_df[(indiv, "x")] = dlc_df[(indiv, BODYCENTRE, "x")]
-            analysis_df[(indiv, "y")] = dlc_df[(indiv, BODYCENTRE, "y")]
+            indiv_x = dlc_df.loc[:, idx[indiv, bpts, "x"]].mean(axis=1)
+            indiv_y = dlc_df.loc[:, idx[indiv, bpts, "y"]].mean(axis=1)
+            analysis_df[(indiv, "x")] = indiv_x
+            analysis_df[(indiv, "y")] = indiv_y
         # making corners_df
         corners_df = pd.DataFrame([tl, tr, bl, br])
         plot_fp = os.path.join(out_dir, "scatter_plot", f"{name}.png")
         make_location_scatterplot(analysis_df, corners_df, plot_fp, "in_center")
+
+        # Summarising and binning analysis_df
+        make_summary_binned(
+            DFIOMixin.read_feather(fbf_fp), out_dir, name, bins_ls, custom_bins_ls, True
+        )
+        return outcome
+
+    @staticmethod
+    def in_roi(
+        dlc_fp: str,
+        analysis_dir: str,
+        configs_fp: str,
+    ) -> str:
+        """
+        Determines the frames in which the subject is inside the cage (from average
+        of given bodypoints).
+
+        Takes DLC data as input and returns the following analysis output:
+
+        - a feather file with the following columns for each video frame (row).
+        - a feather file with the summary statistics (sum, mean, std, min, median, Q1, median,
+        Q3, max) for DeltaMMperSec, and DeltaMMperSecSmoothed
+        - Each row `is_frozen`, and bout number.
+        """
+        outcome = ""
+        name = IOMixin.get_name(dlc_fp)
+        out_dir = os.path.join(analysis_dir, Analyse.in_roi.__name__)
+        # Calculating the deltas (changes in body position) between each frame for the subject
+        configs = ExperimentConfigs.read_json(configs_fp)
+        fps, _, _, px_per_mm, bins_ls, custom_bins_ls = get_analysis_configs(configs)
+        configs_filt = Model_in_roi(**configs.user.analyse.in_roi)
+        bpts = configs_filt.bodyparts
+        # Calculating more parameters
+        thresh_px = configs_filt.thresh_mm / px_per_mm
+
+        # Loading in dataframe
+        dlc_df = KeypointsMixin.clean_headings(DFIOMixin.read_feather(dlc_fp))
+        # Checking df
+        KeypointsMixin.check_df(dlc_df)
+        # Getting indivs and bpts list
+        indivs, bpts = KeypointsMixin.get_headings(dlc_df)
+        # Checking body-centre bodypart exists
+        KeypointsMixin.check_bpts_exist(dlc_df, bpts)
+
+        # Getting average corner coordinates. Assumes arena does not move.
+        tl = dlc_df[(SINGLE_COL, configs_filt.roi_top_left)].mean()
+        tr = dlc_df[(SINGLE_COL, configs_filt.roi_top_right)].mean()
+        bl = dlc_df[(SINGLE_COL, configs_filt.roi_bottom_left)].mean()
+        br = dlc_df[(SINGLE_COL, configs_filt.roi_bottom_right)].mean()
+        # Making boundary functions
+        top = hline_factory(tl, tr)
+        bottom = hline_factory(bl, br)
+        left = vline_factory(tl, bl)
+        right = vline_factory(tr, br)
+
+        analysis_df = init_fbf_analysis_df(dlc_df.index, fps)
+        dlc_df.index = analysis_df.index
+        idx = pd.IndexSlice
+        for indiv in indivs:
+            indiv_x = dlc_df.loc[:, idx[indiv, bpts, "x"]].mean(axis=1)
+            indiv_y = dlc_df.loc[:, idx[indiv, bpts, "y"]].mean(axis=1)
+            # Determining if the indiv is inside of the box region (with the thresh_px buffer)
+            analysis_df[(indiv, "in_roi")] = (
+                (indiv_y >= top(indiv_x) - thresh_px)
+                & (indiv_y <= bottom(indiv_x) + thresh_px)
+                & (indiv_x >= left(indiv_y) - thresh_px)
+                & (indiv_x <= right(indiv_y) + thresh_px)
+            ).astype(np.int8)
+        # Saving analysis_df
+        fbf_fp = os.path.join(out_dir, "fbf", f"{name}.feather")
+        DFIOMixin.write_feather(analysis_df, fbf_fp)
+
+        # Generating scatterplot
+        # Adding bodypoint x and y coords
+        for indiv in indivs:
+            indiv_x = dlc_df.loc[:, idx[indiv, bpts, "x"]].mean(axis=1)
+            indiv_y = dlc_df.loc[:, idx[indiv, bpts, "y"]].mean(axis=1)
+            analysis_df[(indiv, "x")] = indiv_x
+            analysis_df[(indiv, "y")] = indiv_y
+        # making corners_df
+        corners_df = pd.DataFrame([tl, tr, bl, br])
+        plot_fp = os.path.join(out_dir, "scatter_plot", f"{name}.png")
+        make_location_scatterplot(analysis_df, corners_df, plot_fp, "in_roi")
 
         # Summarising and binning analysis_df
         make_summary_binned(
@@ -214,20 +307,24 @@ class Analyse:
         # Calculating the deltas (changes in body position) between each frame for the subject
         configs = ExperimentConfigs.read_json(configs_fp)
         fps, _, _, px_per_mm, bins_ls, custom_bins_ls = get_analysis_configs(configs)
-        configs_filt = configs.user.analyse.speed
-        smoothing_sec = configs_filt.smoothing_sec
+        configs_filt = Model_speed(**configs.user.analyse.speed)
+        bpts = configs_filt.bodyparts
         # Calculating more parameters
-        smoothing_frames = int(smoothing_sec * fps)
+        smoothing_frames = int(configs_filt.smoothing_sec * fps)
+
         # Loading in dataframe
         dlc_df = KeypointsMixin.clean_headings(DFIOMixin.read_feather(dlc_fp))
+        # Checking df
+        KeypointsMixin.check_df(dlc_df)
         # Getting indivs and bpts list
         indivs, _ = KeypointsMixin.get_headings(dlc_df)
         # Checking body-centre bodypart exists
-        KeypointsMixin.check_bpts_exist(dlc_df, [BODYCENTRE])
+        KeypointsMixin.check_bpts_exist(dlc_df, bpts)
 
         # Calculating speed of subject for each frame
         analysis_df = init_fbf_analysis_df(dlc_df.index, fps)
         dlc_df.index = analysis_df.index
+        idx = pd.IndexSlice
         for indiv in indivs:
             # Making a rolling window of 3?? maybe 4 frames for average body-centre
             # Otherwise jitter contributes to movement
@@ -235,8 +332,8 @@ class Analyse:
             smoothed_xy_df = dlc_df.rolling(
                 window=jitter_frames, center=True, min_periods=1
             ).agg(np.nanmean)
-            delta_x = smoothed_xy_df[(indiv, BODYCENTRE, "x")].diff()
-            delta_y = smoothed_xy_df[(indiv, BODYCENTRE, "y")].diff()
+            delta_x = smoothed_xy_df.loc[:, idx[indiv, bpts, "x"]].mean(axis=1).diff()
+            delta_y = smoothed_xy_df.loc[:, idx[indiv, bpts, "y"]].mean(axis=1).diff()
             delta = np.sqrt(np.power(delta_x, 2) + np.power(delta_y, 2))
             analysis_df[(indiv, "SpeedMMperSec")] = (delta / px_per_mm) * fps
             analysis_df[(indiv, "SpeedMMperSecSmoothed")] = (
@@ -280,26 +377,32 @@ class Analyse:
         # Calculating the deltas (changes in body position) between each frame for the subject
         configs = ExperimentConfigs.read_json(configs_fp)
         fps, _, _, px_per_mm, bins_ls, custom_bins_ls = get_analysis_configs(configs)
-        configs_filt = configs.user.analyse.social_distance
-        smoothing_sec = configs_filt.smoothing_sec
+        configs_filt = Model_social_distance(**configs.user.analyse.social_distance)
+        bpts = configs_filt.bodyparts
         # Calculating more parameters
-        smoothing_frames = int(smoothing_sec * fps)
+        smoothing_frames = int(configs_filt.smoothing_sec * fps)
+
         # Loading in dataframe
         dlc_df = KeypointsMixin.clean_headings(DFIOMixin.read_feather(dlc_fp))
-        KeypointsMixin.check_bpts_exist(dlc_df, [BODYCENTRE])
+        # Checking df
+        KeypointsMixin.check_df(dlc_df)
         # Getting indivs and bpts list
         indivs, _ = KeypointsMixin.get_headings(dlc_df)
+        # Checking body-centre bodypart exists
+        KeypointsMixin.check_bpts_exist(dlc_df, bpts)
 
         # Calculating speed of subject for each frame
         analysis_df = init_fbf_analysis_df(dlc_df.index, fps)
         dlc_df.index = analysis_df.index
+        idx = pd.IndexSlice
         # Assumes there are only two individuals
         indiv_a = indivs[0]
         indiv_b = indivs[1]
-        bpt = "Nose"
         # Getting distances between each individual
-        dist_x = dlc_df[(indiv_a, bpt, "x")] - dlc_df[(indiv_b, bpt, "x")]
-        dist_y = dlc_df[(indiv_a, bpt, "y")] - dlc_df[(indiv_b, bpt, "y")]
+        idx_a = idx[indiv_b, bpts, "x"]
+        dist_x = dlc_df.loc[:, idx_a] - dlc_df.loc[:, idx_a]
+        idx_b = idx[indiv_a, bpts, "y"]
+        dist_y = dlc_df.loc[:, idx_b] - dlc_df.loc[:, idx_b]
         dist = np.sqrt(np.power(dist_x, 2) + np.power(dist_y, 2))
         # Adding mm distance to saved analysis_df table
         analysis_df[(f"{indiv_a}_{indiv_b}", "DistMM")] = dist / px_per_mm
@@ -350,16 +453,16 @@ class Analyse:
         # Calculating the deltas (changes in body position) between each frame for the subject
         configs = ExperimentConfigs.read_json(configs_fp)
         fps, _, _, px_per_mm, bins_ls, custom_bins_ls = get_analysis_configs(configs)
-        configs_filt = configs.user.analyse.freezing
-        window_sec = configs_filt.window_sec
-        thresh_mm = configs_filt.thresh_mm
-        smoothing_sec = configs_filt.smoothing_sec
+        configs_filt = Model_freezing(**configs.user.analyse.freezing)
         # Calculating more parameters
-        thresh_px = thresh_mm / px_per_mm
-        smoothing_frames = int(smoothing_sec * fps)
-        window_frames = int(np.round(fps * window_sec, 0))
+        thresh_px = configs_filt.thresh_mm / px_per_mm
+        smoothing_frames = int(configs_filt.smoothing_sec * fps)
+        window_frames = int(np.round(fps * configs_filt.window_sec, 0))
+
         # Loading in dataframe
         dlc_df = KeypointsMixin.clean_headings(DFIOMixin.read_feather(dlc_fp))
+        # Checking df
+        KeypointsMixin.check_df(dlc_df)
         # Getting indivs and bpts list
         indivs, bpts = KeypointsMixin.get_headings(dlc_df)
 
@@ -400,92 +503,6 @@ class Analyse:
         # Saving analysis_df
         fbf_fp = os.path.join(out_dir, "fbf", f"{name}.feather")
         DFIOMixin.write_feather(analysis_df, fbf_fp)
-
-        # Summarising and binning analysis_df
-        make_summary_binned(
-            DFIOMixin.read_feather(fbf_fp), out_dir, name, bins_ls, custom_bins_ls, True
-        )
-        return outcome
-
-    @staticmethod
-    def in_roi(
-        dlc_fp: str,
-        analysis_dir: str,
-        configs_fp: str,
-    ) -> str:
-        """
-        Determines the frames in which the subject's nose is inside the cage.
-
-        Takes DLC data as input and returns the following analysis output:
-
-        - a feather file with the following columns for each video frame (row).
-        - a feather file with the summary statistics (sum, mean, std, min, median, Q1, median,
-        Q3, max) for DeltaMMperSec, and DeltaMMperSecSmoothed
-        - Each row `is_frozen`, and bout number.
-        """
-        outcome = ""
-        name = IOMixin.get_name(dlc_fp)
-        out_dir = os.path.join(analysis_dir, Analyse.in_roi.__name__)
-        # Calculating the deltas (changes in body position) between each frame for the subject
-        configs = ExperimentConfigs.read_json(configs_fp)
-        fps, _, _, px_per_mm, bins_ls, custom_bins_ls = get_analysis_configs(configs)
-        configs_filt = configs.user.analyse.in_roi
-        thresh_mm = configs_filt.thresh_mm
-        tl_label = configs_filt.roi_top_left
-        tr_label = configs_filt.roi_top_right
-        bl_label = configs_filt.roi_bottom_left
-        br_label = configs_filt.roi_bottom_right
-        bpts = configs_filt.bodyparts
-        # Calculating more parameters
-        thresh_px = thresh_mm / px_per_mm
-        # Loading in dataframe
-        dlc_df = KeypointsMixin.clean_headings(DFIOMixin.read_feather(dlc_fp))
-        # Getting indivs and bpts list
-        indivs, bpts = KeypointsMixin.get_headings(dlc_df)
-        # Checking body-centre bodypart exists
-        KeypointsMixin.check_bpts_exist(dlc_df, ["Nose"])
-
-        # Getting average corner coordinates. Assumes arena does not move.
-        tl = dlc_df[(SINGLE_COL, tl_label)].apply(np.nanmean)
-        tr = dlc_df[(SINGLE_COL, tr_label)].apply(np.nanmean)
-        bl = dlc_df[(SINGLE_COL, bl_label)].apply(np.nanmean)
-        br = dlc_df[(SINGLE_COL, br_label)].apply(np.nanmean)
-        # Making boundary functions
-        top = hline_factory(tl, tr)
-        bottom = hline_factory(bl, br)
-        left = vline_factory(tl, bl)
-        right = vline_factory(tr, br)
-
-        analysis_df = init_fbf_analysis_df(dlc_df.index, fps)
-        dlc_df.index = analysis_df.index
-        idx = pd.IndexSlice
-        for indiv in indivs:
-            indiv_x = dlc_df.loc[:, idx[indiv, bpts, "x"]].apply(np.nanmean, axis=1)
-            indiv_y = dlc_df.loc[:, idx[indiv, bpts, "y"]].apply(np.nanmean, axis=1)
-            # Determining if the indiv is inside of the box region (with the thresh_px buffer)
-            analysis_df[(indiv, "in_roi")] = (
-                (indiv_y >= top(indiv_x) - thresh_px)
-                & (indiv_y <= bottom(indiv_x) + thresh_px)
-                & (indiv_x >= left(indiv_y) - thresh_px)
-                & (indiv_x <= right(indiv_y) + thresh_px)
-            ).astype(np.int8)
-        # Saving analysis_df
-        fbf_fp = os.path.join(out_dir, "fbf", f"{name}.feather")
-        DFIOMixin.write_feather(analysis_df, fbf_fp)
-
-        # Generating scatterplot
-        # Adding bodypoint x and y coords
-        for indiv in indivs:
-            analysis_df[(indiv, "x")] = dlc_df.loc[:, idx[indiv, bpts, "x"]].apply(
-                np.nanmean, axis=1
-            )
-            analysis_df[(indiv, "y")] = dlc_df.loc[:, idx[indiv, bpts, "y"]].apply(
-                np.nanmean, axis=1
-            )
-        # making corners_df
-        corners_df = pd.DataFrame([tl, tr, bl, br])
-        plot_fp = os.path.join(out_dir, "scatter_plot", f"{name}.png")
-        make_location_scatterplot(analysis_df, corners_df, plot_fp, "in_roi")
 
         # Summarising and binning analysis_df
         make_summary_binned(
@@ -882,3 +899,36 @@ def vline_factory(p1, p2):
     m = (x2-x1)/(y2-y1)   &   x = m(y-y1) + b + x1
     """
     return lambda y: (p2["x"] - p1["x"]) / (p2["y"] - p1["y"]) * (y - p1["y"]) + p1["x"]
+
+
+class Model_speed(BaseModel):
+    """_summary_"""
+
+    smoothing_sec: float = 0
+    bodyparts: list[str] = []
+
+
+class Model_social_distance(BaseModel):
+    """_summary_"""
+
+    smoothing_sec: float = 0
+    bodyparts: list[str] = []
+
+
+class Model_freezing(BaseModel):
+    """_summary_"""
+
+    window_sec: float = 0
+    thresh_mm: float = 0
+    smoothing_sec: float = 0
+
+
+class Model_in_roi(BaseModel):
+    """_summary_"""
+
+    thresh_mm: float = 0
+    roi_top_left: str = ""
+    roi_top_right: str = ""
+    roi_bottom_left: str = ""
+    roi_bottom_right: str = ""
+    bodyparts: list[str] = []

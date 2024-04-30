@@ -24,6 +24,7 @@ from behavysis_core.data_models.pydantic_base_model import PydanticBaseModel
 from behavysis_core.mixins.df_io_mixin import DFIOMixin
 from behavysis_core.mixins.keypoints_mixin import KeypointsMixin
 from behavysis_core.utils.constants import SINGLE_COL
+from pydantic import BaseModel
 
 
 class CalculateParams:
@@ -56,7 +57,7 @@ class CalculateParams:
         outcome = ""
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
-        configs_filt = configs.user.calculate_params.start_frame
+        configs_filt = Model_start_frame(**configs.user.calculate_params.start_frame)
         bpts = configs_filt.bodyparts
         window_sec = configs_filt.window_sec
         pcutoff = configs_filt.pcutoff
@@ -114,7 +115,7 @@ class CalculateParams:
         outcome = ""
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
-        configs_filt = configs.user.calculate_params.stop_frame
+        configs_filt = Model_stop_frame(**configs.user.calculate_params.stop_frame)
         dur_sec = configs_filt.dur_sec
         start_frame = configs.auto.start_frame
         fps = configs.auto.formatted_vid.fps
@@ -163,7 +164,7 @@ class CalculateParams:
         outcome = ""
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
-        configs_filt = configs.user.calculate_params.px_per_mm
+        configs_filt = Model_px_per_mm(**configs.user.calculate_params.px_per_mm)
         pt_a = configs_filt.pt_a
         pt_b = configs_filt.pt_b
         pcutoff = configs_filt.pcutoff
@@ -198,29 +199,24 @@ class CalculateParams:
         return outcome
 
 
-class Model_start_frame(PydanticBaseModel):
+class Model_start_frame(BaseModel):
     """_summary_"""
 
-    window_sec: float
-    pcutoff: float
-    bodyparts: list[str]
+    bodyparts: list[str] = []
+    window_sec: float = 0
+    pcutoff: float = 0
 
 
-class Model_stop_frame(PydanticBaseModel):
+class Model_stop_frame(BaseModel):
     """_summary_"""
 
-    dur_sec: float
+    dur_sec: float = 0
 
 
-class Model_px_per_mm(PydanticBaseModel):
+class Model_px_per_mm(BaseModel):
     """_summary_"""
 
-    px_per_mm: float
-    start_frame: int
-    stop_frame: int
-
-
-class ConfigsCalculateParams(ConfigsCalculateParams):
-    start_frame: Model_start_frame
-    stop_frame: Model_stop_frame
-    px_per_mm: Model_px_per_mm
+    pt_a: str = "pt_a"
+    pt_b: str = "pt_b"
+    pcutoff: int = 0
+    dist_mm: float = 0

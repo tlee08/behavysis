@@ -73,9 +73,8 @@ def test_pipeline_run(proj_dir):
     proj.preprocess(
         (
             Preprocess.start_stop_trim,
-            Preprocess.interpolate_points,
-            Preprocess.bodycentre,
-            Preprocess.refine_identities,
+            Preprocess.interpolate,
+            Preprocess.refine_ids,
         ),
         overwrite=overwrite,
     )
@@ -150,9 +149,8 @@ def test_pipeline_run(proj_dir):
 #     proj.preprocess(
 #         (
 #             Preprocess.start_stop_trim,
-#             Preprocess.interpolate_points,
-#             Preprocess.bodycentre,
-#             Preprocess.refine_identities,
+#             Preprocess.interpolate,
+#             Preprocess.refine_ids,
 #         ),
 #         overwrite=True,
 #     )
