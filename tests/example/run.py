@@ -34,10 +34,10 @@ if __name__ == "__main__":
     #     ),
     #     overwrite=overwrite,
     # )
-    # # proj.run_dlc(
-    # #     gputouse=None,
-    # #     overwrite=overwrite,
-    # # )
+    # # # proj.run_dlc(
+    # # #     gputouse=None,
+    # # #     overwrite=overwrite,
+    # # # )
     # proj.calculate_params(
     #     (
     #         CalculateParams.start_frame,
@@ -63,19 +63,21 @@ if __name__ == "__main__":
     #         Analyse.freezing,
     #     )
     # )
-    # proj.combine_analysis_binned()
-    # proj.combine_analysis_summary()
-    # proj.extract_features(True, True)
-    # proj.classify_behaviours(True)
-    # proj.export_behaviours(True)
+    # proj.collate_analysis_binned()
+    # proj.collate_analysis_summary()
+
+    # proj = proj.get_experiments()[0]
+    proj.extract_features(True)
+    proj.classify_behaviours(True)
+    proj.export_behaviours(True)
     # proj.export_feather("7_scored_behavs", "./scored_csv")
-    # proj.evaluate(
-    #     (
-    #         Evaluate.eval_vid,
-    #         Evaluate.keypoints_plot,
-    #     ),
-    #     overwrite=overwrite,
-    # )
+    proj.evaluate(
+        (
+            Evaluate.eval_vid,
+            Evaluate.keypoints_plot,
+        ),
+        overwrite=overwrite,
+    )
 
     # # import shutil
     # # import os

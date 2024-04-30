@@ -11,6 +11,7 @@ from behavysis_core.mixins.df_io_mixin import DFIOMixin
 from behavysis_core.mixins.diagnostics_mixin import DiagnosticsMixin
 from behavysis_core.mixins.io_mixin import IOMixin
 from behavysis_core.mixins.keypoints_mixin import KeypointsMixin
+from behavysis_core.mixins.multiproc_mixin import MultiprocMixin
 from behavysis_core.mixins.subproc_mixin import SubprocMixin
 
 # Order of bodyparts is from
@@ -62,9 +63,10 @@ class ExtractFeatures:
             return DiagnosticsMixin.warning_msg()
         # Getting directory and file paths
         name = IOMixin.get_name(dlc_fp)
+        cpid = MultiprocMixin.get_cpid()
         configs_dir = os.path.split(configs_fp)[0]
-        simba_in_dir = os.path.join(temp_dir, "input")
-        simba_dir = os.path.join(temp_dir, "simba_proj")
+        simba_in_dir = os.path.join(temp_dir, f"input_{cpid}")
+        simba_dir = os.path.join(temp_dir, f"simba_proj_{cpid}")
         features_from_dir = os.path.join(
             simba_dir, "project_folder", "csv", "features_extracted"
         )
@@ -79,6 +81,9 @@ class ExtractFeatures:
         index = df.index
         # Saving as csv
         df.to_csv(simba_in_fp)
+        # Removing simba folder (if it exists)
+        if os.path.exists(simba_dir):
+            shutil.rmtree(simba_dir)
         # Running SimBA env and script to run SimBA feature extraction
         outcome += run_extract_features_script(simba_dir, simba_in_dir, configs_dir)
         # Reading SimBA feature extraction csv (to select column and convert to feather)
@@ -159,10 +164,10 @@ def run_extract_features_script(
         "run",
         "--no-capture-output",
         "-n",
-        "simba_wrapper_env",
+        "simba_subproc_env",
         "python",
         "-m",
-        "simbehavysis_pipeline.extract_features",
+        "simba_subproc",
         simba_dir,
         dlc_dir,
         configs_dir,

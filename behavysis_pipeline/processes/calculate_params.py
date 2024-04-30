@@ -17,11 +17,7 @@ str
 import numpy as np
 import pandas as pd
 from behavysis_core.constants import SINGLE_COL
-from behavysis_core.data_models.experiment_configs import (
-    ConfigsCalculateParams,
-    ExperimentConfigs,
-)
-from behavysis_core.data_models.pydantic_base_model import PydanticBaseModel
+from behavysis_core.data_models.experiment_configs import ExperimentConfigs
 from behavysis_core.mixins.df_io_mixin import DFIOMixin
 from behavysis_core.mixins.keypoints_mixin import KeypointsMixin
 from pydantic import BaseModel

@@ -368,8 +368,12 @@ class Project:
         """
         Batch processing for corresponding [Experiment method](experiment.md#behavysis_pipeline.pipeline.Experiment.classify_behaviours)
         """
+        # TODO: handle reading the model file whilst in multiprocessing. Current fix is single processing.
+        nprocs = self.nprocs
+        self.nprocs = 1
         method = Experiment.classify_behaviours
         self._process_scaffold(method, *args, **kwargs)
+        self.nprocs = nprocs
 
     @functools.wraps(Experiment.export_behaviours)
     def export_behaviours(self, *args, **kwargs) -> None:

@@ -14,6 +14,8 @@ from behavysis_core.mixins.diagnostics_mixin import DiagnosticsMixin
 
 from behavysis_pipeline.behav_classifier import BehavClassifier
 
+# TODO: handle reading the model file whilst in multiprocessing
+
 
 class ClassifyBehaviours:
     """__summary__"""
