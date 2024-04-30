@@ -26,9 +26,9 @@ Each experiment must have files that have same name (not including the suffix li
 
 The config file for an experiment stores all the parameters for how the experiment was recorded (e.g., the frames per second of the raw video, the experiment duration, etc.), and the parameters for how we want to process the data (e.g., the intended frames per second to format the video to, the DLC model to use to analyse, the likeliness pcutoff to interpolate points, etc.)
 
-An example of a config file is shown in [The Configs File](configs_setup/configs_setup.md) page.
+An example of a config file is shown in The Configs File.
 
 # Running behavysis_pipeline
 
-To install `behavysis_pipeline`, follow [these](../installation/installing/conda_windows.md) instructions.
+To install `behavysis_pipeline`, follow [these](../installation/installing/conda.md) instructions.
 To run `behavysis_pipeline`, follow these [these](../installation/running/conda.md) instructions.

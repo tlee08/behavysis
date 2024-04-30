@@ -45,8 +45,6 @@ class UpdateConfigs:
             The filepath of the default config file to use.
         overwrite : Literal["user", "all"]
             Specifies how to update the config files.
-        model_class : Type[BaseModel]
-            The Pydantic model class used for validation.
 
         Returns
         -------

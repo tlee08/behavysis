@@ -24,11 +24,11 @@ from typing import Literal
 
 import numpy as np
 import pandas as pd
+from behavysis_core.constants import SINGLE_COL
 from behavysis_core.data_models.experiment_configs import ExperimentConfigs
 from behavysis_core.mixins.df_io_mixin import DFIOMixin
 from behavysis_core.mixins.diagnostics_mixin import DiagnosticsMixin
 from behavysis_core.mixins.keypoints_mixin import KeypointsMixin
-from behavysis_core.utils.constants import SINGLE_COL
 from pydantic import BaseModel
 
 
@@ -60,11 +60,28 @@ class Preprocess:
         Filters the rows of a DLC formatted dataframe to include only rows within the start
         and end time of the experiment, given a corresponding configs dict.
 
+        Parameters
+        ----------
+        in_fp : str
+            The file path of the input DLC formatted dataframe.
+        out_fp : str
+            The file path of the output trimmed dataframe.
+        configs_fp : str
+            The file path of the configs dict.
+        overwrite : bool
+            If True, overwrite the output file if it already exists. If False, skip processing
+            if the output file already exists.
+
+        Returns
+        -------
+        str
+            An outcome message indicating the result of the trimming process.
+
         Notes
         -----
         The config file must contain the following parameters:
         ```
-        - (user, auto)
+        - user
             - preprocess
                 - start_stop_trim
                     - start_frame: int
@@ -75,16 +92,21 @@ class Preprocess:
         # If overwrite is False, checking if we should skip processing
         if not overwrite and os.path.exists(out_fp):
             return DiagnosticsMixin.warning_msg()
+
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
         start_frame = configs.auto.start_frame
         stop_frame = configs.auto.stop_frame
+
         # Reading file
         df = DFIOMixin.read_feather(in_fp)
+
         # Trimming dataframe
         df = df.loc[start_frame:stop_frame, :]
+
         # Writing file
         DFIOMixin.write_feather(df, out_fp)
+
         return outcome
 
     @staticmethod
@@ -99,7 +121,7 @@ class Preprocess:
         -----
         The config file must contain the following parameters:
         ```
-        - (user, auto)
+        - user
             - preprocess
                 - interpolate
                     - pcutoff: float
@@ -179,7 +201,7 @@ class Preprocess:
         -----
         The config file must contain the following parameters:
         ```
-        - (user, auto)
+        - user
             - preprocess
                 - refine_ids
                     - marked: str
@@ -262,8 +284,8 @@ def aggregate_df(
         idx = pd.IndexSlice
         for indiv in indivs:
             # Getting the coordinates of each individual (average of the given bodyparts list)
-            df_aggr[(indiv, coord)] = df.loc[:, idx[l0, indiv, bpts, coord]]
-            df_aggr[(indiv, coord)] = df.loc[:, idx[l0, indiv, bpts, coord]]
+            idx_a = idx[l0, indiv, bpts, coord]
+            df_aggr[(indiv, coord)] = df.loc[:, idx_a].mean(axis=1)
     # Getting the distance between each mouse and the colour marking in each frame
     for indiv in indivs:
         df_aggr[(indiv, "dist")] = np.sqrt(
@@ -370,7 +392,7 @@ def switch_identities(
 class Model_interpolate(BaseModel):
     """_summary_"""
 
-    pcutoff: int = 0
+    pcutoff: float = 0
 
 
 class Model_refine_ids(BaseModel):

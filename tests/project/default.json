@@ -33,7 +33,7 @@
       }
     },
     "preprocess": {
-      "interpolate_points": {
+      "interpolate": {
         "pcutoff": 0.5
       },
       "bodycentre": {
@@ -46,7 +46,7 @@
           "TailBase1"
         ]
       },
-      "refine_identities": {
+      "refine_ids": {
         "marked": "mouse1marked",
         "unmarked": "mouse2unmarked",
         "marking": "AnimalColourMark",
@@ -98,29 +98,69 @@
     },
     "analyse": {
       "thigmotaxis": {
-        "thresh_mm": 50
+        "thresh_mm": 50,
+        "roi_top_left": "TopLeft",
+        "roi_top_right": "TopRight",
+        "roi_bottom_left": "BottomLeft",
+        "roi_bottom_right": "BottomRight",
+        "bodyparts": [
+          "LeftFlankMid",
+          "BodyCentre",
+          "RightFlankMid",
+          "LeftFlankRear",
+          "RightFlankRear",
+          "TailBase1"
+        ]
       },
       "center_crossing": {
-        "thresh_mm": 125
+        "thresh_mm": 125,
+        "roi_top_left": "TopLeft",
+        "roi_top_right": "TopRight",
+        "roi_bottom_left": "BottomLeft",
+        "roi_bottom_right": "BottomRight",
+        "bodyparts": [
+          "LeftFlankMid",
+          "BodyCentre",
+          "RightFlankMid",
+          "LeftFlankRear",
+          "RightFlankRear",
+          "TailBase1"
+        ]
+      },
+      "in_roi": {
+        "thresh_mm": 5,
+        "roi_top_left": "TopLeft",
+        "roi_top_right": "TopRight",
+        "roi_bottom_left": "BottomLeft",
+        "roi_bottom_right": "BottomRight",
+        "bodyparts": ["Nose"]
       },
       "speed": {
-        "smoothing_sec": 1
+        "smoothing_sec": 1,
+        "bodyparts": [
+          "LeftFlankMid",
+          "BodyCentre",
+          "RightFlankMid",
+          "LeftFlankRear",
+          "RightFlankRear",
+          "TailBase1"
+        ]
       },
       "social_distance": {
-        "smoothing_sec": 1
+        "smoothing_sec": 1,
+        "bodyparts": [
+          "LeftFlankMid",
+          "BodyCentre",
+          "RightFlankMid",
+          "LeftFlankRear",
+          "RightFlankRear",
+          "TailBase1"
+        ]
       },
       "freezing": {
         "window_sec": 2,
         "thresh_mm": 5,
         "smoothing_sec": 0.2
-      },
-      "in_roi": {
-        "thresh_mm": 5,
-        "roi_top_left": "SCTopLeft",
-        "roi_top_right": "SCTopRight",
-        "roi_bottom_left": "SCBottomLeft",
-        "roi_bottom_right": "SCBottomRight",
-        "bodyparts": ["Nose"]
       },
       "bins_sec": [30, 60, 120, 300],
       "custom_bins_sec": [60, 120, 300, 600]

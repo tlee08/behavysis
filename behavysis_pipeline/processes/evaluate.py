@@ -34,12 +34,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
-from behavysis_core.data_models.experiment_configs import ExperimentConfigs
-from behavysis_core.mixins.df_io_mixin import DFIOMixin
-from behavysis_core.mixins.diagnostics_mixin import DiagnosticsMixin
-from behavysis_core.mixins.io_mixin import IOMixin
-from behavysis_core.mixins.keypoints_mixin import KeypointsMixin
-from behavysis_core.utils.constants import (
+from behavysis_core.constants import (
     BEHAV_ACTUAL_COL,
     BEHAV_COLUMN_NAMES,
     BEHAV_PRED_COL,
@@ -48,6 +43,11 @@ from behavysis_core.utils.constants import (
     PLOT_STYLE,
     PROCESS_COL,
 )
+from behavysis_core.data_models.experiment_configs import ExperimentConfigs
+from behavysis_core.mixins.df_io_mixin import DFIOMixin
+from behavysis_core.mixins.diagnostics_mixin import DiagnosticsMixin
+from behavysis_core.mixins.io_mixin import IOMixin
+from behavysis_core.mixins.keypoints_mixin import KeypointsMixin
 from tqdm import trange
 
 #####################################################################

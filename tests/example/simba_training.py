@@ -8,7 +8,7 @@ if __name__ == "__main__":
     overwrite = True
 
     proj_dir = r"."
-    proj = BehavysisProject(proj_dir)
+    proj = Project(proj_dir)
     proj.importExperiments()
     # exp = proj.getExperiments()[1]
 
@@ -70,7 +70,7 @@ if __name__ == "__main__":
     #         * Annotated video with predicted vs actual behavs.
 
     # Making root classifier folder (stores all classifiers and data)
-    # root_clf = BehavClassifier.from_BehavysisProject(proj)
+    # root_clf = BehavClassifier.from_Project(proj)
     # # Combining dfs into x_all and y_all
     # root_clf.combine_dfs(
     #     os.path.join(proj.dir, "5_features_extracted"),

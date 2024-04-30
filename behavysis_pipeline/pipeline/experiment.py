@@ -10,15 +10,15 @@ from typing import Any, Callable
 
 import numpy as np
 import pandas as pd
-from behavysis_core.mixins.df_io_mixin import DFIOMixin
-from behavysis_core.mixins.diagnostics_mixin import DiagnosticsMixin
-from behavysis_core.utils.constants import (
+from behavysis_core.constants import (
     ANALYSIS_DIR,
     EVALUATE_DIR,
     FOLDERS,
     STR_DIV,
     TEMP_DIR,
 )
+from behavysis_core.mixins.df_io_mixin import DFIOMixin
+from behavysis_core.mixins.diagnostics_mixin import DiagnosticsMixin
 
 from behavysis_pipeline.processes import (
     ClassifyBehaviours,
@@ -56,7 +56,7 @@ class Experiment:
 
     def __init__(self, name: str, root_dir: str) -> None:
         """
-        Make a BehavysisExperiment instance.
+        Make a Experiment instance.
         """
         # Assertion: root_dir mus† exist
         if not os.path.isdir(root_dir):

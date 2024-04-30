@@ -10,28 +10,34 @@ from behavysis_pipeline.processes import *
 if __name__ == "__main__":
     overwrite = True
 
-    proj_dir = os.path.join(".")
+    # proj_dir = os.path.join(".")
+    proj_dir = os.path.join(r"Z:\PRJ-BowenLab\TimLee\resources\project_ma")
+
     proj = Project(proj_dir)
     proj.import_experiments()
     # exp = proj.get_experiments()[1]
 
     # proj.nprocs = 4
 
+    default_configs_fp = os.path.join(proj_dir, "default.json")
+    default_configs_fp = (
+        r"Z:\PRJ-BowenLab\TimLee\dev\ba\behavysis_pipeline\tests\project\default.json"
+    )
     # proj.update_configs(
-    #     os.path.join(proj_dir, "default.json"),
-    #     overwrite="all",
+    #     default_configs_fp,
+    #     overwrite="user",
     # )
     # proj.format_vid(
     #     (
-    #         FormatVid.format_vid,
+    #         # FormatVid.format_vid,
     #         FormatVid.get_vid_metadata,
     #     ),
     #     overwrite=overwrite,
     # )
-    # proj.run_dlc(
-    #     gputouse=None,
-    #     overwrite=overwrite,
-    # )
+    # # proj.run_dlc(
+    # #     gputouse=None,
+    # #     overwrite=overwrite,
+    # # )
     # proj.calculate_params(
     #     (
     #         CalculateParams.start_frame,
@@ -42,8 +48,8 @@ if __name__ == "__main__":
     # proj.preprocess(
     #     (
     #         Preprocess.start_stop_trim,
-    #         Preprocess.interpolate_points,
-    #         Preprocess.refine_identities,
+    #         Preprocess.interpolate,
+    #         Preprocess.refine_ids,
     #     ),
     #     overwrite=overwrite,
     # )
@@ -51,10 +57,10 @@ if __name__ == "__main__":
     #     (
     #         Analyse.thigmotaxis,
     #         Analyse.center_crossing,
+    #         Analyse.in_roi,
     #         Analyse.speed,
     #         Analyse.social_distance,
     #         Analyse.freezing,
-    #         Analyse.in_roi,
     #     )
     # )
     # proj.combine_analysis_binned()

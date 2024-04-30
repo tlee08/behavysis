@@ -109,7 +109,7 @@ def test_pipeline_run(proj_dir):
 
 # def test_format_vid():
 #     proj_dir = os.path.join(".")
-#     proj = BehavysisProject(proj_dir)
+#     proj = Project(proj_dir)
 #     proj.format_vid(
 #         funcs=(
 #             FormatVid.format_vid,
@@ -122,7 +122,7 @@ def test_pipeline_run(proj_dir):
 
 # def test_run_dlc():
 #     proj_dir = os.path.join(".")
-#     proj = BehavysisProject(proj_dir)
+#     proj = Project(proj_dir)
 #     proj.run_dlc(
 #         gputouse=None,
 #         overwrite=True,
@@ -132,7 +132,7 @@ def test_pipeline_run(proj_dir):
 
 # def test_calculate_params():
 #     proj_dir = os.path.join(".")
-#     proj = BehavysisProject(proj_dir)
+#     proj = Project(proj_dir)
 #     proj.calculate_params(
 #         (
 #             CalculateParams.start_frame,
@@ -145,7 +145,7 @@ def test_pipeline_run(proj_dir):
 
 # def test_preprocess():
 #     proj_dir = os.path.join(".")
-#     proj = BehavysisProject(proj_dir)
+#     proj = Project(proj_dir)
 #     proj.preprocess(
 #         (
 #             Preprocess.start_stop_trim,

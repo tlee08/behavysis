@@ -1,5 +1,3 @@
-# behavysis_pipeline Processes
-
 <!-- :::behavysis_pipeline.processes -->
 
 :::behavysis_pipeline.processes.CalculateParams

@@ -24,7 +24,7 @@ warnings.filterwarnings("ignore")
 import matplotlib
 import matplotlib.pyplot as plt
 import seaborn as sns
-from behavysis_core.utils.constants import PLOT_DPI, PLOT_STYLE
+from behavysis_core.constants import PLOT_DPI, PLOT_STYLE
 
 from behavysis_pipeline.pipeline import Experiment, Project
 

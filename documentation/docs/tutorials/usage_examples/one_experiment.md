@@ -12,12 +12,12 @@ The directory path of the project must be specified and must contain the experim
 
 For more information on how to structure a project directory, please see [setup](../setup.md).
 
-For more information on how a `BehavysisExperiment` works, please see [BehavysisExperiment](../../reference/BehavysisExperiment.md).
+For more information on how a `Experiment` works, please see [Experiment](../../reference/experiment.md).
 
 ```python
 proj_dir = "./project"
 exp_name = "experiment1"
-exp = BehavysisExperiment(exp_name, proj_dir)
+exp = Experiment(exp_name, proj_dir)
 ```
 
 ### ALTERNATIVE: Selecting an experiment from a Project
@@ -27,7 +27,7 @@ The name of an experiment is given by the name of its corresponding files (e.g.,
 
 ```python
 # Making a project and importing experiments into the project
-proj = BehavysisProject(proj_dir)
+proj = Project(proj_dir)
 proj.importExperiments()
 
 # Showing the names of all experiments that have been imported to the project
@@ -43,7 +43,7 @@ exp = proj.experiments["experiment1"]
 
 If you would like the configurations (which are stored in config files) to be updated new parameters, define the JSON style of configuration parameters you would like to add and run the following lines.
 
-For more information about how a configurations file works, please see [the configs file](../configs_setup/configs_setup.md).
+For more information about how a configurations file works, please see the configs file.
 
 ```python
 configs_fp = "path/to/default_configs.json"

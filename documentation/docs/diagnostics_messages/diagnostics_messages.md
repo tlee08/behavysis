@@ -15,7 +15,7 @@ In the diagnostics file, an **error** is something that has caused the processin
 Common warnings and errors that may arise are shown below, grouped by the process they usually occur in:
 
 - updateConfigFiles
-  - The user-given value for `config_fp` may be an incorrect filepath or that cconfig file itself may not be in a valid JSON format (e.g., a bracket or a comma might be missing). You can use one of the configs templates [here](../tutorials/configs_setup/configs_setup.md).
+  - The user-given value for `config_fp` may be an incorrect filepath or that cconfig file itself may not be in a valid JSON format (e.g., a bracket or a comma might be missing). You can use one of the configs templates.
 - formatVideos
   - The raw mp4 file may be missing or corrupted. Please try to open this file to see if this is the case.
   - Sometimes, the resolution is an uncommon value and the downsampling fails. When this happens, the video is instead copied and the diagnostics file notes that the video failed to downsample and was copied instead.

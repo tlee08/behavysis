@@ -16,6 +16,7 @@ str
 
 import numpy as np
 import pandas as pd
+from behavysis_core.constants import SINGLE_COL
 from behavysis_core.data_models.experiment_configs import (
     ConfigsCalculateParams,
     ExperimentConfigs,
@@ -23,7 +24,6 @@ from behavysis_core.data_models.experiment_configs import (
 from behavysis_core.data_models.pydantic_base_model import PydanticBaseModel
 from behavysis_core.mixins.df_io_mixin import DFIOMixin
 from behavysis_core.mixins.keypoints_mixin import KeypointsMixin
-from behavysis_core.utils.constants import SINGLE_COL
 from pydantic import BaseModel
 
 
@@ -47,7 +47,7 @@ class CalculateParams:
         -----
         The config file must contain the following parameters:
         ```
-        - (user, auto)
+        - user
             - calculate_params
                 - start_frame
                     - window_sec: float
@@ -153,7 +153,7 @@ class CalculateParams:
         -----
         The config file must contain the following parameters:
         ```
-        - (user, auto)
+        - user
             - calculate_params
                 - px_per_mm
                     - point_a: str

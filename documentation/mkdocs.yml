@@ -7,6 +7,7 @@ theme:
   features:
     - content.code.copy
     - toc.integrate
+    - toc.follow
 
 markdown_extensions:
   - pymdownx.highlight:
@@ -16,6 +17,8 @@ markdown_extensions:
   - pymdownx.inlinehilite
   - pymdownx.snippets
   - pymdownx.superfences
+  - toc:
+      permalink: true
 
 plugins:
   - mkdocstrings:
@@ -44,7 +47,6 @@ nav:
           - installation/updating/conda.md
         # - installation/updating/docker.md
       - Uninstalling:
-          - installation/uninstalling/conda_mac.md
           - installation/uninstalling/conda_windows.md
           - installation/uninstalling/conda_linux.md
         # - installation/uninstalling/docker.md
@@ -55,17 +57,14 @@ nav:
       - tutorials/setup.md
       # - installation/running/conda.md
       - Configs Setup:
-          - tutorials/configs_setup/configs_setup.md
           - tutorials/configs_setup/configs_update.md
-          - tutorials/configs_setup/configs_OF.md
       - Usage Examples:
           - tutorials/usage_examples/one_experiment.md
-          - tutorials/usage_examples/many_experiments.md
           - tutorials/usage_examples/one_project.md
   - Diagnostics Messages:
       - diagnostics_messages/diagnostics_messages.md
   - Program Reference:
-      - reference/behavysis_pipeline.md
-      - reference/behavysis_project.md
-      - reference/behavysis_experiment.md
-      - reference/behavysis_processes.md
+      - reference/pipeline.md
+      - reference/project.md
+      - reference/experiment.md
+      - reference/processes.md

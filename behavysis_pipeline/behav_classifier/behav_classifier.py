@@ -13,13 +13,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
-from behavysis_core.mixins.df_io_mixin import DFIOMixin
-from behavysis_core.utils.constants import (
+from behavysis_core.constants import (
     BEHAV_ACTUAL_COL,
     BEHAV_COLUMN_NAMES,
     BEHAV_PRED_COL,
     BEHAV_PROB_COL,
 )
+from behavysis_core.mixins.df_io_mixin import DFIOMixin
 from imblearn.under_sampling import RandomUnderSampler
 from matplotlib.figure import Figure
 from sklearn.ensemble import GradientBoostingClassifier
@@ -71,14 +71,14 @@ class BehavClassifier:
         configs.write_json(self.configs_fp)
 
     @classmethod
-    def from_BehavysisProject(cls, proj: Project) -> BehavClassifier:
+    def from_Project(cls, proj: Project) -> BehavClassifier:
         """
-        Loading classifier from given BehavysisProject instance.
+        Loading classifier from given Project instance.
 
         Parameters
         ----------
-        proj : BehavysisProject
-            The BehavysisProject instance.
+        proj : Project
+            The Project instance.
 
         Returns
         -------

@@ -11,17 +11,17 @@ from typing import Any, Callable
 import numpy as np
 import pandas as pd
 import seaborn as sns
-from behavysis_core.data_models.experiment_configs import ConfigsAuto, ExperimentConfigs
-from behavysis_core.mixins.df_io_mixin import DFIOMixin
-from behavysis_core.mixins.io_mixin import IOMixin
-from behavysis_core.mixins.multiproc_mixin import MultiprocMixin
-from behavysis_core.utils.constants import (
+from behavysis_core.constants import (
     ANALYSIS_DIR,
     DIAGNOSTICS_DIR,
     FOLDERS,
     STR_DIV,
     TEMP_DIR,
 )
+from behavysis_core.data_models.experiment_configs import ConfigsAuto, ExperimentConfigs
+from behavysis_core.mixins.df_io_mixin import DFIOMixin
+from behavysis_core.mixins.io_mixin import IOMixin
+from behavysis_core.mixins.multiproc_mixin import MultiprocMixin
 from natsort import natsort_keygen, natsorted
 
 from behavysis_pipeline.pipeline.experiment import Experiment
@@ -151,7 +151,7 @@ class Project:
 
     def __init__(self, root_dir: str) -> None:
         """
-        Make a BehavysisProject instance.
+        Make a Project instance.
         """
         # Assertion: project directory must exist
         if not os.path.isdir(root_dir):
@@ -163,26 +163,6 @@ class Project:
         self.root_dir = os.path.abspath(root_dir)
         self.experiments = {}
         self.nprocs = 4
-
-        # Making batch processing methods dynamically for BehavysisExperiment methods
-        method_names_ls = [i for i in dir(Experiment) if not re.search(r"^_", i)]
-        for method_name in method_names_ls:
-            self._batch_process_factory(method_name)
-
-    def _batch_process_factory(self, method_name: str):
-        method = getattr(Experiment, method_name)
-
-        @functools.wraps(method)
-        def batch_process(*args, **kwargs):
-            # Starting
-            print(f"Running {method_name}")
-            # Running
-            self._process_scaffold(method, *args, **kwargs)
-            # Finishing
-            print(f"Finished {method_name}!")
-            print(f"{STR_DIV}\n{STR_DIV}\n")
-
-        setattr(self, method_name, batch_process)
 
     #####################################################################
     #               GETTER METHODS
@@ -199,7 +179,7 @@ class Project:
 
         Returns
         -------
-        BehavysisExperiment
+        Experiment
             The experiment.
 
         Raises
@@ -215,12 +195,12 @@ class Project:
 
     def get_experiments(self) -> list[Experiment]:
         """
-        Gets the ordered (natsorted) list of Experiment instances in the BehavysisProject.
+        Gets the ordered (natsorted) list of Experiment instances in the Project.
 
         Returns
         -------
-        list[BehavysisExperiment]
-            The list of all BehavysisExperiment instances stored in the BehavysisProject instance.
+        list[Experiment]
+            The list of all Experiment instances stored in the Project instance.
         """
         return [self.experiments[i] for i in natsorted(self.experiments)]
 
@@ -233,77 +213,58 @@ class Project:
         method, exp, args, kwargs = args_tuple
         return method(exp, *args, **kwargs)
 
-    def _process_scaffold_mp(self, method: Callable, *args: Any, **kwargs: Any) -> None:
+    def _process_scaffold_mp(
+        self, method: Callable, *args: Any, **kwargs: Any
+    ) -> list[dict]:
         """
-        Processes an experiment with the given `BehavysisExperiment` method and records
+        Processes an experiment with the given `Experiment` method and records
         the diagnostics of the process in a MULTI-PROCESSING way.
 
         Parameters
         ----------
         method : Callable
-            The `BehavysisExperiment` method to run.
+            The `Experiment` class method to run.
 
         Notes
         -----
-        Can call any `BehavysisExperiment` methods instance.
+        Can call any `Experiment` methods instance.
         Effectively, `method` gets called with:
         ```
-        # exp is a BehavysisExperiment instance
+        # exp is a Experiment instance
         method(exp, *args, **kwargs)
         ```
         """
-        # Initialising diagnostics dataframe
-        df = pd.DataFrame()
-
-        # TODO: maybe have a try-except-finally block to ensure that the diagnostics file is saved
         # Create a Pool of processes
         with Pool(processes=self.nprocs) as p:
             # Apply method to each experiment in self.get_experiments() in parallel
-            results = p.map(
+            return p.map(
                 Project._process_scaffold_mp_worker,
                 [(method, exp, args, kwargs) for exp in self.get_experiments()],
             )
 
-        # Processing all experiments
-        for dd in results:
-            # Converting outcomes dict to dataframe
-            dd = pd.DataFrame(pd.Series(dd)).transpose().set_index("experiment")
-            # Adding outcomes dict to diagnostics dataframe
-            df = pd.concat([df, dd], axis=0).sort_index(key=natsort_keygen())
-            # Updating the diagnostics file at each step
-            self.save_diagnostics(method.__name__, df)
-
-    def _process_scaffold_sp(self, method: Callable, *args: Any, **kwargs: Any) -> None:
+    def _process_scaffold_sp(
+        self, method: Callable, *args: Any, **kwargs: Any
+    ) -> list[dict]:
         """
-        Processes an experiment with the given `BehavysisExperiment` method and records
+        Processes an experiment with the given `Experiment` method and records
         the diagnostics of the process in a SINGLE-PROCESSING way.
 
         Parameters
         ----------
         method : Callable
-            The experiment `BehavysisExperiment` method to run.
+            The experiment `Experiment` class method to run.
 
         Notes
         -----
-        Can call any `BehavysisExperiment` instance method.
+        Can call any `Experiment` instance method.
         Effectively, `method` gets called with:
         ```
-        # exp is a BehavysisExperiment instance
+        # exp is a Experiment instance
         method(exp, *args, **kwargs)
         ```
         """
-        # Initialising diagnostics dataframe
-        df = pd.DataFrame()
-        # Processing all experiments
-        for exp in self.get_experiments():
-            # Processing and storing process outcomes as dict
-            dd = method(exp, *args, **kwargs)
-            # Converting outcomes dict to dataframe
-            dd = pd.DataFrame(pd.Series(dd)).transpose().set_index("experiment")
-            # Adding outcomes dict to diagnostics dataframe
-            df = pd.concat([df, dd], axis=0).sort_index(key=natsort_keygen())
-            # Updating the diagnostics file at each step
-            self.save_diagnostics(method.__name__, df)
+        # Processing all experiments and storing process outcomes as list of dicts
+        return [method(exp, *args, **kwargs) for exp in self.get_experiments()]
 
     def _process_scaffold(self, method: Callable, *args: Any, **kwargs: Any) -> None:
         """
@@ -314,15 +275,19 @@ class Project:
             scaffold_func = self._process_scaffold_sp
         else:
             scaffold_func = self._process_scaffold_mp
-
         # Running the scaffold function
         # Starting
         print(f"Running {method.__name__}")
         # Running
-        scaffold_func(method, *args, **kwargs)
+        dd_ls = scaffold_func(method, *args, **kwargs)
+        # Processing all experiments
+        df = (
+            pd.DataFrame(dd_ls).set_index("experiment").sort_index(key=natsort_keygen())
+        )
+        # Updating the diagnostics file at each step
+        self.save_diagnostics(method.__name__, df)
         # Finishing
-        print(f"Finished {method.__name__}!")
-        print(f"{STR_DIV}\n{STR_DIV}\n")
+        print(f"Finished {method.__name__}!\n{STR_DIV}\n{STR_DIV}\n")
 
     #####################################################################
     #               BATCH PROCESSING METHODS
@@ -330,19 +295,25 @@ class Project:
 
     @functools.wraps(Experiment.update_configs)
     def update_configs(self, *args, **kwargs) -> None:
-        """ """
-        method = Experiment.update_configs.__name__
+        """
+        Batch processing for corresponding [Experiment method](experiment.md#behavysis_pipeline.pipeline.Experiment.update_configs)
+        """
+        method = Experiment.update_configs
         self._process_scaffold(method, *args, **kwargs)
 
     @functools.wraps(Experiment.format_vid)
     def format_vid(self, *args, **kwargs) -> None:
-        """ """
-        method = Experiment.format_vid.__name__
+        """
+        Batch processing for corresponding [Experiment method](experiment.md#behavysis_pipeline.pipeline.Experiment.format_vid)
+        """
+        method = Experiment.format_vid
         self._process_scaffold(method, *args, **kwargs)
 
     @functools.wraps(Experiment.run_dlc)
     def run_dlc(self, gputouse: int = None, overwrite: bool = False) -> None:
-        """ """
+        """
+        Batch processing for corresponding [Experiment method](experiment.md#behavysis_pipeline.pipeline.Experiment.run_dlc)
+        """
         nprocs = len(MultiprocMixin.get_gpu_ids()) if gputouse is None else 1
         # Getting the experiments to run DLC on
         exp_ls = self.get_experiments()
@@ -370,32 +341,66 @@ class Project:
 
     @functools.wraps(Experiment.calculate_params)
     def calculate_params(self, *args, **kwargs) -> None:
-        """ """
-        method = Experiment.calculate_params.__name__
+        """
+        Batch processing for corresponding [Experiment method](experiment.md#behavysis_pipeline.pipeline.Experiment.calculate_params)
+        """
+        method = Experiment.calculate_params
         self._process_scaffold(method, *args, **kwargs)
 
     @functools.wraps(Experiment.preprocess)
     def preprocess(self, *args, **kwargs) -> None:
-        """ """
-        method = Experiment.preprocess.__name__
+        """
+        Batch processing for corresponding [Experiment method](experiment.md#behavysis_pipeline.pipeline.Experiment.preprocess)
+        """
+        method = Experiment.preprocess
         self._process_scaffold(method, *args, **kwargs)
 
     @functools.wraps(Experiment.extract_features)
     def extract_features(self, *args, **kwargs) -> None:
-        """ """
-        method = Experiment.extract_features.__name__
+        """
+        Batch processing for corresponding [Experiment method](experiment.md#behavysis_pipeline.pipeline.Experiment.extract_features)
+        """
+        method = Experiment.extract_features
         self._process_scaffold(method, *args, **kwargs)
 
     @functools.wraps(Experiment.classify_behaviours)
     def classify_behaviours(self, *args, **kwargs) -> None:
-        """ """
-        method = Experiment.classify_behaviours.__name__
+        """
+        Batch processing for corresponding [Experiment method](experiment.md#behavysis_pipeline.pipeline.Experiment.classify_behaviours)
+        """
+        method = Experiment.classify_behaviours
+        self._process_scaffold(method, *args, **kwargs)
+
+    @functools.wraps(Experiment.export_behaviours)
+    def export_behaviours(self, *args, **kwargs) -> None:
+        """
+        Batch processing for corresponding [Experiment method](experiment.md#behavysis_pipeline.pipeline.Experiment.export_behaviours)
+        """
+        method = Experiment.export_behaviours
+        self._process_scaffold(method, *args, **kwargs)
+
+    @functools.wraps(Experiment.export_feather)
+    def export_feather(self, *args, **kwargs) -> None:
+        """
+        Batch processing for corresponding [Experiment method](experiment.md#behavysis_pipeline.pipeline.Experiment.export_feather)
+        """
+        method = Experiment.export_feather
+        self._process_scaffold(method, *args, **kwargs)
+
+    @functools.wraps(Experiment.evaluate)
+    def evaluate(self, *args, **kwargs) -> None:
+        """
+        Batch processing for corresponding [Experiment method](experiment.md#behavysis_pipeline.pipeline.Experiment.evaluate)
+        """
+        method = Experiment.evaluate
         self._process_scaffold(method, *args, **kwargs)
 
     @functools.wraps(Experiment.analyse)
     def analyse(self, *args, **kwargs) -> None:
-        """ """
-        method = Experiment.analyse.__name__
+        """
+        Batch processing for corresponding [Experiment method](experiment.md#behavysis_pipeline.pipeline.Experiment.analyse)
+        """
+        method = Experiment.analyse
         self._process_scaffold(method, *args, **kwargs)
 
     #####################################################################
@@ -507,13 +512,12 @@ class Project:
         """
         Add all experiments in the project folder to the experiments dict.
         The key of each experiment in the .experiments dict is "name".
-        Refer to BehavysisProject.addExperiment() for details about how each experiment is added.
+        Refer to Project.addExperiment() for details about how each experiment is added.
         """
         print(f"Searching project folder: {self.root_dir}\n")
         # Adding all experiments within given project dir
         failed = []
         for i in FOLDERS:
-            i = list(FOLDERS.keys())[i]
             folder = os.path.join(self.root_dir, i)
             # If folder does not exist, skip
             if not os.path.isdir(folder):
@@ -552,15 +556,10 @@ class Project:
     #            COMBINING ANALYSIS DATA ACROSS EXPS METHODS
     #####################################################################
 
-    def combine_analysis_binned(self) -> None:
+    def collate_analysis_binned(self) -> None:
         """
         Combines an analysis of all the experiments together to generate combined h5 files for:
         - Each binned data. The index is (bin) and columns are (expName, indiv, measure).
-
-        Parameters
-        ----------
-        overwrite : bool
-            Whether to overwrite the output file (if it exists).
         """
         # Initialising the process and printing the description
         description = "Combining binned analysis"
@@ -598,16 +597,11 @@ class Project:
                         total_df = pd.concat([total_df, df], axis=1)
                     DFIOMixin.write_feather(total_df, out_fp)
 
-    def combine_analysis_summary(self) -> None:
+    def collate_analysis_summary(self) -> None:
         """
         Combines an analysis of all the experiments together to generate combined h5 files for:
         - The summary data. The index is (expName, indiv, measure) and columns are
         (statistics -e.g., mean).
-
-        Parameters
-        ----------
-        overwrite : bool
-            Whether to overwrite the output file (if it exists).
         """
         # Initialising the process and printing the description
         description = "Combining summary analysis"

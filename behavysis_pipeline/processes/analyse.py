@@ -23,16 +23,16 @@ import os
 import numpy as np
 import pandas as pd
 import seaborn as sns
+from behavysis_core.constants import (
+    ANALYSIS_COLUMN_NAMES,
+    ANALYSIS_INDEX_NAMES,
+    SINGLE_COL,
+)
 from behavysis_core.data_models.experiment_configs import ExperimentConfigs
 from behavysis_core.mixins.behaviour_mixin import BehaviourMixin
 from behavysis_core.mixins.df_io_mixin import DFIOMixin
 from behavysis_core.mixins.io_mixin import IOMixin
 from behavysis_core.mixins.keypoints_mixin import KeypointsMixin
-from behavysis_core.utils.constants import (
-    ANALYSIS_COLUMN_NAMES,
-    ANALYSIS_INDEX_NAMES,
-    SINGLE_COL,
-)
 from pydantic import BaseModel
 
 #####################################################################
@@ -111,6 +111,8 @@ class Analyse:
         for indiv in indivs:
             indiv_x = dlc_df.loc[:, idx[indiv, bpts, "x"]].mean(axis=1)
             indiv_y = dlc_df.loc[:, idx[indiv, bpts, "y"]].mean(axis=1)
+            analysis_df[(indiv, "x")] = indiv_x
+            analysis_df[(indiv, "y")] = indiv_y
         # making corners_df
         corners_df = pd.DataFrame([tl, tr, bl, br])
         plot_fp = os.path.join(out_dir, "scatter_plot", f"{name}.png")
@@ -172,8 +174,8 @@ class Analyse:
         dlc_df.index = analysis_df.index
         idx = pd.IndexSlice
         for indiv in indivs:
-            indiv_x = dlc_df.loc[:, idx[indiv, bpts, "x"]].mean(axix=1)
-            indiv_y = dlc_df.loc[:, idx[indiv, bpts, "y"]].mean(axix=1)
+            indiv_x = dlc_df.loc[:, idx[indiv, bpts, "x"]].mean(axis=1)
+            indiv_y = dlc_df.loc[:, idx[indiv, bpts, "y"]].mean(axis=1)
             # Determining if the indiv is outside of the boundaries (with the thresh_px buffer)
             analysis_df[(indiv, "in_center")] = (
                 (indiv_y >= top(indiv_x) + thresh_px)
@@ -400,9 +402,9 @@ class Analyse:
         indiv_b = indivs[1]
         # Getting distances between each individual
         idx_a = idx[indiv_b, bpts, "x"]
-        dist_x = dlc_df.loc[:, idx_a] - dlc_df.loc[:, idx_a]
+        dist_x = (dlc_df.loc[:, idx_a] - dlc_df.loc[:, idx_a]).mean(axis=1)
         idx_b = idx[indiv_a, bpts, "y"]
-        dist_y = dlc_df.loc[:, idx_b] - dlc_df.loc[:, idx_b]
+        dist_y = (dlc_df.loc[:, idx_b] - dlc_df.loc[:, idx_b]).mean(axis=1)
         dist = np.sqrt(np.power(dist_x, 2) + np.power(dist_y, 2))
         # Adding mm distance to saved analysis_df table
         analysis_df[(f"{indiv_a}_{indiv_b}", "DistMM")] = dist / px_per_mm
@@ -904,31 +906,31 @@ def vline_factory(p1, p2):
 class Model_speed(BaseModel):
     """_summary_"""
 
-    smoothing_sec: float = 0
-    bodyparts: list[str] = []
+    smoothing_sec: float
+    bodyparts: list[str]
 
 
 class Model_social_distance(BaseModel):
     """_summary_"""
 
-    smoothing_sec: float = 0
-    bodyparts: list[str] = []
+    smoothing_sec: float
+    bodyparts: list[str]
 
 
 class Model_freezing(BaseModel):
     """_summary_"""
 
-    window_sec: float = 0
-    thresh_mm: float = 0
-    smoothing_sec: float = 0
+    window_sec: float
+    thresh_mm: float
+    smoothing_sec: float
 
 
 class Model_in_roi(BaseModel):
     """_summary_"""
 
-    thresh_mm: float = 0
-    roi_top_left: str = ""
-    roi_top_right: str = ""
-    roi_bottom_left: str = ""
-    roi_bottom_right: str = ""
-    bodyparts: list[str] = []
+    thresh_mm: float
+    roi_top_left: str
+    roi_top_right: str
+    roi_bottom_left: str
+    roi_bottom_right: str
+    bodyparts: list[str]

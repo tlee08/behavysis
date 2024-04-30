@@ -12,7 +12,7 @@ The directory path of the project must be specified and must contain the experim
 
 ```python
 proj_dir = "path/to/project" # Specify your project folder path here
-proj = BehavysisProject(proj_dir)
+proj = Project(proj_dir)
 
 proj.importExperiments()
 ```
