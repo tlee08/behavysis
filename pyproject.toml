@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "behavysis_pipeline"
 version = "0.1.1"
-description = "A behaviour processing and analysis package"
+description = "An animal behaviour processing and analysis package"
 authors = ["BowenLab"]
 license = "LGPL-3.0-or-later"
 readme = "README.md"
@@ -12,7 +12,7 @@ python = "^3.9"
 seaborn = "^0.13.2"
 scikit-learn = "^1.4.2"
 imbalanced-learn = "^0.12.2"
-behavysis_core = "^0.1.0"
+behavysis_core = "^0.1.1"
 
 [tool.poetry.group.dev.dependencies]
 behavysis_core = { path = "../behavysis_core", develop = true }

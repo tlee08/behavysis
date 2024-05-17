@@ -11,13 +11,7 @@ from typing import Any, Callable
 import numpy as np
 import pandas as pd
 import seaborn as sns
-from behavysis_core.constants import (
-    ANALYSIS_DIR,
-    DIAGNOSTICS_DIR,
-    FOLDERS,
-    STR_DIV,
-    TEMP_DIR,
-)
+from behavysis_core.constants import DIAGNOSTICS_DIR, STR_DIV, TEMP_DIR, Folders
 from behavysis_core.data_models.experiment_configs import ConfigsAuto, ExperimentConfigs
 from behavysis_core.mixins.df_io_mixin import DFIOMixin
 from behavysis_core.mixins.io_mixin import IOMixin
@@ -314,7 +308,13 @@ class Project:
         """
         Batch processing for corresponding [Experiment method](experiment.md#behavysis_pipeline.pipeline.Experiment.run_dlc)
         """
-        nprocs = len(MultiprocMixin.get_gpu_ids()) if gputouse is None else 1
+        # If gputouse is not specified, using all GPUs
+        if gputouse is None:
+            gputouse_ls = MultiprocMixin.get_gpu_ids()
+            nprocs = len(gputouse_ls)
+        else:
+            gputouse_ls = [gputouse]
+            nprocs = 1
         # Getting the experiments to run DLC on
         exp_ls = self.get_experiments()
         # If overwrite is false, filtering for only experiments that need to be run
@@ -322,7 +322,8 @@ class Project:
             exp_ls = [exp for exp in exp_ls if not os.path.isfile(exp.get_fp("3_dlc"))]
         # Splitting the experiments into batches
         exp_batches_ls = np.array_split(exp_ls, nprocs)
-        # Running DLC on each batch of experiments
+        # Running DLC on each batch of experiments with each GPU (given allocated GPU ID)
+        # TODO: have error handling
         with Pool(processes=nprocs) as p:
             p.starmap(
                 RunDLC.ma_dlc_analyse_batch,
@@ -335,7 +336,7 @@ class Project:
                         gputouse,
                         overwrite,
                     )
-                    for exp_batch in exp_batches_ls
+                    for gputouse, exp_batch in zip(gputouse_ls, exp_batches_ls)
                 ],
             )
 
@@ -459,7 +460,6 @@ class Project:
         # Making a DataFrame to store all the auto fields for each experiment
         df_configs = pd.DataFrame(
             index=[exp.name for exp in self.get_experiments()],
-            # columns=ConfigsAuto.model_fields.keys(),
             columns=["_".join(i) for i in auto_field_keys],
         )
         # Collating all the auto fields for each experiment
@@ -489,6 +489,8 @@ class Project:
     #####################################################################
     #               IMPORT EXPERIMENTS METHODS
     #####################################################################
+
+    # TODO: convert to load_project and make make_project, and import_videos methods
 
     def import_experiment(self, name: str) -> bool:
         """
@@ -521,8 +523,8 @@ class Project:
         print(f"Searching project folder: {self.root_dir}\n")
         # Adding all experiments within given project dir
         failed = []
-        for i in FOLDERS:
-            folder = os.path.join(self.root_dir, i)
+        for f in Folders:
+            folder = os.path.join(self.root_dir, f.value)
             # If folder does not exist, skip
             if not os.path.isdir(folder):
                 continue
@@ -534,16 +536,18 @@ class Project:
                 try:
                     self.import_experiment(name)
                 except ValueError as e:  # do not add invalid files
-                    print(f"failed: {i}    --    {j}:\n{e}")
+                    print(f"failed: {f.value}    --    {j}:\n{e}")
                     failed.append(name)
         # Printing outcome of imported and failed experiments
         print("Experiments imported successfully:")
         print("\n".join([f"    - {i}" for i in self.experiments]), end="\n\n")
         print("Experiments failed to import:")
         print("\n".join([f"    - {i}" for i in failed]), end="\n\n")
+        # If there are no experiments, then return
+        if not self.experiments:
+            return
         # Making diagnostics DataFrame of all the files associated with each experiment that exists
-        # TODO: MAKE FASTER
-        cols_ls = list(FOLDERS)
+        cols_ls = [f.value for f in Folders]
         rows_ls = list(self.experiments)
         shape = (len(rows_ls), len(cols_ls))
         dd_arr = np.apply_along_axis(
@@ -572,13 +576,13 @@ class Project:
 
         # AGGREGATING BINNED DATA
         # NOTE: need a more robust way of getting the list of bin sizes
-        analysis_dir = os.path.join(self.root_dir, ANALYSIS_DIR)
+        analysis_dir = os.path.join(self.root_dir, Folders.ANALYSIS.value)
         configs = ExperimentConfigs.read_json(
             self.get_experiments()[0].get_fp("0_configs")
         )
         bin_sizes_sec = configs.user.analyse.bins_sec
         bin_sizes_sec = np.append(bin_sizes_sec, "custom")
-        # Searching through all the analysis sub-folders
+        # Searching through all the analysis subdir
         for i in os.listdir(analysis_dir):
             if i == "aggregate_analysis":
                 continue
@@ -613,8 +617,8 @@ class Project:
         # dd_df = pd.DataFrame()
 
         # AGGREGATING SUMMARY DATA
-        analysis_dir = os.path.join(self.root_dir, ANALYSIS_DIR)
-        # Searching through all the analysis sub-folders
+        analysis_dir = os.path.join(self.root_dir, Folders.ANALYSIS.value)
+        # Searching through all the analysis subdir
         for i in os.listdir(analysis_dir):
             if i == "aggregate_analysis":
                 continue

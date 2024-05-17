@@ -3,13 +3,29 @@
     "format_vid": {
       "height_px": 540,
       "width_px": 960,
-      "fps": 25
+      "fps": 15,
+      "start_sec": 0,
+      "stop_sec": 1200
     },
     "run_dlc": {
-      "dlc_config_path": "Z:\\PRJ-BowenLab\\TimLee\\releases\\dlc_models\\aggrModel_960px\\config.yaml"
+      "dlc_config_path": "Z:\\PRJ-BowenLab\\PRJ-BowenLab\\DeepLabCut-Projects\\aggrModel_960px\\config.yaml"
     },
     "calculate_params": {
       "start_frame": {
+        "window_sec": 3,
+        "pcutoff": 0.9,
+        "bodyparts": [
+          "LeftEar",
+          "RightEar",
+          "Nose",
+          "BodyCentre",
+          "LeftFlankMid",
+          "RightFlankMid",
+          "TailBase1",
+          "TailTip4"
+        ]
+      },
+      "exp_dur": {
         "window_sec": 3,
         "pcutoff": 0.9,
         "bodyparts": [

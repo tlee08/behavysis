@@ -103,7 +103,7 @@ if __name__ == "__main__":
     #     "4_preprocessed_csv",
     #     "5_features_extracted",
     #     "6_predicted_behavs",
-    #     "analysis",
+    #     "8_analysis",
     #     "diagnostics",
     #     "evaluate",
     # ]:

@@ -23,8 +23,6 @@ str
 
 import os
 import re
-import shutil
-from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -34,13 +32,6 @@ from behavysis_core.mixins.diagnostics_mixin import DiagnosticsMixin
 from behavysis_core.mixins.io_mixin import IOMixin
 from behavysis_core.mixins.multiproc_mixin import MultiprocMixin
 from behavysis_core.mixins.subproc_mixin import SubprocMixin
-
-# from tensorflow.config import list_physical_devices
-
-
-#####################################################################
-#               DLC ANALYSE VIDEO
-#####################################################################
 
 
 class RunDLC:
@@ -59,6 +50,9 @@ class RunDLC:
         Running custom DLC script to generate a DLC keypoints dataframe from a single video.
         """
         outcome = ""
+
+        if not gputouse:
+            gputouse = "None"
 
         # If overwrite is False, checking if we should skip processing
         if not overwrite and os.path.exists(out_fp):
@@ -80,10 +74,13 @@ class RunDLC:
                 + 'Check this file and specify a DLC ".yaml" config file.'
             )
 
+        # Running the DLC subprocess (in a separate conda env)
         subproc_run_dlc(dlc_config_path, [in_fp], dlc_out_dir, temp_dir, gputouse)
 
-        # Cleaning up the DLC files
-        clean_raw_dlc_files(in_fp, dlc_out_dir, out_dir)
+        # Exporting the h5 to feather the out_dir
+        export_dlc_to_feather(in_fp, dlc_out_dir, out_dir)
+        IOMixin.silent_rm(dlc_out_dir)
+        # clean_raw_dlc_files(in_fp, dlc_out_dir, out_dir)
 
         return outcome
 
@@ -101,10 +98,12 @@ class RunDLC:
         """
         outcome = ""
 
+        if not gputouse:
+            gputouse = "None"
         # Getting the child process ID (i.e. corresponds to the GPU ID to use)
-        if gputouse is None:
-            gpu_ids = MultiprocMixin.get_gpu_ids()
-            gputouse = np.max([MultiprocMixin.get_cpid() - 1, 0]) % len(gpu_ids)
+        # if gputouse is None:
+        #     gpu_ids = MultiprocMixin.get_gpu_ids()
+        #     gputouse = np.max([MultiprocMixin.get_cpid() - 1, 0]) % len(gpu_ids)
 
         # Assertion: the dlc_config_path should be the same for all configs_fp_ls
         # TODO
@@ -127,13 +126,31 @@ class RunDLC:
                 + 'Check this file and specify a DLC ".yaml" config file.'
             )
 
+        # Running the DLC subprocess (in a separate conda env)
         subproc_run_dlc(dlc_config_path, in_fp_ls, dlc_out_dir, temp_dir, gputouse)
 
-        # Cleaning up the DLC files
+        # Exporting the h5 to feather the out_dir
         for in_fp in in_fp_ls:
-            clean_raw_dlc_files(in_fp, dlc_out_dir, out_dir)
+            export_dlc_to_feather(in_fp, dlc_out_dir, out_dir)
+        IOMixin.silent_rm(dlc_out_dir)
 
         return outcome
+
+
+def export_dlc_to_feather(name: str, in_dir: str, out_dir: str) -> str:
+    """
+    __summary__
+    """
+    # Get name
+    name = IOMixin.get_name(name)
+    # Get the corresponding .h5 filename
+    name_fp_ls = [i for i in os.listdir(in_dir) if re.search(rf"^{name}DLC.*\.h5$", i)]
+    assert len(name_fp_ls) == 1
+    name_fp = os.path.join(in_dir, name_fp_ls[0])
+    # Reading the .h5 file
+    df = pd.DataFrame(pd.read_hdf(name_fp))
+    # Writing the .feather file
+    DFIOMixin.write_feather(df, os.path.join(out_dir, f"{name}.feather"))
 
 
 def subproc_run_dlc(
@@ -165,6 +182,7 @@ deeplabcut.analyze_videos(
 """
         )
 
+    # Running the DLC subprocess
     cmd = [
         os.environ["CONDA_EXE"],
         "run",
@@ -177,6 +195,8 @@ deeplabcut.analyze_videos(
     print(" ".join(cmd))
     # SubprocMixin.run_subproc_fstream(cmd)
     SubprocMixin.run_subproc_console(cmd)
+    # Removing the script file
+    IOMixin.silent_rm(script_fp)
 
 
 def clean_raw_dlc_files(in_fp, dlc_out_dir, out_dir: str) -> str:
@@ -210,7 +230,7 @@ def clean_raw_dlc_files(in_fp, dlc_out_dir, out_dir: str) -> str:
                 df = pd.DataFrame(pd.read_hdf(os.path.join(dlc_out_dir, fp)))
                 DFIOMixin.write_feather(df, os.path.join(out_dir, f"{name}.feather"))
             # Deleting original DLC file
-            os.remove(os.path.join(dlc_out_dir, fp))
+            IOMixin.silent_rm(os.path.join(dlc_out_dir, fp))
     outcome += (
         "DLC output files have been renamed and placed in corresponding folders.\n"
     )

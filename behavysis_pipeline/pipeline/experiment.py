@@ -10,13 +10,7 @@ from typing import Any, Callable
 
 import numpy as np
 import pandas as pd
-from behavysis_core.constants import (
-    ANALYSIS_DIR,
-    EVALUATE_DIR,
-    FOLDERS,
-    STR_DIV,
-    TEMP_DIR,
-)
+from behavysis_core.constants import EVALUATE_DIR, FILE_EXTS, STR_DIV, TEMP_DIR, Folders
 from behavysis_core.mixins.df_io_mixin import DFIOMixin
 from behavysis_core.mixins.diagnostics_mixin import DiagnosticsMixin
 
@@ -31,14 +25,14 @@ from behavysis_pipeline.processes import (
 
 class Experiment:
     """
-    Behavioral Analysis Pipeline class for a single experiment.
+    Behavysis Pipeline class for a single experiment.
 
     Encompasses the entire process including:
     - Raw mp4 file import.
     - mp4 file formatting (px and fps).
     - DLC keypoints inference.
     - Feature wrangling (start time detection, more features like average body position).
-    - Interpretable behaviour analysis results.
+    - Interpretable behaviour results.
     - Other quantitative analysis.
 
     Parameters
@@ -66,8 +60,8 @@ class Experiment:
             )
         # Assertion: name must correspond to at least one file in root_dir
         file_exists_ls = [
-            os.path.isfile(os.path.join(root_dir, folder, f"{name}{ext}"))
-            for folder, ext in FOLDERS.items()
+            os.path.isfile(os.path.join(root_dir, f.value, f"{name}{FILE_EXTS[f]}"))
+            for f in Folders
         ]
         if not np.any(file_exists_ls):
             raise ValueError(
@@ -75,7 +69,7 @@ class Experiment:
                 + f'Please specify a file that exists in "{root_dir}", in one of the'
                 + " following folder WITH the correct file extension name:\n"
                 + "    - "
-                + "\n    - ".join(FOLDERS.keys())
+                + "\n    - ".join([i.value for i in Folders])
             )
         self.name = name
         self.root_dir = os.path.abspath(root_dir)
@@ -84,13 +78,13 @@ class Experiment:
     #               GET/CHECK FILEPATH METHODS
     #####################################################################
 
-    def get_fp(self, folder: str) -> str:
+    def get_fp(self, folder_str: str) -> str:
         """
         Returns the experiment's file path from the given folder.
 
         Parameters
         ----------
-        folder : str
+        folder_str : str
             The folder to return the experiment document's filepath for.
 
         Returns
@@ -103,16 +97,20 @@ class Experiment:
         ValueError
             ValueError: Folder name is not valid. Refer to FOLDERS constant for valid folder names.
         """
+        # Getting folder enum from string
+        folder = next((f for f in Folders if folder_str == f.value), None)
         # Assertion: The given folder name must be valid
-        if folder not in FOLDERS:
+        if not folder:
             raise ValueError(
-                f'"{folder}" is not a valid experiment folder name.\n'
+                f'"{folder_str}" is not a valid experiment folder name.\n'
                 + "Please only specify one of the following folders:\n"
                 + "    - "
-                + "\n    - ".join(FOLDERS.keys())
+                + "\n    - ".join([f.value for f in Folders])
             )
         # Getting experiment filepath for given folder
-        fp = os.path.join(self.root_dir, folder, f"{self.name}{FOLDERS[folder]}")
+        fp = os.path.join(
+            self.root_dir, folder.value, f"{self.name}{FILE_EXTS[folder]}"
+        )
         # Making a folder if it does not exist
         os.makedirs(os.path.split(fp)[0], exist_ok=True)
         # Returning filepath
@@ -322,7 +320,7 @@ class Experiment:
             configs_fp=self.get_fp("0_configs"),
             overwrite=overwrite,
         )
-        # If there is an error, then makes the diagnostics dict
+        # If there is an error, OR warning (indicates not to ovewrite), then returns early
         res = dd["import_keypoints_df"]
         if res.startswith("ERROR") or res.startswith("WARNING"):
             return dd
@@ -332,7 +330,7 @@ class Experiment:
             in_fp=self.get_fp("4_preprocessed"),
             out_fp=self.get_fp("4_preprocessed"),
             configs_fp=self.get_fp("0_configs"),
-            overwrite=overwrite,
+            overwrite=True,
         )
 
     #####################################################################
@@ -362,7 +360,7 @@ class Experiment:
         return self._process_scaffold(
             funcs,
             dlc_fp=self.get_fp("4_preprocessed"),
-            analysis_dir=os.path.join(self.root_dir, ANALYSIS_DIR),
+            analysis_dir=os.path.join(self.root_dir, Folders.ANALYSIS.value),
             configs_fp=self.get_fp("0_configs"),
         )
 
@@ -382,7 +380,7 @@ class Experiment:
             Diagnostics dictionary, with description of each function's outcome.
         """
         dd = {"experiment": self.name}
-        analysis_dir = os.path.join(self.root_dir, ANALYSIS_DIR)
+        analysis_dir = os.path.join(self.root_dir, Folders.ANALYSIS.value)
         out_fp = os.path.join(
             analysis_dir, "aggregateAnalysis", "fbf", f"{self.name}.feather"
         )
@@ -392,7 +390,7 @@ class Experiment:
             return dd
         # Making total_df to store all frame-by-frame analysis for the experiment
         total_df = pd.DataFrame()
-        # Searching through all the analysis sub-folders
+        # Searching through all the analysis subdir
         for analysis_subdir in os.listdir(analysis_dir):
             if analysis_subdir == "aggregate_analysis":
                 continue
@@ -406,7 +404,9 @@ class Experiment:
                 if total_df.shape[0] > 0:
                     assert np.all(total_df.index == df.index)
                 # Prepending analysis level to columns MultiIndex
-                df = pd.concat([df], keys=[analysis_subdir], names=["analysis"], axis=1)
+                df = pd.concat(
+                    [df], keys=[analysis_subdir], names=[Folders.ANALYSIS.value], axis=1
+                )
                 # Concatenating total_df with df
                 total_df = pd.concat([total_df, df], axis=1)
         DFIOMixin.write_feather(total_df, out_fp)

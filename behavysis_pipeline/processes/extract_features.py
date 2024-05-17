@@ -82,8 +82,7 @@ class ExtractFeatures:
         # Saving as csv
         df.to_csv(simba_in_fp)
         # Removing simba folder (if it exists)
-        if os.path.exists(simba_dir):
-            shutil.rmtree(simba_dir)
+        IOMixin.silent_rm(simba_dir)
         # Running SimBA env and script to run SimBA feature extraction
         outcome += run_extract_features_script(simba_dir, simba_in_dir, configs_dir)
         # Reading SimBA feature extraction csv (to select column and convert to feather)
@@ -93,6 +92,9 @@ class ExtractFeatures:
         df.index = index
         # Saving SimBA extracted features df as feather
         DFIOMixin.write_feather(df, out_fp)
+        # Removing temp folders (simba_in_dir, simba_dir)
+        IOMixin.silent_rm(simba_in_dir)
+        IOMixin.silent_rm(simba_dir)
         # Returning outcome
         return outcome
 
@@ -182,7 +184,7 @@ def remove_bpts_cols(
 ) -> pd.DataFrame:
     """
     Drops the bodyparts columns from the SimBA features extractions dataframes.
-    Because bodypart coordinates should not be a factor in behavioural classification.
+    Because bodypart coordinates should not be a factor in behaviour classification.
 
     Parameters
     ----------

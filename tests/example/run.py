@@ -10,34 +10,31 @@ from behavysis_pipeline.processes import *
 if __name__ == "__main__":
     overwrite = True
 
-    # proj_dir = os.path.join(".")
-    proj_dir = os.path.join(r"Z:\PRJ-BowenLab\TimLee\resources\project_ma")
+    proj_dir = os.path.join(".")
 
     proj = Project(proj_dir)
     proj.import_experiments()
-    # exp = proj.get_experiments()[1]
+    # proj = proj.get_experiments()[0]
 
     # proj.nprocs = 4
 
     default_configs_fp = os.path.join(proj_dir, "default.json")
-    default_configs_fp = (
-        r"Z:\PRJ-BowenLab\TimLee\dev\ba\behavysis_pipeline\tests\project\default.json"
+
+    proj.update_configs(
+        default_configs_fp,
+        overwrite="user",
     )
-    # proj.update_configs(
-    #     default_configs_fp,
-    #     overwrite="user",
-    # )
-    # proj.format_vid(
-    #     (
-    #         # FormatVid.format_vid,
-    #         FormatVid.get_vid_metadata,
-    #     ),
+    proj.format_vid(
+        (
+            # FormatVid.format_vid,
+            FormatVid.get_vid_metadata,
+        ),
+        overwrite=overwrite,
+    )
+    # proj.run_dlc(
+    #     gputouse=None,
     #     overwrite=overwrite,
     # )
-    # # # proj.run_dlc(
-    # # #     gputouse=None,
-    # # #     overwrite=overwrite,
-    # # # )
     # proj.calculate_params(
     #     (
     #         CalculateParams.start_frame,
@@ -53,6 +50,10 @@ if __name__ == "__main__":
     #     ),
     #     overwrite=overwrite,
     # )
+    # proj.extract_features(True)
+    # proj.classify_behaviours(True)
+    # proj.export_behaviours(True)
+    # # proj.export_feather("7_scored_behavs", "./scored_csv")
     # proj.analyse(
     #     (
     #         Analyse.thigmotaxis,
@@ -63,21 +64,16 @@ if __name__ == "__main__":
     #         Analyse.freezing,
     #     )
     # )
+    # proj.collate_configs_auto()
     # proj.collate_analysis_binned()
     # proj.collate_analysis_summary()
-
-    # proj = proj.get_experiments()[0]
-    proj.extract_features(True)
-    proj.classify_behaviours(True)
-    proj.export_behaviours(True)
-    # proj.export_feather("7_scored_behavs", "./scored_csv")
-    proj.evaluate(
-        (
-            Evaluate.eval_vid,
-            Evaluate.keypoints_plot,
-        ),
-        overwrite=overwrite,
-    )
+    # proj.evaluate(
+    #     (
+    #         Evaluate.eval_vid,
+    #         Evaluate.keypoints_plot,
+    #     ),
+    #     overwrite=overwrite,
+    # )
 
     # # import shutil
     # # import os
@@ -88,7 +84,7 @@ if __name__ == "__main__":
     # #     "5_features_extracted",
     # #     "6_predicted_behavs",
     # #     "7_scored_behavs",
-    # #     "analysis",
+    # #     "8_analysis",
     # #     "diagnostics",
     # #     "evaluate",
     # # ]:
