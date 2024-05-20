@@ -6,7 +6,7 @@ import os
 
 import numpy as np
 import pandas as pd
-from behavysis_core.constants import BEHAV_COLUMN_NAMES, BEHAV_PRED_COL
+from behavysis_core.constants import BEHAV_COLUMN_NAMES, BehavColumns
 from behavysis_core.data_models.experiment_configs import ExperimentConfigs
 from behavysis_core.mixins.behaviour_mixin import BehaviourMixin
 from behavysis_core.mixins.df_io_mixin import DFIOMixin
@@ -111,11 +111,13 @@ def merge_bouts(
     # Merging short non-behav bouts for each behaviour column
     for behav in df.columns.unique(BEHAV_COLUMN_NAMES[0]):
         # Getting start, stop, and duration of each non-behav bout
-        nonbouts_df = BehaviourMixin.vect_2_bouts(df[(behav, BEHAV_PRED_COL)] == 0)
+        nonbouts_df = BehaviourMixin.vect_2_bouts(
+            df[(behav, BehavColumns.PRED.value)] == 0
+        )
         # For each non-behav bout, if it is less than min_window_frames, then
         # call it a behav
         for _, row in nonbouts_df.iterrows():
             if row["dur"] < min_window_frames:
-                df.loc[row["start"] : row["stop"], (behav, BEHAV_PRED_COL)] = 1
+                df.loc[row["start"] : row["stop"], (behav, BehavColumns.PRED.value)] = 1
     # Returning df
     return df

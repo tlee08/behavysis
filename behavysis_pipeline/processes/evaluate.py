@@ -35,12 +35,8 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 from behavysis_core.constants import (
-    BEHAV_ACTUAL_COL,
     BEHAV_COLUMN_NAMES,
-    BEHAV_PRED_COL,
-    BEHAV_PROB_COL,
-    PLOT_DPI,
-    PLOT_STYLE,
+    BehavColumns,
     PROCESS_COL,
 )
 from behavysis_core.data_models.experiment_configs import ExperimentConfigs
@@ -185,7 +181,8 @@ class Evaluate:
         behavs_ls = behav_df.columns.unique("behaviours")
         # Making sure all relevant behaviour outcome columns exist
         for behav in behavs_ls:
-            for i in [BEHAV_PROB_COL, BEHAV_PRED_COL, BEHAV_ACTUAL_COL]:
+            for i in BehavColumns:
+                i = i.value
                 if (behav, i) not in behav_df:
                     behav_df[(behav, i)] = 0
         # Changing the columns MultiIndex to a single-level index. For speedup
@@ -374,7 +371,8 @@ def annot_behav(
     # colour = (3, 219, 252)  # Yellow
     colour = (0, 0, 0)  # Black
     # Making outcome headings
-    for j, outcome in enumerate((BEHAV_PRED_COL, BEHAV_ACTUAL_COL)):
+    for j, outcome in enumerate((BehavColumns.PRED, BehavColumns.ACTUAL)):
+        j = j.value
         x = 120 + j * 40
         y = 50
         cv2.putText(frame, outcome, (x, y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, colour, 2)
@@ -384,7 +382,8 @@ def annot_behav(
         y = 100 + i * 30
         # Annotating with label
         cv2.putText(frame, behav, (x, y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, colour, 2)
-        for j, outcome in enumerate((BEHAV_PRED_COL, BEHAV_ACTUAL_COL)):
+        for j, outcome in enumerate((BehavColumns.PRED, BehavColumns.ACTUAL)):
+            j = j.value
             x = 120 + j * 40
             if row[f"{behav}_{outcome}"] == 1:
                 cv2.putText(

@@ -14,10 +14,8 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 from behavysis_core.constants import (
-    BEHAV_ACTUAL_COL,
+    BehavColumns,
     BEHAV_COLUMN_NAMES,
-    BEHAV_PRED_COL,
-    BEHAV_PROB_COL,
 )
 from behavysis_core.mixins.df_io_mixin import DFIOMixin
 from imblearn.under_sampling import RandomUnderSampler
@@ -34,8 +32,21 @@ from behavysis_pipeline.behav_classifier.behav_classifier_configs import (
     BehavClassifierConfigs,
 )
 
+from enum import Enum
+
 if TYPE_CHECKING:
     from behavysis_pipeline.pipeline.project import Project
+
+
+class Datasets(Enum):
+    ALL = "all"
+    TRAIN = "train"
+    TEST = "test"
+
+
+X = "X"
+Y = "y"
+SUBSAMPLED = "sub"
 
 
 class BehavClassifier:
@@ -47,7 +58,6 @@ class BehavClassifier:
     def __init__(
         self,
         configs_fp: str,
-        configs: Optional[BehavClassifierConfigs] = None,
     ) -> None:
         """
         Make a BehavClassifier instance.
@@ -56,22 +66,19 @@ class BehavClassifier:
         ----------
         configs_fp : str
             _description_
-        configs : BehavClassifierConfigs, optional
-            _description_, by default BehavClassifierConfigs()
         """
-        # Making configs json
+        # Storing configs json fp
         self.configs_fp = configs_fp
-        # Trying to read in configs json
-        if configs is None:
-            try:
-                configs = BehavClassifierConfigs.read_json(self.configs_fp)
-            except FileNotFoundError:
-                configs = BehavClassifierConfigs()
+        # Trying to read in configs json. Making a new one if it doesn't exist
+        try:
+            configs = BehavClassifierConfigs.read_json(self.configs_fp)
+        except FileNotFoundError:
+            configs = BehavClassifierConfigs()
         # Saving configs
         configs.write_json(self.configs_fp)
 
     @classmethod
-    def from_Project(cls, proj: Project) -> BehavClassifier:
+    def create_from_project(cls, proj: Project) -> BehavClassifier:
         """
         Loading classifier from given Project instance.
 
@@ -85,13 +92,14 @@ class BehavClassifier:
         BehavClassifier
             The loaded BehavClassifier instance.
         """
-        configs_fp: str = os.path.abspath(
-            os.path.join(proj.root_dir, "behav_models", "model_configs.json")
-        )
-        configs: BehavClassifierConfigs = BehavClassifierConfigs(
-            all_ls=[i.name for i in proj.get_experiments()]
-        )
-        return cls(configs_fp, configs)
+        configs_fp = os.path.join(proj.root_dir, "behav_models", "model_configs.json")
+        # Making new BehavClassifier instance
+        inst = cls(configs_fp)
+        return inst
+
+    #################################################
+    #            GETTER AND SETTERS
+    #################################################
 
     @property
     def configs(self) -> BehavClassifierConfigs:
@@ -103,7 +111,7 @@ class BehavClassifier:
         """Returns the model's root directory"""
         return os.path.split(self.configs_fp)[0]
 
-    def make_behav_model_subdir(self, behav: str):
+    def create_behav_model_subdir(self, behav: str):
         """
         Making model subdir for given behaviour.
         Returns the model_subdir's instance.
@@ -131,14 +139,16 @@ class BehavClassifier:
         # Modifying configs for new behaviour
         configs = self.configs
         configs.name = behav
-        behav_clf = BehavClassifier(configs_fp, configs)
+        behav_clf = BehavClassifier(configs_fp)
+        configs.write_json(behav_clf.configs_fp)
         # For each type of X/y dataframe
-        for i in ["all", "train", "test"]:
-            # Copying X dataframes
+        for i in Datasets:
+            i = i.value
+            # Copying X dataframes. NOTE: copying is very slow compared to native operation
             shutil.copyfile(self.get_df_fp(f"x_{i}"), behav_clf.get_df_fp(f"x_{i}"))
             # Selecing y dataframe behav cols and saving to model behav dir
             y_df = DFIOMixin.read_feather(self.get_df_fp(f"y_{i}"))
-            y_df = y_df.loc[:, behav]
+            y_df = y_df.loc[:, [behav]]
             DFIOMixin.write_feather(y_df, behav_clf.get_df_fp(f"y_{i}"))
         # Returning BehavClassifier instance of new subdir
         return behav_clf
@@ -198,6 +208,32 @@ class BehavClassifier:
     #################################################
     #            COMBINING DFS TO SINGLE DF
     #################################################
+
+    def import_names(self, names_ls: list[str]) -> None:
+        """
+        Importing names into the BehavClassifier instance.
+
+        Parameters
+        ----------
+        names_ls : list[str]
+            List of names.
+        """
+        # Loading configs
+        configs = self.configs
+        configs.all_ls = names_ls
+        configs.write_json(self.configs_fp)
+
+    def import_project(self, proj: Project) -> None:
+        """
+        Importing experiments from given Project instance.
+
+        Parameters
+        ----------
+        proj : Project
+            The Project instance.
+        """
+        # Loading configs
+        self.import_names([i.name for i in proj.get_experiments()])
 
     def combine_dfs(
         self,
@@ -277,9 +313,11 @@ class BehavClassifier:
         train_n = int(self.configs.train_fraction * len(self.configs.all_ls))
         # Saving train and test experiments lists
         configs = self.configs
+        # Selecting random train set
         configs.train_ls = np.random.choice(
             a=self.configs.all_ls, size=train_n, replace=False
         ).tolist()
+        # Everything else is the test set
         configs.test_ls = np.array(self.configs.all_ls)[
             ~np.isin(self.configs.all_ls, self.configs.train_ls)
         ].tolist()
@@ -310,14 +348,15 @@ class BehavClassifier:
         - seed: int
         """
         # For each "all" and "train" datasets
-        for i in ["all", "train"]:
+        for i in [Datasets.ALL, Datasets.TRAIN]:
+            i = i.value
             # Reading in df
             x_df = pd.read_feather(self.get_df_fp(f"x_{i}"))
             y_df = pd.read_feather(self.get_df_fp(f"y_{i}"))
             # Preparing ID index to subsample on. These will store the index numbers subsampled on
             index = y_df.index.to_list()  # TODO: try ".values"
             # Preparing y_vals to subsample on. These will store the y values as a 1D array
-            y_vals = y_df[(self.configs.name, BEHAV_ACTUAL_COL)].values
+            y_vals = y_df[(self.configs.name, BehavColumns.ACTUAL.value)].values
             # Random under-subsampling (returns subsampled index IDs)
             undersampler = RandomUnderSampler(
                 sampling_strategy=self.configs.undersampling_strategy,
@@ -367,23 +406,23 @@ class BehavClassifier:
         configs.model_params = model.get_params()
         configs.write_json(self.configs_fp)
 
-    def train_behav_classifier(self):
+    def train_behav_classifier(self, dataset: Datasets = Datasets.ALL):
         """
-        Making classifier from configs json blueprint and training it on `_all` and `_train` data.
-        Saving a separate trained classifier for each dataset (`_all` and `_train`).
+        Making classifier from configs json blueprint and training it on `all` and `_train` data.
+        Saving a separate trained classifier for each dataset (`all` and `train`).
         """
-        # Training model on _all data
-        for i in ["all", "train"]:
-            # Loading in X/y dfs
-            x_df = DFIOMixin.read_feather(self.get_df_fp(f"x_{i}_subs"))
-            y_df = DFIOMixin.read_feather(self.get_df_fp(f"y_{i}_subs"))
-            y_vals = y_df[(self.configs.name, BEHAV_ACTUAL_COL)].values
-            # Making model
-            model = GradientBoostingClassifier(**self.configs.model_params)
-            # Training model
-            model.fit(x_df, y_vals)
-            # Saving model
-            joblib.dump(model, self.get_model_fp(f"model_{i}"))
+        dataset = Datasets(dataset).value
+        # Training model on all data
+        # Loading in X/y dfs
+        x_df = DFIOMixin.read_feather(self.get_df_fp(f"x_{dataset}_subs"))
+        y_df = DFIOMixin.read_feather(self.get_df_fp(f"y_{dataset}_subs"))
+        y_vals = y_df[(self.configs.name, BehavColumns.ACTUAL.value)].values
+        # Making model
+        model = GradientBoostingClassifier(**self.configs.model_params)
+        # Training model
+        model.fit(x_df, y_vals)
+        # Saving model
+        joblib.dump(model, self.get_model_fp(f"model_{dataset}"))
 
     #################################################
     #         RUN MODEL PREDICTIONS
@@ -392,18 +431,18 @@ class BehavClassifier:
     def model_predict(
         self,
         x_df: pd.DataFrame,
-        model_name: str = "model_all",
+        model_dataset: Datasets = Datasets.ALL,
     ) -> pd.DataFrame:
         """
-        Making predictionsusing the given model and novel extracted features dataframe.
-        The default model used for the given BehavClassifier is `"model_all"`.
+        Making predictions using the given model and novel extracted features dataframe.
+        The default model used for the given BehavClassifier is `Datasets.ALL`.
 
         Parameters
         ----------
         x_df : pd.DataFrame
             Novel extracted features dataframe.
-        model_name : {"model_all", "model_train"}, optional
-            model name, by default "model_all".
+        dataset : str, optional
+            Model name, by default `Datasets.ALL`.
 
         Returns
         -------
@@ -414,27 +453,28 @@ class BehavClassifier:
             outcomes   :  "prob"   "pred"
             ```
         """
+        model_dataset = Datasets(model_dataset).value
         # Loading in each model
-        model = joblib.load(self.get_model_fp(model_name))
-        # Getting probabilitites from model
+        model = joblib.load(self.get_model_fp(f"model_{model_dataset}"))
+        # Getting probabilities from model
         probs = model.predict_proba(x_df)[:, 1]
         preds = (probs > self.configs.pcutoff).astype(np.uint8)
         # Making df
-        behav_preds = pd.DataFrame(index=x_df.index)
-        behav_preds[(self.configs.name, BEHAV_PROB_COL)] = probs
-        behav_preds[(self.configs.name, BEHAV_PRED_COL)] = preds
-        # Converting columns to MultiIndex
-        behav_preds.columns = pd.MultiIndex.from_tuples(
-            behav_preds.columns, names=BEHAV_COLUMN_NAMES
+        preds_df = pd.DataFrame(index=x_df.index)
+        preds_df[(self.configs.name, BehavColumns.PROB.value)] = probs
+        preds_df[(self.configs.name, BehavColumns.PRED.value)] = preds
+        # Setting column names
+        preds_df.columns = pd.MultiIndex.from_tuples(
+            preds_df.columns, names=BEHAV_COLUMN_NAMES
         )
         # Returning predicted behavs
-        return behav_preds
+        return preds_df
 
     #################################################
     #      EVALUATE MODEL WITH TRAIN/TEST DATA
     #################################################
 
-    def model_eval(self):
+    def model_eval(self, dataset: Datasets = Datasets.TRAIN):
         """
         Evaluating the model using the model trained on the _train data.
 
@@ -445,14 +485,15 @@ class BehavClassifier:
         - name: str
         ```
         """
+        dataset = Datasets(dataset).value
         # Loading test X data
-        x_test = DFIOMixin.read_feather(self.get_df_fp("x_test"))
+        x_test = DFIOMixin.read_feather(self.get_df_fp(f"x_{Datasets.TEST.value}"))
         # Getting model predictions for evaluation
-        eval_df = self.model_predict(x_test, model_name="model_train")
+        eval_df = self.model_predict(x_test, dataset)
         # Adding actual y labels
-        y_test = DFIOMixin.read_feather(self.get_df_fp("y_test"))
-        eval_df[(self.configs.name, BEHAV_ACTUAL_COL)] = y_test[
-            (self.configs.name, BEHAV_ACTUAL_COL)
+        y_test = DFIOMixin.read_feather(self.get_df_fp(f"y_{Datasets.TEST.value}"))
+        eval_df[(self.configs.name, BehavColumns.ACTUAL.value)] = y_test[
+            (self.configs.name, BehavColumns.ACTUAL.value)
         ].values
         # Saving eval df to file
         eval_fp = os.path.join(self.root_dir, "eval", "eval_df.feather")
@@ -482,10 +523,17 @@ class BehavClassifier:
         # Printing eval report
         print(
             confusion_matrix(
-                eval_df[BEHAV_ACTUAL_COL], eval_df[BEHAV_PRED_COL], labels=[0, 1]
+                eval_df[(self.configs.name, BehavColumns.ACTUAL.value)],
+                eval_df[(self.configs.name, BehavColumns.PRED.value)],
+                labels=[0, 1],
             )
         )
-        print(classification_report(eval_df[BEHAV_ACTUAL_COL], eval_df[BEHAV_PRED_COL]))
+        print(
+            classification_report(
+                eval_df[(self.configs.name, BehavColumns.ACTUAL.value)],
+                eval_df[(self.configs.name, BehavColumns.PRED.value)],
+            )
+        )
 
     def model_eval_plot_timeseries(self, eval_df: pd.DataFrame) -> Figure:
         """
@@ -493,7 +541,12 @@ class BehavClassifier:
         """
         # Getting predictions eval df
         eval_long_df = (
-            eval_df[[BEHAV_ACTUAL_COL, BEHAV_PROB_COL]]
+            eval_df[
+                [
+                    (self.configs.name, BehavColumns.ACTUAL.value),
+                    (self.configs.name, BehavColumns.PROB.value),
+                ]
+            ]
             .reset_index(names="frame")
             .melt(id_vars=["frame"], var_name="measure", value_name="value")
         )
@@ -516,16 +569,20 @@ class BehavClassifier:
         Plotting outcome against ML probability (sorted by ML probability)
         """
         # Sorting eval_df df by y_prob
-        eval_df = eval_df.sort_values(BEHAV_PROB_COL, ignore_index=True).reset_index()
+        eval_df = eval_df[self.configs.name]
+        eval_df = eval_df.sort_values(
+            (BehavColumns.PROB.value), ignore_index=True
+        ).reset_index()
         # Making plot with actual outcomes (scatter) and ML probaility outcomes (line)
         fig, ax = plt.subplots(figsize=(8, 5), layout="constrained")
+        eval_df[f"{BehavColumns.ACTUAL.value}_jitter"] = (
+            eval_df[BehavColumns.ACTUAL.value]
+            + (np.random.rand(eval_df.shape[0]) - 0.5) * 0.1
+        )
         sns.scatterplot(
-            data=eval_df.assign(
-                y_true=eval_df[BEHAV_ACTUAL_COL]
-                + (np.random.rand(eval_df.shape[0]) - 0.5) * 0.1
-            ),
+            data=eval_df,
             x="index",
-            y=BEHAV_ACTUAL_COL,
+            y=f"{BehavColumns.ACTUAL.value}_jitter",
             c="red",
             marker=".",
             s=10,
@@ -536,7 +593,7 @@ class BehavClassifier:
         sns.lineplot(
             data=eval_df,
             x="index",
-            y=BEHAV_PROB_COL,
+            y=BehavColumns.PROB.value,
             ax=ax,
         )
         # Making axis titles
@@ -553,12 +610,13 @@ class BehavClassifier:
         """
         beta = 1.5
         pcutoffs = np.linspace(0, 1, 101)[:-1]
+        eval_df = eval_df[self.configs.name]
         # Initialising df_eval_pcutoffs df
         df_eval_pcutoffs = pd.DataFrame()
         for pcutoff in pcutoffs:
             # Getting y_true and y_pred
-            y_true = eval_df[BEHAV_ACTUAL_COL]
-            y_pred = (eval_df[BEHAV_PROB_COL] >= pcutoff).astype(int)
+            y_true = eval_df[BehavColumns.ACTUAL.value]
+            y_pred = (eval_df[BehavColumns.PROB.value] >= pcutoff).astype(int)
             # Getting performance metrics
             precision, recall, fscore, _ = precision_recall_fscore_support(
                 y_true, y_pred, labels=[0, 1], beta=beta

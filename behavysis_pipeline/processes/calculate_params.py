@@ -79,7 +79,7 @@ class CalculateParams:
         # Writing to configs
         configs = ExperimentConfigs.read_json(configs_fp)
         configs.auto.start_frame = start_frame
-        configs.auto.start_sec = start_frame / fps
+        # configs.auto.start_sec = start_frame / fps
         configs.write_json(configs_fp)
         return outcome
 
@@ -124,7 +124,7 @@ class CalculateParams:
         # Writing to config
         configs = ExperimentConfigs.read_json(configs_fp)
         configs.auto.stop_frame = stop_frame
-        configs.auto.stop_sec = stop_frame / fps
+        # configs.auto.stop_sec = stop_frame / fps
         configs.write_json(configs_fp)
         return outcome
 
@@ -166,7 +166,7 @@ class CalculateParams:
         # Writing to configs
         configs = ExperimentConfigs.read_json(configs_fp)
         configs.auto.exp_dur_frames = exp_dur_frames
-        configs.auto.exp_dur_secs = exp_dur_frames / fps
+        # configs.auto.exp_dur_secs = exp_dur_frames / fps
         configs.write_json(configs_fp)
         return outcome
 
