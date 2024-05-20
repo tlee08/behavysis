@@ -4,15 +4,15 @@
       "height_px": 540,
       "width_px": 960,
       "fps": 15,
-      "start_sec": 0,
-      "stop_sec": 1200
+      "start_sec": null,
+      "stop_sec": null
     },
     "run_dlc": {
       "dlc_config_path": "Z:\\PRJ-BowenLab\\PRJ-BowenLab\\DeepLabCut-Projects\\aggrModel_960px\\config.yaml"
     },
     "calculate_params": {
       "start_frame": {
-        "window_sec": 3,
+        "window_sec": 1,
         "pcutoff": 0.9,
         "bodyparts": [
           "LeftEar",
@@ -26,7 +26,7 @@
         ]
       },
       "exp_dur": {
-        "window_sec": 3,
+        "window_sec": 1,
         "pcutoff": 0.9,
         "bodyparts": [
           "LeftEar",
@@ -109,6 +109,7 @@
         "Z:\\PRJ-BowenLab\\TimLee\\resources\\simba_model_aggr\\behav_models\\marked_fight\\model_configs.json",
         "Z:\\PRJ-BowenLab\\TimLee\\resources\\simba_model_aggr\\behav_models\\unmarked_fight\\model_configs.json"
       ],
+      "pcutoff": 0.4,
       "min_window_frames": 2,
       "user_behavs": ["example", "another example"]
     },

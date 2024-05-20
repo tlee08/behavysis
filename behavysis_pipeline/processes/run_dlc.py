@@ -100,10 +100,16 @@ class RunDLC:
 
         if not gputouse:
             gputouse = "None"
-        # Getting the child process ID (i.e. corresponds to the GPU ID to use)
-        # if gputouse is None:
-        #     gpu_ids = MultiprocMixin.get_gpu_ids()
-        #     gputouse = np.max([MultiprocMixin.get_cpid() - 1, 0]) % len(gpu_ids)
+
+        # If overwrite is False, filtering for only experiments that need processing
+        if not overwrite:
+            in_fp_ls_filt = []
+            for fp in in_fp_ls:
+                name = IOMixin.get_name(fp)
+                out_fp = os.path.join(out_dir, f"{name}.feather")
+                if not os.path.exists(out_fp):
+                    in_fp_ls_filt.append(fp)
+            in_fp_ls = in_fp_ls_filt
 
         # Assertion: the dlc_config_path should be the same for all configs_fp_ls
         # TODO
@@ -145,12 +151,16 @@ def export_dlc_to_feather(name: str, in_dir: str, out_dir: str) -> str:
     name = IOMixin.get_name(name)
     # Get the corresponding .h5 filename
     name_fp_ls = [i for i in os.listdir(in_dir) if re.search(rf"^{name}DLC.*\.h5$", i)]
-    assert len(name_fp_ls) == 1
-    name_fp = os.path.join(in_dir, name_fp_ls[0])
-    # Reading the .h5 file
-    df = pd.DataFrame(pd.read_hdf(name_fp))
-    # Writing the .feather file
-    DFIOMixin.write_feather(df, os.path.join(out_dir, f"{name}.feather"))
+    if len(name_fp_ls) == 0:
+        print(f"No .h5 file found for {name}.")
+    elif len(name_fp_ls) == 1:
+        name_fp = os.path.join(in_dir, name_fp_ls[0])
+        # Reading the .h5 file
+        df = pd.DataFrame(pd.read_hdf(name_fp))
+        # Writing the .feather file
+        DFIOMixin.write_feather(df, os.path.join(out_dir, f"{name}.feather"))
+    else:
+        raise ValueError(f"Multiple .h5 files found for {name}.")
 
 
 def subproc_run_dlc(
@@ -160,25 +170,36 @@ def subproc_run_dlc(
     temp_dir: str,
     gputouse: int,
 ):
-    """Running the DLC subprocess in a separate process (i.e. separate conda env)."""
+    """
+    Running the DLC subprocess in a separate process (i.e. separate conda env).
+
+    NOTE: any dlc processing error for each video that occur during the subprocess
+    will be printed to the console and the process will continue to the next video.
+    """
     # Generating a script to run the DLC analysis
+    # TODO: implement for and try for each video
     script_fp = os.path.join(temp_dir, f"script_{gputouse}.py")
     with open(script_fp, "w", encoding="utf-8") as f:
         f.write(
             f"""
 import deeplabcut
 
-deeplabcut.analyze_videos(
-    config=r'{dlc_config_path}',
-    videos={in_fp_ls},
-    videotype='mp4',
-    destfolder=r'{dlc_out_dir}',
-    gputouse={gputouse},
-    save_as_csv=False,
-    calibrate=False,
-    identity_only=False,
-    allow_growth=False,
-)
+for video in {in_fp_ls}:
+    try:
+        deeplabcut.analyze_videos(
+            config=r'{dlc_config_path}',
+            videos=[video],
+            videotype='mp4',
+            destfolder=r'{dlc_out_dir}',
+            gputouse={gputouse},
+            save_as_csv=False,
+            calibrate=False,
+            identity_only=False,
+            allow_growth=False,
+        )
+    except Exception as e:
+        print(f'Error', e)
+        continue
 """
         )
 

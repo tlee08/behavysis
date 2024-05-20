@@ -311,19 +311,18 @@ class Project:
         # If gputouse is not specified, using all GPUs
         if gputouse is None:
             gputouse_ls = MultiprocMixin.get_gpu_ids()
-            nprocs = len(gputouse_ls)
         else:
             gputouse_ls = [gputouse]
-            nprocs = 1
+        nprocs = len(gputouse_ls)
         # Getting the experiments to run DLC on
         exp_ls = self.get_experiments()
-        # If overwrite is false, filtering for only experiments that need to be run
+        # If overwrite is False, filtering for only experiments that need processing
         if not overwrite:
             exp_ls = [exp for exp in exp_ls if not os.path.isfile(exp.get_fp("3_dlc"))]
-        # Splitting the experiments into batches
-        exp_batches_ls = np.array_split(exp_ls, nprocs)
+
         # Running DLC on each batch of experiments with each GPU (given allocated GPU ID)
         # TODO: have error handling
+        exp_batches_ls = np.array_split(exp_ls, nprocs)
         with Pool(processes=nprocs) as p:
             p.starmap(
                 RunDLC.ma_dlc_analyse_batch,
@@ -475,9 +474,9 @@ class Project:
 
         # Making and saving histogram plots of all the auto fields
         g = sns.FacetGrid(
-            data=df_configs.melt(), col="variable", sharex=False, col_wrap=4
+            data=df_configs.fillna(-1).melt(), col="variable", sharex=False, col_wrap=4
         )
-        g.map(sns.histplot, "value", bins=20)
+        g.map(sns.histplot, "value", bins=10)
         g.set_titles("{col_name}")
         g.savefig(
             os.path.join(
@@ -489,8 +488,6 @@ class Project:
     #####################################################################
     #               IMPORT EXPERIMENTS METHODS
     #####################################################################
-
-    # TODO: convert to load_project and make make_project, and import_videos methods
 
     def import_experiment(self, name: str) -> bool:
         """

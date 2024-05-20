@@ -34,11 +34,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
-from behavysis_core.constants import (
-    BEHAV_COLUMN_NAMES,
-    BehavColumns,
-    PROCESS_COL,
-)
+from behavysis_core.constants import BEHAV_COLUMN_NAMES, PROCESS_COL, BehavColumns
 from behavysis_core.data_models.experiment_configs import ExperimentConfigs
 from behavysis_core.mixins.df_io_mixin import DFIOMixin
 from behavysis_core.mixins.diagnostics_mixin import DiagnosticsMixin
@@ -372,7 +368,7 @@ def annot_behav(
     colour = (0, 0, 0)  # Black
     # Making outcome headings
     for j, outcome in enumerate((BehavColumns.PRED, BehavColumns.ACTUAL)):
-        j = j.value
+        outcome = outcome.value
         x = 120 + j * 40
         y = 50
         cv2.putText(frame, outcome, (x, y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, colour, 2)
@@ -383,7 +379,7 @@ def annot_behav(
         # Annotating with label
         cv2.putText(frame, behav, (x, y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, colour, 2)
         for j, outcome in enumerate((BehavColumns.PRED, BehavColumns.ACTUAL)):
-            j = j.value
+            outcome = outcome.value
             x = 120 + j * 40
             if row[f"{behav}_{outcome}"] == 1:
                 cv2.putText(

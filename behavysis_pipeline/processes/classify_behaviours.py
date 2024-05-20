@@ -65,6 +65,7 @@ class ClassifyBehaviours:
         configs = ExperimentConfigs.read_json(configs_fp)
         configs_filt = configs.user.classify_behaviours
         models_ls = configs_filt.models
+        pcutoff = configs_filt.pcutoff
         min_window_frames = configs_filt.min_window_frames
         # Getting features data
         features_df = DFIOMixin.read_feather(features_fp)
@@ -73,10 +74,19 @@ class ClassifyBehaviours:
         # in a list of pd.DataFrames
         behav_preds_ls = np.zeros(len(models_ls), dtype="object")
         for i, model in enumerate(models_ls):
-            # Getting classifier predictions and filling in small non-behav bouts
-            behav_preds_ls[i] = merge_bouts(
-                BehavClassifier(model).model_predict(features_df), min_window_frames
-            )
+            # Getting classifier probabilities
+            clf = BehavClassifier(model)
+            df_i = clf.model_predict(features_df)
+            # Getting prob and pred column names
+            prob_col = (clf.configs.name, BehavColumns.PROB.value)
+            pred_col = (clf.configs.name, BehavColumns.PRED.value)
+            # Using pcutoff to get binary predictions
+            df_i[pred_col] = df_i[prob_col] > pcutoff
+            df_i[pred_col] = df_i[pred_col].astype(int)
+            # Filling in small non-behav bouts
+            df_i[pred_col] = merge_bouts(df_i[pred_col], min_window_frames)
+            # Saving df
+            behav_preds_ls[i] = df_i
             # Logging outcome
             outcome += f"Completed {model} classification,\n"
         # Concatenating predictions to a single dataframe
@@ -88,7 +98,7 @@ class ClassifyBehaviours:
 
 
 def merge_bouts(
-    df: pd.DataFrame,
+    vect: pd.Series,
     min_window_frames: int,
 ) -> pd.DataFrame:
     """
@@ -107,17 +117,12 @@ def merge_bouts(
     pd.DataFrame
         A scored_behavs dataframe, with the merged bouts.
     """
-    df = df.copy()
-    # Merging short non-behav bouts for each behaviour column
-    for behav in df.columns.unique(BEHAV_COLUMN_NAMES[0]):
-        # Getting start, stop, and duration of each non-behav bout
-        nonbouts_df = BehaviourMixin.vect_2_bouts(
-            df[(behav, BehavColumns.PRED.value)] == 0
-        )
-        # For each non-behav bout, if it is less than min_window_frames, then
-        # call it a behav
-        for _, row in nonbouts_df.iterrows():
-            if row["dur"] < min_window_frames:
-                df.loc[row["start"] : row["stop"], (behav, BehavColumns.PRED.value)] = 1
+    vect = vect.copy()
+    # Getting start, stop, and duration of each non-behav bout
+    nonbouts_df = BehaviourMixin.vect_2_bouts(vect == 0)
+    # For each non-behav bout, if less than min_window_frames, then call it a behav
+    for _, row in nonbouts_df.iterrows():
+        if row["dur"] < min_window_frames:
+            vect.loc[row["start"] : row["stop"]] = 1
     # Returning df
-    return df
+    return vect

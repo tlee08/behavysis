@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import os
 import shutil
+from enum import Enum
 from typing import TYPE_CHECKING, Optional
 
 import joblib
@@ -13,11 +14,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
-from behavysis_core.constants import (
-    BehavColumns,
-    BEHAV_COLUMN_NAMES,
-)
+from behavysis_core.constants import BEHAV_COLUMN_NAMES, BehavColumns
 from behavysis_core.mixins.df_io_mixin import DFIOMixin
+from behavysis_pipeline.behav_classifier.behav_classifier_configs import (
+    BehavClassifierConfigs,
+)
 from imblearn.under_sampling import RandomUnderSampler
 from matplotlib.figure import Figure
 from sklearn.ensemble import GradientBoostingClassifier
@@ -27,12 +28,6 @@ from sklearn.metrics import (
     confusion_matrix,
     precision_recall_fscore_support,
 )
-
-from behavysis_pipeline.behav_classifier.behav_classifier_configs import (
-    BehavClassifierConfigs,
-)
-
-from enum import Enum
 
 if TYPE_CHECKING:
     from behavysis_pipeline.pipeline.project import Project
@@ -579,21 +574,16 @@ class BehavClassifier:
             eval_df[BehavColumns.ACTUAL.value]
             + (np.random.rand(eval_df.shape[0]) - 0.5) * 0.1
         )
+
         sns.scatterplot(
             data=eval_df,
-            x="index",
+            x="prob",
             y=f"{BehavColumns.ACTUAL.value}_jitter",
-            c="red",
+            hue=BehavColumns.PRED.value,
             marker=".",
             s=10,
             linewidth=0,
             alpha=0.2,
-            ax=ax,
-        )
-        sns.lineplot(
-            data=eval_df,
-            x="index",
-            y=BehavColumns.PROB.value,
             ax=ax,
         )
         # Making axis titles

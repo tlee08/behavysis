@@ -12,9 +12,9 @@ class BehavClassifierConfigs(PydanticBaseModel):
     model_config = ConfigDict(extra="forbid")
 
     train_fraction: float = 0.8
-    undersampling_strategy: float = 1.0
+    undersampling_strategy: float = 0.2
     seed: int = 42
-    pcutoff: float = 0.15
+    pcutoff: float = 0.5
     all_ls: list[str] = []
     train_ls: list[str] = []
     test_ls: list[str] = []
