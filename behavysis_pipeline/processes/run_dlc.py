@@ -24,13 +24,11 @@ str
 import os
 import re
 
-import numpy as np
 import pandas as pd
 from behavysis_core.data_models.experiment_configs import ExperimentConfigs
 from behavysis_core.mixins.df_io_mixin import DFIOMixin
 from behavysis_core.mixins.diagnostics_mixin import DiagnosticsMixin
 from behavysis_core.mixins.io_mixin import IOMixin
-from behavysis_core.mixins.multiproc_mixin import MultiprocMixin
 from behavysis_core.mixins.subproc_mixin import SubprocMixin
 
 
@@ -108,14 +106,14 @@ class RunDLC:
 
         # If overwrite is False, filtering for only experiments that need processing
         if not overwrite:
-            # Getting the names of the files that need processing
-            filt_ls = [IOMixin.get_name(i) for i in in_fp_ls]
-            # Getting their corresponding out_fp
-            filt_ls = [os.path.join(out_dir, f"{i}.feather") for i in filt_ls]
-            # Filtering only for files that don't exist
-            filt_ls = [i for i in filt_ls if not os.path.exists(i)]
-            # Overwriting the in_fp_ls
-            in_fp_ls = filt_ls
+            # Getting only the in_fp_ls els that do not exist as .feather files in out_dir
+            in_fp_ls = [
+                i
+                for i in in_fp_ls
+                if not os.path.exists(
+                    os.path.join(out_dir, f"{IOMixin.get_name(i)}.feather")
+                )
+            ]
 
         # Getting the DLC model config path
         # Getting the names of the files that need processing
@@ -206,7 +204,6 @@ for video in {in_fp_ls}:
         )
     except Exception as e:
         print(f'Error', e)
-        continue
 """
         )
 
