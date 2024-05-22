@@ -11,7 +11,7 @@
       "dlc_config_path": "."
     },
     "calculate_params": {
-      "start_frame": {
+      "exp_dur": {
         "bodyparts": [
           "b",
           "c",
@@ -40,6 +40,7 @@
     },
     "classify_behaviours": {
       "models": [],
+      "pcutoff": 0.4,
       "min_window_frames": 1,
       "user_behavs": []
     },
@@ -95,10 +96,7 @@
     },
     "px_per_mm": null,
     "start_frame": null,
-    "start_sec": null,
     "stop_frame": null,
-    "stop_sec": null,
-    "exp_dur_frames": 989,
-    "exp_dur_secs": 65.93333333333334
+    "exp_dur_frames": 988
   }
 }

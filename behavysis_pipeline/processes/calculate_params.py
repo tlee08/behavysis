@@ -58,6 +58,8 @@ class CalculateParams:
         window_sec = configs_filt.window_sec
         pcutoff = configs_filt.pcutoff
         fps = configs.auto.formatted_vid.fps
+        # Asserting that the necessary auto configs are valid
+        assert fps is not None, "fps is None. Please calculate fps first."
         # Deriving more parameters
         window_frames = int(np.round(fps * window_sec, 0))
         # Loading dataframe
@@ -107,6 +109,14 @@ class CalculateParams:
         start_frame = configs.auto.start_frame
         fps = configs.auto.formatted_vid.fps
         auto_stop_frame = configs.auto.formatted_vid.total_frames
+        # Asserting that the necessary auto configs are valid
+        assert (
+            start_frame is not None
+        ), "start_frame is None. Please calculate start_frame first."
+        assert fps is not None, "fps is None. Please calculate fps first."
+        assert (
+            auto_stop_frame is not None
+        ), "total_frames is None. Please calculate total_frames first."
         # Calculating stop_frame
         dur_frames = int(dur_sec * fps)
         stop_frame = start_frame + dur_frames
@@ -143,6 +153,8 @@ class CalculateParams:
         window_sec = configs_filt.window_sec
         pcutoff = configs_filt.pcutoff
         fps = configs.auto.formatted_vid.fps
+        # Asserting that the necessary auto configs are valid
+        assert fps is not None, "fps is None. Please calculate fps first."
         # Deriving more parameters
         window_frames = int(np.round(fps * window_sec, 0))
         # Loading dataframe

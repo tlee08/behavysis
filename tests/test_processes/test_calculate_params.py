@@ -90,7 +90,6 @@ def test_start_frame():
 
     # Asserting
     assert np.abs(configs.auto.start_frame - before_size) < 10
-    assert np.abs(configs.auto.start_sec - before_size / fps) < 1
 
 
 def test_stop_frame():
@@ -98,6 +97,7 @@ def test_stop_frame():
     fps = 15
     start_frame = 500
     dur_sec = 60
+    total_frames = 1000
 
     # Making configs
     configs = ExperimentConfigs()
@@ -106,6 +106,7 @@ def test_stop_frame():
     )
     configs.auto.formatted_vid.fps = fps
     configs.auto.start_frame = start_frame
+    configs.auto.formatted_vid.total_frames = total_frames
     # Writing to BytesIO to mimmick file API
     configs_io = "configs.json"
     configs.write_json(configs_io)
@@ -142,7 +143,7 @@ def test_exp_dur():
 
     # Making configs
     configs = ExperimentConfigs()
-    configs.user.calculate_params.start_frame = Model_start_frame(
+    configs.user.calculate_params.exp_dur = Model_exp_dur(
         bodyparts=["b", "c", "e"],
         window_sec=1,
         pcutoff=0.9,
@@ -173,7 +174,6 @@ def test_exp_dur():
 
     # Asserting
     assert np.abs(configs.auto.exp_dur_frames - during_size) < 20
-    assert np.abs(configs.auto.exp_dur_secs - during_size / fps) < 2
 
 
 # def test_format_vid():

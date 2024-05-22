@@ -483,8 +483,7 @@ class Experiment:
             dd["export_behaviours"] = DiagnosticsMixin.warning_msg()
             return dd
         shutil.copyfile(
-            self.get_fp("6_predicted_behavs"),
-            self.get_fp("7_scored_behavs"),
+            self.get_fp("6_predicted_behavs"), self.get_fp("7_scored_behavs")
         )
         dd["export"] = (
             "Copied predicted_behavs dataframe to 7_scored_behavs folder. "
