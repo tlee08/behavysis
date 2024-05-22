@@ -115,4 +115,3 @@ class FormatVid:
         outcome += "Video metadata stored in config file.\n"
         configs.write_json(configs_fp)
         return outcome
-        return outcome

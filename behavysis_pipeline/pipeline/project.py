@@ -307,6 +307,11 @@ class Project:
     def run_dlc(self, gputouse: int = None, overwrite: bool = False) -> None:
         """
         Batch processing for corresponding [Experiment method](experiment.md#behavysis_pipeline.pipeline.Experiment.run_dlc)
+
+        Uses a multiprocessing pool to run DLC on each batch of experiments with each GPU
+        natively as batch in the same spawned subprocess (a DLC subprocess is spawned).
+        This is a slight tweak from the regular method of running
+        each experiment separately with multiprocessing.
         """
         # If gputouse is not specified, using all GPUs
         if gputouse is None:

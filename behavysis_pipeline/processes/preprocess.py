@@ -36,23 +36,6 @@ class Preprocess:
     """_summary_"""
 
     @staticmethod
-    def import_keypoints_df(
-        in_fp: str, out_fp: str, configs_fp: str, overwrite: bool
-    ) -> str:
-        """ """
-        outcome = ""
-        # If overwrite is False, checking if we should skip processing
-        if not overwrite and os.path.exists(out_fp):
-            return DiagnosticsMixin.warning_msg()
-        # Reading file
-        df = DFIOMixin.read_feather(in_fp)
-        # Writing file
-        DFIOMixin.write_feather(df, out_fp)
-        # Returning outcome
-        outcome += "Imported keypoints dataframe."
-        return outcome
-
-    @staticmethod
     def start_stop_trim(
         in_fp: str, out_fp: str, configs_fp: str, overwrite: bool
     ) -> str:

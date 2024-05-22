@@ -98,39 +98,46 @@ class RunDLC:
         """
         outcome = ""
 
+        # Specifying the GPU to use
+        # and making the output directory
         if not gputouse:
             gputouse = "None"
+        # Making output directories
+        dlc_out_dir = os.path.join(temp_dir, f"dlc_{gputouse}")
+        os.makedirs(dlc_out_dir, exist_ok=True)
 
         # If overwrite is False, filtering for only experiments that need processing
         if not overwrite:
-            in_fp_ls_filt = []
-            for fp in in_fp_ls:
-                name = IOMixin.get_name(fp)
-                out_fp = os.path.join(out_dir, f"{name}.feather")
-                if not os.path.exists(out_fp):
-                    in_fp_ls_filt.append(fp)
-            in_fp_ls = in_fp_ls_filt
+            # Getting the names of the files that need processing
+            filt_ls = [IOMixin.get_name(i) for i in in_fp_ls]
+            # Getting their corresponding out_fp
+            filt_ls = [os.path.join(out_dir, f"{i}.feather") for i in filt_ls]
+            # Filtering only for files that don't exist
+            filt_ls = [i for i in filt_ls if not os.path.exists(i)]
+            # Overwriting the in_fp_ls
+            in_fp_ls = filt_ls
 
-        # Assertion: the dlc_config_path should be the same for all configs_fp_ls
-        # TODO
-
-        # Getting dlc_config_path
-        configs_fp_0 = os.path.join(
-            configs_dir, f"{IOMixin.get_name(in_fp_ls[0])}.json"
-        )
-        configs = ExperimentConfigs.read_json(configs_fp_0)
-        dlc_config_path = configs.user.run_dlc.dlc_config_path
-        # Derive more parameters
-        dlc_out_dir = os.path.join(temp_dir, f"dlc_{gputouse}")
-        # Making output directories
-        os.makedirs(dlc_out_dir, exist_ok=True)
+        # Getting the DLC model config path
+        # Getting the names of the files that need processing
+        dlc_fp_ls = [IOMixin.get_name(i) for i in in_fp_ls]
+        # Getting their corresponding configs_fp
+        dlc_fp_ls = [os.path.join(configs_dir, f"{i}.json") for i in dlc_fp_ls]
+        # Reading their configs
+        dlc_fp_ls = [ExperimentConfigs.read_json(i) for i in dlc_fp_ls]
+        # Getting their dlc_config_path
+        dlc_fp_ls = [i.user.run_dlc.dlc_config_path for i in dlc_fp_ls]
+        # Converting to a set
+        dlc_fp_set = set(dlc_fp_ls)
+        # Checking if all dlc_config_paths are the same
+        assert len(dlc_fp_set) == 1
+        # Getting the dlc_config_path
+        dlc_config_path = dlc_fp_set.pop()
 
         # Assertion: the config.yaml file must exist.
-        if not os.path.isfile(dlc_config_path):
-            raise ValueError(
-                f'The given dlc_config_path file does not exist: "{dlc_config_path}".\n'
-                + 'Check this file and specify a DLC ".yaml" config file.'
-            )
+        assert os.path.isfile(dlc_config_path), (
+            f'The given dlc_config_path file does not exist: "{dlc_config_path}".\n'
+            + 'Check this file and specify a DLC ".yaml" config file.'
+        )
 
         # Running the DLC subprocess (in a separate conda env)
         subproc_run_dlc(dlc_config_path, in_fp_ls, dlc_out_dir, temp_dir, gputouse)
@@ -177,7 +184,7 @@ def subproc_run_dlc(
     will be printed to the console and the process will continue to the next video.
     """
     # Generating a script to run the DLC analysis
-    # TODO: implement for and try for each video
+    # TODO: implement for and try for each video and get errors??
     script_fp = os.path.join(temp_dir, f"script_{gputouse}.py")
     with open(script_fp, "w", encoding="utf-8") as f:
         f.write(

@@ -17,9 +17,9 @@ from behavysis_core.mixins.diagnostics_mixin import DiagnosticsMixin
 from behavysis_pipeline.processes import (
     ClassifyBehaviours,
     ExtractFeatures,
-    Preprocess,
     RunDLC,
     UpdateConfigs,
+    Export,
 )
 
 
@@ -314,14 +314,13 @@ class Experiment:
         """
         # Exporting 3_dlc df to 4_preprocessed folder
         dd = self._process_scaffold(
-            (Preprocess.import_keypoints_df,),
+            (Export.feather_2_feather,),
             in_fp=self.get_fp("3_dlc"),
             out_fp=self.get_fp("4_preprocessed"),
-            configs_fp=self.get_fp("0_configs"),
             overwrite=overwrite,
         )
-        # If there is an error, OR warning (indicates not to ovewrite), then returns early
-        res = dd["import_keypoints_df"]
+        # If there is an error, OR warning (indicates not to ovewrite), then return early
+        res = dd["feather_2_feather"]
         if res.startswith("ERROR") or res.startswith("WARNING"):
             return dd
         # Feeding through preprocessing functions
@@ -478,24 +477,19 @@ class Experiment:
         dict
             _description_
         """
-        dd = {"experiment": self.name}
-        if not overwrite and os.path.exists(self.get_fp("7_scored_behavs")):
-            dd["export_behaviours"] = DiagnosticsMixin.warning_msg()
-            return dd
-        shutil.copyfile(
-            self.get_fp("6_predicted_behavs"), self.get_fp("7_scored_behavs")
+        # Exporting 6_predicted_behavs df to 7_scored_behavs folder
+        return self._process_scaffold(
+            (Export.feather_2_feather,),
+            in_fp=self.get_fp("6_predicted_behavs"),
+            out_fp=self.get_fp("7_scored_behavs"),
+            overwrite=overwrite,
         )
-        dd["export"] = (
-            "Copied predicted_behavs dataframe to 7_scored_behavs folder. "
-            + "Ready for behavysis_viewer scoring!"
-        )
-        return dd
 
     #####################################################################
     #           EVALUATING DLC ANALYSIS AND BEHAV CLASSIFICATION
     #####################################################################
 
-    def export_feather(self, in_dir: str, out_dir: str) -> dict:
+    def export_feather(self, in_dir: str, out_dir: str, overwrite: bool) -> dict:
         """
         _summary_
 
@@ -511,13 +505,12 @@ class Experiment:
         dict
             _description_
         """
-        df = DFIOMixin.read_feather(self.get_fp(in_dir))
-        df.to_csv(os.path.join(out_dir, f"{self.name}.csv"))
-        return {
-            "experiment": self.name,
-            "export": f"Copied {in_dir} dataframe to {out_dir} folder. "
-            + "Ready to view!",
-        }
+        return self._process_scaffold(
+            (Export.feather_2_csv,),
+            in_fp=self.get_fp(in_dir),
+            out_fp=os.path.join(out_dir, f"{self.name}.csv"),
+            overwrite=overwrite,
+        )
 
     def evaluate(self, funcs, overwrite: bool) -> dict:
         """
