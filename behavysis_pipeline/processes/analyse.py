@@ -874,14 +874,16 @@ def make_summary_binned(
             DFIOMixin.read_feather(binned_fp), binned_plot_fp, is_bool
         )
     # Custom binning analysis_df
-    binned_fp = os.path.join(out_dir, "binned_custom", f"{name}.feather")
-    binned_plot_fp = os.path.join(out_dir, "binned_custom_plot", f"{name}.png")
-    # Making binned df
-    outcome += _make_binned(analysis_df, binned_fp, custom_bins_ls)
-    # Making binned plots
-    outcome += _make_binned_plot(
-        DFIOMixin.read_feather(binned_fp), binned_plot_fp, is_bool
-    )
+    if custom_bins_ls:
+        binned_fp = os.path.join(out_dir, "binned_custom", f"{name}.feather")
+        binned_plot_fp = os.path.join(out_dir, "binned_custom_plot", f"{name}.png")
+        # Making binned df
+        outcome += _make_binned(analysis_df, binned_fp, custom_bins_ls)
+        # Making binned plots
+        outcome += _make_binned_plot(
+            DFIOMixin.read_feather(binned_fp), binned_plot_fp, is_bool
+        )
+    # Returning outcome
     return outcome
 
 
@@ -933,4 +935,5 @@ class Model_in_roi(BaseModel):
     roi_top_right: str
     roi_bottom_left: str
     roi_bottom_right: str
+    bodyparts: list[str]
     bodyparts: list[str]
