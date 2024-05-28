@@ -19,6 +19,7 @@ str
 from __future__ import annotations
 
 import os
+from typing import Callable
 
 import numpy as np
 import pandas as pd
@@ -631,22 +632,20 @@ def make_location_scatterplot(
     g.figure.clf()
 
 
-def _make_summary_quantitative(
-    analysis_df: pd.DataFrame,
-    out_fp: str,
-) -> str:
+def _make_summary_quantitative(analysis_df: pd.DataFrame) -> pd.DataFrame:
     """
     Generates the summarised data across the entire period, including mean,
     std, min, Q1, median, Q3, and max.
     Used for quantitative numeric data.
 
     Params:
-        TODO
+        analysis_df: pd.DataFrame
+            _description_
 
     Returns:
+    str
         The outcome string.
     """
-    outcome = ""
     summary_df = pd.DataFrame()
     # Getting summary stats for each individual
     for column_name, column_vals in analysis_df.items():
@@ -668,15 +667,15 @@ def _make_summary_quantitative(
         )
         summary_df = pd.concat([summary_df, indiv_measure_summary], axis=0)
     summary_df.index = analysis_df.columns
-    DFIOMixin.write_feather(summary_df, out_fp)
-    return outcome
+    summary_df.columns.name = "aggs"
+    return summary_df
 
 
-def _make_summary_behaviour(analysis_df: pd.DataFrame, out_fp: str) -> str:
+def _make_summary_behavs(analysis_df: pd.DataFrame) -> pd.DataFrame:
     """
     Generates the summarised data across the entire period, including number of bouts,
     and mean, std, min, Q1, median, Q3, and max duration of bouts.
-    Used for boolean behaviour classification data.
+    Used for boolean behavs classification data.
 
     Parameters
     ----------
@@ -690,8 +689,12 @@ def _make_summary_behaviour(analysis_df: pd.DataFrame, out_fp: str) -> str:
     str
         The outcome string.
     """
-    outcome = ""
     summary_df = pd.DataFrame()
+    # Getting the fps
+    index = analysis_df.index.to_frame()
+    fps = np.nanmean(index["frame"].diff() / index["timestamp"].diff())
+    # Dropping the timestamp index level (causes issues with vect_2_bouts)
+    analysis_df = analysis_df.droplevel("timestamp", axis=0)
     # Getting summary stats for each individual
     for column_name, column_vals in analysis_df.items():
         # Getting start, stop, and duration of each behav bout
@@ -704,13 +707,14 @@ def _make_summary_behaviour(analysis_df: pd.DataFrame, out_fp: str) -> str:
             pd.Series(
                 {
                     "bout_freq": bouts_df.shape[0],
-                    "bout_dur_mean": np.nanmean(bouts.astype(float)),
-                    "bout_dur_std": np.nanstd(bouts.astype(float)),
-                    "bout_dur_min": np.nanmin(bouts.astype(float)),
-                    "bout_dur_Q1": np.nanquantile(bouts.astype(float), q=0.25),
-                    "bout_dur_median": np.nanmedian(bouts.astype(float)),
-                    "bout_dur_Q3": np.nanquantile(bouts.astype(float), q=0.75),
-                    "bout_dur_max": np.nanmax(bouts.astype(float)),
+                    "bout_dur_total": np.nansum(bouts.astype(float)) / fps,
+                    "bout_dur_mean": np.nanmean(bouts.astype(float)) / fps,
+                    "bout_dur_std": np.nanstd(bouts.astype(float)) / fps,
+                    "bout_dur_min": np.nanmin(bouts.astype(float)) / fps,
+                    "bout_dur_Q1": np.nanquantile(bouts.astype(float), q=0.25) / fps,
+                    "bout_dur_median": np.nanmedian(bouts.astype(float)) / fps,
+                    "bout_dur_Q3": np.nanquantile(bouts.astype(float), q=0.75) / fps,
+                    "bout_dur_max": np.nanmax(bouts.astype(float)) / fps,
                 },
                 name=column_name,
             )
@@ -719,20 +723,22 @@ def _make_summary_behaviour(analysis_df: pd.DataFrame, out_fp: str) -> str:
         )
         summary_df = pd.concat([summary_df, measure_summary_i], axis=0)
     summary_df.index = analysis_df.columns
-    DFIOMixin.write_feather(summary_df, out_fp)
-    return outcome
+    summary_df.columns.name = "aggs"
+    return summary_df
 
 
 def _make_binned(
     analysis_df: pd.DataFrame,
     out_fp: str,
     bins: list,
+    summary_func: Callable[[pd.DataFrame], pd.DataFrame],
 ) -> str:
     """
     Generates the binned data and line graph for the given analysis_df, and given bin_sec.
+    The aggregated statistics are very similar to the summary data.
 
-    # TODO - should this be user-changeable?
-    # TODO - for behaviour (binary), make a bout frequency stat (binned) and mean bout time (binned)
+    * TODO - should this be user-changeable?
+    * TODO - for behavs (binary), make a bout frequency stat (binned) and mean bout time (binned)
 
     Parameters
     ----------
@@ -758,7 +764,14 @@ def _make_binned(
         bins = np.append(bins, np.max(timestamps))
     # Making binned data
     bin_sec = pd.cut(timestamps, bins=bins, labels=bins[1:], include_lowest=True)
-    binned_df = analysis_df.assign(bin_sec=bin_sec).groupby("bin_sec").agg(np.nanmean)
+    grouped_df = analysis_df.groupby(bin_sec)
+    binned_df = grouped_df.apply(
+        lambda x: summary_func(x)
+        .unstack(["individuals", "measures"])
+        .reorder_levels(["individuals", "measures", "aggs"])
+        .sort_index(level=["individuals", "measures"])
+    )
+    binned_df.index.name = "bin_sec"
     # Writing binned_df to file
     DFIOMixin.write_feather(binned_df, out_fp)
     return outcome
@@ -767,7 +780,7 @@ def _make_binned(
 def _make_binned_plot(
     binned_df: pd.DataFrame,
     out_fp: str,
-    is_bool: bool,
+    agg_col: str,
 ) -> str:
     """
     _summary_
@@ -789,9 +802,9 @@ def _make_binned_plot(
     outcome = ""
     # Making binned_df long
     binned_stacked_df = (
-        binned_df.stack(["individuals", "measures"])
+        binned_df.stack(["individuals", "measures"])[agg_col]
+        .rename("value")
         .reset_index()
-        .rename(columns={0: "value"})
     )
     # Plotting line graph
     g = sns.relplot(
@@ -812,8 +825,6 @@ def _make_binned_plot(
     g.set_titles(col_template="{col_name}")
     g.figure.subplots_adjust(top=0.85)
     g.figure.suptitle("Binned data", fontsize=12)
-    if is_bool:
-        g.set(ylim=(0, 1))
     # Saving fig
     os.makedirs(os.path.split(out_fp)[0], exist_ok=True)
     g.savefig(out_fp)
@@ -828,7 +839,7 @@ def make_summary_binned(
     name: str,
     bins_ls: list,
     custom_bins_ls: list,
-    is_bool: bool,
+    is_behav: bool,
 ) -> str:
     """
     _summary_
@@ -845,7 +856,7 @@ def make_summary_binned(
         _description_
     custom_bins_ls : list
         _description_
-    is_bool : bool
+    is_behav : bool
         _description_
 
     Returns
@@ -856,10 +867,14 @@ def make_summary_binned(
     outcome = ""
     # Summarising analysis_df
     summary_fp = os.path.join(out_dir, "summary", f"{name}.feather")
-    if is_bool:
-        outcome += _make_summary_behaviour(analysis_df, summary_fp)
+    if is_behav:
+        summary_func = _make_summary_behavs
+        agg_col = "bout_dur_total"
     else:
-        outcome += _make_summary_quantitative(analysis_df, summary_fp)
+        summary_func = _make_summary_quantitative
+        agg_col = "mean"
+    summary_df = summary_func(analysis_df)
+    DFIOMixin.write_feather(summary_df, summary_fp)
     # Getting timestamps index
     timestamps = analysis_df.index.get_level_values("timestamp")
     # Binning analysis_df
@@ -867,21 +882,21 @@ def make_summary_binned(
         binned_fp = os.path.join(out_dir, f"binned_{bin_sec}", f"{name}.feather")
         binned_plot_fp = os.path.join(out_dir, f"binned_{bin_sec}_plot", f"{name}.png")
         # Making binned df
-        bins = np.arange(np.min(timestamps), np.max(timestamps) + bin_sec, bin_sec)
-        outcome += _make_binned(analysis_df, binned_fp, bins)
+        bins = np.arange(0, np.max(timestamps) + bin_sec, bin_sec)
+        outcome += _make_binned(analysis_df, binned_fp, bins, summary_func)
         # Making binned plots
         outcome += _make_binned_plot(
-            DFIOMixin.read_feather(binned_fp), binned_plot_fp, is_bool
+            DFIOMixin.read_feather(binned_fp), binned_plot_fp, agg_col
         )
     # Custom binning analysis_df
     if custom_bins_ls:
         binned_fp = os.path.join(out_dir, "binned_custom", f"{name}.feather")
         binned_plot_fp = os.path.join(out_dir, "binned_custom_plot", f"{name}.png")
         # Making binned df
-        outcome += _make_binned(analysis_df, binned_fp, custom_bins_ls)
+        outcome += _make_binned(analysis_df, binned_fp, custom_bins_ls, summary_func)
         # Making binned plots
         outcome += _make_binned_plot(
-            DFIOMixin.read_feather(binned_fp), binned_plot_fp, is_bool
+            DFIOMixin.read_feather(binned_fp), binned_plot_fp, agg_col
         )
     # Returning outcome
     return outcome
