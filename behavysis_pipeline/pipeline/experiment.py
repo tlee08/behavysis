@@ -4,6 +4,7 @@ _summary_
 
 from __future__ import annotations
 
+import logging
 import os
 from typing import Any, Callable
 
@@ -152,7 +153,7 @@ class Experiment:
         func(*args, **kwargs)
         ```
         """
-        print(f"Processing experiment: {self.name}")
+        logging.info(f"Processing experiment: {self.name}")
         # Setting up diagnostics dict
         dd = {"experiment": self.name}
         # Running functions and saving outcome to diagnostics dict
@@ -163,9 +164,8 @@ class Experiment:
                 dd[f.__name__] += f"SUCCESS: {DiagnosticsMixin.success_msg()}\n"
             except Exception as e:
                 dd[f.__name__] = f"ERROR: {e}"
-            # Printing outcome
-            print(f"{f.__name__}: {dd[f.__name__]}")
-        print(STR_DIV)
+            logging.info(f"{f.__name__}: {dd[f.__name__]}")
+        logging.info(STR_DIV)
         return dd
 
     #####################################################################
@@ -227,8 +227,8 @@ class Experiment:
         """
         return self._process_scaffold(
             funcs,
-            raw_vid_fp=self.get_fp(Folders.RAW_VID.value),
-            formatted_vid_fp=self.get_fp(Folders.FORMATTED_VID.value),
+            in_fp=self.get_fp(Folders.RAW_VID.value),
+            out_fp=self.get_fp(Folders.FORMATTED_VID.value),
             configs_fp=self.get_fp(Folders.CONFIGS.value),
             overwrite=overwrite,
         )

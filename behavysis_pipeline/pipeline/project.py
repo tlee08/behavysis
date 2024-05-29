@@ -3,6 +3,7 @@ _summary_
 """
 
 import functools
+import logging
 import os
 import re
 from multiprocessing import Pool
@@ -277,7 +278,7 @@ class Project:
             scaffold_func = self._process_scaffold_mp
         # Running the scaffold function
         # Starting
-        print(f"Running {method.__name__}")
+        logging.info("Running %s", method.__name__)
         # Running
         dd_ls = scaffold_func(method, *args, **kwargs)
         # Processing all experiments
@@ -287,7 +288,7 @@ class Project:
         # Updating the diagnostics file at each step
         self.save_diagnostics(method.__name__, df)
         # Finishing
-        print(f"Finished {method.__name__}!\n{STR_DIV}\n{STR_DIV}\n")
+        logging.info("Finished %s!\n%s\n%s\n", method.__name__, STR_DIV, STR_DIV)
 
     #####################################################################
     #               BATCH PROCESSING METHODS
@@ -329,7 +330,11 @@ class Project:
         exp_ls = self.get_experiments()
         # If overwrite is False, filtering for only experiments that need processing
         if not overwrite:
-            exp_ls = [exp for exp in exp_ls if not os.path.isfile(exp.get_fp("3_dlc"))]
+            exp_ls = [
+                exp
+                for exp in exp_ls
+                if not os.path.isfile(exp.get_fp(Folders.DLC.value))
+            ]
 
         # Running DLC on each batch of experiments with each GPU (given allocated GPU ID)
         # TODO: have error handling
@@ -339,9 +344,9 @@ class Project:
                 RunDLC.ma_dlc_analyse_batch,
                 [
                     (
-                        [exp.get_fp("2_formatted_vid") for exp in exp_batch],
-                        os.path.join(self.root_dir, "3_dlc"),
-                        os.path.join(self.root_dir, "0_configs"),
+                        [exp.get_fp(Folders.FORMATTED_VID.value) for exp in exp_batch],
+                        os.path.join(self.root_dir, Folders.DLC.value),
+                        os.path.join(self.root_dir, Folders.CONFIGS.value),
                         os.path.join(self.root_dir, TEMP_DIR),
                         gputouse,
                         overwrite,
@@ -498,7 +503,7 @@ class Project:
         The key of each experiment in the .experiments dict is "name".
         Refer to Project.addExperiment() for details about how each experiment is added.
         """
-        print(f"Searching project folder: {self.root_dir}\n")
+        logging.info("Searching project folder: %s\n", self.root_dir)
         # Adding all experiments within given project dir
         failed = []
         for f in Folders:
@@ -514,13 +519,13 @@ class Project:
                 try:
                     self.import_experiment(name)
                 except ValueError as e:  # do not add invalid files
-                    print(f"failed: {f.value}    --    {j}:\n{e}")
+                    logging.info("failed: %s    --    %s:\n%s", f.value, j, e)
                     failed.append(name)
         # Printing outcome of imported and failed experiments
-        print("Experiments imported successfully:")
-        print("\n".join([f"    - {i}" for i in self.experiments]), end="\n\n")
-        print("Experiments failed to import:")
-        print("\n".join([f"    - {i}" for i in failed]), end="\n\n")
+        logging.info("Experiments imported successfully:")
+        logging.info("%s\n\n", "\n".join([f"    - {i}" for i in self.experiments]))
+        logging.info("Experiments failed to import:")
+        logging.info("%s\n\n", "\n".join([f"    - {i}" for i in failed]))
         # If there are no experiments, then return
         if not self.experiments:
             return
@@ -546,6 +551,9 @@ class Project:
         """
         Collates the auto fields of the configs of all experiments into a DataFrame.
         """
+        # Initialising the process and printing the description
+        description = "Combining binned analysis"
+        logging.info("%s...", description)
         # Getting all the auto field keys
         auto_field_keys = ConfigsAuto.get_field_names(ConfigsAuto)
         # Making a DataFrame to store all the auto fields for each experiment
@@ -555,7 +563,7 @@ class Project:
         )
         # Collating all the auto fields for each experiment
         for exp in self.get_experiments():
-            configs = ExperimentConfigs.read_json(exp.get_fp("0_configs"))
+            configs = ExperimentConfigs.read_json(exp.get_fp(Folders.CONFIGS.value))
             for i in auto_field_keys:
                 val = configs.auto
                 for j in i:
@@ -588,14 +596,14 @@ class Project:
         """
         # Initialising the process and printing the description
         description = "Combining binned analysis"
-        print(f"{description}...")
+        logging.info("%s...", description)
         # dd_df = pd.DataFrame()
 
         # AGGREGATING BINNED DATA
         # NOTE: need a more robust way of getting the list of bin sizes
         analysis_dir = os.path.join(self.root_dir, ANALYSIS_DIR)
         configs = ExperimentConfigs.read_json(
-            self.get_experiments()[0].get_fp("0_configs")
+            self.get_experiments()[0].get_fp(Folders.CONFIGS.value)
         )
         bin_sizes_sec = configs.get_ref(configs.user.analyse.bins_sec)
         bin_sizes_sec = np.append(bin_sizes_sec, "custom")
@@ -630,7 +638,7 @@ class Project:
         """
         # Initialising the process and printing the description
         description = "Combining summary analysis"
-        print(f"{description}...")
+        logging.info("%s...", description)
         # dd_df = pd.DataFrame()
 
         # AGGREGATING SUMMARY DATA

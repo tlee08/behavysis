@@ -13,6 +13,7 @@ interpretable plotted and tabulated data for different analysises. This pipeline
 #               FILTERING STDOUT WARNINGS
 #####################################################################
 
+import logging.config
 import warnings
 
 warnings.filterwarnings("ignore")
@@ -20,6 +21,8 @@ warnings.filterwarnings("ignore")
 #####################################################################
 #         IMPORTING MODULES (INCL. RELATIVE AND 3RD PARTY)
 #####################################################################
+
+import logging
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -40,3 +43,9 @@ sns.set_theme(style=PLOT_STYLE)
 
 plt.rcParams["figure.dpi"] = PLOT_DPI
 plt.rcParams["savefig.dpi"] = PLOT_DPI
+
+#####################################################################
+#           SETTING UP LOGGING
+#####################################################################
+
+logging.basicConfig(level=logging.INFO)

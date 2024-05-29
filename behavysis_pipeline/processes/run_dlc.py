@@ -21,6 +21,7 @@ str
     The outcome of the process.
 """
 
+import logging
 import os
 import re
 
@@ -28,7 +29,6 @@ import pandas as pd
 from behavysis_core.constants import DLC_COLUMN_NAMES, DLC_INDEX_NAME
 from behavysis_core.data_models.experiment_configs import ExperimentConfigs
 from behavysis_core.mixins.df_io_mixin import DFIOMixin
-from behavysis_core.mixins.diagnostics_mixin import DiagnosticsMixin
 from behavysis_core.mixins.io_mixin import IOMixin
 from behavysis_core.mixins.subproc_mixin import SubprocMixin
 
@@ -37,6 +37,7 @@ class RunDLC:
     """_summary_"""
 
     @staticmethod
+    @IOMixin.overwrite_check()
     def ma_dlc_analyse_single(
         in_fp: str,
         out_fp: str,
@@ -49,14 +50,8 @@ class RunDLC:
         Running custom DLC script to generate a DLC keypoints dataframe from a single video.
         """
         outcome = ""
-
-        if not gputouse:
-            gputouse = "None"
-
-        # If overwrite is False, checking if we should skip processing
-        if not overwrite and os.path.exists(out_fp):
-            return DiagnosticsMixin.warning_msg()
-
+        # Specifying the GPU to use
+        gputouse = "None" if not gputouse else gputouse
         # Getting dlc_config_path
         configs = ExperimentConfigs.read_json(configs_fp)
         dlc_config_path = configs.get_ref(configs.user.run_dlc.dlc_config_path)
@@ -106,7 +101,7 @@ class RunDLC:
 
         # If overwrite is False, filtering for only experiments that need processing
         if not overwrite:
-            # Getting only the in_fp_ls els that do not exist as .feather files in out_dir
+            # Getting only the in_fp_ls elements that do not exist in out_dir
             in_fp_ls = [
                 i
                 for i in in_fp_ls
@@ -126,11 +121,10 @@ class RunDLC:
         dlc_fp_ls = [i.user.run_dlc.dlc_config_path for i in dlc_fp_ls]
         # Converting to a set
         dlc_fp_set = set(dlc_fp_ls)
-        # Checking if all dlc_config_paths are the same
+        # Assertion: all dlc_config_paths must be the same
         assert len(dlc_fp_set) == 1
         # Getting the dlc_config_path
         dlc_config_path = dlc_fp_set.pop()
-
         # Assertion: the config.yaml file must exist.
         assert os.path.isfile(dlc_config_path), (
             f'The given dlc_config_path file does not exist: "{dlc_config_path}".\n'
@@ -144,7 +138,7 @@ class RunDLC:
         for in_fp in in_fp_ls:
             export_dlc_to_feather(in_fp, dlc_out_dir, out_dir)
         IOMixin.silent_rm(dlc_out_dir)
-
+        # Returning outcome
         return outcome
 
 
@@ -162,7 +156,7 @@ def subproc_run_dlc(
     will be printed to the console and the process will continue to the next video.
     """
     # Generating a script to run the DLC analysis
-    # TODO: implement for and try for each video and get errors??
+    # TODO: implement for and try for each video and get errors?? Maybe save a log to a file
     script_fp = os.path.join(temp_dir, f"script_{gputouse}.py")
     with open(script_fp, "w", encoding="utf-8") as f:
         f.write(
@@ -212,7 +206,7 @@ def export_dlc_to_feather(name: str, in_dir: str, out_dir: str) -> str:
     # Get the corresponding .h5 filename
     name_fp_ls = [i for i in os.listdir(in_dir) if re.search(rf"^{name}DLC.*\.h5$", i)]
     if len(name_fp_ls) == 0:
-        print(f"No .h5 file found for {name}.")
+        logging.info("No .h5 file found for %s.", name)
     elif len(name_fp_ls) == 1:
         name_fp = os.path.join(in_dir, name_fp_ls[0])
         # Reading the .h5 file

@@ -74,10 +74,6 @@ class Preprocess:
         ```
         """
         outcome = ""
-        # If overwrite is False, checking if we should skip processing
-        if not overwrite and os.path.exists(out_fp):
-            return DiagnosticsMixin.warning_msg()
-
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
         start_frame = configs.auto.start_frame
@@ -95,6 +91,7 @@ class Preprocess:
         return outcome
 
     @staticmethod
+    @IOMixin.overwrite_check()
     def interpolate(in_fp: str, out_fp: str, configs_fp: str, overwrite: bool) -> str:
         """
         "Smooths" out noticeable jitter of points, where the likelihood (and accuracy) of
@@ -113,9 +110,6 @@ class Preprocess:
         ```
         """
         outcome = ""
-        # If overwrite is False, checking if we should skip processing
-        if not overwrite and os.path.exists(out_fp):
-            return DiagnosticsMixin.warning_msg()
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
         configs_filt = Model_interpolate(**configs.user.preprocess.interpolate)
@@ -138,6 +132,7 @@ class Preprocess:
         return outcome
 
     @staticmethod
+    @IOMixin.overwrite_check()
     def refine_ids(in_fp: str, out_fp: str, configs_fp: str, overwrite: bool) -> str:
         """
         Ensures that the identity is correctly tracked for maDLC.
@@ -158,9 +153,6 @@ class Preprocess:
         ```
         """
         outcome = ""
-        # If overwrite is False, checking if we should skip processing
-        if not overwrite and os.path.exists(out_fp):
-            return DiagnosticsMixin.warning_msg()
         # Reading file
         df = KeypointsMixin.read_feather(in_fp)
         # Getting necessary config parameters

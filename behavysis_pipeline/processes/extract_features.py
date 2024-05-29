@@ -7,7 +7,6 @@ import os
 import pandas as pd
 from behavysis_core.data_models.experiment_configs import ExperimentConfigs
 from behavysis_core.mixins.df_io_mixin import DFIOMixin
-from behavysis_core.mixins.diagnostics_mixin import DiagnosticsMixin
 from behavysis_core.mixins.io_mixin import IOMixin
 from behavysis_core.mixins.keypoints_mixin import KeypointsMixin
 from behavysis_core.mixins.multiproc_mixin import MultiprocMixin
@@ -29,6 +28,7 @@ class ExtractFeatures:
     """__summary__"""
 
     @staticmethod
+    @IOMixin.overwrite_check()
     def extract_features(
         dlc_fp: str,
         out_fp: str,
@@ -59,9 +59,6 @@ class ExtractFeatures:
             The outcome of the process.
         """
         outcome = ""
-        # If overwrite is False, checking if we should skip processing
-        if not overwrite and os.path.exists(out_fp):
-            return DiagnosticsMixin.warning_msg()
         # Getting directory and file paths
         name = IOMixin.get_name(dlc_fp)
         cpid = MultiprocMixin.get_cpid()

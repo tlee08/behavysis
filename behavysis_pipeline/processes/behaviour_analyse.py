@@ -29,10 +29,6 @@ from behavysis_core.mixins.io_mixin import IOMixin
 
 from .analyse_mixins import AggAnalyse, AnalyseMixin
 
-#####################################################################
-#               ANALYSIS API FUNCS
-#####################################################################
-
 
 class BehaviourAnalyse:
     """__summary__"""

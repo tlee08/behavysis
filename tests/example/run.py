@@ -4,6 +4,8 @@ import os
 import shutil
 import sys
 
+import pandas as pd
+
 from behavysis_pipeline import *
 from behavysis_pipeline.processes import *
 
@@ -11,82 +13,108 @@ if __name__ == "__main__":
     overwrite = True
 
     proj_dir = os.path.join(".")
-
     proj = Project(proj_dir)
     proj.import_experiments()
-    # proj = proj.get_experiments()[0]
+    exp = proj.get_experiments()[1]
 
-    # proj.nprocs = 4
+    proj.nprocs = 5
 
     default_configs_fp = os.path.join(proj_dir, "default.json")
-
     proj.update_configs(
         default_configs_fp,
         overwrite="user",
     )
+
     proj.format_vid(
         (
-            # FormatVid.format_vid,
+            FormatVid.format_vid,
             FormatVid.get_vid_metadata,
         ),
         overwrite=overwrite,
     )
-    # proj.run_dlc(
-    #     gputouse=None,
-    #     overwrite=overwrite,
-    # )
-    # proj.calculate_params(
-    #     (
-    #         CalculateParams.start_frame,
-    #         CalculateParams.stop_frame,
-    #         CalculateParams.px_per_mm,
-    #     )
-    # )
-    # proj.preprocess(
-    #     (
-    #         Preprocess.start_stop_trim,
-    #         Preprocess.interpolate,
-    #         Preprocess.refine_ids,
-    #     ),
-    #     overwrite=overwrite,
-    # )
-    # proj.extract_features(True)
-    # proj.classify_behaviours(True)
-    # proj.export_behaviours(True)
-    # # proj.export_feather("7_scored_behavs", "./scored_csv")
-    # proj.analyse(
-    #     (
-    #         Analyse.thigmotaxis,
-    #         Analyse.center_crossing,
-    #         Analyse.in_roi,
-    #         Analyse.speed,
-    #         Analyse.social_distance,
-    #         Analyse.freezing,
-    #     )
-    # )
-    # proj.collate_configs_auto()
-    # proj.collate_analysis_binned()
-    # proj.collate_analysis_summary()
-    # proj.evaluate(
-    #     (
-    #         Evaluate.eval_vid,
-    #         Evaluate.keypoints_plot,
-    #     ),
-    #     overwrite=overwrite,
+
+    proj.run_dlc(
+        gputouse=None,
+        overwrite=overwrite,
+    )
+
+    proj.calculate_params(
+        (
+            CalculateParams.start_frame,
+            CalculateParams.stop_frame,
+            CalculateParams.exp_dur,
+            CalculateParams.px_per_mm,
+        )
+    )
+
+    proj.collate_configs_auto()
+
+    proj.preprocess(
+        (
+            Preprocess.start_stop_trim,
+            Preprocess.interpolate,
+            Preprocess.refine_ids,
+        ),
+        overwrite=overwrite,
+    )
+
+    proj.analyse(
+        (
+            Analyse.thigmotaxis,
+            Analyse.center_crossing,
+            Analyse.in_roi,
+            Analyse.speed,
+            Analyse.social_distance,
+            Analyse.freezing,
+        )
+    )
+    proj.collate_analysis_binned()
+    proj.collate_analysis_summary()
+
+    proj.extract_features(overwrite)
+    proj.classify_behaviours(overwrite)
+    proj.export_behaviours(overwrite)
+
+    for exp in proj.get_experiments():
+        behavs_df = pd.read_feather(exp.get_fp("7_scored_behavs"))
+        behavs_df[("fight", "actual")] = behavs_df[("fight", "actual")].map(
+            lambda x: 1 if x == -1 else 0
+        )
+        behavs_df.to_feather(exp.get_fp("7_scored_behavs"))
+
+    proj.behav_analyse()
+
+    proj.evaluate(
+        (
+            Evaluate.eval_vid,
+            Evaluate.keypoints_plot,
+        ),
+        overwrite=overwrite,
+    )
+
+    # proj.export_feather("7_scored_behavs", "./scored_csv")
+
+    # import os
+    # import shutil
+    # from behavysis_core.constants import (
+    #     ANALYSIS_DIR,
+    #     DIAGNOSTICS_DIR,
+    #     EVALUATE_DIR,
+    #     TEMP_DIR,
+    #     Folders,
     # )
 
-    # # import shutil
-    # # import os
-
-    # # for i in [
-    # #     "0_configs",
-    # #     "4_preprocessed",
-    # #     "5_features_extracted",
-    # #     "6_predicted_behavs",
-    # #     "7_scored_behavs",
-    # #     "8_analysis",
-    # #     "diagnostics",
-    # #     "evaluate",
-    # # ]:
-    # #     if os.path.exists(os.path.join(proj_dir, i)):
-    # #         shutil.rmtree(os.path.join(proj_dir, i))
+    # for i in [
+    #     Folders.CONFIGS.value,
+    #     Folders.PREPROCESSED.value,
+    #     Folders.FEATURES_EXTRACTED.value,
+    #     Folders.PREDICTED_BEHAVS.value,
+    #     Folders.SCORED_BEHAVS.value,
+    #     ANALYSIS_DIR,
+    #     DIAGNOSTICS_DIR,
+    #     EVALUATE_DIR,
+    # ]:
+    #     try:
+    #         shutil.rmtree(os.path.join(proj_dir, i))
+    #     except:
+    #         pass
