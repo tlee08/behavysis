@@ -7,7 +7,7 @@ vid_fp : str
     the GPU's number so computation is done on this GPU.
 dlc_fp : str
     _description_
-behav_fp : str
+behavs_fp : str
     _description_
 out_dir : str
     _description_
@@ -52,7 +52,7 @@ class Evaluate:
     def keypoints_plot(
         vid_fp: str,
         dlc_fp: str,
-        behav_fp: str,
+        behavs_fp: str,
         out_dir: str,
         configs_fp: str,
         overwrite: bool,
@@ -109,7 +109,7 @@ class Evaluate:
     def eval_vid(
         vid_fp: str,
         dlc_fp: str,
-        behav_fp: str,
+        behavs_fp: str,
         out_dir: str,
         configs_fp: str,
         overwrite: bool,
@@ -162,27 +162,27 @@ class Evaluate:
 
         # Getting behavs df
         try:
-            behav_df = DFIOMixin.read_feather(behav_fp)
+            behavs_df = DFIOMixin.read_feather(behavs_fp)
         except Exception:
             outcome += (
                 "WARNING: behavs file not found or could not be loaded."
                 + "Disregarding behaviour."
                 + "If you have run the behaviour classifier, please check this file.\n"
             )
-            behav_df = pd.DataFrame(
+            behavs_df = pd.DataFrame(
                 index=dlc_df.index,
                 columns=pd.MultiIndex.from_tuples((), names=BEHAV_COLUMN_NAMES),
             )
         # Getting list of behaviours
-        behavs_ls = behav_df.columns.unique("behaviours")
+        behavs_ls = behavs_df.columns.unique("behaviours")
         # Making sure all relevant behaviour outcome columns exist
         for behav in behavs_ls:
             for i in BehavColumns:
                 i = i.value
-                if (behav, i) not in behav_df:
-                    behav_df[(behav, i)] = 0
+                if (behav, i) not in behavs_df:
+                    behavs_df[(behav, i)] = 0
         # Changing the columns MultiIndex to a single-level index. For speedup
-        behav_df.columns = [f"{behav}_{outcome}" for behav, outcome in behav_df.columns]
+        behavs_df.columns = [f"{behav}_{outcome}" for behav, outcome in behavs_df.columns]
 
         # MAKING ANNOTATED VIDEO
         # Settings the funcs for how to annotate the video
@@ -203,7 +203,7 @@ class Evaluate:
             elif f_name == "behavs":
                 outcome += f"Added {f_name} to video. \n"
                 new_func: Callable[[np.ndarray, int], np.ndarray] = (
-                    lambda frame, i: annot_behav(frame, behav_df.loc[i], behavs_ls)
+                    lambda frame, i: annot_behav(frame, behavs_df.loc[i], behavs_ls)
                 )
             else:
                 continue

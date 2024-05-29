@@ -19,22 +19,18 @@ str
 from __future__ import annotations
 
 import os
-from typing import Callable
 
 import numpy as np
 import pandas as pd
-import seaborn as sns
-from behavysis_core.constants import (
-    ANALYSIS_COLUMN_NAMES,
-    ANALYSIS_INDEX_NAMES,
-    SINGLE_COL,
-)
+from behavysis_core.constants import SINGLE_COL
 from behavysis_core.data_models.experiment_configs import ExperimentConfigs
 from behavysis_core.mixins.behaviour_mixin import BehaviourMixin
 from behavysis_core.mixins.df_io_mixin import DFIOMixin
 from behavysis_core.mixins.io_mixin import IOMixin
 from behavysis_core.mixins.keypoints_mixin import KeypointsMixin
 from pydantic import BaseModel
+
+from .analyse_mixins import AggAnalyse, AnalyseHelper
 
 #####################################################################
 #               ANALYSIS API FUNCS
@@ -55,18 +51,21 @@ class Analyse:
 
         Takes DLC data as input and returns the following analysis output:
 
-        - A feather file with the thigmotaxis data columns for each video frame (row)
-        - A png of the scatterplot of the subject's x-y position in every frame, coloured by whether
-        it was in thigmotaxis.
-        - A png of the bivariate histogram distribution of the subject's x-y position for all frames,
-        coloured by whether it was in thigmotaxis.
+        - A feather file with the ROI data columns for each video frame (row)
+        - A png of the scatterplot of the subject's x-y position in every frame,
+        coloured by whether it was in ROI.
+        - A png of the bivariate histogram distribution of the subject's x-y position
+        for all frames, coloured by whether it was in ROI.
         """
         outcome = ""
         name = IOMixin.get_name(dlc_fp)
-        out_dir = os.path.join(analysis_dir, Analyse.thigmotaxis.__name__)
+        f_name = Analyse.thigmotaxis.__name__
+        out_dir = os.path.join(analysis_dir, f_name)
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
-        fps, _, _, px_per_mm, bins_ls, custom_bins_ls = get_analysis_configs(configs)
+        fps, _, _, px_per_mm, bins_ls, custom_bins_ls = (
+            AnalyseHelper.get_analysis_configs(configs)
+        )
         configs_filt = Model_in_roi(**configs.user.analyse.thigmotaxis)
         bpts = configs_filt.bodyparts
         # Calculating more parameters
@@ -76,52 +75,53 @@ class Analyse:
         dlc_df = KeypointsMixin.clean_headings(DFIOMixin.read_feather(dlc_fp))
         # Checking df
         KeypointsMixin.check_df(dlc_df)
-        # Getting indivs and bpts list
+        # Checking body-centre bodypart exists
+        KeypointsMixin.check_bpts_exist(dlc_df, bpts)
+        # Getting indivs list
         indivs, _ = KeypointsMixin.get_headings(dlc_df)
 
         # Getting average corner coordinates. Assumes arena does not move.
         tl = dlc_df[(SINGLE_COL, configs_filt.roi_top_left)].mean()
         tr = dlc_df[(SINGLE_COL, configs_filt.roi_top_right)].mean()
-        bl = dlc_df[(SINGLE_COL, configs_filt.roi_bottom_left)].mean()
         br = dlc_df[(SINGLE_COL, configs_filt.roi_bottom_right)].mean()
-        # Making boundary functions
-        top = hline_factory(tl, tr)
-        bottom = hline_factory(bl, br)
-        left = vline_factory(tl, bl)
-        right = vline_factory(tr, br)
-
-        analysis_df = init_fbf_analysis_df(dlc_df.index, fps)
-        dlc_df.index = analysis_df.index
+        bl = dlc_df[(SINGLE_COL, configs_filt.roi_bottom_left)].mean()
+        # Making roi_df of corners (with the thresh_px buffer)
+        roi_df = pd.DataFrame(
+            [
+                (tl["x"] + thresh_px, tl["y"] + thresh_px),
+                (tr["x"] - thresh_px, tr["y"] + thresh_px),
+                (br["x"] - thresh_px, br["y"] - thresh_px),
+                (bl["x"] + thresh_px, bl["y"] - thresh_px),
+            ],
+            columns=["x", "y"],
+        )
+        # Getting the (x, y, in-roi) df
         idx = pd.IndexSlice
-        for indiv in indivs:
-            indiv_x = dlc_df.loc[:, idx[indiv, bpts, "x"]].mean(axis=1)
-            indiv_y = dlc_df.loc[:, idx[indiv, bpts, "y"]].mean(axis=1)
-            # Determining if the indiv is outside of the boundaries (with the thresh_px buffer)
-            analysis_df[(indiv, "thigmotaxis")] = (
-                (indiv_y <= top(indiv_x) + thresh_px)
-                | (indiv_y >= bottom(indiv_x) - thresh_px)
-                | (indiv_x <= left(indiv_y) + thresh_px)
-                | (indiv_x >= right(indiv_y) - thresh_px)
-            ).astype(np.int8)
+        res_df = AnalyseHelper.pt_in_roi_df(dlc_df, roi_df, indivs, bpts)
+        # Changing column MultiIndex names
+        res_df.columns = res_df.columns.set_levels(["x", "y", f_name], level=1)
+        # Setting thigmotaxis as OUTSIDE region (negative)
+        res_df.loc[:, idx[:, f_name]] = (res_df.loc[:, idx[:, f_name]] == 0).astype(
+            np.int8
+        )
+        # Getting analysis_df
+        analysis_df = res_df.loc[:, idx[:, f_name]]
         # Saving analysis_df
         fbf_fp = os.path.join(out_dir, "fbf", f"{name}.feather")
         DFIOMixin.write_feather(analysis_df, fbf_fp)
 
         # Generating scatterplot
-        # Adding bodypoint x and y coords
-        for indiv in indivs:
-            indiv_x = dlc_df.loc[:, idx[indiv, bpts, "x"]].mean(axis=1)
-            indiv_y = dlc_df.loc[:, idx[indiv, bpts, "y"]].mean(axis=1)
-            analysis_df[(indiv, "x")] = indiv_x
-            analysis_df[(indiv, "y")] = indiv_y
-        # making corners_df
-        corners_df = pd.DataFrame([tl, tr, bl, br])
         plot_fp = os.path.join(out_dir, "scatter_plot", f"{name}.png")
-        make_location_scatterplot(analysis_df, corners_df, plot_fp, "thigmotaxis")
+        AnalyseHelper.make_location_scatterplot(res_df, roi_df, plot_fp, f_name)
 
         # Summarising and binning analysis_df
-        make_summary_binned(
-            DFIOMixin.read_feather(fbf_fp), out_dir, name, bins_ls, custom_bins_ls, True
+        AggAnalyse.summary_binned_behavs(
+            analysis_df,
+            out_dir,
+            name,
+            fps,
+            bins_ls,
+            custom_bins_ls,
         )
         return outcome
 
@@ -132,22 +132,25 @@ class Analyse:
         configs_fp: str,
     ) -> str:
         """
-        Determines the frames when the subject is in center (reverse of thigmotaxis).
+        Determines the frames when the subject is in center.
 
         Takes DLC data as input and returns the following analysis output:
 
-        - A feather file with the thigmotaxis data columns for each video frame (row)
+        - A feather file with the ROI data columns for each video frame (row)
         - A png of the scatterplot of the subject's x-y position in every frame, coloured by whether
-        it was in thigmotaxis.
+        it was in ROI.
         - A png of the bivariate histogram distribution of the subject's x-y position for all
-        frames, coloured by whether it was in thigmotaxis.
+        frames, coloured by whether it was in ROI.
         """
         outcome = ""
         name = IOMixin.get_name(dlc_fp)
-        out_dir = os.path.join(analysis_dir, Analyse.center_crossing.__name__)
+        f_name = Analyse.center_crossing.__name__
+        out_dir = os.path.join(analysis_dir, f_name)
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
-        fps, _, _, px_per_mm, bins_ls, custom_bins_ls = get_analysis_configs(configs)
+        fps, _, _, px_per_mm, bins_ls, custom_bins_ls = (
+            AnalyseHelper.get_analysis_configs(configs)
+        )
         configs_filt = Model_in_roi(**configs.user.analyse.center_crossing)
         bpts = configs_filt.bodyparts
         # Calculating more parameters
@@ -157,7 +160,9 @@ class Analyse:
         dlc_df = KeypointsMixin.clean_headings(DFIOMixin.read_feather(dlc_fp))
         # Checking df
         KeypointsMixin.check_df(dlc_df)
-        # Getting indivs and bpts list
+        # Checking body-centre bodypart exists
+        KeypointsMixin.check_bpts_exist(dlc_df, bpts)
+        # Getting indivs list
         indivs, _ = KeypointsMixin.get_headings(dlc_df)
 
         # Getting average corner coordinates. Assumes arena does not move.
@@ -165,44 +170,39 @@ class Analyse:
         tr = dlc_df[(SINGLE_COL, configs_filt.roi_top_right)].mean()
         bl = dlc_df[(SINGLE_COL, configs_filt.roi_bottom_left)].mean()
         br = dlc_df[(SINGLE_COL, configs_filt.roi_bottom_right)].mean()
-        # Making boundary functions
-        top = hline_factory(tl, tr)
-        bottom = hline_factory(bl, br)
-        left = vline_factory(tl, bl)
-        right = vline_factory(tr, br)
-
-        analysis_df = init_fbf_analysis_df(dlc_df.index, fps)
-        dlc_df.index = analysis_df.index
+        # Making roi_df of corners (with the thresh_px buffer)
+        roi_df = pd.DataFrame(
+            [
+                (tl["x"] + thresh_px, tl["y"] + thresh_px),
+                (tr["x"] - thresh_px, tr["y"] + thresh_px),
+                (br["x"] - thresh_px, br["y"] - thresh_px),
+                (bl["x"] + thresh_px, bl["y"] - thresh_px),
+            ],
+            columns=["x", "y"],
+        )
+        # Getting the (x, y, in-roi) df
         idx = pd.IndexSlice
-        for indiv in indivs:
-            indiv_x = dlc_df.loc[:, idx[indiv, bpts, "x"]].mean(axis=1)
-            indiv_y = dlc_df.loc[:, idx[indiv, bpts, "y"]].mean(axis=1)
-            # Determining if the indiv is outside of the boundaries (with the thresh_px buffer)
-            analysis_df[(indiv, "in_center")] = (
-                (indiv_y >= top(indiv_x) + thresh_px)
-                & (indiv_y <= bottom(indiv_x) - thresh_px)
-                & (indiv_x >= left(indiv_y) + thresh_px)
-                & (indiv_x <= right(indiv_y) - thresh_px)
-            ).astype(np.int8)
+        res_df = AnalyseHelper.pt_in_roi_df(dlc_df, roi_df, indivs, bpts)
+        # Changing column MultiIndex names
+        res_df.columns = res_df.columns.set_levels(["x", "y", f_name], level=1)
+        # Getting analysis_df
+        analysis_df = res_df.loc[:, idx[:, f_name]]
         # Saving analysis_df
         fbf_fp = os.path.join(out_dir, "fbf", f"{name}.feather")
         DFIOMixin.write_feather(analysis_df, fbf_fp)
 
         # Generating scatterplot
-        # Adding bodypoint x and y coords
-        for indiv in indivs:
-            indiv_x = dlc_df.loc[:, idx[indiv, bpts, "x"]].mean(axis=1)
-            indiv_y = dlc_df.loc[:, idx[indiv, bpts, "y"]].mean(axis=1)
-            analysis_df[(indiv, "x")] = indiv_x
-            analysis_df[(indiv, "y")] = indiv_y
-        # making corners_df
-        corners_df = pd.DataFrame([tl, tr, bl, br])
         plot_fp = os.path.join(out_dir, "scatter_plot", f"{name}.png")
-        make_location_scatterplot(analysis_df, corners_df, plot_fp, "in_center")
+        AnalyseHelper.make_location_scatterplot(res_df, roi_df, plot_fp, f_name)
 
         # Summarising and binning analysis_df
-        make_summary_binned(
-            DFIOMixin.read_feather(fbf_fp), out_dir, name, bins_ls, custom_bins_ls, True
+        AggAnalyse.summary_binned_behavs(
+            analysis_df,
+            out_dir,
+            name,
+            fps,
+            bins_ls,
+            custom_bins_ls,
         )
         return outcome
 
@@ -225,10 +225,13 @@ class Analyse:
         """
         outcome = ""
         name = IOMixin.get_name(dlc_fp)
-        out_dir = os.path.join(analysis_dir, Analyse.in_roi.__name__)
+        f_name = Analyse.in_roi.__name__
+        out_dir = os.path.join(analysis_dir, f_name)
         # Calculating the deltas (changes in body position) between each frame for the subject
         configs = ExperimentConfigs.read_json(configs_fp)
-        fps, _, _, px_per_mm, bins_ls, custom_bins_ls = get_analysis_configs(configs)
+        fps, _, _, px_per_mm, bins_ls, custom_bins_ls = (
+            AnalyseHelper.get_analysis_configs(configs)
+        )
         configs_filt = Model_in_roi(**configs.user.analyse.in_roi)
         bpts = configs_filt.bodyparts
         # Calculating more parameters
@@ -238,54 +241,49 @@ class Analyse:
         dlc_df = KeypointsMixin.clean_headings(DFIOMixin.read_feather(dlc_fp))
         # Checking df
         KeypointsMixin.check_df(dlc_df)
-        # Getting indivs and bpts list
-        indivs, bpts = KeypointsMixin.get_headings(dlc_df)
         # Checking body-centre bodypart exists
         KeypointsMixin.check_bpts_exist(dlc_df, bpts)
+        # Getting indivs list
+        indivs, _ = KeypointsMixin.get_headings(dlc_df)
 
         # Getting average corner coordinates. Assumes arena does not move.
         tl = dlc_df[(SINGLE_COL, configs_filt.roi_top_left)].mean()
         tr = dlc_df[(SINGLE_COL, configs_filt.roi_top_right)].mean()
         bl = dlc_df[(SINGLE_COL, configs_filt.roi_bottom_left)].mean()
         br = dlc_df[(SINGLE_COL, configs_filt.roi_bottom_right)].mean()
-        # Making boundary functions
-        top = hline_factory(tl, tr)
-        bottom = hline_factory(bl, br)
-        left = vline_factory(tl, bl)
-        right = vline_factory(tr, br)
-
-        analysis_df = init_fbf_analysis_df(dlc_df.index, fps)
-        dlc_df.index = analysis_df.index
+        # Making roi_df of corners (with the thresh_px buffer)
+        roi_df = pd.DataFrame(
+            [
+                (tl["x"] - thresh_px, tl["y"] - thresh_px),
+                (tr["x"] + thresh_px, tr["y"] - thresh_px),
+                (br["x"] + thresh_px, br["y"] + thresh_px),
+                (bl["x"] - thresh_px, bl["y"] + thresh_px),
+            ],
+            columns=["x", "y"],
+        )
+        # Getting the (x, y, in-roi) df
         idx = pd.IndexSlice
-        for indiv in indivs:
-            indiv_x = dlc_df.loc[:, idx[indiv, bpts, "x"]].mean(axis=1)
-            indiv_y = dlc_df.loc[:, idx[indiv, bpts, "y"]].mean(axis=1)
-            # Determining if the indiv is inside of the box region (with the thresh_px buffer)
-            analysis_df[(indiv, "in_roi")] = (
-                (indiv_y >= top(indiv_x) - thresh_px)
-                & (indiv_y <= bottom(indiv_x) + thresh_px)
-                & (indiv_x >= left(indiv_y) - thresh_px)
-                & (indiv_x <= right(indiv_y) + thresh_px)
-            ).astype(np.int8)
+        res_df = AnalyseHelper.pt_in_roi_df(dlc_df, roi_df, indivs, bpts)
+        # Changing column MultiIndex names
+        res_df.columns = res_df.columns.set_levels(["x", "y", f_name], level=1)
+        # Getting analysis_df
+        analysis_df = res_df.loc[:, idx[:, f_name]]
         # Saving analysis_df
         fbf_fp = os.path.join(out_dir, "fbf", f"{name}.feather")
         DFIOMixin.write_feather(analysis_df, fbf_fp)
 
         # Generating scatterplot
-        # Adding bodypoint x and y coords
-        for indiv in indivs:
-            indiv_x = dlc_df.loc[:, idx[indiv, bpts, "x"]].mean(axis=1)
-            indiv_y = dlc_df.loc[:, idx[indiv, bpts, "y"]].mean(axis=1)
-            analysis_df[(indiv, "x")] = indiv_x
-            analysis_df[(indiv, "y")] = indiv_y
-        # making corners_df
-        corners_df = pd.DataFrame([tl, tr, bl, br])
         plot_fp = os.path.join(out_dir, "scatter_plot", f"{name}.png")
-        make_location_scatterplot(analysis_df, corners_df, plot_fp, "in_roi")
+        AnalyseHelper.make_location_scatterplot(res_df, roi_df, plot_fp, f_name)
 
         # Summarising and binning analysis_df
-        make_summary_binned(
-            DFIOMixin.read_feather(fbf_fp), out_dir, name, bins_ls, custom_bins_ls, True
+        AggAnalyse.summary_binned_behavs(
+            analysis_df,
+            out_dir,
+            name,
+            fps,
+            bins_ls,
+            custom_bins_ls,
         )
         return outcome
 
@@ -306,10 +304,13 @@ class Analyse:
         """
         outcome = ""
         name = IOMixin.get_name(dlc_fp)
-        out_dir = os.path.join(analysis_dir, Analyse.speed.__name__)
+        f_name = Analyse.speed.__name__
+        out_dir = os.path.join(analysis_dir, f_name)
         # Calculating the deltas (changes in body position) between each frame for the subject
         configs = ExperimentConfigs.read_json(configs_fp)
-        fps, _, _, px_per_mm, bins_ls, custom_bins_ls = get_analysis_configs(configs)
+        fps, _, _, px_per_mm, bins_ls, custom_bins_ls = (
+            AnalyseHelper.get_analysis_configs(configs)
+        )
         configs_filt = Model_speed(**configs.user.analyse.speed)
         bpts = configs_filt.bodyparts
         # Calculating more parameters
@@ -319,17 +320,17 @@ class Analyse:
         dlc_df = KeypointsMixin.clean_headings(DFIOMixin.read_feather(dlc_fp))
         # Checking df
         KeypointsMixin.check_df(dlc_df)
-        # Getting indivs and bpts list
-        indivs, _ = KeypointsMixin.get_headings(dlc_df)
         # Checking body-centre bodypart exists
         KeypointsMixin.check_bpts_exist(dlc_df, bpts)
+        # Getting indivs and bpts list
+        indivs, _ = KeypointsMixin.get_headings(dlc_df)
 
         # Calculating speed of subject for each frame
-        analysis_df = init_fbf_analysis_df(dlc_df.index, fps)
+        analysis_df = AnalyseHelper.init_fbf_analysis_df(dlc_df.index)
         dlc_df.index = analysis_df.index
         idx = pd.IndexSlice
         for indiv in indivs:
-            # Making a rolling window of 3?? maybe 4 frames for average body-centre
+            # Making a rolling window of 3(??) frames for average body-centre
             # Otherwise jitter contributes to movement
             jitter_frames = 3
             smoothed_xy_df = dlc_df.rolling(
@@ -344,18 +345,20 @@ class Analyse:
                 .rolling(window=smoothing_frames, min_periods=1)
                 .agg(np.nanmean)
             )
+        # Backfilling the analysis_df (because of diff and rolling window)
+        analysis_df = analysis_df.bfill()
         # Saving analysis_df
         fbf_fp = os.path.join(out_dir, "fbf", f"{name}.feather")
         DFIOMixin.write_feather(analysis_df, fbf_fp)
 
         # Summarising and binning analysis_df
-        make_summary_binned(
-            DFIOMixin.read_feather(fbf_fp),
+        AggAnalyse.summary_binned_quantitative(
+            analysis_df,
             out_dir,
             name,
+            fps,
             bins_ls,
             custom_bins_ls,
-            False,
         )
         return outcome
 
@@ -376,10 +379,13 @@ class Analyse:
         """
         outcome = ""
         name = IOMixin.get_name(dlc_fp)
-        out_dir = os.path.join(analysis_dir, Analyse.social_distance.__name__)
+        f_name = Analyse.social_distance.__name__
+        out_dir = os.path.join(analysis_dir, f_name)
         # Calculating the deltas (changes in body position) between each frame for the subject
         configs = ExperimentConfigs.read_json(configs_fp)
-        fps, _, _, px_per_mm, bins_ls, custom_bins_ls = get_analysis_configs(configs)
+        fps, _, _, px_per_mm, bins_ls, custom_bins_ls = (
+            AnalyseHelper.get_analysis_configs(configs)
+        )
         configs_filt = Model_social_distance(**configs.user.analyse.social_distance)
         bpts = configs_filt.bodyparts
         # Calculating more parameters
@@ -389,13 +395,13 @@ class Analyse:
         dlc_df = KeypointsMixin.clean_headings(DFIOMixin.read_feather(dlc_fp))
         # Checking df
         KeypointsMixin.check_df(dlc_df)
-        # Getting indivs and bpts list
-        indivs, _ = KeypointsMixin.get_headings(dlc_df)
         # Checking body-centre bodypart exists
         KeypointsMixin.check_bpts_exist(dlc_df, bpts)
+        # Getting indivs and bpts list
+        indivs, _ = KeypointsMixin.get_headings(dlc_df)
 
         # Calculating speed of subject for each frame
-        analysis_df = init_fbf_analysis_df(dlc_df.index, fps)
+        analysis_df = AnalyseHelper.init_fbf_analysis_df(dlc_df.index)
         dlc_df.index = analysis_df.index
         idx = pd.IndexSlice
         # Assumes there are only two individuals
@@ -419,13 +425,13 @@ class Analyse:
         DFIOMixin.write_feather(analysis_df, fbf_fp)
 
         # Summarising and binning analysis_df
-        make_summary_binned(
-            DFIOMixin.read_feather(fbf_fp),
+        AggAnalyse.summary_binned_quantitative(
+            analysis_df,
             out_dir,
             name,
+            fps,
             bins_ls,
             custom_bins_ls,
-            False,
         )
         return outcome
 
@@ -452,10 +458,13 @@ class Analyse:
         """
         outcome = ""
         name = IOMixin.get_name(dlc_fp)
-        out_dir = os.path.join(analysis_dir, Analyse.freezing.__name__)
+        f_name = Analyse.freezing.__name__
+        out_dir = os.path.join(analysis_dir, f_name)
         # Calculating the deltas (changes in body position) between each frame for the subject
         configs = ExperimentConfigs.read_json(configs_fp)
-        fps, _, _, px_per_mm, bins_ls, custom_bins_ls = get_analysis_configs(configs)
+        fps, _, _, px_per_mm, bins_ls, custom_bins_ls = (
+            AnalyseHelper.get_analysis_configs(configs)
+        )
         configs_filt = Model_freezing(**configs.user.analyse.freezing)
         # Calculating more parameters
         thresh_px = configs_filt.thresh_mm / px_per_mm
@@ -470,7 +479,7 @@ class Analyse:
         indivs, bpts = KeypointsMixin.get_headings(dlc_df)
 
         # Calculating speed of subject for each frame
-        analysis_df = init_fbf_analysis_df(dlc_df.index, fps)
+        analysis_df = AnalyseHelper.init_fbf_analysis_df(dlc_df.index)
         dlc_df.index = analysis_df.index
         for indiv in indivs:
             temp_df = pd.DataFrame(index=analysis_df.index)
@@ -490,434 +499,33 @@ class Analyse:
                     .agg(np.nanmean)
                 )
             # If ALL bodypoints do not leave `thresh_px`
-            analysis_df[(indiv, "freezing")] = temp_df.apply(
+            analysis_df[(indiv, f_name)] = temp_df.apply(
                 lambda x: pd.Series(np.all(x < thresh_px)), axis=1
             ).astype(np.int8)
 
             # Getting start, stop, and duration of each freezing behav bout
             freezingbouts_df = BehaviourMixin.vect_2_bouts(
-                analysis_df[(indiv, "freezing")] == 1
+                analysis_df[(indiv, f_name)] == 1
             )
             # For each freezing bout, if there is less than window_frames, tehn
             # it is not actually freezing
             for _, row in freezingbouts_df.iterrows():
                 if row["dur"] < window_frames:
-                    analysis_df.loc[row["start"] : row["stop"], (indiv, "freezing")] = 0
+                    analysis_df.loc[row["start"] : row["stop"], (indiv, f_name)] = 0
         # Saving analysis_df
         fbf_fp = os.path.join(out_dir, "fbf", f"{name}.feather")
         DFIOMixin.write_feather(analysis_df, fbf_fp)
 
         # Summarising and binning analysis_df
-        make_summary_binned(
-            DFIOMixin.read_feather(fbf_fp), out_dir, name, bins_ls, custom_bins_ls, True
+        AggAnalyse.summary_binned_behavs(
+            analysis_df,
+            out_dir,
+            name,
+            fps,
+            bins_ls,
+            custom_bins_ls,
         )
         return outcome
-
-
-def get_analysis_configs(
-    configs: ExperimentConfigs,
-) -> tuple[
-    int,
-    float,
-    float,
-    float,
-    list,
-    list,
-]:
-    """
-    _summary_
-
-    Parameters
-    ----------
-    configs : Configs
-        _description_
-
-    Returns
-    -------
-    tuple[ int, float, float, float, list, list, ]
-        _description_
-    """
-    return (
-        configs.auto.formatted_vid.fps,
-        configs.auto.formatted_vid.width_px,
-        configs.auto.formatted_vid.height_px,
-        configs.auto.px_per_mm,
-        configs.user.analyse.bins_sec,
-        configs.user.analyse.custom_bins_sec,
-    )
-
-
-def init_fbf_analysis_df(frame_vect: pd.Series | pd.Index, fps: int) -> pd.DataFrame:
-    """
-    Returning a frame-by-frame analysis_df with the frame number (according to original video)
-    and timestamps as the MultiIndex index, relative to the first element of frame_vect.
-    Note that that the frame number can thus begin on a non-zero number.
-
-    Parameters
-    ----------
-    frame_vect : pd.Series | pd.Index
-        _description_
-    fps : int
-        _description_
-
-    Returns
-    -------
-    pd.DataFrame
-        _description_
-    """
-    return pd.DataFrame(
-        index=pd.MultiIndex.from_arrays(
-            (frame_vect, (frame_vect - frame_vect[0]) / fps), names=ANALYSIS_INDEX_NAMES
-        ),
-        columns=pd.MultiIndex.from_tuples((), names=ANALYSIS_COLUMN_NAMES),
-    )
-
-
-def make_location_scatterplot(
-    analysis_df: pd.DataFrame, corners_df: pd.DataFrame, out_fp, measure: str
-):
-    """
-    Expects analysis_df index to be (frame, timestamp), and columns to be (individual, measure).
-
-    Parameters
-    ----------
-    analysis_df : pd.DataFrame
-        _description_
-    corners_df : pd.DataFrame
-        _description_
-    out_fp : _type_
-        _description_
-    measure : str
-        _description_
-    """
-    analysis_stacked_df = analysis_df.stack(level="individuals").reset_index(
-        "individuals"
-    )
-    g = sns.relplot(
-        data=analysis_stacked_df,
-        x="x",
-        y="y",
-        hue=measure,
-        col="individuals",
-        kind="scatter",
-        col_wrap=2,
-        height=4,
-        aspect=1,
-        alpha=0.8,
-        linewidth=0,
-        marker=".",
-        s=10,
-        legend=True,
-    )
-    # Invert the y axis and adding arena corners to the plot
-    g.axes[0].invert_yaxis()
-    for ax in g.axes:
-        sns.scatterplot(
-            data=corners_df,
-            x="x",
-            y="y",
-            marker="+",
-            color=(1, 0, 0),
-            s=50,
-            legend=False,
-            ax=ax,
-        )
-    # Setting fig titles and labels
-    g.set_titles(col_template="{col_name}")
-    g.figure.subplots_adjust(top=0.85)
-    g.figure.suptitle("Spatial position", fontsize=12)
-    # Saving fig
-    os.makedirs(os.path.split(out_fp)[0], exist_ok=True)
-    g.savefig(out_fp)
-    g.figure.clf()
-
-
-def _make_summary_quantitative(analysis_df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Generates the summarised data across the entire period, including mean,
-    std, min, Q1, median, Q3, and max.
-    Used for quantitative numeric data.
-
-    Params:
-        analysis_df: pd.DataFrame
-            _description_
-
-    Returns:
-    str
-        The outcome string.
-    """
-    summary_df = pd.DataFrame()
-    # Getting summary stats for each individual
-    for column_name, column_vals in analysis_df.items():
-        indiv_measure_summary = (
-            pd.Series(
-                {
-                    "mean": np.nanmean(column_vals.astype(float)),
-                    "std": np.nanstd(column_vals.astype(float)),
-                    "min": np.nanmin(column_vals.astype(float)),
-                    "Q1": np.nanquantile(column_vals.astype(float), q=0.25),
-                    "median": np.nanmedian(column_vals.astype(float)),
-                    "Q3": np.nanquantile(column_vals.astype(float), q=0.75),
-                    "max": np.nanmax(column_vals.astype(float)),
-                },
-                name=column_name,
-            )
-            .to_frame()
-            .transpose()
-        )
-        summary_df = pd.concat([summary_df, indiv_measure_summary], axis=0)
-    summary_df.index = analysis_df.columns
-    summary_df.columns.name = "aggs"
-    return summary_df
-
-
-def _make_summary_behavs(analysis_df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Generates the summarised data across the entire period, including number of bouts,
-    and mean, std, min, Q1, median, Q3, and max duration of bouts.
-    Used for boolean behavs classification data.
-
-    Parameters
-    ----------
-    analysis_df : pd.DataFrame
-        _description_
-    out_fp : str
-        _description_
-
-    Returns
-    -------
-    str
-        The outcome string.
-    """
-    summary_df = pd.DataFrame()
-    # Getting the fps
-    index = analysis_df.index.to_frame()
-    fps = np.nanmean(index["frame"].diff() / index["timestamp"].diff())
-    # Dropping the timestamp index level (causes issues with vect_2_bouts)
-    analysis_df = analysis_df.droplevel("timestamp", axis=0)
-    # Getting summary stats for each individual
-    for column_name, column_vals in analysis_df.items():
-        # Getting start, stop, and duration of each behav bout
-        bouts_df = BehaviourMixin.vect_2_bouts(column_vals == 1)
-        bouts = bouts_df["dur"]
-        # Handling edge case where bouts is empty
-        if bouts_df.shape[0] == 0:
-            bouts = np.array([0])
-        measure_summary_i = (
-            pd.Series(
-                {
-                    "bout_freq": bouts_df.shape[0],
-                    "bout_dur_total": np.nansum(bouts.astype(float)) / fps,
-                    "bout_dur_mean": np.nanmean(bouts.astype(float)) / fps,
-                    "bout_dur_std": np.nanstd(bouts.astype(float)) / fps,
-                    "bout_dur_min": np.nanmin(bouts.astype(float)) / fps,
-                    "bout_dur_Q1": np.nanquantile(bouts.astype(float), q=0.25) / fps,
-                    "bout_dur_median": np.nanmedian(bouts.astype(float)) / fps,
-                    "bout_dur_Q3": np.nanquantile(bouts.astype(float), q=0.75) / fps,
-                    "bout_dur_max": np.nanmax(bouts.astype(float)) / fps,
-                },
-                name=column_name,
-            )
-            .to_frame()
-            .transpose()
-        )
-        summary_df = pd.concat([summary_df, measure_summary_i], axis=0)
-    summary_df.index = analysis_df.columns
-    summary_df.columns.name = "aggs"
-    return summary_df
-
-
-def _make_binned(
-    analysis_df: pd.DataFrame,
-    out_fp: str,
-    bins: list,
-    summary_func: Callable[[pd.DataFrame], pd.DataFrame],
-) -> str:
-    """
-    Generates the binned data and line graph for the given analysis_df, and given bin_sec.
-    The aggregated statistics are very similar to the summary data.
-
-    * TODO - should this be user-changeable?
-    * TODO - for behavs (binary), make a bout frequency stat (binned) and mean bout time (binned)
-
-    Parameters
-    ----------
-    analysis_df : pd.DataFrame
-        _description_
-    out_fp : str
-        _description_
-    bins : list
-        _description_
-
-    Returns
-    -------
-    str
-        _description_
-    """
-    # For each column, displays the mean of each binned group.
-    outcome = ""
-    timestamps = analysis_df.index.get_level_values("timestamp")
-    # Ensuring all bins are included (start frame and end frame)
-    if np.min(bins) > 0:  # If 0 is not included
-        bins = np.append(0, bins)
-    if np.max(bins) < np.max(timestamps):  # If end timestamp is not included
-        bins = np.append(bins, np.max(timestamps))
-    # Making binned data
-    bin_sec = pd.cut(timestamps, bins=bins, labels=bins[1:], include_lowest=True)
-    grouped_df = analysis_df.groupby(bin_sec)
-    binned_df = grouped_df.apply(
-        lambda x: summary_func(x)
-        .unstack(["individuals", "measures"])
-        .reorder_levels(["individuals", "measures", "aggs"])
-        .sort_index(level=["individuals", "measures"])
-    )
-    binned_df.index.name = "bin_sec"
-    # Writing binned_df to file
-    DFIOMixin.write_feather(binned_df, out_fp)
-    return outcome
-
-
-def _make_binned_plot(
-    binned_df: pd.DataFrame,
-    out_fp: str,
-    agg_col: str,
-) -> str:
-    """
-    _summary_
-
-    Parameters
-    ----------
-    binned_df : pd.DataFrame
-        _description_
-    out_fp : str
-        _description_
-    is_bool : bool
-        _description_
-
-    Returns
-    -------
-    str
-        _description_
-    """
-    outcome = ""
-    # Making binned_df long
-    binned_stacked_df = (
-        binned_df.stack(["individuals", "measures"])[agg_col]
-        .rename("value")
-        .reset_index()
-    )
-    # Plotting line graph
-    g = sns.relplot(
-        data=binned_stacked_df,
-        x="bin_sec",
-        y="value",
-        hue="measures",
-        col="individuals",
-        kind="line",
-        height=4,
-        aspect=1.5,
-        alpha=0.5,
-        marker="X",
-        markersize=10,
-        legend=True,
-    )
-    # Setting fig titles and labels
-    g.set_titles(col_template="{col_name}")
-    g.figure.subplots_adjust(top=0.85)
-    g.figure.suptitle("Binned data", fontsize=12)
-    # Saving fig
-    os.makedirs(os.path.split(out_fp)[0], exist_ok=True)
-    g.savefig(out_fp)
-    g.figure.clf()
-    # Returning outcome
-    return outcome
-
-
-def make_summary_binned(
-    analysis_df: pd.DataFrame,
-    out_dir: str,
-    name: str,
-    bins_ls: list,
-    custom_bins_ls: list,
-    is_behav: bool,
-) -> str:
-    """
-    _summary_
-
-    Parameters
-    ----------
-    analysis_df : pd.DataFrame
-        _description_
-    out_dir : str
-        _description_
-    name : str
-        _description_
-    bins_ls : list
-        _description_
-    custom_bins_ls : list
-        _description_
-    is_behav : bool
-        _description_
-
-    Returns
-    -------
-    str
-        _description_
-    """
-    outcome = ""
-    # Summarising analysis_df
-    summary_fp = os.path.join(out_dir, "summary", f"{name}.feather")
-    if is_behav:
-        summary_func = _make_summary_behavs
-        agg_col = "bout_dur_total"
-    else:
-        summary_func = _make_summary_quantitative
-        agg_col = "mean"
-    summary_df = summary_func(analysis_df)
-    DFIOMixin.write_feather(summary_df, summary_fp)
-    # Getting timestamps index
-    timestamps = analysis_df.index.get_level_values("timestamp")
-    # Binning analysis_df
-    for bin_sec in bins_ls:
-        binned_fp = os.path.join(out_dir, f"binned_{bin_sec}", f"{name}.feather")
-        binned_plot_fp = os.path.join(out_dir, f"binned_{bin_sec}_plot", f"{name}.png")
-        # Making binned df
-        bins = np.arange(0, np.max(timestamps) + bin_sec, bin_sec)
-        outcome += _make_binned(analysis_df, binned_fp, bins, summary_func)
-        # Making binned plots
-        outcome += _make_binned_plot(
-            DFIOMixin.read_feather(binned_fp), binned_plot_fp, agg_col
-        )
-    # Custom binning analysis_df
-    if custom_bins_ls:
-        binned_fp = os.path.join(out_dir, "binned_custom", f"{name}.feather")
-        binned_plot_fp = os.path.join(out_dir, "binned_custom_plot", f"{name}.png")
-        # Making binned df
-        outcome += _make_binned(analysis_df, binned_fp, custom_bins_ls, summary_func)
-        # Making binned plots
-        outcome += _make_binned_plot(
-            DFIOMixin.read_feather(binned_fp), binned_plot_fp, agg_col
-        )
-    # Returning outcome
-    return outcome
-
-
-def hline_factory(p1, p2):
-    """
-    Boundary function factories (x input to y).
-    Making boundary line, given corner points. Expects input to be x
-    m = (y2-y1)/(x2-x1)   &   y = m(x-x1) + b + y1
-    """
-    return lambda x: (p2["y"] - p1["y"]) / (p2["x"] - p1["x"]) * (x - p1["x"]) + p1["y"]
-
-
-def vline_factory(p1, p2):
-    """
-    Boundary function factories (y input to x).
-    Making boundary line, given corner points. Expects input to be y
-    m = (x2-x1)/(y2-y1)   &   x = m(y-y1) + b + x1
-    """
-    return lambda y: (p2["x"] - p1["x"]) / (p2["y"] - p1["y"]) * (y - p1["y"]) + p1["x"]
 
 
 class Model_speed(BaseModel):

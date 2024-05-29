@@ -411,6 +411,14 @@ class Project:
         """
         method = Experiment.analyse
         self._process_scaffold(method, *args, **kwargs)
+    
+    @functools.wraps(Experiment.behav_analyse)
+    def behav_analyse(self, *args, **kwargs) -> None:
+        """
+        Batch processing for corresponding [Experiment method](experiment.md#behavysis_pipeline.pipeline.Experiment.behav_analyse)
+        """
+        method = Experiment.behav_analyse
+        self._process_scaffold(method, *args, **kwargs)
 
     #####################################################################
     #               DIAGNOSTICS DICT METHODS

@@ -11,6 +11,7 @@ from behavysis_core.data_models.experiment_configs import ExperimentConfigs
 from behavysis_core.mixins.behaviour_mixin import BehaviourMixin
 from behavysis_core.mixins.df_io_mixin import DFIOMixin
 from behavysis_core.mixins.diagnostics_mixin import DiagnosticsMixin
+from behavysis_core.mixins.io_mixin import IOMixin
 
 from behavysis_pipeline.behav_classifier import BehavClassifier
 
@@ -21,6 +22,7 @@ class ClassifyBehaviours:
     """__summary__"""
 
     @staticmethod
+    @IOMixin.overwrite_check()
     def classify_behaviours(
         features_fp: str,
         out_fp: str,
@@ -58,9 +60,9 @@ class ClassifyBehaviours:
         Where the `models` list is a list of `model_config.json` filepaths.
         """
         outcome = ""
-        # If overwrite is False, checking if we should skip processing
-        if not overwrite and os.path.exists(out_fp):
-            return DiagnosticsMixin.warning_msg()
+        # # If overwrite is False, checking if we should skip processing
+        # if not overwrite and os.path.exists(out_fp):
+        #     return DiagnosticsMixin.warning_msg()
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
         configs_filt = configs.user.classify_behaviours

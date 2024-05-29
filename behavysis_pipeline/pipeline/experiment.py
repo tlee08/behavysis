@@ -5,21 +5,19 @@ _summary_
 from __future__ import annotations
 
 import os
-import shutil
 from typing import Any, Callable
 
 import numpy as np
-import pandas as pd
 from behavysis_core.constants import EVALUATE_DIR, FILE_EXTS, STR_DIV, TEMP_DIR, Folders
-from behavysis_core.mixins.df_io_mixin import DFIOMixin
 from behavysis_core.mixins.diagnostics_mixin import DiagnosticsMixin
 
 from behavysis_pipeline.processes import (
+    BehavAnalyse,
     ClassifyBehaviours,
+    Export,
     ExtractFeatures,
     RunDLC,
     UpdateConfigs,
-    Export,
 )
 
 
@@ -189,7 +187,7 @@ class Experiment:
         """
         return self._process_scaffold(
             (UpdateConfigs.update_configs,),
-            configs_fp=self.get_fp("0_configs"),
+            configs_fp=self.get_fp(Folders.CONFIGS.value),
             default_configs_fp=default_configs_fp,
             overwrite=overwrite,
         )
@@ -222,9 +220,9 @@ class Experiment:
         """
         return self._process_scaffold(
             funcs,
-            raw_vid_fp=self.get_fp("1_raw_vid"),
-            formatted_vid_fp=self.get_fp("2_formatted_vid"),
-            configs_fp=self.get_fp("0_configs"),
+            raw_vid_fp=self.get_fp(Folders.RAW_VID.value),
+            formatted_vid_fp=self.get_fp(Folders.FORMATTED_VID.value),
+            configs_fp=self.get_fp(Folders.CONFIGS.value),
             overwrite=overwrite,
         )
 
@@ -255,9 +253,9 @@ class Experiment:
         """
         return self._process_scaffold(
             (RunDLC.ma_dlc_analyse_single,),
-            in_fp=self.get_fp("2_formatted_vid"),
-            out_fp=self.get_fp("3_dlc"),
-            configs_fp=self.get_fp("0_configs"),
+            in_fp=self.get_fp(Folders.FORMATTED_VID.value),
+            out_fp=self.get_fp(Folders.DLC.value),
+            configs_fp=self.get_fp(Folders.CONFIGS.value),
             temp_dir=os.path.join(self.root_dir, TEMP_DIR),
             gputouse=gputouse,
             overwrite=overwrite,
@@ -284,8 +282,8 @@ class Experiment:
         """
         return self._process_scaffold(
             funcs,
-            dlc_fp=self.get_fp("3_dlc"),
-            configs_fp=self.get_fp("0_configs"),
+            dlc_fp=self.get_fp(Folders.DLC.value),
+            configs_fp=self.get_fp(Folders.CONFIGS.value),
         )
 
     def preprocess(self, funcs: tuple[Callable, ...], overwrite: bool) -> dict:
@@ -315,8 +313,8 @@ class Experiment:
         # Exporting 3_dlc df to 4_preprocessed folder
         dd = self._process_scaffold(
             (Export.feather_2_feather,),
-            in_fp=self.get_fp("3_dlc"),
-            out_fp=self.get_fp("4_preprocessed"),
+            in_fp=self.get_fp(Folders.DLC.value),
+            out_fp=self.get_fp(Folders.PREPROCESSED.value),
             overwrite=overwrite,
         )
         # If there is an error, OR warning (indicates not to ovewrite), then return early
@@ -326,10 +324,85 @@ class Experiment:
         # Feeding through preprocessing functions
         return self._process_scaffold(
             funcs,
-            in_fp=self.get_fp("4_preprocessed"),
-            out_fp=self.get_fp("4_preprocessed"),
-            configs_fp=self.get_fp("0_configs"),
+            in_fp=self.get_fp(Folders.PREPROCESSED.value),
+            out_fp=self.get_fp(Folders.PREPROCESSED.value),
+            configs_fp=self.get_fp(Folders.CONFIGS.value),
             overwrite=True,
+        )
+
+    #####################################################################
+    #                 SIMBA BEHAVIOUR CLASSIFICATION METHODS
+    #####################################################################
+
+    def extract_features(self, overwrite: bool) -> dict:
+        """
+        Extracts features from the preprocessed dlc file to generate many more features.
+        This dataframe of derived features will be input for a ML classifier to detect
+        particularly trained behaviours.
+
+        Parameters
+        ----------
+        overwrite : bool
+            Whether to overwrite the output file (if it exists).
+
+        Returns
+        -------
+        dict
+            Diagnostics dictionary, with description of each function's outcome.
+        """
+        return self._process_scaffold(
+            (ExtractFeatures.extract_features,),
+            dlc_fp=self.get_fp(Folders.PREPROCESSED.value),
+            out_fp=self.get_fp(Folders.FEATURES_EXTRACTED.value),
+            configs_fp=self.get_fp(Folders.CONFIGS.value),
+            temp_dir=os.path.join(self.root_dir, TEMP_DIR),
+            overwrite=overwrite,
+        )
+
+    def classify_behaviours(self, overwrite: bool) -> dict:
+        """
+        Given model config files in the BehavClassifier format, generates beahviour predidctions
+        on the given extracted features dataframe.
+
+        Parameters
+        ----------
+        overwrite : bool
+            Whether to overwrite the output file (if it exists).
+
+        Returns
+        -------
+        dict
+            Diagnostics dictionary, with description of each function's outcome.
+        """
+        return self._process_scaffold(
+            (ClassifyBehaviours.classify_behaviours,),
+            features_fp=self.get_fp(Folders.FEATURES_EXTRACTED.value),
+            out_fp=self.get_fp(Folders.PREDICTED_BEHAVS.value),
+            configs_fp=self.get_fp(Folders.CONFIGS.value),
+            overwrite=overwrite,
+        )
+
+    def export_behaviours(self, overwrite: bool) -> dict:
+        """
+        _summary_
+
+        Parameters
+        ----------
+        overwrite : bool
+            _description_
+
+        Returns
+        -------
+        dict
+            _description_
+        """
+        # Exporting 6_predicted_behavs df to 7_scored_behavs folder
+        return self._process_scaffold(
+            (Export.behaviour_export,),
+            in_fp=self.get_fp(Folders.PREDICTED_BEHAVS.value),
+            out_fp=self.get_fp(Folders.SCORED_BEHAVS.value),
+            configs_fp=self.get_fp(Folders.CONFIGS.value),
+            overwrite=overwrite,
         )
 
     #####################################################################
@@ -358,132 +431,38 @@ class Experiment:
         """
         return self._process_scaffold(
             funcs,
-            dlc_fp=self.get_fp("4_preprocessed"),
+            dlc_fp=self.get_fp(Folders.PREPROCESSED.value),
             analysis_dir=os.path.join(self.root_dir, Folders.ANALYSIS.value),
-            configs_fp=self.get_fp("0_configs"),
+            configs_fp=self.get_fp(Folders.CONFIGS.value),
         )
 
-    def aggregate_analysis(self, overwrite: bool) -> dict:
+    def behav_analyse(self) -> dict:
         """
-        Combines all the frame-by-frame (fbf) analysis measures for the single experiment.
-        The index is (frame, timestamp) and the columns are (analysisFile, indiv, measure)
+        An ML pipeline method to analyse the preprocessed DLC data.
+        Possible funcs are given in analysis.py.
+        The preprocessed data is saved to the project's analysis folder.
 
         Parameters
         ----------
-        overwrite : bool
-            Whether to overwrite the output file (if it exists).
-
-        Returns
-        -------
-        dict
-            Diagnostics dictionary, with description of each function's outcome.
-        """
-        dd = {"experiment": self.name}
-        analysis_dir = os.path.join(self.root_dir, Folders.ANALYSIS.value)
-        out_fp = os.path.join(
-            analysis_dir, "aggregateAnalysis", "fbf", f"{self.name}.feather"
-        )
-        # If overwrite is False, checking if we should skip processing
-        if not overwrite and os.path.exists(out_fp):
-            dd["aggregate_analysis"] = DiagnosticsMixin.warning_msg()
-            return dd
-        # Making total_df to store all frame-by-frame analysis for the experiment
-        total_df = pd.DataFrame()
-        # Searching through all the analysis subdir
-        for analysis_subdir in os.listdir(analysis_dir):
-            if analysis_subdir == "aggregate_analysis":
-                continue
-            in_fp = os.path.join(
-                analysis_dir, analysis_subdir, "fbf", f"{self.name}.feather"
-            )
-            if os.path.isfile(in_fp):
-                # Reading exp fbf df
-                df = DFIOMixin.read_feather(in_fp)
-                # Asserting that the index is the same (frames, timestamps)
-                if total_df.shape[0] > 0:
-                    assert np.all(total_df.index == df.index)
-                # Prepending analysis level to columns MultiIndex
-                df = pd.concat(
-                    [df], keys=[analysis_subdir], names=[Folders.ANALYSIS.value], axis=1
-                )
-                # Concatenating total_df with df
-                total_df = pd.concat([total_df, df], axis=1)
-        DFIOMixin.write_feather(total_df, out_fp)
-        return dd
-
-    #####################################################################
-    #                 SIMBA BEHAVIOUR CLASSIFICATION METHODS
-    #####################################################################
-
-    def extract_features(self, overwrite: bool) -> dict:
-        """
-        Extracts features from the preprocessed dlc file to generate many more features.
-        This dataframe of derived features will be input for a ML classifier to detect
-        particularly trained behaviours.
-
-        Parameters
-        ----------
-        overwrite : bool
-            Whether to overwrite the output file (if it exists).
-
-        Returns
-        -------
-        dict
-            Diagnostics dictionary, with description of each function's outcome.
-        """
-        return self._process_scaffold(
-            (ExtractFeatures.extract_features,),
-            dlc_fp=self.get_fp("4_preprocessed"),
-            out_fp=self.get_fp("5_features_extracted"),
-            configs_fp=self.get_fp("0_configs"),
-            temp_dir=os.path.join(self.root_dir, TEMP_DIR),
-            overwrite=overwrite,
-        )
-
-    def classify_behaviours(self, overwrite: bool) -> dict:
-        """
-        Given model config files in the BehavClassifier format, generates beahviour predidctions
-        on the given extracted features dataframe.
-
-        Parameters
-        ----------
-        overwrite : bool
-            Whether to overwrite the output file (if it exists).
-
-        Returns
-        -------
-        dict
-            Diagnostics dictionary, with description of each function's outcome.
-        """
-        return self._process_scaffold(
-            (ClassifyBehaviours.classify_behaviours,),
-            features_fp=self.get_fp("5_features_extracted"),
-            out_fp=self.get_fp("6_predicted_behavs"),
-            configs_fp=self.get_fp("0_configs"),
-            overwrite=overwrite,
-        )
-
-    def export_behaviours(self, overwrite: bool) -> dict:
-        """
-        _summary_
-
-        Parameters
-        ----------
-        overwrite : bool
+        funcs : tuple[Callable, ...]
             _description_
 
         Returns
         -------
         dict
-            _description_
+            Diagnostics dictionary, with description of each function's outcome.
+
+        Notes
+        -----
+        Can call any methods from `Analyse`.
         """
-        # Exporting 6_predicted_behavs df to 7_scored_behavs folder
         return self._process_scaffold(
-            (Export.feather_2_feather,),
-            in_fp=self.get_fp("6_predicted_behavs"),
-            out_fp=self.get_fp("7_scored_behavs"),
-            overwrite=overwrite,
+            (BehavAnalyse.behav_analysis,),
+            behavs_fp=self.get_fp(Folders.SCORED_BEHAVS.value),
+            analysis_dir=os.path.join(self.root_dir, Folders.ANALYSIS.value),
+            configs_fp=self.get_fp(Folders.CONFIGS.value),
         )
+
 
     #####################################################################
     #           EVALUATING DLC ANALYSIS AND BEHAV CLASSIFICATION
@@ -530,10 +509,10 @@ class Experiment:
         """
         return self._process_scaffold(
             funcs,
-            vid_fp=self.get_fp("2_formatted_vid"),
-            dlc_fp=self.get_fp("4_preprocessed"),
-            behav_fp=self.get_fp("6_predicted_behavs"),
+            vid_fp=self.get_fp(Folders.FORMATTED_VID.value),
+            dlc_fp=self.get_fp(Folders.PREPROCESSED.value),
+            behavs_fp=self.get_fp(Folders.PREDICTED_BEHAVS.value),
             out_dir=os.path.join(self.root_dir, EVALUATE_DIR),
-            configs_fp=self.get_fp("0_configs"),
+            configs_fp=self.get_fp(Folders.CONFIGS.value),
             overwrite=overwrite,
         )
