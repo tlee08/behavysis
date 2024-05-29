@@ -34,9 +34,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
-from behavysis_core.constants import BEHAV_COLUMN_NAMES, PROCESS_COL, BehavColumns
+from behavysis_core.constants import PROCESS_COL, BehavColumns
 from behavysis_core.data_models.experiment_configs import ExperimentConfigs
-from behavysis_core.mixins.df_io_mixin import DFIOMixin
+from behavysis_core.mixins.behaviour_mixin import BehaviourMixin
 from behavysis_core.mixins.diagnostics_mixin import DiagnosticsMixin
 from behavysis_core.mixins.io_mixin import IOMixin
 from behavysis_core.mixins.keypoints_mixin import KeypointsMixin
@@ -48,6 +48,8 @@ from tqdm import trange
 
 
 class Evaluate:
+    """__summary__"""
+
     @staticmethod
     def keypoints_plot(
         vid_fp: str,
@@ -70,7 +72,7 @@ class Evaluate:
             return DiagnosticsMixin.warning_msg()
         # Getting necessary config parameters
         # Read the file
-        dlc_df = KeypointsMixin.clean_headings(DFIOMixin.read_feather(dlc_fp))
+        dlc_df = KeypointsMixin.clean_headings(KeypointsMixin.read_feather(dlc_fp))
         # Getting indivs and bpts list
         _, bpts = KeypointsMixin.get_headings(dlc_df)
         cols_to_keep = dlc_df.columns.get_level_values("bodyparts").isin(bpts)
@@ -131,14 +133,14 @@ class Evaluate:
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
         configs_filt = configs.user.evaluate.eval_vid
-        funcs_names = configs_filt.funcs
-        pcutoff = configs_filt.pcutoff
-        colour_level = configs_filt.colour_level
-        radius = configs_filt.radius
-        cmap = configs_filt.cmap
+        funcs_names = configs.get_ref(configs_filt.funcs)
+        pcutoff = configs.get_ref(configs_filt.pcutoff)
+        colour_level = configs.get_ref(configs_filt.colour_level)
+        radius = configs.get_ref(configs_filt.radius)
+        cmap = configs.get_ref(configs_filt.cmap)
 
         # Modifying dlc_df and making list of how to select dlc_df components to optimise processing
-        dlc_df = KeypointsMixin.clean_headings(DFIOMixin.read_feather(dlc_fp))
+        dlc_df = KeypointsMixin.clean_headings(KeypointsMixin.read_feather(dlc_fp))
         # Filtering out PROCESS_COL columns
         if PROCESS_COL in dlc_df.columns.unique("individuals"):
             dlc_df.drop(columns=PROCESS_COL, level="individuals")
@@ -154,7 +156,8 @@ class Evaluate:
         dlc_df.columns = [
             f"{indiv}_{bpt}_{coord}" for indiv, bpt, coord in dlc_df.columns
         ]
-        # Making the corresponding colours list for each bodypart instance (colours depend on indiv/bpt)
+        # Making the corresponding colours list for each bodypart instance
+        # (colours depend on indiv/bpt)
         colours_i, _ = pd.factorize(indivs_bpts_ls.get_level_values(colour_level))
         colours = (plt.get_cmap(cmap)(colours_i / colours_i.max()) * 255)[
             :, [2, 1, 0, 3]
@@ -162,17 +165,14 @@ class Evaluate:
 
         # Getting behavs df
         try:
-            behavs_df = DFIOMixin.read_feather(behavs_fp)
-        except Exception:
+            behavs_df = BehaviourMixin.read_feather(behavs_fp)
+        except FileNotFoundError:
             outcome += (
                 "WARNING: behavs file not found or could not be loaded."
                 + "Disregarding behaviour."
                 + "If you have run the behaviour classifier, please check this file.\n"
             )
-            behavs_df = pd.DataFrame(
-                index=dlc_df.index,
-                columns=pd.MultiIndex.from_tuples((), names=BEHAV_COLUMN_NAMES),
-            )
+            behavs_df = BehaviourMixin.init_df(dlc_df.index)
         # Getting list of behaviours
         behavs_ls = behavs_df.columns.unique("behaviours")
         # Making sure all relevant behaviour outcome columns exist
@@ -182,7 +182,9 @@ class Evaluate:
                 if (behav, i) not in behavs_df:
                     behavs_df[(behav, i)] = 0
         # Changing the columns MultiIndex to a single-level index. For speedup
-        behavs_df.columns = [f"{behav}_{outcome}" for behav, outcome in behavs_df.columns]
+        behavs_df.columns = [
+            f"{behav}_{outcome}" for behav, outcome in behavs_df.columns
+        ]
 
         # MAKING ANNOTATED VIDEO
         # Settings the funcs for how to annotate the video

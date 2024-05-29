@@ -8,11 +8,18 @@ import os
 from typing import Any, Callable
 
 import numpy as np
-from behavysis_core.constants import EVALUATE_DIR, FILE_EXTS, STR_DIV, TEMP_DIR, Folders
+from behavysis_core.constants import (
+    ANALYSIS_DIR,
+    EVALUATE_DIR,
+    FILE_EXTS,
+    STR_DIV,
+    TEMP_DIR,
+    Folders,
+)
 from behavysis_core.mixins.diagnostics_mixin import DiagnosticsMixin
 
 from behavysis_pipeline.processes import (
-    BehavAnalyse,
+    BehaviourAnalyse,
     ClassifyBehaviours,
     Export,
     ExtractFeatures,
@@ -432,7 +439,7 @@ class Experiment:
         return self._process_scaffold(
             funcs,
             dlc_fp=self.get_fp(Folders.PREPROCESSED.value),
-            analysis_dir=os.path.join(self.root_dir, Folders.ANALYSIS.value),
+            analysis_dir=os.path.join(self.root_dir, ANALYSIS_DIR),
             configs_fp=self.get_fp(Folders.CONFIGS.value),
         )
 
@@ -457,12 +464,11 @@ class Experiment:
         Can call any methods from `Analyse`.
         """
         return self._process_scaffold(
-            (BehavAnalyse.behav_analysis,),
+            (BehaviourAnalyse.behav_analysis,),
             behavs_fp=self.get_fp(Folders.SCORED_BEHAVS.value),
-            analysis_dir=os.path.join(self.root_dir, Folders.ANALYSIS.value),
+            analysis_dir=os.path.join(self.root_dir, ANALYSIS_DIR),
             configs_fp=self.get_fp(Folders.CONFIGS.value),
         )
-
 
     #####################################################################
     #           EVALUATING DLC ANALYSIS AND BEHAV CLASSIFICATION
@@ -511,7 +517,7 @@ class Experiment:
             funcs,
             vid_fp=self.get_fp(Folders.FORMATTED_VID.value),
             dlc_fp=self.get_fp(Folders.PREPROCESSED.value),
-            behavs_fp=self.get_fp(Folders.PREDICTED_BEHAVS.value),
+            behavs_fp=self.get_fp(Folders.SCORED_BEHAVS.value),
             out_dir=os.path.join(self.root_dir, EVALUATE_DIR),
             configs_fp=self.get_fp(Folders.CONFIGS.value),
             overwrite=overwrite,

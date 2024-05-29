@@ -62,10 +62,11 @@ class UpdateConfigs:
         # Overwriting the configs file (with given method)
         if overwrite == "user":
             configs.user = default_configs.user
-            outcome += "Updating user configs.\n"
+            configs.ref = default_configs.ref
+            outcome += "Updating user and ref configs.\n"
         elif overwrite == "all":
             configs = default_configs
-            outcome += "Updating all parameters.\n"
+            outcome += "Updating all configs.\n"
         else:
             raise ValueError(
                 f'Invalid value "{overwrite}" passed to function. '

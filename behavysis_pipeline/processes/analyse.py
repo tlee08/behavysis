@@ -30,7 +30,7 @@ from behavysis_core.mixins.io_mixin import IOMixin
 from behavysis_core.mixins.keypoints_mixin import KeypointsMixin
 from pydantic import BaseModel
 
-from .analyse_mixins import AggAnalyse, AnalyseHelper
+from .analyse_mixins import AggAnalyse, AnalyseMixin
 
 #####################################################################
 #               ANALYSIS API FUNCS
@@ -63,28 +63,29 @@ class Analyse:
         out_dir = os.path.join(analysis_dir, f_name)
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
-        fps, _, _, px_per_mm, bins_ls, custom_bins_ls = (
-            AnalyseHelper.get_analysis_configs(configs)
-        )
+        fps, _, _, px_per_mm, bins_ls, cbins_ls = AnalyseMixin.get_configs(configs)
         configs_filt = Model_in_roi(**configs.user.analyse.thigmotaxis)
-        bpts = configs_filt.bodyparts
+        bpts = configs.get_ref(configs_filt.bodyparts)
+        thresh_mm = configs.get_ref(configs_filt.thresh_mm)
+        tl = configs.get_ref(configs_filt.roi_top_left)
+        tr = configs.get_ref(configs_filt.roi_top_right)
+        br = configs.get_ref(configs_filt.roi_bottom_right)
+        bl = configs.get_ref(configs_filt.roi_bottom_left)
         # Calculating more parameters
-        thresh_px = configs_filt.thresh_mm / px_per_mm
+        thresh_px = thresh_mm / px_per_mm
 
         # Loading in dataframe
-        dlc_df = KeypointsMixin.clean_headings(DFIOMixin.read_feather(dlc_fp))
-        # Checking df
-        KeypointsMixin.check_df(dlc_df)
+        dlc_df = KeypointsMixin.clean_headings(KeypointsMixin.read_feather(dlc_fp))
         # Checking body-centre bodypart exists
         KeypointsMixin.check_bpts_exist(dlc_df, bpts)
         # Getting indivs list
         indivs, _ = KeypointsMixin.get_headings(dlc_df)
 
         # Getting average corner coordinates. Assumes arena does not move.
-        tl = dlc_df[(SINGLE_COL, configs_filt.roi_top_left)].mean()
-        tr = dlc_df[(SINGLE_COL, configs_filt.roi_top_right)].mean()
-        br = dlc_df[(SINGLE_COL, configs_filt.roi_bottom_right)].mean()
-        bl = dlc_df[(SINGLE_COL, configs_filt.roi_bottom_left)].mean()
+        tl = dlc_df[(SINGLE_COL, tl)].mean()
+        tr = dlc_df[(SINGLE_COL, tr)].mean()
+        br = dlc_df[(SINGLE_COL, br)].mean()
+        bl = dlc_df[(SINGLE_COL, bl)].mean()
         # Making roi_df of corners (with the thresh_px buffer)
         roi_df = pd.DataFrame(
             [
@@ -97,7 +98,7 @@ class Analyse:
         )
         # Getting the (x, y, in-roi) df
         idx = pd.IndexSlice
-        res_df = AnalyseHelper.pt_in_roi_df(dlc_df, roi_df, indivs, bpts)
+        res_df = AnalyseMixin.pt_in_roi_df(dlc_df, roi_df, indivs, bpts)
         # Changing column MultiIndex names
         res_df.columns = res_df.columns.set_levels(["x", "y", f_name], level=1)
         # Setting thigmotaxis as OUTSIDE region (negative)
@@ -112,7 +113,7 @@ class Analyse:
 
         # Generating scatterplot
         plot_fp = os.path.join(out_dir, "scatter_plot", f"{name}.png")
-        AnalyseHelper.make_location_scatterplot(res_df, roi_df, plot_fp, f_name)
+        AnalyseMixin.make_location_scatterplot(res_df, roi_df, plot_fp, f_name)
 
         # Summarising and binning analysis_df
         AggAnalyse.summary_binned_behavs(
@@ -121,7 +122,7 @@ class Analyse:
             name,
             fps,
             bins_ls,
-            custom_bins_ls,
+            cbins_ls,
         )
         return outcome
 
@@ -148,28 +149,29 @@ class Analyse:
         out_dir = os.path.join(analysis_dir, f_name)
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
-        fps, _, _, px_per_mm, bins_ls, custom_bins_ls = (
-            AnalyseHelper.get_analysis_configs(configs)
-        )
+        fps, _, _, px_per_mm, bins_ls, cbins_ls = AnalyseMixin.get_configs(configs)
         configs_filt = Model_in_roi(**configs.user.analyse.center_crossing)
-        bpts = configs_filt.bodyparts
+        bpts = configs.get_ref(configs_filt.bodyparts)
+        thresh_mm = configs.get_ref(configs_filt.thresh_mm)
+        tl = configs.get_ref(configs_filt.roi_top_left)
+        tr = configs.get_ref(configs_filt.roi_top_right)
+        bl = configs.get_ref(configs_filt.roi_bottom_left)
+        br = configs.get_ref(configs_filt.roi_bottom_right)
         # Calculating more parameters
-        thresh_px = configs_filt.thresh_mm / px_per_mm
+        thresh_px = thresh_mm / px_per_mm
 
         # Loading in dataframe
-        dlc_df = KeypointsMixin.clean_headings(DFIOMixin.read_feather(dlc_fp))
-        # Checking df
-        KeypointsMixin.check_df(dlc_df)
+        dlc_df = KeypointsMixin.clean_headings(KeypointsMixin.read_feather(dlc_fp))
         # Checking body-centre bodypart exists
         KeypointsMixin.check_bpts_exist(dlc_df, bpts)
         # Getting indivs list
         indivs, _ = KeypointsMixin.get_headings(dlc_df)
 
         # Getting average corner coordinates. Assumes arena does not move.
-        tl = dlc_df[(SINGLE_COL, configs_filt.roi_top_left)].mean()
-        tr = dlc_df[(SINGLE_COL, configs_filt.roi_top_right)].mean()
-        bl = dlc_df[(SINGLE_COL, configs_filt.roi_bottom_left)].mean()
-        br = dlc_df[(SINGLE_COL, configs_filt.roi_bottom_right)].mean()
+        tl = dlc_df[(SINGLE_COL, tl)].mean()
+        tr = dlc_df[(SINGLE_COL, tr)].mean()
+        bl = dlc_df[(SINGLE_COL, bl)].mean()
+        br = dlc_df[(SINGLE_COL, br)].mean()
         # Making roi_df of corners (with the thresh_px buffer)
         roi_df = pd.DataFrame(
             [
@@ -182,7 +184,7 @@ class Analyse:
         )
         # Getting the (x, y, in-roi) df
         idx = pd.IndexSlice
-        res_df = AnalyseHelper.pt_in_roi_df(dlc_df, roi_df, indivs, bpts)
+        res_df = AnalyseMixin.pt_in_roi_df(dlc_df, roi_df, indivs, bpts)
         # Changing column MultiIndex names
         res_df.columns = res_df.columns.set_levels(["x", "y", f_name], level=1)
         # Getting analysis_df
@@ -193,7 +195,7 @@ class Analyse:
 
         # Generating scatterplot
         plot_fp = os.path.join(out_dir, "scatter_plot", f"{name}.png")
-        AnalyseHelper.make_location_scatterplot(res_df, roi_df, plot_fp, f_name)
+        AnalyseMixin.make_location_scatterplot(res_df, roi_df, plot_fp, f_name)
 
         # Summarising and binning analysis_df
         AggAnalyse.summary_binned_behavs(
@@ -202,7 +204,7 @@ class Analyse:
             name,
             fps,
             bins_ls,
-            custom_bins_ls,
+            cbins_ls,
         )
         return outcome
 
@@ -229,28 +231,29 @@ class Analyse:
         out_dir = os.path.join(analysis_dir, f_name)
         # Calculating the deltas (changes in body position) between each frame for the subject
         configs = ExperimentConfigs.read_json(configs_fp)
-        fps, _, _, px_per_mm, bins_ls, custom_bins_ls = (
-            AnalyseHelper.get_analysis_configs(configs)
-        )
+        fps, _, _, px_per_mm, bins_ls, cbins_ls = AnalyseMixin.get_configs(configs)
         configs_filt = Model_in_roi(**configs.user.analyse.in_roi)
-        bpts = configs_filt.bodyparts
+        bpts = configs.get_ref(configs_filt.bodyparts)
+        thresh_mm = configs.get_ref(configs_filt.thresh_mm)
+        tl = configs.get_ref(configs_filt.roi_top_left)
+        tr = configs.get_ref(configs_filt.roi_top_right)
+        bl = configs.get_ref(configs_filt.roi_bottom_left)
+        br = configs.get_ref(configs_filt.roi_bottom_right)
         # Calculating more parameters
-        thresh_px = configs_filt.thresh_mm / px_per_mm
+        thresh_px = thresh_mm / px_per_mm
 
         # Loading in dataframe
-        dlc_df = KeypointsMixin.clean_headings(DFIOMixin.read_feather(dlc_fp))
-        # Checking df
-        KeypointsMixin.check_df(dlc_df)
+        dlc_df = KeypointsMixin.clean_headings(KeypointsMixin.read_feather(dlc_fp))
         # Checking body-centre bodypart exists
         KeypointsMixin.check_bpts_exist(dlc_df, bpts)
         # Getting indivs list
         indivs, _ = KeypointsMixin.get_headings(dlc_df)
 
         # Getting average corner coordinates. Assumes arena does not move.
-        tl = dlc_df[(SINGLE_COL, configs_filt.roi_top_left)].mean()
-        tr = dlc_df[(SINGLE_COL, configs_filt.roi_top_right)].mean()
-        bl = dlc_df[(SINGLE_COL, configs_filt.roi_bottom_left)].mean()
-        br = dlc_df[(SINGLE_COL, configs_filt.roi_bottom_right)].mean()
+        tl = dlc_df[(SINGLE_COL, tl)].mean()
+        tr = dlc_df[(SINGLE_COL, tr)].mean()
+        bl = dlc_df[(SINGLE_COL, bl)].mean()
+        br = dlc_df[(SINGLE_COL, br)].mean()
         # Making roi_df of corners (with the thresh_px buffer)
         roi_df = pd.DataFrame(
             [
@@ -263,7 +266,7 @@ class Analyse:
         )
         # Getting the (x, y, in-roi) df
         idx = pd.IndexSlice
-        res_df = AnalyseHelper.pt_in_roi_df(dlc_df, roi_df, indivs, bpts)
+        res_df = AnalyseMixin.pt_in_roi_df(dlc_df, roi_df, indivs, bpts)
         # Changing column MultiIndex names
         res_df.columns = res_df.columns.set_levels(["x", "y", f_name], level=1)
         # Getting analysis_df
@@ -274,7 +277,7 @@ class Analyse:
 
         # Generating scatterplot
         plot_fp = os.path.join(out_dir, "scatter_plot", f"{name}.png")
-        AnalyseHelper.make_location_scatterplot(res_df, roi_df, plot_fp, f_name)
+        AnalyseMixin.make_location_scatterplot(res_df, roi_df, plot_fp, f_name)
 
         # Summarising and binning analysis_df
         AggAnalyse.summary_binned_behavs(
@@ -283,7 +286,7 @@ class Analyse:
             name,
             fps,
             bins_ls,
-            custom_bins_ls,
+            cbins_ls,
         )
         return outcome
 
@@ -308,25 +311,22 @@ class Analyse:
         out_dir = os.path.join(analysis_dir, f_name)
         # Calculating the deltas (changes in body position) between each frame for the subject
         configs = ExperimentConfigs.read_json(configs_fp)
-        fps, _, _, px_per_mm, bins_ls, custom_bins_ls = (
-            AnalyseHelper.get_analysis_configs(configs)
-        )
+        fps, _, _, px_per_mm, bins_ls, cbins_ls = AnalyseMixin.get_configs(configs)
         configs_filt = Model_speed(**configs.user.analyse.speed)
-        bpts = configs_filt.bodyparts
+        bpts = configs.get_ref(configs_filt.bodyparts)
+        smoothing_sec = configs.get_ref(configs_filt.smoothing_sec)
         # Calculating more parameters
-        smoothing_frames = int(configs_filt.smoothing_sec * fps)
+        smoothing_frames = int(smoothing_sec * fps)
 
         # Loading in dataframe
-        dlc_df = KeypointsMixin.clean_headings(DFIOMixin.read_feather(dlc_fp))
-        # Checking df
-        KeypointsMixin.check_df(dlc_df)
+        dlc_df = KeypointsMixin.clean_headings(KeypointsMixin.read_feather(dlc_fp))
         # Checking body-centre bodypart exists
         KeypointsMixin.check_bpts_exist(dlc_df, bpts)
         # Getting indivs and bpts list
         indivs, _ = KeypointsMixin.get_headings(dlc_df)
 
         # Calculating speed of subject for each frame
-        analysis_df = AnalyseHelper.init_fbf_analysis_df(dlc_df.index)
+        analysis_df = AnalyseMixin.init_df(dlc_df.index)
         dlc_df.index = analysis_df.index
         idx = pd.IndexSlice
         for indiv in indivs:
@@ -358,7 +358,7 @@ class Analyse:
             name,
             fps,
             bins_ls,
-            custom_bins_ls,
+            cbins_ls,
         )
         return outcome
 
@@ -383,25 +383,22 @@ class Analyse:
         out_dir = os.path.join(analysis_dir, f_name)
         # Calculating the deltas (changes in body position) between each frame for the subject
         configs = ExperimentConfigs.read_json(configs_fp)
-        fps, _, _, px_per_mm, bins_ls, custom_bins_ls = (
-            AnalyseHelper.get_analysis_configs(configs)
-        )
+        fps, _, _, px_per_mm, bins_ls, cbins_ls = AnalyseMixin.get_configs(configs)
         configs_filt = Model_social_distance(**configs.user.analyse.social_distance)
-        bpts = configs_filt.bodyparts
+        bpts = configs.get_ref(configs_filt.bodyparts)
+        smoothing_sec = configs.get_ref(configs_filt.smoothing_sec)
         # Calculating more parameters
-        smoothing_frames = int(configs_filt.smoothing_sec * fps)
+        smoothing_frames = int(smoothing_sec * fps)
 
         # Loading in dataframe
-        dlc_df = KeypointsMixin.clean_headings(DFIOMixin.read_feather(dlc_fp))
-        # Checking df
-        KeypointsMixin.check_df(dlc_df)
+        dlc_df = KeypointsMixin.clean_headings(KeypointsMixin.read_feather(dlc_fp))
         # Checking body-centre bodypart exists
         KeypointsMixin.check_bpts_exist(dlc_df, bpts)
         # Getting indivs and bpts list
         indivs, _ = KeypointsMixin.get_headings(dlc_df)
 
         # Calculating speed of subject for each frame
-        analysis_df = AnalyseHelper.init_fbf_analysis_df(dlc_df.index)
+        analysis_df = AnalyseMixin.init_df(dlc_df.index)
         dlc_df.index = analysis_df.index
         idx = pd.IndexSlice
         # Assumes there are only two individuals
@@ -431,7 +428,7 @@ class Analyse:
             name,
             fps,
             bins_ls,
-            custom_bins_ls,
+            cbins_ls,
         )
         return outcome
 
@@ -462,24 +459,26 @@ class Analyse:
         out_dir = os.path.join(analysis_dir, f_name)
         # Calculating the deltas (changes in body position) between each frame for the subject
         configs = ExperimentConfigs.read_json(configs_fp)
-        fps, _, _, px_per_mm, bins_ls, custom_bins_ls = (
-            AnalyseHelper.get_analysis_configs(configs)
-        )
+        fps, _, _, px_per_mm, bins_ls, cbins_ls = AnalyseMixin.get_configs(configs)
         configs_filt = Model_freezing(**configs.user.analyse.freezing)
+        bpts = configs.get_ref(configs_filt.bodyparts)
+        thresh_mm = configs.get_ref(configs_filt.thresh_mm)
+        smoothing_sec = configs.get_ref(configs_filt.smoothing_sec)
+        window_sec = configs.get_ref(configs_filt.window_sec)
         # Calculating more parameters
-        thresh_px = configs_filt.thresh_mm / px_per_mm
-        smoothing_frames = int(configs_filt.smoothing_sec * fps)
-        window_frames = int(np.round(fps * configs_filt.window_sec, 0))
+        thresh_px = thresh_mm / px_per_mm
+        smoothing_frames = int(smoothing_sec * fps)
+        window_frames = int(np.round(fps * window_sec, 0))
 
         # Loading in dataframe
-        dlc_df = KeypointsMixin.clean_headings(DFIOMixin.read_feather(dlc_fp))
-        # Checking df
-        KeypointsMixin.check_df(dlc_df)
+        dlc_df = KeypointsMixin.clean_headings(KeypointsMixin.read_feather(dlc_fp))
+        # Checking body-centre bodypart exists
+        KeypointsMixin.check_bpts_exist(dlc_df, bpts)
         # Getting indivs and bpts list
-        indivs, bpts = KeypointsMixin.get_headings(dlc_df)
+        indivs, _ = KeypointsMixin.get_headings(dlc_df)
 
         # Calculating speed of subject for each frame
-        analysis_df = AnalyseHelper.init_fbf_analysis_df(dlc_df.index)
+        analysis_df = AnalyseMixin.init_df(dlc_df.index)
         dlc_df.index = analysis_df.index
         for indiv in indivs:
             temp_df = pd.DataFrame(index=analysis_df.index)
@@ -523,7 +522,7 @@ class Analyse:
             name,
             fps,
             bins_ls,
-            custom_bins_ls,
+            cbins_ls,
         )
         return outcome
 
@@ -531,32 +530,32 @@ class Analyse:
 class Model_speed(BaseModel):
     """_summary_"""
 
-    smoothing_sec: float
-    bodyparts: list[str]
+    smoothing_sec: float | str
+    bodyparts: list[str] | str
 
 
 class Model_social_distance(BaseModel):
     """_summary_"""
 
-    smoothing_sec: float
-    bodyparts: list[str]
+    smoothing_sec: float | str
+    bodyparts: list[str] | str
 
 
 class Model_freezing(BaseModel):
     """_summary_"""
 
-    window_sec: float
-    thresh_mm: float
-    smoothing_sec: float
+    window_sec: float | str
+    thresh_mm: float | str
+    smoothing_sec: float | str
+    bodyparts: list[str] | str
 
 
 class Model_in_roi(BaseModel):
     """_summary_"""
 
-    thresh_mm: float
-    roi_top_left: str
-    roi_top_right: str
-    roi_bottom_left: str
-    roi_bottom_right: str
-    bodyparts: list[str]
-    bodyparts: list[str]
+    thresh_mm: float | str
+    roi_top_left: str | str
+    roi_top_right: str | str
+    roi_bottom_left: str | str
+    roi_bottom_right: str | str
+    bodyparts: list[str] | str

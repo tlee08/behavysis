@@ -27,7 +27,7 @@ import seaborn as sns
 from behavysis_core.constants import (
     AGG_ANALYSIS_COLUMN_NAMES,
     ANALYSIS_COLUMN_NAMES,
-    ANALYSIS_INDEX_NAMES,
+    ANALYSIS_INDEX_NAME,
 )
 from behavysis_core.data_models.experiment_configs import ExperimentConfigs
 from behavysis_core.mixins.behaviour_mixin import BehaviourMixin
@@ -38,11 +38,11 @@ from behavysis_core.mixins.df_io_mixin import DFIOMixin
 #####################################################################
 
 
-class AnalyseHelper:
+class AnalyseMixin:
     """__summary__"""
 
     @staticmethod
-    def get_analysis_configs(
+    def get_configs(
         configs: ExperimentConfigs,
     ) -> tuple[
         float,
@@ -70,12 +70,12 @@ class AnalyseHelper:
             configs.auto.formatted_vid.width_px,
             configs.auto.formatted_vid.height_px,
             configs.auto.px_per_mm,
-            configs.user.analyse.bins_sec,
-            configs.user.analyse.custom_bins_sec,
+            configs.get_ref(configs.user.analyse.bins_sec),
+            configs.get_ref(configs.user.analyse.custom_bins_sec),
         )
 
     @staticmethod
-    def init_fbf_analysis_df(frame_vect: pd.Series | pd.Index) -> pd.DataFrame:
+    def init_df(frame_vect: pd.Series | pd.Index) -> pd.DataFrame:
         """
         Returning a frame-by-frame analysis_df with the frame number (according to original video)
         as the MultiIndex index, relative to the first element of frame_vect.
@@ -92,9 +92,45 @@ class AnalyseHelper:
             _description_
         """
         return pd.DataFrame(
-            index=pd.MultiIndex.from_arrays((frame_vect,), names=ANALYSIS_INDEX_NAMES),
+            index=pd.Index(frame_vect, name=ANALYSIS_INDEX_NAME),
             columns=pd.MultiIndex.from_tuples((), names=ANALYSIS_COLUMN_NAMES),
         )
+
+    @staticmethod
+    def check_df(df: pd.DataFrame) -> None:
+        """
+        Checks whether the dataframe is in the correct format for the keypoints functions.
+
+        Checks that:
+
+        - There are no null values.
+        - The column levels are correct.
+        - The index levels are correct.
+        """
+        # Checking for null values
+        assert (
+            not df.isnull().values.any()
+        ), "The dataframe contains null values. Be sure to run interpolate_points first."
+        # Checking that the index levels are correct
+        assert (
+            df.index.name == ANALYSIS_INDEX_NAME
+        ), f"The index level is incorrect. They should be {ANALYSIS_INDEX_NAME}"
+        # Checking that the column levels are correct
+        assert (
+            df.columns.names == ANALYSIS_COLUMN_NAMES
+        ), f"The column levels are incorrect. They should be {ANALYSIS_COLUMN_NAMES}."
+
+    @staticmethod
+    def read_feather(fp: str) -> pd.DataFrame:
+        """
+        Reading feather file.
+        """
+        # Reading
+        df = DFIOMixin.read_feather(fp)
+        # Checking
+        AnalyseMixin.check_df(df)
+        # Returning
+        return df
 
     @staticmethod
     def make_location_scatterplot(
@@ -183,7 +219,7 @@ class AnalyseHelper:
         dlc_df: pd.DataFrame, roi_df: pd.DataFrame, indivs: list[str], bpts: list[str]
     ) -> pd.DataFrame:
         """__summary__"""
-        res_df = AnalyseHelper.init_fbf_analysis_df(dlc_df.index)
+        res_df = AnalyseMixin.init_df(dlc_df.index)
         idx = pd.IndexSlice
         for indiv in indivs:
             res_df[(indiv, "x")] = (
@@ -195,7 +231,7 @@ class AnalyseHelper:
             # Determining if the indiv is outside the boundaries
             res_df[(indiv, "in_roi")] = (
                 res_df[indiv]
-                .apply(lambda pt: AnalyseHelper.pt_in_roi(pt, roi_df), axis=1)
+                .apply(lambda pt: AnalyseMixin.pt_in_roi(pt, roi_df), axis=1)
                 .astype(np.int8)
             )
         return res_df
@@ -377,7 +413,7 @@ class AggAnalyse:
         name: str,
         fps: float,
         bins_ls: Optional[list],
-        custom_bins_ls: Optional[list],
+        cbins_ls: Optional[list],
     ) -> str:
         """
         _summary_
@@ -390,7 +426,7 @@ class AggAnalyse:
             summary_func=AggAnalyse.agg_quantitative,
             agg_column="mean",
             bins_ls=bins_ls,
-            custom_bins_ls=custom_bins_ls,
+            cbins_ls=cbins_ls,
         )
 
     @staticmethod
@@ -400,7 +436,7 @@ class AggAnalyse:
         name: str,
         fps: float,
         bins_ls: Optional[list],
-        custom_bins_ls: Optional[list],
+        cbins_ls: Optional[list],
     ) -> str:
         """
         _summary_
@@ -413,7 +449,7 @@ class AggAnalyse:
             summary_func=AggAnalyse.agg_behavs,
             agg_column="bout_dur_total",
             bins_ls=bins_ls,
-            custom_bins_ls=custom_bins_ls,
+            cbins_ls=cbins_ls,
         )
 
     @staticmethod
@@ -425,7 +461,7 @@ class AggAnalyse:
         summary_func: Callable[[pd.DataFrame, float], pd.DataFrame],
         agg_column: str,
         bins_ls: Optional[list],
-        custom_bins_ls: Optional[list],
+        cbins_ls: Optional[list],
     ) -> str:
         """
         _summary_
@@ -451,14 +487,12 @@ class AggAnalyse:
             # Making binned plots
             AggAnalyse.make_binned_plot(binned_df, binned_plot_fp, agg_column)
         # Custom binning analysis_df
-        if custom_bins_ls:
+        if cbins_ls:
             # Making filepaths
             binned_fp = os.path.join(out_dir, "binned_custom", f"{name}.feather")
             binned_plot_fp = os.path.join(out_dir, "binned_custom_plot", f"{name}.png")
             # Making binned df
-            binned_df = AggAnalyse.make_binned(
-                analysis_df, fps, custom_bins_ls, summary_func
-            )
+            binned_df = AggAnalyse.make_binned(analysis_df, fps, cbins_ls, summary_func)
             DFIOMixin.write_feather(binned_df, binned_fp)
             # Making binned plots
             AggAnalyse.make_binned_plot(binned_df, binned_plot_fp, agg_column)

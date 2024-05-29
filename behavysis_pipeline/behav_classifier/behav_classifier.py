@@ -14,11 +14,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
-from behavysis_core.constants import BEHAV_COLUMN_NAMES, BehavColumns
+from behavysis_core.constants import BEHAV_COLUMN_NAMES, BEHAV_INDEX_NAME, BehavColumns
+from behavysis_core.mixins.behaviour_mixin import BehaviourMixin
 from behavysis_core.mixins.df_io_mixin import DFIOMixin
-from behavysis_pipeline.behav_classifier.behav_classifier_configs import (
-    BehavClassifierConfigs,
-)
+from behavysis_core.mixins.keypoints_mixin import KeypointsMixin
 from imblearn.under_sampling import RandomUnderSampler
 from matplotlib.figure import Figure
 from sklearn.ensemble import GradientBoostingClassifier
@@ -27,6 +26,10 @@ from sklearn.metrics import (
     classification_report,
     confusion_matrix,
     precision_recall_fscore_support,
+)
+
+from behavysis_pipeline.behav_classifier.behav_classifier_configs import (
+    BehavClassifierConfigs,
 )
 
 if TYPE_CHECKING:
@@ -142,7 +145,7 @@ class BehavClassifier:
             # Copying X dataframes. NOTE: copying is very slow compared to native operation
             shutil.copyfile(self.get_df_fp(f"x_{i}"), behav_clf.get_df_fp(f"x_{i}"))
             # Selecing y dataframe behav cols and saving to model behav dir
-            y_df = DFIOMixin.read_feather(self.get_df_fp(f"y_{i}"))
+            y_df = BehaviourMixin.read_feather(self.get_df_fp(f"y_{i}"))
             y_df = y_df.loc[:, [behav]]
             DFIOMixin.write_feather(y_df, behav_clf.get_df_fp(f"y_{i}"))
         # Returning BehavClassifier instance of new subdir
@@ -195,7 +198,7 @@ class BehavClassifier:
         Checks if the given behaviour string exists as a behaviour label
         in the `y_all` dataframe.
         """
-        y_all = DFIOMixin.read_feather(self.get_df_fp("y_all"))
+        y_all = BehaviourMixin.read_feather(self.get_df_fp("y_all"))
         behavs_ls = y_all.columns.unique("behaviours")
         if behav not in behavs_ls:
             raise ValueError(f"{behav} is not in the `y_all` dataframe.")
@@ -291,8 +294,8 @@ class BehavClassifier:
         # Making train/test fraction lists in configs json
         self._init_train_test_split()
         # Loading _all dfs
-        x_all = DFIOMixin.read_feather(self.get_df_fp("x_all"))
-        y_all = DFIOMixin.read_feather(self.get_df_fp("y_all"))
+        x_all = KeypointsMixin.read_feather(self.get_df_fp("x_all"))
+        y_all = BehaviourMixin.read_feather(self.get_df_fp("y_all"))
         # Making train/test split
         x_train, x_test = self._make_train_test_split(x_all)
         y_train, y_test = self._make_train_test_split(y_all)
@@ -346,8 +349,8 @@ class BehavClassifier:
         for i in [Datasets.ALL, Datasets.TRAIN]:
             i = i.value
             # Reading in df
-            x_df = pd.read_feather(self.get_df_fp(f"x_{i}"))
-            y_df = pd.read_feather(self.get_df_fp(f"y_{i}"))
+            x_df = KeypointsMixin.read_feather(self.get_df_fp(f"x_{i}"))
+            y_df = BehaviourMixin.read_feather(self.get_df_fp(f"y_{i}"))
             # Preparing ID index to subsample on. These will store the index numbers subsampled on
             index = y_df.index.to_list()  # TODO: try ".values"
             # Preparing y_vals to subsample on. These will store the y values as a 1D array
@@ -409,8 +412,8 @@ class BehavClassifier:
         dataset = Datasets(dataset).value
         # Training model on all data
         # Loading in X/y dfs
-        x_df = DFIOMixin.read_feather(self.get_df_fp(f"x_{dataset}_subs"))
-        y_df = DFIOMixin.read_feather(self.get_df_fp(f"y_{dataset}_subs"))
+        x_df = KeypointsMixin.read_feather(self.get_df_fp(f"x_{dataset}_subs"))
+        y_df = BehaviourMixin.read_feather(self.get_df_fp(f"y_{dataset}_subs"))
         y_vals = y_df[(self.configs.name, BehavColumns.ACTUAL.value)].values
         # Making model
         model = GradientBoostingClassifier(**self.configs.model_params)
@@ -455,13 +458,12 @@ class BehavClassifier:
         probs = model.predict_proba(x_df)[:, 1]
         preds = (probs > self.configs.pcutoff).astype(np.uint8)
         # Making df
-        preds_df = pd.DataFrame(index=x_df.index)
+        preds_df = pd.DataFrame(
+            index=pd.Index(x_df.index, name=BEHAV_INDEX_NAME),
+            columns=pd.MultiIndex.from_tuples((), names=BEHAV_COLUMN_NAMES),
+        )
         preds_df[(self.configs.name, BehavColumns.PROB.value)] = probs
         preds_df[(self.configs.name, BehavColumns.PRED.value)] = preds
-        # Setting column names
-        preds_df.columns = pd.MultiIndex.from_tuples(
-            preds_df.columns, names=BEHAV_COLUMN_NAMES
-        )
         # Returning predicted behavs
         return preds_df
 
@@ -482,11 +484,11 @@ class BehavClassifier:
         """
         dataset = Datasets(dataset).value
         # Loading test X data
-        x_test = DFIOMixin.read_feather(self.get_df_fp(f"x_{Datasets.TEST.value}"))
+        x_test = KeypointsMixin.read_feather(self.get_df_fp(f"x_{Datasets.TEST.value}"))
         # Getting model predictions for evaluation
         eval_df = self.model_predict(x_test, dataset)
         # Adding actual y labels
-        y_test = DFIOMixin.read_feather(self.get_df_fp(f"y_{Datasets.TEST.value}"))
+        y_test = BehaviourMixin.read_feather(self.get_df_fp(f"y_{Datasets.TEST.value}"))
         eval_df[(self.configs.name, BehavColumns.ACTUAL.value)] = y_test[
             (self.configs.name, BehavColumns.ACTUAL.value)
         ].values

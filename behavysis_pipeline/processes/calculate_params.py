@@ -18,7 +18,6 @@ import numpy as np
 import pandas as pd
 from behavysis_core.constants import SINGLE_COL
 from behavysis_core.data_models.experiment_configs import ExperimentConfigs
-from behavysis_core.mixins.df_io_mixin import DFIOMixin
 from behavysis_core.mixins.keypoints_mixin import KeypointsMixin
 from pydantic import BaseModel, ConfigDict
 
@@ -53,24 +52,26 @@ class CalculateParams:
         outcome = ""
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
-        configs_filt = Model_exp_dur(**configs.user.calculate_params.start_frame)
-        bpts = configs_filt.bodyparts
-        window_sec = configs_filt.window_sec
-        pcutoff = configs_filt.pcutoff
+        configs_filt = Model_check_existence(
+            **configs.user.calculate_params.start_frame
+        )
+        bpts = configs.get_ref(configs_filt.bodyparts)
+        window_sec = configs.get_ref(configs_filt.window_sec)
+        pcutoff = configs.get_ref(configs_filt.pcutoff)
         fps = configs.auto.formatted_vid.fps
         # Asserting that the necessary auto configs are valid
         assert fps is not None, "fps is None. Please calculate fps first."
         # Deriving more parameters
         window_frames = int(np.round(fps * window_sec, 0))
         # Loading dataframe
-        dlc_df = DFIOMixin.read_feather(dlc_fp)
+        dlc_df = KeypointsMixin.clean_headings(KeypointsMixin.read_feather(dlc_fp))
         # Getting likehoods of subject (given bpts) existing in each frame
         df_lhoods = calc_likelihoods(dlc_df, bpts, window_frames)
         # Determining start time. Start frame is the first frame of the rolling window's range
         df_lhoods["exists"] = df_lhoods["rolling"] > pcutoff
         # Getting when subject first and last exists in video
         start_frame = 0
-        if np.all(df_lhoods["exists"] == False):
+        if np.all(df_lhoods["exists"] == 0):
             # If subject never exists (i.e. no True values in exist column), then raise warning
             outcome += (
                 "WARNING: The subject was not detected in any frames - using the first frame."
@@ -105,7 +106,7 @@ class CalculateParams:
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
         configs_filt = Model_stop_frame(**configs.user.calculate_params.stop_frame)
-        dur_sec = configs_filt.dur_sec
+        dur_sec = configs.get_ref(configs_filt.dur_sec)
         start_frame = configs.auto.start_frame
         fps = configs.auto.formatted_vid.fps
         auto_stop_frame = configs.auto.formatted_vid.total_frames
@@ -148,24 +149,24 @@ class CalculateParams:
         outcome = ""
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
-        configs_filt = Model_exp_dur(**configs.user.calculate_params.exp_dur)
-        bpts = configs_filt.bodyparts
-        window_sec = configs_filt.window_sec
-        pcutoff = configs_filt.pcutoff
+        configs_filt = Model_check_existence(**configs.user.calculate_params.exp_dur)
+        bpts = configs.get_ref(configs_filt.bodyparts)
+        window_sec = configs.get_ref(configs_filt.window_sec)
+        pcutoff = configs.get_ref(configs_filt.pcutoff)
         fps = configs.auto.formatted_vid.fps
         # Asserting that the necessary auto configs are valid
         assert fps is not None, "fps is None. Please calculate fps first."
         # Deriving more parameters
         window_frames = int(np.round(fps * window_sec, 0))
         # Loading dataframe
-        dlc_df = DFIOMixin.read_feather(dlc_fp)
+        dlc_df = KeypointsMixin.clean_headings(KeypointsMixin.read_feather(dlc_fp))
         # Getting likehoods of subject (given bpts) existing in each frame
         df_lhoods = calc_likelihoods(dlc_df, bpts, window_frames)
         # Determining start time. Start frame is the first frame of the rolling window's range
         df_lhoods["exists"] = df_lhoods["rolling"] > pcutoff
         # Getting when subject first and last exists in video
-        exp_dur = 0
-        if np.all(df_lhoods["exists"] == False):
+        exp_dur_frames = 0
+        if np.all(df_lhoods["exists"] == 0):
             # If subject never exists (i.e. no True values in exist column), then raise warning
             outcome += (
                 "WARNING: The subject was not detected in any frames - using the first frame."
@@ -212,12 +213,12 @@ class CalculateParams:
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
         configs_filt = Model_px_per_mm(**configs.user.calculate_params.px_per_mm)
-        pt_a = configs_filt.pt_a
-        pt_b = configs_filt.pt_b
-        pcutoff = configs_filt.pcutoff
-        dist_mm = configs_filt.dist_mm
+        pt_a = configs.get_ref(configs_filt.pt_a)
+        pt_b = configs.get_ref(configs_filt.pt_b)
+        pcutoff = configs.get_ref(configs_filt.pcutoff)
+        dist_mm = configs.get_ref(configs_filt.dist_mm)
         # Loading dataframe
-        dlc_df = KeypointsMixin.clean_headings(DFIOMixin.read_feather(dlc_fp))
+        dlc_df = KeypointsMixin.clean_headings(KeypointsMixin.read_feather(dlc_fp))
         # Imputing missing values with 0 (only really relevant for "likelihood" columns)
         dlc_df = dlc_df.fillna(0)
         # Checking that the two reference points are valid
@@ -251,6 +252,7 @@ def calc_likelihoods(
     bpts: list,
     window_frames: int,
 ):
+    """__summary__"""
     # Imputing missing values with 0 (only really relevant for "likelihood" columns)
     df = df.fillna(0)
     # Checking that the two reference points are valid
@@ -258,7 +260,7 @@ def calc_likelihoods(
     # Calculating likelihood of subject (given bpts) existing.
     idx = pd.IndexSlice
     df_lhoods = pd.DataFrame(index=df.index)
-    df_bpts_lhoods = df.loc[:, idx[:, :, bpts, "likelihood"]]
+    df_bpts_lhoods = df.loc[:, idx[:, bpts, "likelihood"]]
     df_lhoods["current"] = df_bpts_lhoods.apply(np.nanmedian, axis=1)
     # Calculating likelihood of subject existing over time window
     df_lhoods["rolling"] = (
@@ -268,32 +270,22 @@ def calc_likelihoods(
     return df_lhoods
 
 
-class Model_start_frame(BaseModel):
-    """_summary_"""
-
-    model_config = ConfigDict(extra="forbid")
-
-    bodyparts: list[str] = []
-    window_sec: float = 0
-    pcutoff: float = 0
-
-
 class Model_stop_frame(BaseModel):
     """_summary_"""
 
     model_config = ConfigDict(extra="forbid")
 
-    dur_sec: float = 0
+    dur_sec: float | str = 0
 
 
-class Model_exp_dur(BaseModel):
+class Model_check_existence(BaseModel):
     """__summary__"""
 
     model_config = ConfigDict(extra="forbid")
 
-    bodyparts: list[str] = []
-    window_sec: float = 0
-    pcutoff: float = 0
+    bodyparts: list[str] | str = []
+    window_sec: float | str = 0
+    pcutoff: float | str = 0
 
 
 class Model_px_per_mm(BaseModel):
@@ -303,5 +295,5 @@ class Model_px_per_mm(BaseModel):
 
     pt_a: str = "pt_a"
     pt_b: str = "pt_b"
-    pcutoff: int = 0
-    dist_mm: float = 0
+    pcutoff: int | str = 0
+    dist_mm: float | str = 0

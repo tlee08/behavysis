@@ -1,8 +1,5 @@
-import functools
 import os
-from typing import Callable
 
-import pandas as pd
 from behavysis_core.constants import BEHAV_COLUMN_NAMES, BehavColumns
 from behavysis_core.data_models.experiment_configs import ExperimentConfigs
 from behavysis_core.mixins.behaviour_mixin import BehaviourMixin
@@ -44,22 +41,23 @@ class Export:
         """__summary__"""
         # Reading the configs file
         configs = ExperimentConfigs.read_json(configs_fp)
-        user_behavs = configs.user.classify_behaviours.user_behavs
+        user_behavs = configs.get_ref(configs.user.classify_behaviours.user_behavs)
         # Reading file
-        df = DFIOMixin.read_feather(in_fp)
+        in_df = BehaviourMixin.read_feather(in_fp)
         # Adding in behaviour columns
-        df = BehaviourMixin.frames_add_behaviour(df, user_behavs)
+        in_df = BehaviourMixin.frames_add_behaviour(in_df, user_behavs)
         # Keeping the `actual`, `pred`, and all user_behavs columns
+        out_df = BehaviourMixin.init_df(in_df.index)
         a = BehavColumns.ACTUAL.value
         p = BehavColumns.PRED.value
-        for behav in behavs:
-            analysis_df[(behav, a)] = behavs_df[(behav, a)].values
-            analysis_df[(behav, p)] = behavs_df[(behav, p)].values
+        for behav in in_df.columns.unique(BEHAV_COLUMN_NAMES[0]):
+            out_df[(behav, a)] = in_df[(behav, a)].values
+            out_df[(behav, p)] = in_df[(behav, p)].values
             for i in user_behavs:
-                analysis_df[(behav, i)] = behavs_df[(behav, i)].values
+                out_df[(behav, i)] = in_df[(behav, i)].values
         # Ordering by "behaviours" level
-        df = df.sort_index(axis=1, level="behaviours")
+        out_df = out_df.sort_index(axis=1, level="behaviours")
         # Writing file
-        DFIOMixin.write_feather(df, out_fp)
+        DFIOMixin.write_feather(out_df, out_fp)
         # Returning outcome
         return "prediced_behavs to scored_behavs\n"

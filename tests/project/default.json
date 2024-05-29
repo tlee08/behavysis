@@ -14,37 +14,19 @@
       "start_frame": {
         "window_sec": 1,
         "pcutoff": 0.9,
-        "bodyparts": [
-          "LeftEar",
-          "RightEar",
-          "Nose",
-          "BodyCentre",
-          "LeftFlankMid",
-          "RightFlankMid",
-          "TailBase1",
-          "TailTip4"
-        ]
+        "bodyparts": "--bodyparts-simba"
       },
       "exp_dur": {
         "window_sec": 1,
         "pcutoff": 0.9,
-        "bodyparts": [
-          "LeftEar",
-          "RightEar",
-          "Nose",
-          "BodyCentre",
-          "LeftFlankMid",
-          "RightFlankMid",
-          "TailBase1",
-          "TailTip4"
-        ]
+        "bodyparts": "--bodyparts-simba"
       },
       "stop_frame": {
         "dur_sec": 600
       },
       "px_per_mm": {
-        "pt_a": "TopLeft",
-        "pt_b": "TopRight",
+        "pt_a": "--tl",
+        "pt_b": "--tr",
         "dist_mm": 400
       }
     },
@@ -53,14 +35,7 @@
         "pcutoff": 0.5
       },
       "bodycentre": {
-        "bodyparts": [
-          "LeftFlankMid",
-          "BodyCentre",
-          "RightFlankMid",
-          "LeftFlankRear",
-          "RightFlankRear",
-          "TailBase1"
-        ]
+        "bodyparts": "--bodyparts-centre"
       },
       "refine_ids": {
         "marked": "mouse1marked",
@@ -68,14 +43,7 @@
         "marking": "AnimalColourMark",
         "window_sec": 0.5,
         "metric": "rolling",
-        "bodyparts": [
-          "LeftFlankMid",
-          "BodyCentre",
-          "RightFlankMid",
-          "LeftFlankRear",
-          "RightFlankRear",
-          "TailBase1"
-        ]
+        "bodyparts": "--bodyparts-centre"
       }
     },
     "evaluate": {
@@ -92,16 +60,7 @@
     },
     "extract_features": {
       "individuals": ["mouse1marked", "mouse2unmarked"],
-      "bodyparts": [
-        "LeftEar",
-        "RightEar",
-        "Nose",
-        "BodyCentre",
-        "LeftFlankMid",
-        "RightFlankMid",
-        "TailBase1",
-        "TailTip4"
-      ]
+      "bodyparts": "--bodyparts-simba"
     },
     "classify_behaviours": {
       "models": [
@@ -116,71 +75,68 @@
     "analyse": {
       "thigmotaxis": {
         "thresh_mm": 50,
-        "roi_top_left": "TopLeft",
-        "roi_top_right": "TopRight",
-        "roi_bottom_left": "BottomLeft",
-        "roi_bottom_right": "BottomRight",
-        "bodyparts": [
-          "LeftFlankMid",
-          "BodyCentre",
-          "RightFlankMid",
-          "LeftFlankRear",
-          "RightFlankRear",
-          "TailBase1"
-        ]
+        "roi_top_left": "--tl",
+        "roi_top_right": "--tr",
+        "roi_bottom_left": "--bl",
+        "roi_bottom_right": "--br",
+        "bodyparts": "--bodyparts-centre"
       },
       "center_crossing": {
         "thresh_mm": 125,
-        "roi_top_left": "TopLeft",
-        "roi_top_right": "TopRight",
-        "roi_bottom_left": "BottomLeft",
-        "roi_bottom_right": "BottomRight",
-        "bodyparts": [
-          "LeftFlankMid",
-          "BodyCentre",
-          "RightFlankMid",
-          "LeftFlankRear",
-          "RightFlankRear",
-          "TailBase1"
-        ]
+        "roi_top_left": "--tl",
+        "roi_top_right": "--tr",
+        "roi_bottom_left": "--bl",
+        "roi_bottom_right": "--br",
+        "bodyparts": "--bodyparts-centre"
       },
       "in_roi": {
         "thresh_mm": 5,
-        "roi_top_left": "TopLeft",
-        "roi_top_right": "TopRight",
-        "roi_bottom_left": "BottomLeft",
-        "roi_bottom_right": "BottomRight",
+        "roi_top_left": "--tl",
+        "roi_top_right": "--tr",
+        "roi_bottom_left": "--bl",
+        "roi_bottom_right": "--br",
         "bodyparts": ["Nose"]
       },
       "speed": {
         "smoothing_sec": 1,
-        "bodyparts": [
-          "LeftFlankMid",
-          "BodyCentre",
-          "RightFlankMid",
-          "LeftFlankRear",
-          "RightFlankRear",
-          "TailBase1"
-        ]
+        "bodyparts": "--bodyparts-centre"
       },
       "social_distance": {
         "smoothing_sec": 1,
-        "bodyparts": [
-          "LeftFlankMid",
-          "BodyCentre",
-          "RightFlankMid",
-          "LeftFlankRear",
-          "RightFlankRear",
-          "TailBase1"
-        ]
+        "bodyparts": "--bodyparts-centre"
       },
       "freezing": {
         "window_sec": 2,
         "thresh_mm": 5,
-        "smoothing_sec": 0.2
+        "smoothing_sec": 0.2,
+        "bodyparts": "--bodyparts-simba"
       },
       "bins_sec": [30, 60, 120, 300],
       "custom_bins_sec": [60, 120, 300, 600]
     }
+  },
+  "ref": {
+    "bodyparts-centre": [
+      "LeftFlankMid",
+      "BodyCentre",
+      "RightFlankMid",
+      "LeftFlankRear",
+      "RightFlankRear",
+      "TailBase1"
+    ],
+    "bodyparts-simba": [
+      "LeftEar",
+      "RightEar",
+      "Nose",
+      "BodyCentre",
+      "LeftFlankMid",
+      "RightFlankMid",
+      "TailBase1",
+      "TailTip4"
+    ],
+    "tl": "TopLeft",
+    "tr": "TopRight",
+    "bl": "BottomLeft",
+    "br": "BottomRight"
   }
 }

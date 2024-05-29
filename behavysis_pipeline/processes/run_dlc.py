@@ -25,6 +25,7 @@ import os
 import re
 
 import pandas as pd
+from behavysis_core.constants import DLC_COLUMN_NAMES, DLC_INDEX_NAME
 from behavysis_core.data_models.experiment_configs import ExperimentConfigs
 from behavysis_core.mixins.df_io_mixin import DFIOMixin
 from behavysis_core.mixins.diagnostics_mixin import DiagnosticsMixin
@@ -58,7 +59,7 @@ class RunDLC:
 
         # Getting dlc_config_path
         configs = ExperimentConfigs.read_json(configs_fp)
-        dlc_config_path = configs.user.run_dlc.dlc_config_path
+        dlc_config_path = configs.get_ref(configs.user.run_dlc.dlc_config_path)
         # Derive more parameters
         dlc_out_dir = os.path.join(temp_dir, f"dlc_{gputouse}")
         out_dir = os.path.dirname(out_fp)
@@ -78,7 +79,6 @@ class RunDLC:
         # Exporting the h5 to feather the out_dir
         export_dlc_to_feather(in_fp, dlc_out_dir, out_dir)
         IOMixin.silent_rm(dlc_out_dir)
-        # clean_raw_dlc_files(in_fp, dlc_out_dir, out_dir)
 
         return outcome
 
@@ -148,26 +148,6 @@ class RunDLC:
         return outcome
 
 
-def export_dlc_to_feather(name: str, in_dir: str, out_dir: str) -> str:
-    """
-    __summary__
-    """
-    # Get name
-    name = IOMixin.get_name(name)
-    # Get the corresponding .h5 filename
-    name_fp_ls = [i for i in os.listdir(in_dir) if re.search(rf"^{name}DLC.*\.h5$", i)]
-    if len(name_fp_ls) == 0:
-        print(f"No .h5 file found for {name}.")
-    elif len(name_fp_ls) == 1:
-        name_fp = os.path.join(in_dir, name_fp_ls[0])
-        # Reading the .h5 file
-        df = pd.DataFrame(pd.read_hdf(name_fp))
-        # Writing the .feather file
-        DFIOMixin.write_feather(df, os.path.join(out_dir, f"{name}.feather"))
-    else:
-        raise ValueError(f"Multiple .h5 files found for {name}.")
-
-
 def subproc_run_dlc(
     dlc_config_path: str,
     in_fp_ls: list[str],
@@ -217,46 +197,32 @@ for video in {in_fp_ls}:
         "python",
         script_fp,
     ]
-    print(" ".join(cmd))
     # SubprocMixin.run_subproc_fstream(cmd)
     SubprocMixin.run_subproc_console(cmd)
     # Removing the script file
     IOMixin.silent_rm(script_fp)
 
 
-def clean_raw_dlc_files(in_fp, dlc_out_dir, out_dir: str) -> str:
+def export_dlc_to_feather(name: str, in_dir: str, out_dir: str) -> str:
     """
-    Cleaning up the DLC files for the given filepath.
-    This involves:
-    - Converting the corresponding outputted .h5 dataframe to a .feather file.
-    - Removing all other corresponding files in the `out_fp` directory.
-
-    Parameters
-    ----------
-    out_fp : str
-        _description_
-
-    Returns
-    -------
-    str
-        _description_
+    __summary__
     """
-    outcome = ""
-    # Renaming files corresponding to the experiment
-    name = IOMixin.get_name(in_fp)
-
-    # Iterating through all files in the dlc_out_dir directory
-    for fp in os.listdir(dlc_out_dir):
-        # Looking at only files corresponding to the experiment (by name)
-        if re.search(rf"^{name}DLC", fp):
-            # If the file is a .h5 file
-            if re.search(r"\.h5$", fp):
-                # copying file to dlc folder
-                df = pd.DataFrame(pd.read_hdf(os.path.join(dlc_out_dir, fp)))
-                DFIOMixin.write_feather(df, os.path.join(out_dir, f"{name}.feather"))
-            # Deleting original DLC file
-            IOMixin.silent_rm(os.path.join(dlc_out_dir, fp))
-    outcome += (
-        "DLC output files have been renamed and placed in corresponding folders.\n"
-    )
-    return outcome
+    # Get name
+    name = IOMixin.get_name(name)
+    # Get the corresponding .h5 filename
+    name_fp_ls = [i for i in os.listdir(in_dir) if re.search(rf"^{name}DLC.*\.h5$", i)]
+    if len(name_fp_ls) == 0:
+        print(f"No .h5 file found for {name}.")
+    elif len(name_fp_ls) == 1:
+        name_fp = os.path.join(in_dir, name_fp_ls[0])
+        # Reading the .h5 file
+        df = pd.DataFrame(pd.read_hdf(name_fp))
+        # Setting the column and index level names
+        df.index.name = DLC_INDEX_NAME
+        df.columns.names = DLC_COLUMN_NAMES
+        # Imputing na values with 0
+        df = df.fillna(0)
+        # Writing the .feather file
+        DFIOMixin.write_feather(df, os.path.join(out_dir, f"{name}.feather"))
+    else:
+        raise ValueError(f"Multiple .h5 files found for {name}.")

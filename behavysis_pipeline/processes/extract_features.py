@@ -3,7 +3,6 @@ _summary_
 """
 
 import os
-import shutil
 
 import pandas as pd
 from behavysis_core.data_models.experiment_configs import ExperimentConfigs
@@ -27,6 +26,8 @@ from behavysis_core.mixins.subproc_mixin import SubprocMixin
 
 
 class ExtractFeatures:
+    """__summary__"""
+
     @staticmethod
     def extract_features(
         dlc_fp: str,
@@ -73,12 +74,13 @@ class ExtractFeatures:
         # Preparing dlc dfs for input to SimBA project
         os.makedirs(simba_in_dir, exist_ok=True)
         simba_in_fp = os.path.join(simba_in_dir, f"{name}.csv")
-        # TODO: order mousemarked and mouseunmarked correctly as 1 and 2
         # Selecting bodyparts for SimBA (8 bpts, 2 indivs)
-        df = DFIOMixin.read_feather(dlc_fp)
+        df = KeypointsMixin.read_feather(dlc_fp)
         df = select_cols(df, configs_fp)
         # Saving dlc frame to place in the SimBA features extraction df
         index = df.index
+        # Need to remove index name for SimBA to import correctly
+        df.index.name = None
         # Saving as csv
         df.to_csv(simba_in_fp)
         # Removing simba folder (if it exists)
@@ -126,8 +128,8 @@ def select_cols(
     # Getting necessary config parameters
     configs = ExperimentConfigs.read_json(configs_fp)
     configs_filt = configs.user.extract_features
-    indivs = configs_filt.individuals
-    bpts = configs_filt.bodyparts
+    indivs = configs.get_ref(configs_filt.individuals)
+    bpts = configs.get_ref(configs_filt.bodyparts)
     # Checking that the bodyparts are all valid
     KeypointsMixin.check_bpts_exist(df, bpts)
     # Selecting given columns

@@ -11,7 +11,13 @@ from typing import Any, Callable
 import numpy as np
 import pandas as pd
 import seaborn as sns
-from behavysis_core.constants import DIAGNOSTICS_DIR, STR_DIV, TEMP_DIR, Folders
+from behavysis_core.constants import (
+    ANALYSIS_DIR,
+    DIAGNOSTICS_DIR,
+    STR_DIV,
+    TEMP_DIR,
+    Folders,
+)
 from behavysis_core.data_models.experiment_configs import ConfigsAuto, ExperimentConfigs
 from behavysis_core.mixins.df_io_mixin import DFIOMixin
 from behavysis_core.mixins.io_mixin import IOMixin
@@ -373,7 +379,8 @@ class Project:
         """
         Batch processing for corresponding [Experiment method](experiment.md#behavysis_pipeline.pipeline.Experiment.classify_behaviours)
         """
-        # TODO: handle reading the model file whilst in multiprocessing. Current fix is single processing.
+        # TODO: handle reading the model file whilst in multiprocessing.
+        # Current fix is single processing.
         nprocs = self.nprocs
         self.nprocs = 1
         method = Experiment.classify_behaviours
@@ -411,7 +418,7 @@ class Project:
         """
         method = Experiment.analyse
         self._process_scaffold(method, *args, **kwargs)
-    
+
     @functools.wraps(Experiment.behav_analyse)
     def behav_analyse(self, *args, **kwargs) -> None:
         """
@@ -458,45 +465,6 @@ class Project:
         os.makedirs(os.path.split(fp)[0], exist_ok=True)
         # Writing diagnostics file
         df.to_csv(fp)
-
-    #####################################################################
-    #                CONFIGS DIAGONOSTICS METHODS
-    #####################################################################
-
-    def collate_configs_auto(self) -> None:
-        """
-        Collates the auto fields of the configs of all experiments into a DataFrame.
-        """
-        # Getting all the auto field keys
-        auto_field_keys = ConfigsAuto.get_field_names(ConfigsAuto)
-        # Making a DataFrame to store all the auto fields for each experiment
-        df_configs = pd.DataFrame(
-            index=[exp.name for exp in self.get_experiments()],
-            columns=["_".join(i) for i in auto_field_keys],
-        )
-        # Collating all the auto fields for each experiment
-        for exp in self.get_experiments():
-            configs = ExperimentConfigs.read_json(exp.get_fp("0_configs"))
-            for i in auto_field_keys:
-                val = configs.auto
-                for j in i:
-                    val = getattr(val, j)
-                df_configs.loc[exp.name, "_".join(i)] = val
-        # Saving the collated auto fields DataFrame to diagnostics folder
-        self.save_diagnostics("collated_configs_auto", df_configs)
-
-        # Making and saving histogram plots of all the auto fields
-        g = sns.FacetGrid(
-            data=df_configs.fillna(-1).melt(), col="variable", sharex=False, col_wrap=4
-        )
-        g.map(sns.histplot, "value", bins=10)
-        g.set_titles("{col_name}")
-        g.savefig(
-            os.path.join(
-                self.root_dir, DIAGNOSTICS_DIR, "collated_configs_auto_hist.png"
-            )
-        )
-        g.figure.clf()
 
     #####################################################################
     #               IMPORT EXPERIMENTS METHODS
@@ -571,6 +539,45 @@ class Project:
         self.save_diagnostics("import_experiments", dd_df)
 
     #####################################################################
+    #                CONFIGS DIAGONOSTICS METHODS
+    #####################################################################
+
+    def collate_configs_auto(self) -> None:
+        """
+        Collates the auto fields of the configs of all experiments into a DataFrame.
+        """
+        # Getting all the auto field keys
+        auto_field_keys = ConfigsAuto.get_field_names(ConfigsAuto)
+        # Making a DataFrame to store all the auto fields for each experiment
+        df_configs = pd.DataFrame(
+            index=[exp.name for exp in self.get_experiments()],
+            columns=["_".join(i) for i in auto_field_keys],
+        )
+        # Collating all the auto fields for each experiment
+        for exp in self.get_experiments():
+            configs = ExperimentConfigs.read_json(exp.get_fp("0_configs"))
+            for i in auto_field_keys:
+                val = configs.auto
+                for j in i:
+                    val = getattr(val, j)
+                df_configs.loc[exp.name, "_".join(i)] = val
+        # Saving the collated auto fields DataFrame to diagnostics folder
+        self.save_diagnostics("collated_configs_auto", df_configs)
+
+        # Making and saving histogram plots of all the auto fields
+        g = sns.FacetGrid(
+            data=df_configs.fillna(-1).melt(), col="variable", sharex=False, col_wrap=4
+        )
+        g.map(sns.histplot, "value", bins=10)
+        g.set_titles("{col_name}")
+        g.savefig(
+            os.path.join(
+                self.root_dir, DIAGNOSTICS_DIR, "collated_configs_auto_hist.png"
+            )
+        )
+        g.figure.clf()
+
+    #####################################################################
     #            COMBINING ANALYSIS DATA ACROSS EXPS METHODS
     #####################################################################
 
@@ -586,11 +593,11 @@ class Project:
 
         # AGGREGATING BINNED DATA
         # NOTE: need a more robust way of getting the list of bin sizes
-        analysis_dir = os.path.join(self.root_dir, Folders.ANALYSIS.value)
+        analysis_dir = os.path.join(self.root_dir, ANALYSIS_DIR)
         configs = ExperimentConfigs.read_json(
             self.get_experiments()[0].get_fp("0_configs")
         )
-        bin_sizes_sec = configs.user.analyse.bins_sec
+        bin_sizes_sec = configs.get_ref(configs.user.analyse.bins_sec)
         bin_sizes_sec = np.append(bin_sizes_sec, "custom")
         # Searching through all the analysis subdir
         for i in os.listdir(analysis_dir):
@@ -627,7 +634,7 @@ class Project:
         # dd_df = pd.DataFrame()
 
         # AGGREGATING SUMMARY DATA
-        analysis_dir = os.path.join(self.root_dir, Folders.ANALYSIS.value)
+        analysis_dir = os.path.join(self.root_dir, ANALYSIS_DIR)
         # Searching through all the analysis subdir
         for i in os.listdir(analysis_dir):
             if i == "aggregate_analysis":
