@@ -89,6 +89,8 @@ class ExtractFeatures:
         df = pd.read_csv(simba_out_fp, header=0, index_col=0)
         # Setting index to same as dlc preprocessed df
         df.index = index
+        # TODO: check df
+        # ...
         # Saving SimBA extracted features df as feather
         DFIOMixin.write_feather(df, out_fp)
         # Removing temp folders (simba_in_dir, simba_dir)

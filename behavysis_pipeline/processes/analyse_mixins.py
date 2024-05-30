@@ -30,7 +30,7 @@ from behavysis_core.constants import (
     ANALYSIS_INDEX_NAME,
 )
 from behavysis_core.data_models.experiment_configs import ExperimentConfigs
-from behavysis_core.mixins.behaviour_mixin import BehaviourMixin
+from behavysis_core.mixins.behav_mixin import BehavMixin
 from behavysis_core.mixins.df_io_mixin import DFIOMixin
 
 #####################################################################
@@ -305,7 +305,7 @@ class AggAnalyse:
         # Getting summary stats for each individual
         for name, vect in analysis_df.items():
             # Getting duration of each behav bout
-            bouts = BehaviourMixin.vect_2_bouts(vect == 1)["dur"]
+            bouts = BehavMixin.vect_2_bouts(vect == 1)["dur"]
             # Getting bout frequency (before it is overwritten if empty)
             bout_freq = bouts.shape[0]
             # Handling edge case where bouts is empty

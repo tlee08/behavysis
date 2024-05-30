@@ -14,8 +14,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
-from behavysis_core.constants import BEHAV_COLUMN_NAMES, BEHAV_INDEX_NAME, BehavColumns
-from behavysis_core.mixins.behaviour_mixin import BehaviourMixin
+from behavysis_core.constants import (
+    BEHAV_COLUMN_NAMES,
+    DLC_COLUMN_NAMES,
+    DLC_INDEX_NAME,
+    BehavColumns,
+)
+from behavysis_core.mixins.behav_mixin import BehavMixin
 from behavysis_core.mixins.df_io_mixin import DFIOMixin
 from behavysis_core.mixins.keypoints_mixin import KeypointsMixin
 from imblearn.under_sampling import RandomUnderSampler
@@ -45,6 +50,10 @@ class Datasets(Enum):
 X = "X"
 Y = "y"
 SUBSAMPLED = "sub"
+
+COMB_INDEX_NAMES = ["experiments", "frames"]
+COMB_X_COLUMN_NAME = "features"
+COMB_Y_COLUMN_NAMES = BEHAV_COLUMN_NAMES
 
 
 class BehavClassifier:
@@ -109,6 +118,64 @@ class BehavClassifier:
         """Returns the model's root directory"""
         return os.path.split(self.configs_fp)[0]
 
+    @staticmethod
+    def check_comb_x_df(df: pd.DataFrame) -> None:
+        """
+        Checks whether the dataframe is in the correct format for the combined
+        keypoints functions.
+        """
+        # Checking for null values
+        assert (
+            not df.isnull().values.any()
+        ), "The dataframe contains null values. Be sure to run interpolate_points first."
+        # Checking that the index levels are correct
+        assert (
+            df.index.names == COMB_INDEX_NAMES
+        ), f"The index level is incorrect. They should be {COMB_INDEX_NAMES}"
+        # Checking that the column levels are correct
+        assert (
+            df.columns.names == COMB_X_COLUMN_NAME
+        ), f"The column levels are incorrect. They should be {COMB_X_COLUMN_NAME}."
+
+    @staticmethod
+    def check_comb_y_df(df: pd.DataFrame) -> None:
+        """
+        Checks whether the dataframe is in the correct format for the combined
+        keypoints functions.
+        """
+        # Checking for null values
+        assert (
+            not df.isnull().values.any()
+        ), "The dataframe contains null values. Be sure to run interpolate_points first."
+        # Checking that the index levels are correct
+        assert (
+            df.index.names == COMB_INDEX_NAMES
+        ), f"The index level is incorrect. They should be {COMB_INDEX_NAMES}"
+        # Checking that the column levels are correct
+        assert (
+            df.columns.names == COMB_Y_COLUMN_NAMES
+        ), f"The column levels are incorrect. They should be {COMB_Y_COLUMN_NAMES}."
+
+    @staticmethod
+    def read_comb_x_feather(fp: str) -> pd.DataFrame:
+        """Reading feather file."""
+        # Reading
+        df = DFIOMixin.read_feather(fp)
+        # Checking
+        BehavClassifier.check_comb_x_df(df)
+        # Returning
+        return df
+
+    @staticmethod
+    def read_comb_y_feather(fp: str) -> pd.DataFrame:
+        """Reading feather file."""
+        # Reading
+        df = DFIOMixin.read_feather(fp)
+        # Checking
+        BehavClassifier.check_comb_y_df(df)
+        # Returning
+        return df
+
     def create_behav_model_subdir(self, behav: str):
         """
         Making model subdir for given behaviour.
@@ -145,7 +212,7 @@ class BehavClassifier:
             # Copying X dataframes. NOTE: copying is very slow compared to native operation
             shutil.copyfile(self.get_df_fp(f"x_{i}"), behav_clf.get_df_fp(f"x_{i}"))
             # Selecing y dataframe behav cols and saving to model behav dir
-            y_df = BehaviourMixin.read_feather(self.get_df_fp(f"y_{i}"))
+            y_df = BehavClassifier.read_comb_y_feather(self.get_df_fp(f"y_{i}"))
             y_df = y_df.loc[:, [behav]]
             DFIOMixin.write_feather(y_df, behav_clf.get_df_fp(f"y_{i}"))
         # Returning BehavClassifier instance of new subdir
@@ -198,7 +265,7 @@ class BehavClassifier:
         Checks if the given behaviour string exists as a behaviour label
         in the `y_all` dataframe.
         """
-        y_all = BehaviourMixin.read_feather(self.get_df_fp("y_all"))
+        y_all = BehavClassifier.read_comb_y_feather(self.get_df_fp("y_all"))
         behavs_ls = y_all.columns.unique("behaviours")
         if behav not in behavs_ls:
             raise ValueError(f"{behav} is not in the `y_all` dataframe.")
@@ -260,6 +327,9 @@ class BehavClassifier:
         # Select only rows that exist in both x_all and y_all (like an inner join)
         x_all = x_all[x_all.index.isin(y_all.index)]
         y_all = y_all[y_all.index.isin(x_all.index)]
+        # Checking x and y dfs
+        BehavClassifier.check_comb_x_df(x_all)
+        BehavClassifier.check_comb_y_df(y_all)
         # Sorting index and saving to output
         DFIOMixin.write_feather(x_all.sort_index(), self.get_df_fp("x_all"))
         DFIOMixin.write_feather(y_all.sort_index(), self.get_df_fp("y_all"))
@@ -271,16 +341,15 @@ class BehavClassifier:
         """
         return pd.concat(
             [
-                self._combine_dfs_worker(os.path.join(in_dir, f"{i}.feather"), i)
-                for i in names_ls
+                pd.concat(
+                    [DFIOMixin.read_feather(os.path.join(in_dir, f"{name}.feather"))],
+                    keys=[name],
+                    names=["experiments"],
+                    axis=0,
+                )
+                for name in names_ls
             ],
             axis=0,
-        )
-
-    def _combine_dfs_worker(self, fp: str, name: str) -> pd.DataFrame:
-        """Add the name of the experiment to the index of the dataframe."""
-        return pd.concat(
-            [DFIOMixin.read_feather(fp)], keys=[name], names=["experiments"], axis=0
         )
 
     #################################################
@@ -294,8 +363,8 @@ class BehavClassifier:
         # Making train/test fraction lists in configs json
         self._init_train_test_split()
         # Loading _all dfs
-        x_all = KeypointsMixin.read_feather(self.get_df_fp("x_all"))
-        y_all = BehaviourMixin.read_feather(self.get_df_fp("y_all"))
+        x_all = BehavClassifier.read_comb_x_feather(self.get_df_fp("x_all"))
+        y_all = BehavClassifier.read_comb_y_feather(self.get_df_fp("y_all"))
         # Making train/test split
         x_train, x_test = self._make_train_test_split(x_all)
         y_train, y_test = self._make_train_test_split(y_all)
@@ -349,8 +418,8 @@ class BehavClassifier:
         for i in [Datasets.ALL, Datasets.TRAIN]:
             i = i.value
             # Reading in df
-            x_df = KeypointsMixin.read_feather(self.get_df_fp(f"x_{i}"))
-            y_df = BehaviourMixin.read_feather(self.get_df_fp(f"y_{i}"))
+            x_df = BehavClassifier.read_comb_x_feather(self.get_df_fp(f"x_{i}"))
+            y_df = BehavClassifier.read_comb_y_feather(self.get_df_fp(f"y_{i}"))
             # Preparing ID index to subsample on. These will store the index numbers subsampled on
             index = y_df.index.to_list()  # TODO: try ".values"
             # Preparing y_vals to subsample on. These will store the y values as a 1D array
@@ -412,8 +481,8 @@ class BehavClassifier:
         dataset = Datasets(dataset).value
         # Training model on all data
         # Loading in X/y dfs
-        x_df = KeypointsMixin.read_feather(self.get_df_fp(f"x_{dataset}_subs"))
-        y_df = BehaviourMixin.read_feather(self.get_df_fp(f"y_{dataset}_subs"))
+        x_df = BehavClassifier.read_comb_x_feather(self.get_df_fp(f"x_{dataset}_subs"))
+        y_df = BehavClassifier.read_comb_y_feather(self.get_df_fp(f"y_{dataset}_subs"))
         y_vals = y_df[(self.configs.name, BehavColumns.ACTUAL.value)].values
         # Making model
         model = GradientBoostingClassifier(**self.configs.model_params)
@@ -458,10 +527,7 @@ class BehavClassifier:
         probs = model.predict_proba(x_df)[:, 1]
         preds = (probs > self.configs.pcutoff).astype(np.uint8)
         # Making df
-        preds_df = pd.DataFrame(
-            index=pd.Index(x_df.index, name=BEHAV_INDEX_NAME),
-            columns=pd.MultiIndex.from_tuples((), names=BEHAV_COLUMN_NAMES),
-        )
+        preds_df = BehavMixin.init_df(x_df.index)
         preds_df[(self.configs.name, BehavColumns.PROB.value)] = probs
         preds_df[(self.configs.name, BehavColumns.PRED.value)] = preds
         # Returning predicted behavs
@@ -484,11 +550,15 @@ class BehavClassifier:
         """
         dataset = Datasets(dataset).value
         # Loading test X data
-        x_test = KeypointsMixin.read_feather(self.get_df_fp(f"x_{Datasets.TEST.value}"))
+        x_test = BehavClassifier.read_comb_x_feather(
+            self.get_df_fp(f"x_{Datasets.TEST.value}")
+        )
         # Getting model predictions for evaluation
         eval_df = self.model_predict(x_test, dataset)
         # Adding actual y labels
-        y_test = BehaviourMixin.read_feather(self.get_df_fp(f"y_{Datasets.TEST.value}"))
+        y_test = BehavClassifier.read_comb_y_feather(
+            self.get_df_fp(f"y_{Datasets.TEST.value}")
+        )
         eval_df[(self.configs.name, BehavColumns.ACTUAL.value)] = y_test[
             (self.configs.name, BehavColumns.ACTUAL.value)
         ].values
@@ -981,6 +1051,7 @@ class BehavClassifier:
 #         )
 #     # Saving to TOTAL.csv file
 #     df.to_csv(os.path.join(eval_dir, "TOTAL.csv"))
+#     return df
 #     return df
 #     return df
 #     return df

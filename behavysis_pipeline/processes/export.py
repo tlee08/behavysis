@@ -2,7 +2,7 @@ import os
 
 from behavysis_core.constants import BEHAV_COLUMN_NAMES, BehavColumns
 from behavysis_core.data_models.experiment_configs import ExperimentConfigs
-from behavysis_core.mixins.behaviour_mixin import BehaviourMixin
+from behavysis_core.mixins.behav_mixin import BehavMixin
 from behavysis_core.mixins.df_io_mixin import DFIOMixin
 from behavysis_core.mixins.io_mixin import IOMixin
 
@@ -35,19 +35,17 @@ class Export:
 
     @staticmethod
     @IOMixin.overwrite_check()
-    def behaviour_export(
-        in_fp: str, out_fp: str, configs_fp: str, overwrite: bool
-    ) -> str:
+    def behav_export(in_fp: str, out_fp: str, configs_fp: str, overwrite: bool) -> str:
         """__summary__"""
         # Reading the configs file
         configs = ExperimentConfigs.read_json(configs_fp)
         user_behavs = configs.get_ref(configs.user.classify_behaviours.user_behavs)
         # Reading file
-        in_df = BehaviourMixin.read_feather(in_fp)
+        in_df = BehavMixin.read_feather(in_fp)
         # Adding in behaviour columns
-        in_df = BehaviourMixin.frames_add_behaviour(in_df, user_behavs)
+        in_df = BehavMixin.frames_add_behaviour(in_df, user_behavs)
         # Keeping the `actual`, `pred`, and all user_behavs columns
-        out_df = BehaviourMixin.init_df(in_df.index)
+        out_df = BehavMixin.init_df(in_df.index)
         a = BehavColumns.ACTUAL.value
         p = BehavColumns.PRED.value
         for behav in in_df.columns.unique(BEHAV_COLUMN_NAMES[0]):

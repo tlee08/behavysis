@@ -23,14 +23,14 @@ import os
 import numpy as np
 from behavysis_core.constants import BehavColumns
 from behavysis_core.data_models.experiment_configs import ExperimentConfigs
-from behavysis_core.mixins.behaviour_mixin import BehaviourMixin
+from behavysis_core.mixins.behav_mixin import BehavMixin
 from behavysis_core.mixins.df_io_mixin import DFIOMixin
 from behavysis_core.mixins.io_mixin import IOMixin
 
 from .analyse_mixins import AggAnalyse, AnalyseMixin
 
 
-class BehaviourAnalyse:
+class BehavAnalyse:
     """__summary__"""
 
     @staticmethod
@@ -46,14 +46,14 @@ class BehaviourAnalyse:
         """
         outcome = ""
         name = IOMixin.get_name(behavs_fp)
-        out_dir = os.path.join(analysis_dir, BehaviourAnalyse.behav_analysis.__name__)
+        out_dir = os.path.join(analysis_dir, BehavAnalyse.behav_analysis.__name__)
         # Calculating the deltas (changes in body position) between each frame for the subject
         configs = ExperimentConfigs.read_json(configs_fp)
         fps, _, _, _, bins_ls, cbins_ls = AnalyseMixin.get_configs(configs)
         # Calculating more parameters
         user_behavs = configs.get_ref(configs.user.classify_behaviours.user_behavs)
         # Loading in dataframe
-        behavs_df = BehaviourMixin.read_feather(behavs_fp)
+        behavs_df = BehavMixin.read_feather(behavs_fp)
         # Setting all na and -1 values to 0
         behavs_df = behavs_df.fillna(0).map(lambda x: np.maximum(0, x))
         # Getting the behaviour names

@@ -24,7 +24,7 @@ import numpy as np
 import pandas as pd
 from behavysis_core.constants import SINGLE_COL
 from behavysis_core.data_models.experiment_configs import ExperimentConfigs
-from behavysis_core.mixins.behaviour_mixin import BehaviourMixin
+from behavysis_core.mixins.behav_mixin import BehavMixin
 from behavysis_core.mixins.df_io_mixin import DFIOMixin
 from behavysis_core.mixins.io_mixin import IOMixin
 from behavysis_core.mixins.keypoints_mixin import KeypointsMixin
@@ -503,7 +503,7 @@ class Analyse:
             ).astype(np.int8)
 
             # Getting start, stop, and duration of each freezing behav bout
-            freezingbouts_df = BehaviourMixin.vect_2_bouts(
+            freezingbouts_df = BehavMixin.vect_2_bouts(
                 analysis_df[(indiv, f_name)] == 1
             )
             # For each freezing bout, if there is less than window_frames, tehn

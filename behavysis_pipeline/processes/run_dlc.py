@@ -30,6 +30,7 @@ from behavysis_core.constants import DLC_COLUMN_NAMES, DLC_INDEX_NAME
 from behavysis_core.data_models.experiment_configs import ExperimentConfigs
 from behavysis_core.mixins.df_io_mixin import DFIOMixin
 from behavysis_core.mixins.io_mixin import IOMixin
+from behavysis_core.mixins.keypoints_mixin import KeypointsMixin
 from behavysis_core.mixins.subproc_mixin import SubprocMixin
 
 
@@ -216,6 +217,8 @@ def export_dlc_to_feather(name: str, in_dir: str, out_dir: str) -> str:
         df.columns.names = DLC_COLUMN_NAMES
         # Imputing na values with 0
         df = df.fillna(0)
+        # Checking df
+        KeypointsMixin.check_df(df)
         # Writing the .feather file
         DFIOMixin.write_feather(df, os.path.join(out_dir, f"{name}.feather"))
     else:

@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 from behavysis_core.constants import BEHAV_COLUMN_NAMES, BEHAV_INDEX_NAME, BehavColumns
 from behavysis_core.data_models.experiment_configs import ExperimentConfigs
-from behavysis_core.mixins.behaviour_mixin import BehaviourMixin
+from behavysis_core.mixins.behav_mixin import BehavMixin
 from behavysis_core.mixins.df_io_mixin import DFIOMixin
 from behavysis_core.mixins.io_mixin import IOMixin
 
@@ -88,12 +88,14 @@ class ClassifyBehaviours:
             # Logging outcome
             outcome += f"Completed {model} classification,\n"
         # Concatenating predictions to a single dataframe
-        behav_preds = pd.concat(behav_preds_ls, axis=1)
+        behavs_df = pd.concat(behav_preds_ls, axis=1)
         # Setting the index and column names
-        behav_preds.index.name = BEHAV_INDEX_NAME
-        behav_preds.columns.names = BEHAV_COLUMN_NAMES
+        behavs_df.index.name = BEHAV_INDEX_NAME
+        behavs_df.columns.names = BEHAV_COLUMN_NAMES
+        # Checking df
+        BehavMixin.check_df(behavs_df)
         # Saving behav_preds df
-        DFIOMixin.write_feather(behav_preds, out_fp)
+        DFIOMixin.write_feather(behavs_df, out_fp)
         # Returning outcome
         return outcome
 
@@ -120,7 +122,7 @@ def merge_bouts(
     """
     vect = vect.copy()
     # Getting start, stop, and duration of each non-behav bout
-    nonbouts_df = BehaviourMixin.vect_2_bouts(vect == 0)
+    nonbouts_df = BehavMixin.vect_2_bouts(vect == 0)
     # For each non-behav bout, if less than min_window_frames, then call it a behav
     for _, row in nonbouts_df.iterrows():
         if row["dur"] < min_window_frames:

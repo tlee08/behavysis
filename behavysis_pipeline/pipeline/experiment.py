@@ -20,7 +20,7 @@ from behavysis_core.constants import (
 from behavysis_core.mixins.diagnostics_mixin import DiagnosticsMixin
 
 from behavysis_pipeline.processes import (
-    BehaviourAnalyse,
+    BehavAnalyse,
     ClassifyBehaviours,
     Export,
     ExtractFeatures,
@@ -405,7 +405,7 @@ class Experiment:
         """
         # Exporting 6_predicted_behavs df to 7_scored_behavs folder
         return self._process_scaffold(
-            (Export.behaviour_export,),
+            (Export.behav_export,),
             in_fp=self.get_fp(Folders.PREDICTED_BEHAVS.value),
             out_fp=self.get_fp(Folders.SCORED_BEHAVS.value),
             configs_fp=self.get_fp(Folders.CONFIGS.value),
@@ -464,7 +464,7 @@ class Experiment:
         Can call any methods from `Analyse`.
         """
         return self._process_scaffold(
-            (BehaviourAnalyse.behav_analysis,),
+            (BehavAnalyse.behav_analysis,),
             behavs_fp=self.get_fp(Folders.SCORED_BEHAVS.value),
             analysis_dir=os.path.join(self.root_dir, ANALYSIS_DIR),
             configs_fp=self.get_fp(Folders.CONFIGS.value),

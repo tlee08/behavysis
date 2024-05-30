@@ -36,7 +36,7 @@ import pandas as pd
 import seaborn as sns
 from behavysis_core.constants import PROCESS_COL, BehavColumns
 from behavysis_core.data_models.experiment_configs import ExperimentConfigs
-from behavysis_core.mixins.behaviour_mixin import BehaviourMixin
+from behavysis_core.mixins.behav_mixin import BehavMixin
 from behavysis_core.mixins.diagnostics_mixin import DiagnosticsMixin
 from behavysis_core.mixins.io_mixin import IOMixin
 from behavysis_core.mixins.keypoints_mixin import KeypointsMixin
@@ -165,14 +165,14 @@ class Evaluate:
 
         # Getting behavs df
         try:
-            behavs_df = BehaviourMixin.read_feather(behavs_fp)
+            behavs_df = BehavMixin.read_feather(behavs_fp)
         except FileNotFoundError:
             outcome += (
                 "WARNING: behavs file not found or could not be loaded."
                 + "Disregarding behaviour."
                 + "If you have run the behaviour classifier, please check this file.\n"
             )
-            behavs_df = BehaviourMixin.init_df(dlc_df.index)
+            behavs_df = BehavMixin.init_df(dlc_df.index)
         # Getting list of behaviours
         behavs_ls = behavs_df.columns.unique("behaviours")
         # Making sure all relevant behaviour outcome columns exist
