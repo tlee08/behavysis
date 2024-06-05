@@ -27,7 +27,7 @@ from behavysis_core.mixins.behav_mixin import BehavMixin
 from behavysis_core.mixins.df_io_mixin import DFIOMixin
 from behavysis_core.mixins.io_mixin import IOMixin
 
-from .analyse_mixins import AggAnalyse, AnalyseMixin
+from .analyse_mixin import AggAnalyse, AnalyseMixin
 
 
 class BehavAnalyse:

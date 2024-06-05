@@ -34,7 +34,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
-from behavysis_core.constants import PROCESS_COL, BehavColumns
+from behavysis_core.constants import IndivColumns, BehavColumns
 from behavysis_core.data_models.experiment_configs import ExperimentConfigs
 from behavysis_core.mixins.behav_mixin import BehavMixin
 from behavysis_core.mixins.diagnostics_mixin import DiagnosticsMixin
@@ -141,9 +141,9 @@ class Evaluate:
 
         # Modifying dlc_df and making list of how to select dlc_df components to optimise processing
         dlc_df = KeypointsMixin.clean_headings(KeypointsMixin.read_feather(dlc_fp))
-        # Filtering out PROCESS_COL columns
-        if PROCESS_COL in dlc_df.columns.unique("individuals"):
-            dlc_df.drop(columns=PROCESS_COL, level="individuals")
+        # Filtering out IndivColumns.PROCESS.value columns
+        if IndivColumns.PROCESS.value in dlc_df.columns.unique("individuals"):
+            dlc_df.drop(columns=IndivColumns.PROCESS.value, level="individuals")
         # Getting (indivs, bpts) MultiIndex
         indivs_bpts_ls = dlc_df.columns.droplevel("coords").unique()
         # Rounding and converting to correct dtypes - "x" and "y" values are ints

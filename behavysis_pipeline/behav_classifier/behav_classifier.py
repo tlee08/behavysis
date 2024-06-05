@@ -14,12 +14,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
-from behavysis_core.constants import (
-    BEHAV_COLUMN_NAMES,
-    DLC_COLUMN_NAMES,
-    DLC_INDEX_NAME,
-    BehavColumns,
-)
+from behavysis_core.constants import BEHAV_CN, BEHAV_IN, BehavColumns
 from behavysis_core.mixins.behav_mixin import BehavMixin
 from behavysis_core.mixins.df_io_mixin import DFIOMixin
 from behavysis_core.mixins.keypoints_mixin import KeypointsMixin
@@ -51,9 +46,9 @@ X = "X"
 Y = "y"
 SUBSAMPLED = "sub"
 
-COMB_INDEX_NAMES = ["experiments", "frames"]
+COMB_INDEX_NAMES = ["experiments", *BEHAV_IN]
 COMB_X_COLUMN_NAME = "features"
-COMB_Y_COLUMN_NAMES = BEHAV_COLUMN_NAMES
+COMB_Y_COLUMN_NAMES = BEHAV_CN
 
 
 class BehavClassifier:

@@ -22,7 +22,7 @@ import os
 
 import numpy as np
 import pandas as pd
-from behavysis_core.constants import SINGLE_COL
+from behavysis_core.constants import IndivColumns
 from behavysis_core.data_models.experiment_configs import ExperimentConfigs
 from behavysis_core.mixins.behav_mixin import BehavMixin
 from behavysis_core.mixins.df_io_mixin import DFIOMixin
@@ -30,7 +30,7 @@ from behavysis_core.mixins.io_mixin import IOMixin
 from behavysis_core.mixins.keypoints_mixin import KeypointsMixin
 from pydantic import BaseModel
 
-from .analyse_mixins import AggAnalyse, AnalyseMixin
+from .analyse_mixin import AggAnalyse, AnalyseMixin
 
 #####################################################################
 #               ANALYSIS API FUNCS
@@ -82,10 +82,10 @@ class Analyse:
         indivs, _ = KeypointsMixin.get_headings(dlc_df)
 
         # Getting average corner coordinates. Assumes arena does not move.
-        tl = dlc_df[(SINGLE_COL, tl)].mean()
-        tr = dlc_df[(SINGLE_COL, tr)].mean()
-        br = dlc_df[(SINGLE_COL, br)].mean()
-        bl = dlc_df[(SINGLE_COL, bl)].mean()
+        tl = dlc_df[(IndivColumns.SINGLE.value, tl)].mean()
+        tr = dlc_df[(IndivColumns.SINGLE.value, tr)].mean()
+        br = dlc_df[(IndivColumns.SINGLE.value, br)].mean()
+        bl = dlc_df[(IndivColumns.SINGLE.value, bl)].mean()
         # Making roi_df of corners (with the thresh_px buffer)
         roi_df = pd.DataFrame(
             [
@@ -168,10 +168,10 @@ class Analyse:
         indivs, _ = KeypointsMixin.get_headings(dlc_df)
 
         # Getting average corner coordinates. Assumes arena does not move.
-        tl = dlc_df[(SINGLE_COL, tl)].mean()
-        tr = dlc_df[(SINGLE_COL, tr)].mean()
-        bl = dlc_df[(SINGLE_COL, bl)].mean()
-        br = dlc_df[(SINGLE_COL, br)].mean()
+        tl = dlc_df[(IndivColumns.SINGLE.value, tl)].mean()
+        tr = dlc_df[(IndivColumns.SINGLE.value, tr)].mean()
+        bl = dlc_df[(IndivColumns.SINGLE.value, bl)].mean()
+        br = dlc_df[(IndivColumns.SINGLE.value, br)].mean()
         # Making roi_df of corners (with the thresh_px buffer)
         roi_df = pd.DataFrame(
             [
@@ -250,10 +250,10 @@ class Analyse:
         indivs, _ = KeypointsMixin.get_headings(dlc_df)
 
         # Getting average corner coordinates. Assumes arena does not move.
-        tl = dlc_df[(SINGLE_COL, tl)].mean()
-        tr = dlc_df[(SINGLE_COL, tr)].mean()
-        bl = dlc_df[(SINGLE_COL, bl)].mean()
-        br = dlc_df[(SINGLE_COL, br)].mean()
+        tl = dlc_df[(IndivColumns.SINGLE.value, tl)].mean()
+        tr = dlc_df[(IndivColumns.SINGLE.value, tr)].mean()
+        bl = dlc_df[(IndivColumns.SINGLE.value, bl)].mean()
+        br = dlc_df[(IndivColumns.SINGLE.value, br)].mean()
         # Making roi_df of corners (with the thresh_px buffer)
         roi_df = pd.DataFrame(
             [

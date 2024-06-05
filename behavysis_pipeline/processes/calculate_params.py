@@ -16,7 +16,7 @@ str
 
 import numpy as np
 import pandas as pd
-from behavysis_core.constants import SINGLE_COL
+from behavysis_core.constants import IndivColumns
 from behavysis_core.data_models.experiment_configs import ExperimentConfigs
 from behavysis_core.mixins.keypoints_mixin import KeypointsMixin
 from pydantic import BaseModel, ConfigDict
@@ -224,8 +224,8 @@ class CalculateParams:
         # Checking that the two reference points are valid
         KeypointsMixin.check_bpts_exist(dlc_df, [pt_a, pt_b])
         # Getting calibration points (x, y, likelihood) values
-        pt_a_df = dlc_df[SINGLE_COL, pt_a]
-        pt_b_df = dlc_df[SINGLE_COL, pt_b]
+        pt_a_df = dlc_df[IndivColumns.SINGLE.value, pt_a]
+        pt_b_df = dlc_df[IndivColumns.SINGLE.value, pt_b]
         # Interpolating points which are below a likelihood threshold (linear)
         pt_a_df.loc[pt_a_df["likelihood"] < pcutoff] = np.nan
         pt_a_df = pt_a_df.interpolate(method="linear", axis=0).bfill()

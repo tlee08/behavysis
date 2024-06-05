@@ -5,8 +5,10 @@ _summary_
 import os
 
 import pandas as pd
+from behavysis_core.constants import BEHAV_CN, BEHAV_IN
 from behavysis_core.data_models.experiment_configs import ExperimentConfigs
 from behavysis_core.mixins.df_io_mixin import DFIOMixin
+from behavysis_core.mixins.features_mixin import FeaturesMixin
 from behavysis_core.mixins.io_mixin import IOMixin
 from behavysis_core.mixins.keypoints_mixin import KeypointsMixin
 from behavysis_core.mixins.multiproc_mixin import MultiprocMixin
@@ -84,15 +86,9 @@ class ExtractFeatures:
         IOMixin.silent_rm(simba_dir)
         # Running SimBA env and script to run SimBA feature extraction
         outcome += run_extract_features_script(simba_dir, simba_in_dir, configs_dir)
-        # Reading SimBA feature extraction csv (to select column and convert to feather)
+        # Exporting SimBA feature extraction csv to feather
         simba_out_fp = os.path.join(features_from_dir, f"{name}.csv")
-        df = pd.read_csv(simba_out_fp, header=0, index_col=0)
-        # Setting index to same as dlc preprocessed df
-        df.index = index
-        # TODO: check df
-        # ...
-        # Saving SimBA extracted features df as feather
-        DFIOMixin.write_feather(df, out_fp)
+        export_2_feather(simba_out_fp, out_fp, index)
         # Removing temp folders (simba_in_dir, simba_dir)
         IOMixin.silent_rm(simba_in_dir)
         IOMixin.silent_rm(simba_dir)
@@ -202,3 +198,21 @@ def remove_bpts_cols(
     coords_n = 3
     n = indivs_n * bpts_n * coords_n
     return df.iloc[:, n:]
+
+
+def export_2_feather(in_fp: str, out_fp: str, index: pd.Index) -> str:
+    """
+    __summary__
+    """
+    df = pd.read_csv(in_fp, header=0, index_col=0)
+    # Setting index to same as dlc preprocessed df
+    df.index = index
+    # Setting index and column level names
+    df.index.name = BEHAV_IN
+    df.columns.name = BEHAV_CN
+    # Checking df
+    FeaturesMixin.check_df(df)
+    # Saving SimBA extracted features df as feather
+    DFIOMixin.write_feather(df, out_fp)
+    # Returning outcome
+    return "Exported SimBA features to feather.\n"

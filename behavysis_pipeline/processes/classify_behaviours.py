@@ -6,7 +6,7 @@ import os
 
 import numpy as np
 import pandas as pd
-from behavysis_core.constants import BEHAV_COLUMN_NAMES, BEHAV_INDEX_NAME, BehavColumns
+from behavysis_core.constants import BEHAV_CN, BEHAV_IN, BehavColumns
 from behavysis_core.data_models.experiment_configs import ExperimentConfigs
 from behavysis_core.mixins.behav_mixin import BehavMixin
 from behavysis_core.mixins.df_io_mixin import DFIOMixin
@@ -90,8 +90,8 @@ class ClassifyBehaviours:
         # Concatenating predictions to a single dataframe
         behavs_df = pd.concat(behav_preds_ls, axis=1)
         # Setting the index and column names
-        behavs_df.index.name = BEHAV_INDEX_NAME
-        behavs_df.columns.names = BEHAV_COLUMN_NAMES
+        behavs_df.index.name = BEHAV_IN
+        behavs_df.columns.names = BEHAV_CN
         # Checking df
         BehavMixin.check_df(behavs_df)
         # Saving behav_preds df

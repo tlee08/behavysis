@@ -29,7 +29,6 @@ class FormatVid:
     """
 
     @staticmethod
-    @IOMixin.overwrite_check()
     def format_vid(in_fp: str, out_fp: str, configs_fp: str, overwrite: bool) -> str:
         """
         Formats the input video with the given parameters.
@@ -71,8 +70,9 @@ class FormatVid:
         return outcome
 
     @staticmethod
+    @IOMixin.overwrite_check()
     def get_vid_metadata(
-        raw_vid_fp: str, formatted_vid_fp: str, configs_fp: str, overwrite: bool
+        in_fp: str, out_fp: str, configs_fp: str, overwrite: bool
     ) -> str:
         """
         Finds the video metadata/parameters for either the raw or formatted video,
@@ -98,7 +98,7 @@ class FormatVid:
 
         # Saving video metadata to configs dict
         configs = ExperimentConfigs.read_json(configs_fp)
-        for ftype, fp in (("raw_vid", raw_vid_fp), ("formatted_vid", formatted_vid_fp)):
+        for ftype, fp in (("raw_vid", in_fp), ("formatted_vid", out_fp)):
             try:
                 setattr(configs.auto, ftype, ProcessVidMixin.get_vid_metadata(fp))
             except ValueError as e:

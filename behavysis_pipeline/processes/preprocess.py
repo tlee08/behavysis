@@ -24,7 +24,7 @@ from typing import Literal
 
 import numpy as np
 import pandas as pd
-from behavysis_core.constants import SINGLE_COL
+from behavysis_core.constants import IndivColumns
 from behavysis_core.data_models.experiment_configs import ExperimentConfigs
 from behavysis_core.mixins.df_io_mixin import DFIOMixin
 from behavysis_core.mixins.diagnostics_mixin import DiagnosticsMixin
@@ -125,8 +125,13 @@ class Preprocess:
             to_remove = df[(scorer, indiv, bp, "likelihood")] < configs_filt.pcutoff
             df.loc[to_remove, (scorer, indiv, bp, "x")] = np.nan
             df.loc[to_remove, (scorer, indiv, bp, "y")] = np.nan
-        # linearly interpolating Nan x and y points. Also backfilling points at the start.
-        df = df.interpolate(method="linear", axis=0).bfill()
+        # linearly interpolating Nan x and y points.
+        # Also backfilling points at the start.
+        # Also forward filling points at the end.
+        # Also imputing nan points with 0 (if the ENTIRE column is nan, then it's imputed)
+        df = df.interpolate(method="linear", axis=0).bfill().ffill()
+        # if df.isnull().values.any() then the entire column is nan (print warning)
+        df = df.fillna(0)
         # Writing file
         DFIOMixin.write_feather(df, out_fp)
         return outcome
@@ -218,7 +223,7 @@ def aggregate_df(
     df_aggr = pd.DataFrame(index=df.index)
     for coord in ["x", "y"]:
         # Getting the coordinates of the colour marking in each frame
-        df_aggr[("mark", coord)] = df[l0, SINGLE_COL, marking, coord]
+        df_aggr[("mark", coord)] = df[l0, IndivColumns.SINGLE.value, marking, coord]
         idx = pd.IndexSlice
         for indiv in indivs:
             # Getting the coordinates of each individual (average of the given bodyparts list)

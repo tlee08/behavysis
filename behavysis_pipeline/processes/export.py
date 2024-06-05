@@ -1,6 +1,6 @@
 import os
 
-from behavysis_core.constants import BEHAV_COLUMN_NAMES, BehavColumns
+from behavysis_core.constants import BEHAV_CN, BehavColumns
 from behavysis_core.data_models.experiment_configs import ExperimentConfigs
 from behavysis_core.mixins.behav_mixin import BehavMixin
 from behavysis_core.mixins.df_io_mixin import DFIOMixin
@@ -48,7 +48,7 @@ class Export:
         out_df = BehavMixin.init_df(in_df.index)
         a = BehavColumns.ACTUAL.value
         p = BehavColumns.PRED.value
-        for behav in in_df.columns.unique(BEHAV_COLUMN_NAMES[0]):
+        for behav in in_df.columns.unique(BEHAV_CN[0]):
             out_df[(behav, a)] = in_df[(behav, a)].values
             out_df[(behav, p)] = in_df[(behav, p)].values
             for i in user_behavs:

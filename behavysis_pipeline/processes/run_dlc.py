@@ -26,7 +26,7 @@ import os
 import re
 
 import pandas as pd
-from behavysis_core.constants import DLC_COLUMN_NAMES, DLC_INDEX_NAME
+from behavysis_core.constants import KEYPOINTS_CN, KEYPOINTS_IN
 from behavysis_core.data_models.experiment_configs import ExperimentConfigs
 from behavysis_core.mixins.df_io_mixin import DFIOMixin
 from behavysis_core.mixins.io_mixin import IOMixin
@@ -73,7 +73,7 @@ class RunDLC:
         subproc_run_dlc(dlc_config_path, [in_fp], dlc_out_dir, temp_dir, gputouse)
 
         # Exporting the h5 to feather the out_dir
-        export_dlc_to_feather(in_fp, dlc_out_dir, out_dir)
+        export_2_feather(in_fp, dlc_out_dir, out_dir)
         IOMixin.silent_rm(dlc_out_dir)
 
         return outcome
@@ -137,7 +137,7 @@ class RunDLC:
 
         # Exporting the h5 to feather the out_dir
         for in_fp in in_fp_ls:
-            export_dlc_to_feather(in_fp, dlc_out_dir, out_dir)
+            export_2_feather(in_fp, dlc_out_dir, out_dir)
         IOMixin.silent_rm(dlc_out_dir)
         # Returning outcome
         return outcome
@@ -198,7 +198,7 @@ for video in {in_fp_ls}:
     IOMixin.silent_rm(script_fp)
 
 
-def export_dlc_to_feather(name: str, in_dir: str, out_dir: str) -> str:
+def export_2_feather(name: str, in_dir: str, out_dir: str) -> str:
     """
     __summary__
     """
@@ -213,8 +213,8 @@ def export_dlc_to_feather(name: str, in_dir: str, out_dir: str) -> str:
         # Reading the .h5 file
         df = pd.DataFrame(pd.read_hdf(name_fp))
         # Setting the column and index level names
-        df.index.name = DLC_INDEX_NAME
-        df.columns.names = DLC_COLUMN_NAMES
+        df.index.name = KEYPOINTS_IN
+        df.columns.names = KEYPOINTS_CN
         # Imputing na values with 0
         df = df.fillna(0)
         # Checking df

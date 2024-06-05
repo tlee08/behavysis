@@ -12,22 +12,22 @@ class BehavClassifierConfigs(PydanticBaseModel):
     model_config = ConfigDict(extra="forbid")
 
     train_fraction: float = 0.8
-    undersampling_strategy: float = 0.2
+    undersampling_strategy: float = 0.5
     seed: int = 42
     pcutoff: float = 0.5
-    all_ls: list[str] = []
-    train_ls: list[str] = []
-    test_ls: list[str] = []
-    name: str = "Base"
+    behaviour_name: str = "BehaviourName"
 
-    model_type: str = "RandomForestClassifier"
-    model_params: dict = {
-        "n_estimators": 2000,
-        "learning_rate": 0.1,
-        "loss": "log_loss",
-        "criterion": "friedman_mse",
-        "max_features": "sqrt",
-        "random_state": seed,
-        "subsample": 1.0,
-        "verbose": 1,
-    }
+    window_frames: int = 10
+
+    model_template_fp: str = "./model_template"  # Path to the model template
+    # model_type: str = "RandomForestClassifier"
+    # model_params: dict = {
+    #     "n_estimators": 2000,
+    #     "learning_rate": 0.1,
+    #     "loss": "log_loss",
+    #     "criterion": "friedman_mse",
+    #     "max_features": "sqrt",
+    #     "random_state": seed,
+    #     "subsample": 1.0,
+    #     "verbose": 1,
+    # }

@@ -23,10 +23,11 @@ markdown_extensions:
 plugins:
   - mkdocstrings:
       default_handler: python
+      enable_inventory: true
       handlers:
         python:
           paths: [../]
-          load_external_modules: false
+          load_external_modules: true
           options:
             show_source: false
             show_root_heading: true
@@ -34,7 +35,12 @@ plugins:
             docstring_style: numpy
             merge_init_into_class: true
             modernize_annotations: true
+            annotations_path: brief
+            separate_signature: true
+            show_signature_annotations: true
+            signature_crossrefs: true
   - search
+  - autorefs
   - offline
 
 nav:
@@ -63,7 +69,7 @@ nav:
           - tutorials/usage_examples/one_project.md
   - Diagnostics Messages:
       - diagnostics_messages/diagnostics_messages.md
-  - Program Reference:
+  - API Reference:
       - reference/pipeline.md
       - reference/project.md
       - reference/experiment.md

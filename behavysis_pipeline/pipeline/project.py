@@ -297,7 +297,7 @@ class Project:
     @functools.wraps(Experiment.update_configs)
     def update_configs(self, *args, **kwargs) -> None:
         """
-        Batch processing for corresponding [Experiment method](experiment.md#behavysis_pipeline.pipeline.Experiment.update_configs)
+        Batch processing for corresponding [Experiment method][behavysis_pipeline.pipeline.Experiment.update_configs]
         """
         method = Experiment.update_configs
         self._process_scaffold(method, *args, **kwargs)
@@ -305,7 +305,7 @@ class Project:
     @functools.wraps(Experiment.format_vid)
     def format_vid(self, *args, **kwargs) -> None:
         """
-        Batch processing for corresponding [Experiment method](experiment.md#behavysis_pipeline.pipeline.Experiment.format_vid)
+        Batch processing for corresponding [Experiment method][behavysis_pipeline.pipeline.Experiment.format_vid]
         """
         method = Experiment.format_vid
         self._process_scaffold(method, *args, **kwargs)
@@ -313,7 +313,7 @@ class Project:
     @functools.wraps(Experiment.run_dlc)
     def run_dlc(self, gputouse: int = None, overwrite: bool = False) -> None:
         """
-        Batch processing for corresponding [Experiment method](experiment.md#behavysis_pipeline.pipeline.Experiment.run_dlc)
+        Batch processing for corresponding [Experiment method][behavysis_pipeline.pipeline.Experiment.run_dlc]
 
         Uses a multiprocessing pool to run DLC on each batch of experiments with each GPU
         natively as batch in the same spawned subprocess (a DLC subprocess is spawned).
@@ -358,7 +358,7 @@ class Project:
     @functools.wraps(Experiment.calculate_params)
     def calculate_params(self, *args, **kwargs) -> None:
         """
-        Batch processing for corresponding [Experiment method](experiment.md#behavysis_pipeline.pipeline.Experiment.calculate_params)
+        Batch processing for corresponding [Experiment method][behavysis_pipeline.pipeline.Experiment.calculate_params]
         """
         method = Experiment.calculate_params
         self._process_scaffold(method, *args, **kwargs)
@@ -366,7 +366,7 @@ class Project:
     @functools.wraps(Experiment.preprocess)
     def preprocess(self, *args, **kwargs) -> None:
         """
-        Batch processing for corresponding [Experiment method](experiment.md#behavysis_pipeline.pipeline.Experiment.preprocess)
+        Batch processing for corresponding [Experiment method][behavysis_pipeline.pipeline.Experiment.preprocess]
         """
         method = Experiment.preprocess
         self._process_scaffold(method, *args, **kwargs)
@@ -374,7 +374,7 @@ class Project:
     @functools.wraps(Experiment.extract_features)
     def extract_features(self, *args, **kwargs) -> None:
         """
-        Batch processing for corresponding [Experiment method](experiment.md#behavysis_pipeline.pipeline.Experiment.extract_features)
+        Batch processing for corresponding [Experiment method][behavysis_pipeline.pipeline.Experiment.extract_features]
         """
         method = Experiment.extract_features
         self._process_scaffold(method, *args, **kwargs)
@@ -382,7 +382,7 @@ class Project:
     @functools.wraps(Experiment.classify_behaviours)
     def classify_behaviours(self, *args, **kwargs) -> None:
         """
-        Batch processing for corresponding [Experiment method](experiment.md#behavysis_pipeline.pipeline.Experiment.classify_behaviours)
+        Batch processing for corresponding [Experiment method][behavysis_pipeline.pipeline.Experiment.classify_behaviours]
         """
         # TODO: handle reading the model file whilst in multiprocessing.
         # Current fix is single processing.
@@ -395,7 +395,7 @@ class Project:
     @functools.wraps(Experiment.export_behaviours)
     def export_behaviours(self, *args, **kwargs) -> None:
         """
-        Batch processing for corresponding [Experiment method](experiment.md#behavysis_pipeline.pipeline.Experiment.export_behaviours)
+        Batch processing for corresponding [Experiment method][behavysis_pipeline.pipeline.Experiment.export_behaviours]
         """
         method = Experiment.export_behaviours
         self._process_scaffold(method, *args, **kwargs)
@@ -403,7 +403,7 @@ class Project:
     @functools.wraps(Experiment.export_feather)
     def export_feather(self, *args, **kwargs) -> None:
         """
-        Batch processing for corresponding [Experiment method](experiment.md#behavysis_pipeline.pipeline.Experiment.export_feather)
+        Batch processing for corresponding [Experiment method][behavysis_pipeline.pipeline.Experiment.export_feather]
         """
         method = Experiment.export_feather
         self._process_scaffold(method, *args, **kwargs)
@@ -411,7 +411,7 @@ class Project:
     @functools.wraps(Experiment.evaluate)
     def evaluate(self, *args, **kwargs) -> None:
         """
-        Batch processing for corresponding [Experiment method](experiment.md#behavysis_pipeline.pipeline.Experiment.evaluate)
+        Batch processing for corresponding [Experiment method][behavysis_pipeline.pipeline.Experiment.evaluate]
         """
         method = Experiment.evaluate
         self._process_scaffold(method, *args, **kwargs)
@@ -419,7 +419,7 @@ class Project:
     @functools.wraps(Experiment.analyse)
     def analyse(self, *args, **kwargs) -> None:
         """
-        Batch processing for corresponding [Experiment method](experiment.md#behavysis_pipeline.pipeline.Experiment.analyse)
+        Batch processing for corresponding [Experiment method][behavysis_pipeline.pipeline.Experiment.analyse]
         """
         method = Experiment.analyse
         self._process_scaffold(method, *args, **kwargs)
@@ -427,7 +427,7 @@ class Project:
     @functools.wraps(Experiment.behav_analyse)
     def behav_analyse(self, *args, **kwargs) -> None:
         """
-        Batch processing for corresponding [Experiment method](experiment.md#behavysis_pipeline.pipeline.Experiment.behav_analyse)
+        Batch processing for corresponding [Experiment method][behavysis_pipeline.pipeline.Experiment.behav_analyse]
         """
         method = Experiment.behav_analyse
         self._process_scaffold(method, *args, **kwargs)
