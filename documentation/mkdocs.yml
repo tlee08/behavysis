@@ -1,47 +1,70 @@
 site_name: behavysis_pipeline Documentation
-site_url: ""
-use_directory_urls: false
+site_url: https://tlee08.github.io/behavysis_pipeline/
+repo_url: https://github.com/tlee08/behavysis_pipeline
 
 theme:
   name: material
   features:
     - content.code.copy
-    - toc.integrate
     - toc.follow
+    # - toc.integrate
 
 markdown_extensions:
+  # Python Markdown
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - toc:
+      permalink: true
+  # Python Markdown Extensions
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.betterem:
+      smart_enable: all
+  - pymdownx.caret
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
   - pymdownx.highlight:
       anchor_linenums: true
       line_spans: __span
       pygments_lang_class: true
   - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.mark
+  - pymdownx.smartsymbols
   - pymdownx.snippets
   - pymdownx.superfences
-  - toc:
-      permalink: true
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
 
 plugins:
   - mkdocstrings:
       default_handler: python
-      enable_inventory: true
       handlers:
         python:
           paths: [../]
-          load_external_modules: true
+          import:
+            - https://docs.python.org/3/objects.inv
+            - https://numpy.org/doc/stable/objects.inv
+            - https://pandas.pydata.org/docs/objects.inv
           options:
-            show_source: false
             show_root_heading: true
-            heading_level: 2
             docstring_style: numpy
-            merge_init_into_class: true
+            # merge_init_into_class: true
             modernize_annotations: true
-            annotations_path: brief
-            separate_signature: true
-            show_signature_annotations: true
             signature_crossrefs: true
   - search
   - autorefs
   - offline
+  - tags
 
 nav:
   - index.md

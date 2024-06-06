@@ -14,12 +14,15 @@ scikit-learn = "^1.4.2"
 imbalanced-learn = "^0.12.2"
 behavysis_core = "^0.1.1"
 
+
 [tool.poetry.group.dev.dependencies]
 behavysis_core = { path = "../behavysis_core", develop = true }
 black = "^24.4.0"
 pytest = "^8.1.1"
 mkdocs-material = "^9.5.18"
 mkdocstrings-python = "^1.9.2"
+tensorflow = "^2.16.1"
+pydot = "^2.0.0"
 
 [build-system]
 requires = ["poetry-core"]

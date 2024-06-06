@@ -1,1 +1,1 @@
-::: behavysis_pipeline.pipeline.Project
+::: behavysis_pipeline.pipeline.project.Project

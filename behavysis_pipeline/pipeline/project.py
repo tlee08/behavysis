@@ -133,17 +133,15 @@ class Project:
                     - ...
     ```
 
-    Params:
-        dir: The filepath of the project directory. Can be relative to current directory
-        or absolute.
-
-    Attributes:
-        dir: The filepath of the project directory. Can be relative to current directory
-        or absolute.
-        experiments: The experiments that have been loaded into the project.
-
-    Raises:
-        ValueError: The givendir filepath does not exist.
+    Attributes
+    ----------
+        root_dir : str
+            The filepath of the project directory. Can be relative to
+            current dir or absolute dir.
+        experiments : dict[str, Experiment]
+            The experiments that have been loaded into the project.
+        nprocs : int
+            The number of processes to use for multiprocessing.
     """
 
     root_dir: str
@@ -153,6 +151,12 @@ class Project:
     def __init__(self, root_dir: str) -> None:
         """
         Make a Project instance.
+
+        Parameters
+        ----------
+        root_dir : str
+            The filepath of the project directory. Can be relative to
+            current dir or absolute dir.
         """
         # Assertion: project directory must exist
         if not os.path.isdir(root_dir):
@@ -297,7 +301,21 @@ class Project:
     @functools.wraps(Experiment.update_configs)
     def update_configs(self, *args, **kwargs) -> None:
         """
-        Batch processing for corresponding [Experiment method][behavysis_pipeline.pipeline.Experiment.update_configs]
+        Batch processing for corresponding
+        [Experiment method][behavysis_pipeline.pipeline.Experiment.update_configs]
+
+        [Experiment method][.experiment.Experiment.update_configs]
+
+        `behavysis_pipeline.pipeline.Experiment.update_configs`
+
+        [behavysis_pipeline.pipeline.Experiment.update_configs][]
+
+        Parameters
+        ----------
+        *args : tuple
+            args passed to process scaffold method.
+        **kwargs : dict
+            keyword args passed to process scaffold method.
         """
         method = Experiment.update_configs
         self._process_scaffold(method, *args, **kwargs)
@@ -305,7 +323,15 @@ class Project:
     @functools.wraps(Experiment.format_vid)
     def format_vid(self, *args, **kwargs) -> None:
         """
-        Batch processing for corresponding [Experiment method][behavysis_pipeline.pipeline.Experiment.format_vid]
+        Batch processing for corresponding
+        [Experiment method][behavysis_pipeline.pipeline.Experiment.format_vid]
+
+        Parameters
+        ----------
+        *args : tuple
+            args passed to process scaffold method.
+        **kwargs : dict
+            keyword args passed to process scaffold method.
         """
         method = Experiment.format_vid
         self._process_scaffold(method, *args, **kwargs)
@@ -313,12 +339,20 @@ class Project:
     @functools.wraps(Experiment.run_dlc)
     def run_dlc(self, gputouse: int = None, overwrite: bool = False) -> None:
         """
-        Batch processing for corresponding [Experiment method][behavysis_pipeline.pipeline.Experiment.run_dlc]
+        Batch processing for corresponding
+        [Experiment method][behavysis_pipeline.pipeline.Experiment.run_dlc]
 
         Uses a multiprocessing pool to run DLC on each batch of experiments with each GPU
         natively as batch in the same spawned subprocess (a DLC subprocess is spawned).
         This is a slight tweak from the regular method of running
         each experiment separately with multiprocessing.
+
+        Parameters
+        ----------
+        gputouse : int, optional
+            The GPU ID to use for running DLC. If None, all GPUs are used.
+        overwrite : bool, optional
+            Whether to overwrite the DLC output files if they already exist.
         """
         # If gputouse is not specified, using all GPUs
         if gputouse is None:
@@ -358,7 +392,15 @@ class Project:
     @functools.wraps(Experiment.calculate_params)
     def calculate_params(self, *args, **kwargs) -> None:
         """
-        Batch processing for corresponding [Experiment method][behavysis_pipeline.pipeline.Experiment.calculate_params]
+        Batch processing for corresponding
+        [Experiment method][behavysis_pipeline.pipeline.Experiment.calculate_params]
+
+        Parameters
+        ----------
+        *args : tuple
+            args passed to process scaffold method.
+        **kwargs : dict
+            keyword args passed to process scaffold method.
         """
         method = Experiment.calculate_params
         self._process_scaffold(method, *args, **kwargs)
@@ -366,7 +408,15 @@ class Project:
     @functools.wraps(Experiment.preprocess)
     def preprocess(self, *args, **kwargs) -> None:
         """
-        Batch processing for corresponding [Experiment method][behavysis_pipeline.pipeline.Experiment.preprocess]
+        Batch processing for corresponding
+        [Experiment method][behavysis_pipeline.pipeline.Experiment.preprocess]
+
+        Parameters
+        ----------
+        *args : tuple
+            args passed to process scaffold method.
+        **kwargs : dict
+            keyword args passed to process scaffold method.
         """
         method = Experiment.preprocess
         self._process_scaffold(method, *args, **kwargs)
@@ -374,7 +424,15 @@ class Project:
     @functools.wraps(Experiment.extract_features)
     def extract_features(self, *args, **kwargs) -> None:
         """
-        Batch processing for corresponding [Experiment method][behavysis_pipeline.pipeline.Experiment.extract_features]
+        Batch processing for corresponding
+        [Experiment method][behavysis_pipeline.pipeline.Experiment.extract_features]
+
+        Parameters
+        ----------
+        *args : tuple
+            args passed to process scaffold method.
+        **kwargs : dict
+            keyword args passed to process scaffold method.
         """
         method = Experiment.extract_features
         self._process_scaffold(method, *args, **kwargs)
@@ -382,7 +440,15 @@ class Project:
     @functools.wraps(Experiment.classify_behaviours)
     def classify_behaviours(self, *args, **kwargs) -> None:
         """
-        Batch processing for corresponding [Experiment method][behavysis_pipeline.pipeline.Experiment.classify_behaviours]
+        Batch processing for corresponding
+        [Experiment method][behavysis_pipeline.pipeline.Experiment.classify_behaviours]
+
+        Parameters
+        ----------
+        *args : tuple
+            args passed to process scaffold method.
+        **kwargs : dict
+            keyword args passed to process scaffold method.
         """
         # TODO: handle reading the model file whilst in multiprocessing.
         # Current fix is single processing.
@@ -395,7 +461,15 @@ class Project:
     @functools.wraps(Experiment.export_behaviours)
     def export_behaviours(self, *args, **kwargs) -> None:
         """
-        Batch processing for corresponding [Experiment method][behavysis_pipeline.pipeline.Experiment.export_behaviours]
+        Batch processing for corresponding
+        [Experiment method][behavysis_pipeline.pipeline.Experiment.export_behaviours]
+
+        Parameters
+        ----------
+        *args : tuple
+            args passed to process scaffold method.
+        **kwargs : dict
+            keyword args passed to process scaffold method.
         """
         method = Experiment.export_behaviours
         self._process_scaffold(method, *args, **kwargs)
@@ -403,7 +477,15 @@ class Project:
     @functools.wraps(Experiment.export_feather)
     def export_feather(self, *args, **kwargs) -> None:
         """
-        Batch processing for corresponding [Experiment method][behavysis_pipeline.pipeline.Experiment.export_feather]
+        Batch processing for corresponding
+        [Experiment method][behavysis_pipeline.pipeline.Experiment.export_feather]
+
+        Parameters
+        ----------
+        *args : tuple
+            args passed to process scaffold method.
+        **kwargs : dict
+            keyword args passed to process scaffold method.
         """
         method = Experiment.export_feather
         self._process_scaffold(method, *args, **kwargs)
@@ -411,7 +493,15 @@ class Project:
     @functools.wraps(Experiment.evaluate)
     def evaluate(self, *args, **kwargs) -> None:
         """
-        Batch processing for corresponding [Experiment method][behavysis_pipeline.pipeline.Experiment.evaluate]
+        Batch processing for corresponding
+        [Experiment method][behavysis_pipeline.pipeline.Experiment.evaluate]
+
+        Parameters
+        ----------
+        *args : tuple
+            args passed to process scaffold method.
+        **kwargs : dict
+            keyword args passed to process scaffold method.
         """
         method = Experiment.evaluate
         self._process_scaffold(method, *args, **kwargs)
@@ -419,7 +509,15 @@ class Project:
     @functools.wraps(Experiment.analyse)
     def analyse(self, *args, **kwargs) -> None:
         """
-        Batch processing for corresponding [Experiment method][behavysis_pipeline.pipeline.Experiment.analyse]
+        Batch processing for corresponding
+        [Experiment method][behavysis_pipeline.pipeline.Experiment.analyse]
+
+        Parameters
+        ----------
+        *args : tuple
+            args passed to process scaffold method.
+        **kwargs : dict
+            keyword args passed to process scaffold method.
         """
         method = Experiment.analyse
         self._process_scaffold(method, *args, **kwargs)
@@ -427,7 +525,15 @@ class Project:
     @functools.wraps(Experiment.behav_analyse)
     def behav_analyse(self, *args, **kwargs) -> None:
         """
-        Batch processing for corresponding [Experiment method][behavysis_pipeline.pipeline.Experiment.behav_analyse]
+        Batch processing for corresponding
+        [Experiment method][behavysis_pipeline.pipeline.Experiment.behav_analyse]
+
+        Parameters
+        ----------
+        *args : tuple
+            args passed to process scaffold method.
+        **kwargs : dict
+            keyword args passed to process scaffold method.
         """
         method = Experiment.behav_analyse
         self._process_scaffold(method, *args, **kwargs)
@@ -659,5 +765,9 @@ class Project:
                     df = pd.concat([df], keys=[exp.name], names=["experiment"], axis=0)
                     # Concatenating total_df with df down rows
                     total_df = pd.concat([total_df, df], axis=0)
+            DFIOMixin.write_feather(total_df, out_fp)
+            DFIOMixin.write_feather(total_df, out_fp)
+            DFIOMixin.write_feather(total_df, out_fp)
+            DFIOMixin.write_feather(total_df, out_fp)
             DFIOMixin.write_feather(total_df, out_fp)
             DFIOMixin.write_feather(total_df, out_fp)
