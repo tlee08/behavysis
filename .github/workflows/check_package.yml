@@ -1,0 +1,37 @@
+name: Python Package using Conda
+
+on:
+  workflow_dispatch
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    strategy:
+      max-parallel: 5
+
+    steps:
+    - name: Checkout main branch
+    - uses: actions/checkout@v4
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v3
+      with:
+        python-version: '3.10'
+    - name: Add conda to system path
+      run: |
+        # $CONDA is an environment variable pointing to the root of the miniconda directory
+        echo $CONDA/bin >> $GITHUB_PATH
+    - name: Install env of dependencies and entering env
+      run: |
+        conda update -n base conda
+        conda install -n base conda-libmamba-solver
+        conda config --set solver libmamba
+        conda env create -f conda_env.yaml -n my_env
+        conda activate my_env
+    - name: Lint with ruff
+      run: |
+        conda install -c conda-forge ruff
+        ruff check .
+    - name: Test with pytest
+      run: |
+        conda install -c conda-forge pytest
+        pytest
