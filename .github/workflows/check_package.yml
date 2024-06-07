@@ -21,12 +21,10 @@ jobs:
           echo $CONDA/bin >> $GITHUB_PATH
       - name: Install env of dependencies and entering env
         run: |
-          conda init
           conda update -n base conda
           conda install -n base conda-libmamba-solver
           conda config --set solver libmamba
-          conda env create -f conda_env.yaml -n my_env
-          conda activate my_env
+          conda env create -f conda_env.yaml -n base
       - name: Lint with ruff
         run: |
           conda install -c conda-forge ruff
