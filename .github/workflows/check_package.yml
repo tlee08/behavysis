@@ -24,7 +24,7 @@ jobs:
           conda update -n base conda
           conda install -n base conda-libmamba-solver
           conda config --set solver libmamba
-          conda env update -f conda_env.yaml -n base
+          conda env update -f conda_env.yaml -n base -y
       - name: Lint with ruff
         run: |
           conda install -c conda-forge ruff
