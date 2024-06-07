@@ -89,7 +89,7 @@
       "total_frames": null
     },
     "formatted_vid": {
-      "fps": 15,
+      "fps": 15.0,
       "width_px": null,
       "height_px": null,
       "total_frames": null
@@ -98,5 +98,6 @@
     "start_frame": null,
     "stop_frame": null,
     "exp_dur_frames": 988
-  }
+  },
+  "ref": {}
 }

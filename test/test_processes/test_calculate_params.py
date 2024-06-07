@@ -1,24 +1,16 @@
-import os
-import shutil
+import logging
+from io import BytesIO
 
-from behavysis_core.mixins.io_mixin import IOMixin
-
-import pandas as pd
 import numpy as np
+import pandas as pd
+from behavysis_core.constants import KEYPOINTS_CN, KEYPOINTS_IN
+from behavysis_core.data_models.experiment_configs import ExperimentConfigs
 
 from behavysis_pipeline.processes.calculate_params import (
     CalculateParams,
-    Model_exp_dur,
-    Model_px_per_mm,
-    Model_start_frame,
+    Model_check_exists,
     Model_stop_frame,
 )
-
-from io import BytesIO, StringIO
-
-from behavysis_core.data_models.experiment_configs import ExperimentConfigs
-
-import logging
 
 
 def make_dlc_df_for_dur(sections_params_ls, columns):
@@ -48,6 +40,9 @@ def make_dlc_df_for_dur(sections_params_ls, columns):
     columns_df = columns_df[["scorer", "individuals", "bodyparts", "coords"]]
     dlc_df.columns = pd.MultiIndex.from_frame(columns_df)
     dlc_df = dlc_df.sort_index(level=["individuals", "bodyparts"], axis=1)
+    # Setting index and column level names
+    dlc_df.index.name = KEYPOINTS_IN
+    dlc_df.columns.name = KEYPOINTS_CN
     # Returning dlc_df
     return dlc_df
 
@@ -59,7 +54,7 @@ def test_start_frame():
 
     # Making configs
     configs = ExperimentConfigs()
-    configs.user.calculate_params.start_frame = Model_start_frame(
+    configs.user.calculate_params.start_frame = Model_check_exists(
         bodyparts=["b", "c", "e"],
         window_sec=1,
         pcutoff=0.9,
@@ -143,7 +138,7 @@ def test_exp_dur():
 
     # Making configs
     configs = ExperimentConfigs()
-    configs.user.calculate_params.exp_dur = Model_exp_dur(
+    configs.user.calculate_params.exp_dur = Model_check_exists(
         bodyparts=["b", "c", "e"],
         window_sec=1,
         pcutoff=0.9,

@@ -52,9 +52,7 @@ class CalculateParams:
         outcome = ""
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
-        configs_filt = Model_check_existence(
-            **configs.user.calculate_params.start_frame
-        )
+        configs_filt = Model_check_exists(**configs.user.calculate_params.start_frame)
         bpts = configs.get_ref(configs_filt.bodyparts)
         window_sec = configs.get_ref(configs_filt.window_sec)
         pcutoff = configs.get_ref(configs_filt.pcutoff)
@@ -149,7 +147,7 @@ class CalculateParams:
         outcome = ""
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
-        configs_filt = Model_check_existence(**configs.user.calculate_params.exp_dur)
+        configs_filt = Model_check_exists(**configs.user.calculate_params.exp_dur)
         bpts = configs.get_ref(configs_filt.bodyparts)
         window_sec = configs.get_ref(configs_filt.window_sec)
         pcutoff = configs.get_ref(configs_filt.pcutoff)
@@ -278,7 +276,7 @@ class Model_stop_frame(BaseModel):
     dur_sec: float | str = 0
 
 
-class Model_check_existence(BaseModel):
+class Model_check_exists(BaseModel):
     """__summary__"""
 
     model_config = ConfigDict(extra="forbid")
