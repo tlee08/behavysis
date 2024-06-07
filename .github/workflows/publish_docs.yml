@@ -22,7 +22,9 @@ jobs:
           path: .cache
           restore-keys: |
             mkdocs-material-
-      - run: pip install mkdocs-material
+      - run: |
+        pip install mkdocs-material
+        pip install mkdocstrings-python
       - name: Build and Deploy Docs
         run: |
           cd ./docs
