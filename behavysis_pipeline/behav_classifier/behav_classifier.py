@@ -8,7 +8,7 @@ import logging
 import os
 import shutil
 from enum import Enum
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable, Optional
 
 import joblib
 import matplotlib.pyplot as plt
@@ -19,7 +19,6 @@ from behavysis_core.constants import (
     BEHAV_CN,
     BEHAV_IN,
     FEATURES_CN,
-    FEATURES_IN,
     BehavColumns,
     Folders,
 )
@@ -28,22 +27,27 @@ from behavysis_core.mixins.df_io_mixin import DFIOMixin
 from behavysis_core.mixins.features_mixin import FeaturesMixin
 from behavysis_core.mixins.io_mixin import IOMixin
 from imblearn.under_sampling import RandomUnderSampler
-from keras.layers import Conv1D, Dense, Dropout, Flatten, Input, MaxPooling1D
+from keras.layers import (
+    Conv1D,
+    Dense,
+    Dropout,
+    Flatten,
+    Input,
+    MaxPooling1D,
+)
 from keras.models import Model
 from keras.utils import plot_model
-from matplotlib.figure import Figure
-from sklearn.ensemble import GradientBoostingClassifier, RandomForestClassifier
+from sklearn.base import BaseEstimator
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import (
-    accuracy_score,
     classification_report,
     confusion_matrix,
-    precision_recall_fscore_support,
 )
+from sklearn.model_selection import train_test_split
+from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import MinMaxScaler
 
-from behavysis_pipeline.behav_classifier.behav_classifier_configs import (
-    BehavClassifierConfigs,
-)
+from .behav_classifier_configs import BehavClassifierConfigs
 
 if TYPE_CHECKING:
     from behavysis_pipeline.pipeline.project import Project
@@ -71,7 +75,7 @@ class BehavClassifier:
     """
 
     configs_fp: str
-    clf: Model
+    clf: Model | BaseEstimator
 
     def __init__(self, configs_fp: str) -> None:
         """
@@ -115,7 +119,7 @@ class BehavClassifier:
             The loaded BehavClassifier instance.
         """
         # Getting the list of behaviours
-        y_df = BehavClassifier.preprocess_y(
+        y_df = BehavClassifier.preproc_y(
             pd.concat(
                 [
                     BehavMixin.read_feather(exp.get_fp(Folders.SCORED_BEHAVS.value))
@@ -190,6 +194,11 @@ class BehavClassifier:
         """Returns the model's filepath"""
         return os.path.join(self.root_dir, f"{self.configs.behaviour_name}.sav")
 
+    @property
+    def preproc_fp(self) -> str:
+        """Returns the model's preprocessor filepath"""
+        return os.path.join(self.root_dir, f"{self.configs.behaviour_name}_preproc.sav")
+
     #################################################
     #            IMPORTING DATA TO MODEL
     #################################################
@@ -261,15 +270,31 @@ class BehavClassifier:
         # Returning the x and y dfs
         return x, y
 
-    @staticmethod
-    def preprocess_x(x: pd.DataFrame) -> pd.DataFrame:
+    #################################################
+    #            PREPROCESSING DFS
+    #################################################
+
+    def preproc_x_fit(self, x: pd.DataFrame):
+        """
+        __summary__
+        """
+        # Making pipeline
+        preproc_pipe = Pipeline(steps=[("MinMaxScaler", MinMaxScaler())])
+        # Fitting pipeline
+        preproc_pipe.fit(x)
+        # Saving pipeline
+        joblib.dump(preproc_pipe, self.preproc_fp)
+
+    def preproc_x(self, x: pd.DataFrame) -> pd.DataFrame:
         """
         The preprocessing steps are:
-        - MinMax scaling
+        - MinMax scaling (using previously fitted MinMaxScaler)
         """
-        # MinMax scaling X dfs
+        # Loading in pipeline
+        preproc_pipe = joblib.load(self.preproc_fp)
+        # (so uses trained fit for new data)
         x = pd.DataFrame(
-            MinMaxScaler().fit_transform(x),
+            preproc_pipe.transform(x),
             index=x.index,
             columns=x.columns,
         )
@@ -277,7 +302,7 @@ class BehavClassifier:
         return x
 
     @staticmethod
-    def preprocess_y(y: pd.DataFrame) -> pd.DataFrame:
+    def preproc_y(y: pd.DataFrame) -> pd.DataFrame:
         """
         The preprocessing steps are:
         - Imputing NaN values with 0
@@ -304,10 +329,15 @@ class BehavClassifier:
         # Returning df
         return y
 
-    def resample(self, y: pd.DataFrame):
+    def resample(self, y: pd.DataFrame) -> pd.MultiIndex:
         """
         Uses the resampling strategy and seed in configs.
-        Returns the index for resampling. This can then be used to filter the X and y dfs.
+        Returns the index for resampling. This can then
+        be used to filter the X and y dfs.
+
+        Notes
+        -----
+        Only indices within the window frame range are considered for resampling.
         """
         index = y.index
         n = self.configs.window_frames
@@ -333,9 +363,21 @@ class BehavClassifier:
     ) -> np.ndarray:
         """
         Returns np array of (samples, frames, features).
+
+        Notes
+        -----
+        Anything that is on the edge of the window will be padded with bfilled and ffilled.
+        This introduces synthetic data.
         """
+        # NOTE: synthesising data by padding with bfill and ffill
+        # for window size
+        fpad = df.iloc[np.repeat(0, self.configs.window_frames)]
+        fpad.index = np.repeat(None, self.configs.window_frames)
+        bpad = df.iloc[np.repeat(-1, self.configs.window_frames)]
+        bpad.index = np.repeat(None, self.configs.window_frames)
+        df = pd.concat([fpad, df, bpad])
         # Getting array of index numbers
-        resampled_arr = [df.index.get_loc(l) for l in resampled_index]
+        resampled_arr = [df.index.get_loc(i) for i in resampled_index]
         n = self.configs.window_frames
         # Making arrays of (samples, window, features)
         return np.stack([df.iloc[i - n : i + n + 1].values for i in resampled_arr])
@@ -344,26 +386,28 @@ class BehavClassifier:
         """
         Splitting into train and test sets
         """
-        # Splitting
         # Splitting into train and test sets
-        # X_train, X_test, y_train, y_test = train_test_split(
-        #     X,
-        #     y,
-        #     test_size=1-self.configs.train_fraction,
-        #     stratify=y,
-        # )
+        x_train, x_test, y_train, y_test = train_test_split(
+            x,
+            y,
+            test_size=1 - self.configs.train_fraction,
+            stratify=y,
+        )
         # Manual split to separate bouts themselves
-        split = int(x.shape[0] * self.configs.train_fraction)
-        x_train, x_test = x[:split], x[split:]
-        y_train, y_test = y[:split], y[split:]
+        # split = int(x.shape[0] * self.configs.train_fraction)
+        # x_train, x_test = x[:split], x[split:]
+        # y_train, y_test = y[:split], y[split:]
         return x_train, x_test, y_train, y_test
 
     #################################################
     #            PIPELINE FOR DATA PREP
     #################################################
 
-    def prepare_data(self) -> tuple[np.ndarray, np.ndarray]:
+    def prepare_data_training(self) -> tuple[np.ndarray, np.ndarray]:
         """
+        Prepares the data (`x` and `y`) in the model for training.
+        Data is taken from the model's `x` and `y` dirs.
+
         Performs the following:
         - Combining dfs from x and y directories (individual experiment data)
         - Ensures the x and y dfs have the same index, and are in the same row order
@@ -384,20 +428,86 @@ class BehavClassifier:
         """
         # Combining dfs from x and y directories (individual experiment data)
         x, y = self.combine_dfs()
-        # Preprocessing X df
-        x = self.preprocess_x(x)
+        # Fitting the preprocessor pipeline
+        self.preproc_x_fit(x)
+        # Preprocessing x df
+        x = self.preproc_x(x)
         # Preprocessing y df
-        y = self.preprocess_y(y)
+        y = self.preproc_y(y)
         # Selecting y class
         y = y[self.configs.behaviour_name]
         # Resampling indexes using y classes
         index = self.resample(y)
-        # Making X windowed array
-        x = self.make_windows(x, index)
+        # Making x (windowed) array
+        # x = self.make_windows(x, index)
+        x = x.loc[index].values
         # Making y array
         y = y.loc[index].values.reshape(-1, 1)
         # Returning x and y
         return x, y
+
+    def prepare_data(self, x: pd.DataFrame) -> np.ndarray:
+        """
+        Prepares novel (`x` only) data, given the `x` pd.DataFrame.
+
+        Performs the following:
+        - Preprocesses x df. Refer to `preprocess_x` for details.
+        - Makes the X windowed array, for each index.
+
+        Returns
+        -------
+        x : np.ndarray
+            Features array in the format: `(samples, window, features)`
+        """
+        # Preprocessing x df
+        x = self.preproc_x(x)
+        # Making x (windowed) array
+        # x = self.make_windows(x, x.index)
+        x = x.values
+        # Returning x
+        return x
+
+    #################################################
+    # PIPELINE FOR CLASSIFIER TRAINING AND INFERENCE
+    #################################################
+
+    def pipeline_build(self, clf_init_f: Optional[Callable] = None):
+        """
+        Makes a classifier and saves it to the model's root directory.
+
+        Currently using the DNN classifier.
+        """
+        # Preparing data
+        x, y = self.prepare_data_training()
+        # Splitting into train and test sets
+        x_train, x_test, y_train, y_test = self.train_test_split(x, y)
+        # Initialising the model (cnn, dnn, or rf)
+        clf_init_f = self.clf_dnn_init if clf_init_f is None else clf_init_f
+        self.clf = clf_init_f()
+        # Evaluating the model (training on train, testing on test)
+        self.clf_train(x_train, y_train)
+        self.clf_eval(x_test, y_test)
+        # Training the model (on all data)
+        self.clf_train(x, y)
+        self.clf_save()
+
+    def pipeline_run(self, x: pd.DataFrame) -> pd.DataFrame:
+        """
+        Given the unprocessed features dataframe, runs the model pipeline to make predictions.
+
+        Pipeline is:
+        - Preprocess `x` df. Refer to
+        [behavysis_pipeline.behav_classifier.BehavClassifier.preprocess_x][] for details.
+        - Makes predictions and returns the predicted behaviours.
+        """
+        # Preprocessing features
+        x = self.prepare_data(x)
+        # Making predictions
+        y_eval = self.clf_predict(x)
+        # Settings the index
+        y_eval.index = x.index
+        # Returning predictions
+        return
 
     #################################################
     # MODEL CLASSIFIER METHODS
@@ -415,14 +525,35 @@ class BehavClassifier:
         """
         joblib.dump(self.clf, self.clf_fp)
 
-    def clf_predict(self, x: pd.DataFrame | np.ndarray) -> pd.DataFrame:
+    def clf_train(self, x: np.array, y: np.array):
         """
-        Making predictions using the given model and novel extracted features dataframe.
+        __summary__
+        """
+        if isinstance(self.clf, Model):
+            h = self.clf.fit(
+                x,
+                y,
+                batch_size=64,
+                epochs=200,
+                validation_split=0.1,
+                shuffle=True,
+                verbose=1,
+                callbacks=None,
+            )
+        elif isinstance(self.clf, BaseEstimator):
+            self.clf.fit(x, y)
+        else:
+            raise ValueError("Model is not a valid type")
+
+    def clf_predict(self, x: np.ndarray) -> pd.DataFrame:
+        """
+        Making predictions using the given model and preprocessed features.
+        Assumes the x array is already preprocessed.
 
         Parameters
         ----------
-        x : pd.DataFrame
-            Novel extracted features dataframe.
+        x : np.ndarray
+            Preprocessed features.
 
         Returns
         -------
@@ -433,19 +564,24 @@ class BehavClassifier:
             outcomes   :  "prob"   "pred"
             ```
         """
-        # TODO: how to preprocess x (if we require a (sample, window, features) shape array)
         # Getting probabilities from model
-        y_probs = self.clf.predict(x)
-        y_preds = y_probs > self.configs.pcutoff
+        if isinstance(self.clf, Model):
+            y_probs = self.clf.predict(x)
+        elif isinstance(self.clf, BaseEstimator):
+            y_probs = self.clf.predict_proba(x)[:, 1]
+        else:
+            raise ValueError("Model is not a valid type")
+        y_preds = (y_probs > self.configs.pcutoff).astype(int)
         # Making df
-        index = x.index if isinstance(x, pd.DataFrame) else np.arange(x.shape[0])
-        pred_df = BehavMixin.init_df(index)
+        pred_df = BehavMixin.init_df(np.arange(x.shape[0]))
         pred_df[(self.configs.behaviour_name, BehavColumns.PROB.value)] = y_probs
         pred_df[(self.configs.behaviour_name, BehavColumns.PRED.value)] = y_preds
         # Returning predicted behavs
         return pred_df
 
-    def clf_eval(self, x, y):
+    def clf_eval(
+        self, x: np.ndarray, y: np.ndarray
+    ) -> tuple[pd.DataFrame, plt.Figure, plt.Figure, plt.Figure]:
         """
         Evaluates the classifier performance on the given x and y data.
         Saves the `metrics_fig` and `pcutoffs_fig` to the model's root directory.
@@ -458,6 +594,8 @@ class BehavClassifier:
             Figure showing the confusion matrix.
         pcutoffs_fig : mpl.Figure
             Figure showing the precision, recall, f1, and accuracy for different pcutoffs.
+        logc_fig : mpl.Figure
+            Figure showing the logistic curve for different predicted probabilities.
         """
         # Making eval dir
         eval_dir = os.path.join(self.root_dir, "eval")
@@ -472,43 +610,23 @@ class BehavClassifier:
         y_pred = y_eval[self.configs.behaviour_name, BehavColumns.PRED.value]
         y_true = y_eval[self.configs.behaviour_name, BehavColumns.ACTUAL.value]
         # Making confusion matrix figure
-        metrics_fig = self.conf_matr_fig(y_true, y_pred)
+        metrics_fig = self.eval_conf_matr(y_true, y_pred)
         metrics_fig.savefig(os.path.join(eval_dir, f"{name}_confm.png"))
         # Making performance for different pcutoffs figure
-        pcutoffs_fig = self.metrics_pcutoffs_fig(y_true, y_prob)
+        pcutoffs_fig = self.eval_metrics_pcutoffs(y_true, y_prob)
         pcutoffs_fig.savefig(os.path.join(eval_dir, f"{name}_pcutoffs.png"))
         # Logistic curve
-        logc_fig = self.logistic_curve(y_true, y_prob)
+        logc_fig = self.eval_logc(y_true, y_prob)
         logc_fig.savefig(os.path.join(eval_dir, f"{name}_logc.png"))
         # Return evaluations
         return y_eval, metrics_fig, pcutoffs_fig, logc_fig
-
-    def clf_pipeline(self):
-        """
-        Makes a classifier and saves it to the model's root directory.
-        """
-        # Preparing data
-        x, y = self.prepare_data()
-        # If using a frames classifier, then taking the middle frame of each window sample
-        # NOTE: ommit for window classifiers
-        x = x[:, self.configs.window_frames + 1]
-        # Splitting into train and test sets
-        x_train, x_test, y_train, y_test = self.train_test_split(x, y)
-        # Initialising the model (cnn, dnn, or rf)
-        self.init_dnn_classifier()
-        # Evaluating the model (training on train, testing on test)
-        self.train_nn_classifier(x_train, y_train)
-        self.clf_eval(x_test, y_test)
-        # Training the model (on all data)
-        self.train_nn_classifier(x, y)
-        self.clf_save()
 
     #################################################
     # EVALUATION METRICS FUNCTIONS
     #################################################
 
     @staticmethod
-    def conf_matr_fig(y_true, y_pred):
+    def eval_conf_matr(y_true: pd.Series, y_pred: pd.Series) -> plt.Figure:
         """
         __summary__
         """
@@ -528,7 +646,7 @@ class BehavClassifier:
         return fig
 
     @staticmethod
-    def metrics_pcutoffs_fig(y_true, y_prob):
+    def eval_metrics_pcutoffs(y_true: pd.Series, y_prob: pd.Series) -> plt.Figure:
         """
         __summary__
         """
@@ -555,7 +673,7 @@ class BehavClassifier:
         return fig
 
     @staticmethod
-    def logistic_curve(y_true, y_prob):
+    def eval_logc(y_true: pd.Series, y_prob: pd.Series) -> plt.Figure:
         """
         __summary__
         """
@@ -564,8 +682,7 @@ class BehavClassifier:
                 "y_true": y_true,
                 "y_prob": y_prob,
                 "y_pred": y_prob > 0.4,
-                "y_true_jitter": y_true
-                + (0.2 * (np.random.rand(len(y_prob)) - 0.5)),
+                "y_true_jitter": y_true + (0.2 * (np.random.rand(len(y_prob)) - 0.5)),
             }
         )
         fig, ax = plt.subplots(figsize=(10, 7))
@@ -577,7 +694,7 @@ class BehavClassifier:
             s=10,
             linewidth=0,
             alpha=0.2,
-            ax=ax,        
+            ax=ax,
         )
         # Making line of ratio of y_true outcomes for each y_prob
         pcutoffs = np.linspace(0, 1, 101)
@@ -586,11 +703,44 @@ class BehavClassifier:
         # Returning figure
         return fig
 
+    @staticmethod
+    def eval_bouts(y_true: pd.Series, y_pred: pd.Series) -> pd.DataFrame:
+        """
+        __summary__
+        """
+        y_eval = pd.DataFrame({"y_true": y_true, "y_pred": y_pred})
+        y_eval["ids"] = np.cumsum(y_eval["y_true"] != y_eval["y_true"].shift())
+        # Getting the proportion of correct predictions for each bout
+        y_eval_grouped = y_eval.groupby("ids")
+        y_eval_summary = pd.DataFrame(
+            y_eval_grouped.apply(lambda x: (x["y_pred"] == x["y_true"]).mean()),
+            columns=["proportion"],
+        )
+        y_eval_summary["actual_bout"] = y_eval_grouped.apply(
+            lambda x: x["y_true"].mean()
+        )
+        y_eval_summary["bout_len"] = y_eval_grouped.apply(lambda x: x.shape[0])
+        y_eval_summary = y_eval_summary.sort_values("proportion")
+        # # Making figure
+        # fig, ax = plt.subplots(figsize=(10, 7))
+        # sns.scatterplot(
+        #     data=y_eval_summary,
+        #     x="proportion",
+        #     y="bout_len",
+        #     hue="actual_bout",
+        #     alpha=0.4,
+        #     marker=".",
+        #     s=50,
+        #     linewidth=0,
+        #     ax=ax,
+        # )
+        return y_eval_summary
+
     #################################################
     # CNN CLASSIFIER
     #################################################
 
-    def init_cnn_classifier(self):
+    def clf_cnn_init(self):
         """
         x features is (samples, window, features).
         y outcome is (samples, class).
@@ -599,32 +749,61 @@ class BehavClassifier:
         # 546 is number of SimBA features
         inputs = Input(shape=(self.configs.window_frames * 2 + 1, 546))
         # Hidden layers
-        l = Conv1D(32, 3, activation="relu")(inputs)
-        l = MaxPooling1D(2)(l)
-        l = Conv1D(64, 3, activation="relu")(l)
-        l = MaxPooling1D(2)(l)
-        l = Flatten()(l)
-        l = Dense(64, activation="relu")(l)
-        l = Dropout(0.5)(l)
+        x = Conv1D(32, 3, activation="relu")(inputs)
+        x = MaxPooling1D(2)(x)
+        x = Conv1D(64, 3, activation="relu")(x)
+        x = MaxPooling1D(2)(x)
+        x = Flatten()(x)
+        x = Dense(64, activation="relu")(x)
+        x = Dropout(0.5)(x)
         # Binary classification problem (probability output)
-        outputs = Dense(1, activation="sigmoid")(l)
+        outputs = Dense(1, activation="sigmoid")(x)
         # Create the model
         self.clf = Model(inputs=inputs, outputs=outputs)
         # Compile the model
         self.clf.compile(
             optimizer="adam", loss="binary_crossentropy", metrics=["accuracy"]
         )
+        # Returning classifier model
+        return self.clf
 
-    def visualize_nn_classifier(self):
+    def clf_dnn_init(self):
+        """
+        x features is (samples, features).
+        y outcome is (samples, class).
+        """
+        # Input layers
+        # 546 is number of SimBA features
+        input_shape = (546,)
+        inputs = Input(shape=input_shape)
+        # Hidden layers
+        # l = Dense(256, activation="relu")(inputs)  # 32, 64, 256
+        # l = Dropout(0.5)(l)
+        x = Dense(64, activation="relu")(inputs)  # 32, 64, 256
+        x = Dropout(0.5)(x)
+        # Binary classification problem (probability output)
+        outputs = Dense(1, activation="sigmoid")(x)
+        # Create the model
+        self.clf = Model(inputs=inputs, outputs=outputs)
+        # Compiling model
+        self.clf.compile(
+            optimizer="adam", loss="binary_crossentropy", metrics=["accuracy"]
+        )
+        # Returning classifier model
+        return self.clf
+
+    def clf_nn_visualize(self):
         """
         __summary__
         """
         # model.summary()
-        plot_model(
+        # Making file names
+        name = self.configs.behaviour_name
+        fp = os.path.join(self.root_dir, "eval", f"{name}_architecture.png")
+        # Saving model architecture
+        return plot_model(
             self.clf,
-            to_file=os.path.join(
-                self.root_dir, f"{self.configs.behaviour_name}_architecture.png"
-            ),
+            to_file=fp,
             show_shapes=True,
             show_dtype=True,
             show_layer_names=True,
@@ -635,57 +814,13 @@ class BehavClassifier:
             show_trainable=False,
         )
 
-    def train_nn_classifier(self, x, y):
-        """
-        __summary__
-        """
-        h = self.clf.fit(
-            x,
-            y,
-            batch_size=64,
-            epochs=200,
-            validation_split=0.1,
-            shuffle=True,
-            verbose=1,
-            callbacks=None,
-        )
-
-    #################################################
-    # DNN CLASSIFIER
-    #################################################
-
-    def init_dnn_classifier(self):
-        """
-        x features is (samples, features).
-        y outcome is (samples, class).
-        """
-        # Input layers
-        # 546 is number of SimBA features
-        input_shape = (546,)
-        inputs = Input(shape=input_shape)
-        # Hidden layers
-        l = Dense(32, activation="relu")(inputs)  # 32, 64
-        l = Dropout(0.5)(l)
-        # Binary classification problem (probability output)
-        outputs = Dense(1, activation="sigmoid")(l)
-        # Create the model
-        self.clf = Model(inputs=inputs, outputs=outputs)
-        # Compiling model
-        self.clf.compile(
-            optimizer="adam", loss="binary_crossentropy", metrics=["accuracy"]
-        )
-
-    #################################################
-    # RF CLASSIFIER
-    #################################################
-
-    def init_rf_classifier(self):
+    def clf_rf_init(self):
         """
         x features is (samples, features).
         y outcome is (samples, class).
         """
         # Creating Gradient Boosting Classifier
-        # self.model = GradientBoostingClassifier(
+        # self.clf = GradientBoostingClassifier(
         #     n_estimators=200,
         #     learning_rate=0.1,
         #     # max_depth=3,
@@ -699,432 +834,5 @@ class BehavClassifier:
             n_jobs=16,
             verbose=1,
         )
-        setattr(self.clf, "predict", lambda x: self.clf.predict_proba(x)[:, 1])
-
-    def train_sk_classifier(self, x, y):
-        """
-        __summary__
-        """
-        # Training the model
-        self.clf.fit(x, y)
-
-    #################################################
-    #            COMBINING DFS TO SINGLE DF
-    #################################################
-
-    # def combine_dfs(
-    #     self,
-    #     x_dir: str,
-    #     y_dir: str,
-    # ) -> None:
-    # """
-
-    #     Concatenating the data into a single `X` df and `y` df and save to
-    #     the BehavClassifier's root directory.
-
-    #     Parameters
-    #     ----------
-    #     x_dir : str
-    #         Directory path for extracted features dataframes.
-    #     y_dir : str
-    #         Directory path for labelled behaviours dataframes.
-
-    #     Notes
-    #     -----
-    #     The model_config file must contain the following parameters:
-    #     - todo
-    #     """
-    #     # Combining features and scored labels dfs together respectively
-    #     x_all = self._combine_dfs(x_dir, self.configs.names_ls)
-    #     y_all = self._combine_dfs(y_dir, self.configs.names_ls)
-    #     # Select only rows that exist in both x_all and y_all (like an inner join)
-    #     x_all = x_all[x_all.index.isin(y_all.index)]
-    #     y_all = y_all[y_all.index.isin(x_all.index)]
-    #     # Checking x and y dfs
-    #     BehavClassifier.check_comb_x_df(x_all)
-    #     BehavClassifier.check_comb_y_df(y_all)
-    #     # Sorting index and saving to output
-    #     DFIOMixin.write_feather(x_all.sort_index(), self.get_df_fp("x_all"))
-    #     DFIOMixin.write_feather(y_all.sort_index(), self.get_df_fp("y_all"))
-
-    # def _combine_dfs(self, in_dir: str, names_ls: list[str]) -> pd.DataFrame:
-    #     """
-    #     Combine a list of dataframes into a single dataframe.
-    #     The experiment ID is added as a level to the index.
-    #     """
-    #     return pd.concat(
-    #         [
-    #             pd.concat(
-    #                 [DFIOMixin.read_feather(os.path.join(in_dir, f"{name}.feather"))],
-    #                 keys=[name],
-    #                 names=["experiments"],
-    #                 axis=0,
-    #             )
-    #             for name in names_ls
-    #         ],
-    #         axis=0,
-    #     )
-
-    # #################################################
-    # #         MAKING TRAIN TEST SPLITS
-    # #################################################
-
-    # def make_train_test_split(self):
-    #     """
-    #     Making train and test splits from _all dfs (i.e. the combined dfs)
-    #     """
-    #     # Making train/test fraction lists in configs json
-    #     self._init_train_test_split()
-    #     # Loading _all dfs
-    #     x_all = BehavClassifier.read_comb_x_feather(self.get_df_fp("x_all"))
-    #     y_all = BehavClassifier.read_comb_y_feather(self.get_df_fp("y_all"))
-    #     # Making train/test split
-    #     x_train, x_test = self._make_train_test_split(x_all)
-    #     y_train, y_test = self._make_train_test_split(y_all)
-    #     # Sorting index and saving each train/test file
-    #     DFIOMixin.write_feather(x_train.sort_index(), self.get_df_fp("x_train"))
-    #     DFIOMixin.write_feather(x_test.sort_index(), self.get_df_fp("x_test"))
-    #     DFIOMixin.write_feather(y_train.sort_index(), self.get_df_fp("y_train"))
-    #     DFIOMixin.write_feather(y_test.sort_index(), self.get_df_fp("y_test"))
-
-    # def _init_train_test_split(self):
-    #     """Making train and test split experiments lists in the configs."""
-    #     # Splitting videos into training and test sets
-    #     train_n = int(self.configs.train_fraction * len(self.configs.all_ls))
-    #     # Saving train and test experiments lists
-    #     configs = self.configs
-    #     # Selecting random train set
-    #     configs.train_ls = np.random.choice(
-    #         a=self.configs.all_ls, size=train_n, replace=False
-    #     ).tolist()
-    #     # Everything else is the test set
-    #     configs.test_ls = np.array(self.configs.all_ls)[
-    #         ~np.isin(self.configs.all_ls, self.configs.train_ls)
-    #     ].tolist()
-    #     configs.write_json(self.configs_fp)
-
-    # def _make_train_test_split(
-    #     self, all_df: pd.DataFrame
-    # ) -> tuple[pd.DataFrame, pd.DataFrame]:
-    #     """Make the combined train and test dataframes from the combined all dataframe."""
-    #     # Create and save _train dfs
-    #     train_df = all_df[all_df.index.isin(self.configs.train_ls, level="experiments")]
-    #     test_df = all_df[all_df.index.isin(self.configs.test_ls, level="experiments")]
-    #     return train_df, test_df
-
-    # #################################################
-    # #         RANDOM UNDERSAMPLING
-    # #################################################
-
-    # def make_random_undersample(self):
-    #     """
-    #     Performing random undersampling for given behaviour.
-
-    #     Notes
-    #     -----
-    #     The model_config file must contain the following parameters:
-    #     - name: str
-    #     - undersampling_strategy: float
-    #     - seed: int
-    #     """
-    #     # For each "all" and "train" datasets
-    #     for i in [Datasets.ALL, Datasets.TRAIN]:
-    #         i = i.value
-    #         # Reading in df
-    #         x_df = BehavClassifier.read_comb_x_feather(self.get_df_fp(f"x_{i}"))
-    #         y_df = BehavClassifier.read_comb_y_feather(self.get_df_fp(f"y_{i}"))
-    #         # Preparing ID index to subsample on. These will store the index numbers subsampled on
-    #         index = y_df.index.to_list()  # TODO: try ".values"
-    #         # Preparing y_vals to subsample on. These will store the y values as a 1D array
-    #         y_vals = y_df[(self.configs.name, BehavColumns.ACTUAL.value)].values
-    #         # Random under-subsampling (returns subsampled index IDs)
-    #         undersampler = RandomUnderSampler(
-    #             sampling_strategy=self.configs.undersampling_strategy,
-    #             random_state=self.configs.seed,
-    #         )
-    #         index, _ = undersampler.fit_resample(index, y_vals)
-    #         # Formatting index_subs IDs so they match indexes in _dfs
-    #         index = [(i[0], int(i[1])) for i in index]
-    #         # Filtering x_df and y_dfs for selected undersampled index IDs
-    #         x_df = x_df.loc[index]
-    #         y_df = y_df.loc[index]
-    #         # Selecting subsampled index ID rows, sorting, and saving
-    #         DFIOMixin.write_feather(x_df.sort_index(), self.get_df_fp(f"x_{i}_subs"))
-    #         DFIOMixin.write_feather(y_df.sort_index(), self.get_df_fp(f"y_{i}_subs"))
-
-    # #################################################
-    # #       MAKE, TRAIN, RUN SCIKIT CLASSIFIER
-    # #################################################
-
-    # def init_behav_classifier(self):
-    #     """
-    #     Save hyper-params for the classfier (i.e. a blueprint) to the configs json for
-    #     given behaviour.
-
-    #     Notes
-    #     -----
-    #     The model_config file must contain the following parameters:
-    #     ```
-    #     - seed: int
-    #     ```
-    #     """
-    #     # Initialising and defining model
-    #     model = GradientBoostingClassifier(
-    #         n_estimators=2000,
-    #         learning_rate=0.1,
-    #         loss="log_loss",
-    #         criterion="friedman_mse",
-    #         max_features="sqrt",
-    #         random_state=self.configs.seed,
-    #         subsample=1.0,
-    #         verbose=1,
-    #         # njobs=-1,
-    #     )
-    #     # Saving model hyper parameters to configs file
-    #     configs = self.configs
-    #     configs.model_type = str(type(model))
-    #     configs.model_params = model.get_params()
-    #     configs.write_json(self.configs_fp)
-
-    # def train_behav_classifier(self, dataset: Datasets = Datasets.ALL):
-    #     """
-    #     Making classifier from configs json blueprint and training it on `all` and `_train` data.
-    #     Saving a separate trained classifier for each dataset (`all` and `train`).
-    #     """
-    #     dataset = Datasets(dataset).value
-    #     # Training model on all data
-    #     # Loading in X/y dfs
-    #     x_df = BehavClassifier.read_comb_x_feather(self.get_df_fp(f"x_{dataset}_subs"))
-    #     y_df = BehavClassifier.read_comb_y_feather(self.get_df_fp(f"y_{dataset}_subs"))
-    #     y_vals = y_df[(self.configs.name, BehavColumns.ACTUAL.value)].values
-    #     # Making model
-    #     model = GradientBoostingClassifier(**self.configs.model_params)
-    #     # Training model
-    #     model.fit(x_df, y_vals)
-    #     # Saving model
-    #     joblib.dump(model, self.get_model_fp(f"model_{dataset}"))
-
-    # #################################################
-    # #         RUN MODEL PREDICTIONS
-    # #################################################
-
-    # def model_predict(
-    #     self,
-    #     x_df: pd.DataFrame,
-    #     model_dataset: Datasets = Datasets.ALL,
-    # ) -> pd.DataFrame:
-    #     """
-    #     Making predictions using the given model and novel extracted features dataframe.
-    #     The default model used for the given BehavClassifier is `Datasets.ALL`.
-
-    #     Parameters
-    #     ----------
-    #     x_df : pd.DataFrame
-    #         Novel extracted features dataframe.
-    #     dataset : str, optional
-    #         Model name, by default `Datasets.ALL`.
-
-    #     Returns
-    #     -------
-    #     pd.DataFrame
-    #         Predicted behaviour classifications. Dataframe columns are in the format:
-    #         ```
-    #         behaviours :  behav    behav
-    #         outcomes   :  "prob"   "pred"
-    #         ```
-    #     """
-    #     model_dataset = Datasets(model_dataset).value
-    #     # Loading in each model
-    #     model = joblib.load(self.get_model_fp(f"model_{model_dataset}"))
-    #     # Getting probabilities from model
-    #     probs = model.predict_proba(x_df)[:, 1]
-    #     preds = (probs > self.configs.pcutoff).astype(np.uint8)
-    #     # Making df
-    #     preds_df = BehavMixin.init_df(x_df.index)
-    #     preds_df[(self.configs.name, BehavColumns.PROB.value)] = probs
-    #     preds_df[(self.configs.name, BehavColumns.PRED.value)] = preds
-    #     # Returning predicted behavs
-    #     return preds_df
-
-    # #################################################
-    # #      EVALUATE MODEL WITH TRAIN/TEST DATA
-    # #################################################
-
-    # def model_eval(self, dataset: Datasets = Datasets.TRAIN):
-    #     """
-    #     Evaluating the model using the model trained on the _train data.
-
-    #     Notes
-    #     -----
-    #     The model_config file must contain the following parameters:
-    #     ```
-    #     - name: str
-    #     ```
-    #     """
-    #     dataset = Datasets(dataset).value
-    #     # Loading test X data
-    #     x_test = BehavClassifier.read_comb_x_feather(
-    #         self.get_df_fp(f"x_{Datasets.TEST.value}")
-    #     )
-    #     # Getting model predictions for evaluation
-    #     eval_df = self.model_predict(x_test, dataset)
-    #     # Adding actual y labels
-    #     y_test = BehavClassifier.read_comb_y_feather(
-    #         self.get_df_fp(f"y_{Datasets.TEST.value}")
-    #     )
-    #     eval_df[(self.configs.name, BehavColumns.ACTUAL.value)] = y_test[
-    #         (self.configs.name, BehavColumns.ACTUAL.value)
-    #     ].values
-    #     # Saving eval df to file
-    #     eval_fp = os.path.join(self.root_dir, "eval", "eval_df.feather")
-    #     DFIOMixin.write_feather(eval_df, eval_fp)
-    #     # Making pcutoff metrics plot
-    #     fig = self.model_eval_plot_metrics(eval_df)
-    #     fig.savefig(os.path.join(self.root_dir, "eval", "pcutoff_metrics.png"))
-    #     fig.clf()
-    #     # Making logistic results plot
-    #     fig = self.model_eval_plot_results(eval_df)
-    #     fig.savefig(os.path.join(self.root_dir, "eval", "logistic_results.png"))
-    #     fig.clf()
-
-    # #################################################
-    # #         EVALUATE MODEL PREDICTIONS
-    # #################################################
-
-    # def model_eval_report(self, eval_df: pd.DataFrame) -> None:
-    #     """
-    #     Printing model evaluation summaries.
-
-    #     Parameters
-    #     ----------
-    #     eval_df : pd.DataFrame
-    #         fbf evaluation dataframe.
-    #     """
-    #     # Printing eval report
-    #     print(
-    #         confusion_matrix(
-    #             eval_df[(self.configs.name, BehavColumns.ACTUAL.value)],
-    #             eval_df[(self.configs.name, BehavColumns.PRED.value)],
-    #             labels=[0, 1],
-    #         )
-    #     )
-    #     print(
-    #         classification_report(
-    #             eval_df[(self.configs.name, BehavColumns.ACTUAL.value)],
-    #             eval_df[(self.configs.name, BehavColumns.PRED.value)],
-    #         )
-    #     )
-
-    # def model_eval_plot_timeseries(self, eval_df: pd.DataFrame) -> Figure:
-    #     """
-    #     Plots timeseries of behav probability against actual behaviour
-    #     """
-    #     # Getting predictions eval df
-    #     eval_long_df = (
-    #         eval_df[
-    #             [
-    #                 (self.configs.name, BehavColumns.ACTUAL.value),
-    #                 (self.configs.name, BehavColumns.PROB.value),
-    #             ]
-    #         ]
-    #         .reset_index(names="frame")
-    #         .melt(id_vars=["frame"], var_name="measure", value_name="value")
-    #     )
-    #     # Plotting each outcome (through time)
-    #     fig, ax = plt.subplots(figsize=(8, 5), layout="constrained")
-    #     sns.lineplot(
-    #         data=eval_long_df,
-    #         x="frame",
-    #         y="value",
-    #         hue="measure",
-    #         palette="rainbow",
-    #         alpha=0.6,
-    #         ax=ax,
-    #     )
-    #     ax.set_ylim(-0.01, 1.01)
-    #     return fig
-
-    # def model_eval_plot_results(self, eval_df: pd.DataFrame) -> Figure:
-    #     """
-    #     Plotting outcome against ML probability (sorted by ML probability)
-    #     """
-    #     # Sorting eval_df df by y_prob
-    #     eval_df = eval_df[self.configs.name]
-    #     eval_df = eval_df.sort_values(
-    #         (BehavColumns.PROB.value), ignore_index=True
-    #     ).reset_index()
-    #     # Making plot with actual outcomes (scatter) and ML probaility outcomes (line)
-    #     fig, ax = plt.subplots(figsize=(8, 5), layout="constrained")
-    #     eval_df[f"{BehavColumns.ACTUAL.value}_jitter"] = (
-    #         eval_df[BehavColumns.ACTUAL.value]
-    #         + (np.random.rand(eval_df.shape[0]) - 0.5) * 0.1
-    #     )
-
-    #     sns.scatterplot(
-    #         data=eval_df,
-    #         x="prob",
-    #         y=f"{BehavColumns.ACTUAL.value}_jitter",
-    #         hue=BehavColumns.PRED.value,
-    #         marker=".",
-    #         s=10,
-    #         linewidth=0,
-    #         alpha=0.2,
-    #         ax=ax,
-    #     )
-    #     # Making axis titles
-    #     ax.set_title("Logistic outcomes against ML probability")
-    #     ax.set_xlabel("Sample")
-    #     ax.set_ylabel("ML probability")
-    #     ax.set_ylim(-0.11, 1.11)
-    #     ax.set_xticks([])
-    #     return fig
-
-    # def model_eval_plot_metrics(self, eval_df: pd.DataFrame) -> Figure:
-    #     """
-    #     PLOTTING RECALL, PRECISION, F1, AND ACCURACY FOR DIFFERENT PCUTOFFS.
-    #     """
-    #     beta = 1.5
-    #     pcutoffs = np.linspace(0, 1, 101)[:-1]
-    #     eval_df = eval_df[self.configs.name]
-    #     # Initialising df_eval_pcutoffs df
-    #     df_eval_pcutoffs = pd.DataFrame()
-    #     for pcutoff in pcutoffs:
-    #         # Getting y_true and y_pred
-    #         y_true = eval_df[BehavColumns.ACTUAL.value]
-    #         y_pred = (eval_df[BehavColumns.PROB.value] >= pcutoff).astype(int)
-    #         # Getting performance metrics
-    #         precision, recall, fscore, _ = precision_recall_fscore_support(
-    #             y_true, y_pred, labels=[0, 1], beta=beta
-    #         )
-    #         accuracy = accuracy_score(y_true, y_pred)
-    #         # Getting eval metrics
-    #         df_eval_pcutoffs.loc[pcutoff, "precision"] = precision[1]
-    #         df_eval_pcutoffs.loc[pcutoff, "recall"] = recall[1]
-    #         df_eval_pcutoffs.loc[pcutoff, "fscore"] = fscore[1]
-    #         df_eval_pcutoffs.loc[pcutoff, "accuracy"] = accuracy
-    #     # Plotting performance metrics for different pcutoff values
-    #     df_eval_pcutoffs_long = (
-    #         df_eval_pcutoffs.reset_index(names="pcutoff")
-    #         .melt(id_vars=["pcutoff"], var_name="measure", value_name="value")
-    #         .infer_objects()
-    #     )
-    #     fig, ax = plt.subplots(figsize=(8, 5), layout="constrained")
-    #     sns.lineplot(
-    #         data=df_eval_pcutoffs_long,
-    #         x="pcutoff",
-    #         y="value",
-    #         hue="measure",
-    #         palette="Pastel1",
-    #         ax=ax,
-    #     )
-    #     # Making axis titles
-    #     ax.set_title("Evaluation of behav detection")
-    #     ax.set_xlabel("pcutoff")
-    #     ax.set_ylabel("Metric")
-    #     ax.set_ylim(0, 1.01)
-    #     ax.legend(loc="upper left", bbox_to_anchor=(1.0, 1.0))
-    #     return fig
-    #     return fig
-    #     return fig
-    #     return fig
-    #     return fig
+        # Returning classifier model
+        return self.clf

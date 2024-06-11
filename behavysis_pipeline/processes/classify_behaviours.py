@@ -2,8 +2,6 @@
 Classify Behaviours
 """
 
-import os
-
 import numpy as np
 import pandas as pd
 from behavysis_core.constants import BEHAV_CN, BEHAV_IN, BehavColumns
@@ -73,17 +71,16 @@ class ClassifyBehaviours:
         behav_preds_ls = np.zeros(len(models_ls), dtype="object")
         for i, model in enumerate(models_ls):
             # Getting classifier probabilities
-            clf = BehavClassifier(model)
-            df_i = clf.model_predict(features_df)
+            clf = BehavClassifier.load(model)
+            df_i = clf.pipeline_run(features_df)
             # Getting prob and pred column names
-            prob_col = (clf.configs.name, BehavColumns.PROB.value)
-            pred_col = (clf.configs.name, BehavColumns.PRED.value)
+            prob_col = (clf.configs.behaviour_name, BehavColumns.PROB.value)
+            pred_col = (clf.configs.behaviour_name, BehavColumns.PRED.value)
             # Using pcutoff to get binary predictions
-            df_i[pred_col] = df_i[prob_col] > pcutoff
-            df_i[pred_col] = df_i[pred_col].astype(int)
+            df_i[pred_col] = (df_i[prob_col] > pcutoff).astype(int)
             # Filling in small non-behav bouts
             df_i[pred_col] = merge_bouts(df_i[pred_col], min_window_frames)
-            # Saving df
+            # Adding model predictions df to list
             behav_preds_ls[i] = df_i
             # Logging outcome
             outcome += f"Completed {model} classification,\n"

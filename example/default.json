@@ -1,0 +1,142 @@
+{
+  "user": {
+    "format_vid": {
+      "height_px": 540,
+      "width_px": 960,
+      "fps": 15,
+      "start_sec": null,
+      "stop_sec": null
+    },
+    "run_dlc": {
+      "dlc_config_path": "Z:\\PRJ-BowenLab\\PRJ-BowenLab\\DeepLabCut-Projects\\aggrModel_960px\\config.yaml"
+    },
+    "calculate_params": {
+      "start_frame": {
+        "window_sec": 1,
+        "pcutoff": 0.9,
+        "bodyparts": "--bodyparts-simba"
+      },
+      "exp_dur": {
+        "window_sec": 1,
+        "pcutoff": 0.9,
+        "bodyparts": "--bodyparts-simba"
+      },
+      "stop_frame": {
+        "dur_sec": 600
+      },
+      "px_per_mm": {
+        "pt_a": "--tl",
+        "pt_b": "--tr",
+        "dist_mm": 400
+      }
+    },
+    "preprocess": {
+      "interpolate": {
+        "pcutoff": 0.5
+      },
+      "bodycentre": {
+        "bodyparts": "--bodyparts-centre"
+      },
+      "refine_ids": {
+        "marked": "mouse1marked",
+        "unmarked": "mouse2unmarked",
+        "marking": "AnimalColourMark",
+        "window_sec": 0.5,
+        "metric": "rolling",
+        "bodyparts": "--bodyparts-centre"
+      }
+    },
+    "evaluate": {
+      "keypoints_plot": {
+        "bodyparts": ["Nose", "BodyCentre", "TailBase1"]
+      },
+      "eval_vid": {
+        "funcs": ["keypoints", "behavs"],
+        "pcutoff": 0.5,
+        "colour_level": "individuals",
+        "radius": 4,
+        "cmap": "rainbow"
+      }
+    },
+    "extract_features": {
+      "individuals": ["mouse1marked", "mouse2unmarked"],
+      "bodyparts": "--bodyparts-simba"
+    },
+    "classify_behaviours": {
+      "models": [
+        "Z:\\PRJ-BowenLab\\TimLee\\resources\\simba_model_aggr\\behav_models\\fight\\model_configs.json",
+        "Z:\\PRJ-BowenLab\\TimLee\\resources\\simba_model_aggr\\behav_models\\marked_fight\\model_configs.json",
+        "Z:\\PRJ-BowenLab\\TimLee\\resources\\simba_model_aggr\\behav_models\\unmarked_fight\\model_configs.json"
+      ],
+      "pcutoff": 0.4,
+      "min_window_frames": 2,
+      "user_behavs": ["example", "another example"]
+    },
+    "analyse": {
+      "thigmotaxis": {
+        "thresh_mm": 50,
+        "roi_top_left": "--tl",
+        "roi_top_right": "--tr",
+        "roi_bottom_left": "--bl",
+        "roi_bottom_right": "--br",
+        "bodyparts": "--bodyparts-centre"
+      },
+      "center_crossing": {
+        "thresh_mm": 125,
+        "roi_top_left": "--tl",
+        "roi_top_right": "--tr",
+        "roi_bottom_left": "--bl",
+        "roi_bottom_right": "--br",
+        "bodyparts": "--bodyparts-centre"
+      },
+      "in_roi": {
+        "thresh_mm": 5,
+        "roi_top_left": "--tl",
+        "roi_top_right": "--tr",
+        "roi_bottom_left": "--bl",
+        "roi_bottom_right": "--br",
+        "bodyparts": ["Nose"]
+      },
+      "speed": {
+        "smoothing_sec": 1,
+        "bodyparts": "--bodyparts-centre"
+      },
+      "social_distance": {
+        "smoothing_sec": 1,
+        "bodyparts": "--bodyparts-centre"
+      },
+      "freezing": {
+        "window_sec": 2,
+        "thresh_mm": 5,
+        "smoothing_sec": 0.2,
+        "bodyparts": "--bodyparts-simba"
+      },
+      "bins_sec": [30, 60, 120, 300],
+      "custom_bins_sec": [60, 120, 300, 600]
+    }
+  },
+  "ref": {
+    "bodyparts-centre": [
+      "LeftFlankMid",
+      "BodyCentre",
+      "RightFlankMid",
+      "LeftFlankRear",
+      "RightFlankRear",
+      "TailBase1"
+    ],
+    "bodyparts-simba": [
+      "LeftEar",
+      "RightEar",
+      "Nose",
+      "BodyCentre",
+      "LeftFlankMid",
+      "RightFlankMid",
+      "TailBase1",
+      "TailTip4"
+    ],
+    "tl": "TopLeft",
+    "tr": "TopRight",
+    "bl": "BottomLeft",
+    "br": "BottomRight"
+  }
+}
