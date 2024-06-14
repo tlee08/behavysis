@@ -68,9 +68,9 @@ COMB_X_CN = FEATURES_CN
 CN = BEHAV_CN
 
 
-class BehavClassifier:
+class BaseBehavClassifier:
     """
-    BehavClassifier class peforms behav classifier model preparation, training, saving,
+    BaseBehavClassifier abstract class peforms behav classifier model preparation, training, saving,
     evaluation, and inference.
     """
 
@@ -84,6 +84,8 @@ class BehavClassifier:
         Parameters
         ----------
         configs_fp : str
+            _description_
+        clf : Model | BaseEstimator
             _description_
         """
         # Storing configs json fp

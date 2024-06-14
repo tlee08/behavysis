@@ -598,7 +598,7 @@ class Project:
             Whether the experiment was imported or not.
             True if imported, False if not.
         """
-        if not name in self.experiments:
+        if name not in self.experiments:
             self.experiments[name] = Experiment(name, self.root_dir)
             return True
         return False

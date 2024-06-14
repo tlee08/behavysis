@@ -71,11 +71,11 @@ class ClassifyBehaviours:
         behav_preds_ls = np.zeros(len(models_ls), dtype="object")
         for i, model in enumerate(models_ls):
             # Getting classifier probabilities
-            clf = BehavClassifier.load(model)
-            df_i = clf.pipeline_run(features_df)
+            model = BehavClassifier.load(model)
+            df_i = model.pipeline_run(features_df)
             # Getting prob and pred column names
-            prob_col = (clf.configs.behaviour_name, BehavColumns.PROB.value)
-            pred_col = (clf.configs.behaviour_name, BehavColumns.PRED.value)
+            prob_col = (model.configs.behaviour_name, BehavColumns.PROB.value)
+            pred_col = (model.configs.behaviour_name, BehavColumns.PRED.value)
             # Using pcutoff to get binary predictions
             df_i[pred_col] = (df_i[prob_col] > pcutoff).astype(int)
             # Filling in small non-behav bouts

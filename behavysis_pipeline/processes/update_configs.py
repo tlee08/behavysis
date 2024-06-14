@@ -16,7 +16,7 @@ str
     Description of the function's outcome.
 """
 
-from typing import Literal, Type
+from typing import Literal
 
 from behavysis_core.data_models.experiment_configs import ExperimentConfigs
 from pydantic import ValidationError
@@ -74,5 +74,4 @@ class UpdateConfigs:
             )
         # Writing new configs to JSON file
         configs.write_json(configs_fp)
-        return outcome
         return outcome
