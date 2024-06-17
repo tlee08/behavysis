@@ -12,11 +12,8 @@ There are three important guidelines to set up the project:
 
 They need to be set up inside specially named folders, as shown below.
 
-![folders1](../figures/folders1.png)
-
 An example of how this would look on a computer (in this case, a Mac) is shown below.
 
-![folders3](../figures/folders3.png)
 
 ## Experiment Files
 
@@ -26,9 +23,10 @@ Each experiment must have files that have same name (not including the suffix li
 
 The config file for an experiment stores all the parameters for how the experiment was recorded (e.g., the frames per second of the raw video, the experiment duration, etc.), and the parameters for how we want to process the data (e.g., the intended frames per second to format the video to, the DLC model to use to analyse, the likeliness pcutoff to interpolate points, etc.)
 
-An example of a config file is shown in The Configs File.
+An example of a config file is shown [here][configs-json-file].
 
 # Running behavysis_pipeline
 
-To install `behavysis_pipeline`, follow [these](../installation/installing/conda.md) instructions.
-To run `behavysis_pipeline`, follow these [these](../installation/running/conda.md) instructions.
+To install `behavysis_pipeline`, follow [these][installing] instructions.
+
+To run `behavysis_pipeline`, follow these [these][running] instructions.

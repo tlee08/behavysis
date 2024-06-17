@@ -3,9 +3,9 @@ Functions have the following format:
 
 Parameters
 ----------
-raw_vid_fp : str
+in_fp : str
     The input video filepath.
-formatted_vid_fp : str
+out_fp : str
     The output video filepath.
 configs_fp : str
     The JSON configs filepath.
@@ -80,9 +80,9 @@ class FormatVid:
 
         Parameters
         ----------
-        raw_vid_fp : str
+        in_fp : str
             The input video filepath.
-        formatted_vid_fp : str
+        out_fp : str
             The output video filepath.
         configs_fp : str
             The JSON configs filepath.

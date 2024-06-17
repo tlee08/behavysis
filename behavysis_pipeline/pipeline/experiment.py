@@ -449,11 +449,6 @@ class Experiment:
         Possible funcs are given in analysis.py.
         The preprocessed data is saved to the project's analysis folder.
 
-        Parameters
-        ----------
-        funcs : tuple[Callable, ...]
-            _description_
-
         Returns
         -------
         dict

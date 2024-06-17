@@ -22,7 +22,7 @@ import os
 
 import numpy as np
 import pandas as pd
-from behavysis_core.constants import IndivColumns
+from behavysis_core.constants import ANALYSIS_CN, IndivColumns
 from behavysis_core.data_models.experiment_configs import ExperimentConfigs
 from behavysis_core.mixins.behav_mixin import BehavMixin
 from behavysis_core.mixins.df_io_mixin import DFIOMixin
@@ -268,7 +268,7 @@ class Analyse:
         idx = pd.IndexSlice
         res_df = AnalyseMixin.pt_in_roi_df(dlc_df, roi_df, indivs, bpts)
         # Changing column MultiIndex names
-        res_df.columns = res_df.columns.set_levels(["x", "y", f_name], level=1)
+        res_df.columns = res_df.columns.set_levels(["x", "y", f_name], level=ANALYSIS_CN[1])
         # Getting analysis_df
         analysis_df = res_df.loc[:, idx[:, f_name]]
         # Saving analysis_df

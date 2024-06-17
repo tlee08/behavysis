@@ -69,31 +69,21 @@ plugins:
 nav:
   - index.md
   - Installing and Running:
-      - Installing:
-          - installation/installing/conda.md
-        # - installation/installing/docker.md
-      - Updating:
-          - installation/updating/conda.md
-        # - installation/updating/docker.md
-      - Uninstalling:
-          - installation/uninstalling/conda_windows.md
-          - installation/uninstalling/conda_linux.md
-        # - installation/uninstalling/docker.md
-      - Running:
-          - installation/running/conda.md
+    - installation/installing.md
+    - installation/running.md
+    - installation/updating.md
+    - installation/uninstalling.md
   - Tutorials:
-      - tutorials/explanation.md
-      - tutorials/setup.md
-      # - installation/running/conda.md
-      - Configs Setup:
-          - tutorials/configs_setup/configs_update.md
-      - Usage Examples:
-          - tutorials/usage_examples/one_experiment.md
-          - tutorials/usage_examples/one_project.md
-  - Diagnostics Messages:
-      - diagnostics_messages/diagnostics_messages.md
+    - tutorials/explanation.md
+    - tutorials/setup.md
+    - tutorials/configs_json.md
+    - tutorials/diagnostics_messages.md
+  - Examples:
+    - examples/analysis.md
+    - examples/train.md
   - API Reference:
-      - reference/pipeline.md
-      - reference/project.md
-      - reference/experiment.md
-      - reference/processes.md
+    - reference/behavysis_pipeline.md
+    - reference/project.md
+    - reference/experiment.md
+    - reference/processes.md
+    - reference/behav_classifier.md

@@ -104,9 +104,7 @@ class AnalyseMixin:
         - The index levels are correct.
         """
         # Checking for null values
-        assert (
-            not df.isnull().values.any()
-        ), "The dataframe contains null values. Be sure to run interpolate_points first."
+        assert not df.isnull().values.any(), "The dataframe contains null values. Be sure to run interpolate_points first."
         # Checking that the index levels are correct
         DFIOMixin.check_df_index_names(df, ANALYSIS_IN)
         # Checking that the column levels are correct
@@ -214,6 +212,7 @@ class AnalyseMixin:
         res_df = AnalyseMixin.init_df(dlc_df.index)
         idx = pd.IndexSlice
         for indiv in indivs:
+            # Getting average body center (x, y) for each individual
             res_df[(indiv, "x")] = (
                 dlc_df.loc[:, idx[indiv, bpts, "x"]].mean(axis=1).values
             )

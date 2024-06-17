@@ -59,19 +59,21 @@ class ClassifyBehaviours:
         outcome = ""
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
-        configs_filt = configs.user.classify_behaviours
-        models_ls = configs.get_ref(configs_filt.models)
-        pcutoff = configs.get_ref(configs_filt.pcutoff)
-        min_window_frames = configs.get_ref(configs_filt.min_window_frames)
+        models_ls = configs.user.classify_behaviours
         # Getting features data
         features_df = DFIOMixin.read_feather(features_fp)
         # Initialising y_preds df
         # Getting predictions for each classifier model and saving
         # in a list of pd.DataFrames
         behav_preds_ls = np.zeros(len(models_ls), dtype="object")
-        for i, model in enumerate(models_ls):
-            # Getting classifier probabilities
-            model = BehavClassifier.load(model)
+        for i, model_config in enumerate(models_ls):
+            # Getting model (clf, pcutoff, min_window_frames)
+            model_fp = configs.get_ref(model_config.model_fp)
+            model = BehavClassifier.load(model_fp)
+            pcutoff = configs.get_ref(model_config.pcutoff)
+            pcutoff = model.configs.pcutoff if pcutoff is None else pcutoff
+            min_window_frames = configs.get_ref(model_config.min_window_frames)
+            # Running the clf pipeline
             df_i = model.pipeline_run(features_df)
             # Getting prob and pred column names
             prob_col = (model.configs.behaviour_name, BehavColumns.PROB.value)
@@ -83,7 +85,7 @@ class ClassifyBehaviours:
             # Adding model predictions df to list
             behav_preds_ls[i] = df_i
             # Logging outcome
-            outcome += f"Completed {model} classification,\n"
+            outcome += f"Completed {model.configs.behaviour_name} classification.\n"
         # Concatenating predictions to a single dataframe
         behavs_df = pd.concat(behav_preds_ls, axis=1)
         # Setting the index and column names

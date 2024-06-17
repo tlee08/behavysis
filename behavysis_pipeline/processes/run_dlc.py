@@ -25,6 +25,7 @@ import logging
 import os
 import re
 
+from jinja2 import Environment, PackageLoader
 import pandas as pd
 from behavysis_core.constants import KEYPOINTS_CN, KEYPOINTS_IN
 from behavysis_core.data_models.experiment_configs import ExperimentConfigs
@@ -53,9 +54,9 @@ class RunDLC:
         outcome = ""
         # Specifying the GPU to use
         gputouse = "None" if not gputouse else gputouse
-        # Getting dlc_config_path
+        # Getting model_fp
         configs = ExperimentConfigs.read_json(configs_fp)
-        dlc_config_path = configs.get_ref(configs.user.run_dlc.dlc_config_path)
+        model_fp = configs.get_ref(configs.user.run_dlc.model_fp)
         # Derive more parameters
         dlc_out_dir = os.path.join(temp_dir, f"dlc_{gputouse}")
         out_dir = os.path.dirname(out_fp)
@@ -63,14 +64,14 @@ class RunDLC:
         os.makedirs(dlc_out_dir, exist_ok=True)
 
         # Assertion: the config.yaml file must exist.
-        if not os.path.isfile(dlc_config_path):
+        if not os.path.isfile(model_fp):
             raise ValueError(
-                f'The given dlc_config_path file does not exist: "{dlc_config_path}".\n'
+                f'The given model_fp file does not exist: "{model_fp}".\n'
                 + 'Check this file and specify a DLC ".yaml" config file.'
             )
 
         # Running the DLC subprocess (in a separate conda env)
-        subproc_run_dlc(dlc_config_path, [in_fp], dlc_out_dir, temp_dir, gputouse)
+        run_dlc_subproc(model_fp, [in_fp], dlc_out_dir, temp_dir, gputouse)
 
         # Exporting the h5 to feather the out_dir
         export_2_feather(in_fp, dlc_out_dir, out_dir)
@@ -118,22 +119,22 @@ class RunDLC:
         dlc_fp_ls = [os.path.join(configs_dir, f"{i}.json") for i in dlc_fp_ls]
         # Reading their configs
         dlc_fp_ls = [ExperimentConfigs.read_json(i) for i in dlc_fp_ls]
-        # Getting their dlc_config_path
-        dlc_fp_ls = [i.user.run_dlc.dlc_config_path for i in dlc_fp_ls]
+        # Getting their model_fp
+        dlc_fp_ls = [i.user.run_dlc.model_fp for i in dlc_fp_ls]
         # Converting to a set
         dlc_fp_set = set(dlc_fp_ls)
-        # Assertion: all dlc_config_paths must be the same
+        # Assertion: all model_fp must be the same
         assert len(dlc_fp_set) == 1
-        # Getting the dlc_config_path
-        dlc_config_path = dlc_fp_set.pop()
+        # Getting the model_fp
+        model_fp = dlc_fp_set.pop()
         # Assertion: the config.yaml file must exist.
-        assert os.path.isfile(dlc_config_path), (
-            f'The given dlc_config_path file does not exist: "{dlc_config_path}".\n'
+        assert os.path.isfile(model_fp), (
+            f'The given model_fp file does not exist: "{model_fp}".\n'
             + 'Check this file and specify a DLC ".yaml" config file.'
         )
 
         # Running the DLC subprocess (in a separate conda env)
-        subproc_run_dlc(dlc_config_path, in_fp_ls, dlc_out_dir, temp_dir, gputouse)
+        run_dlc_subproc(model_fp, in_fp_ls, dlc_out_dir, temp_dir, gputouse)
 
         # Exporting the h5 to feather the out_dir
         for in_fp in in_fp_ls:
@@ -143,8 +144,8 @@ class RunDLC:
         return outcome
 
 
-def subproc_run_dlc(
-    dlc_config_path: str,
+def run_dlc_subproc(
+    model_fp: str,
     in_fp_ls: list[str],
     dlc_out_dir: str,
     temp_dir: str,
@@ -158,31 +159,23 @@ def subproc_run_dlc(
     """
     # Generating a script to run the DLC analysis
     # TODO: implement for and try for each video and get errors?? Maybe save a log to a file
-    script_fp = os.path.join(temp_dir, f"script_{gputouse}.py")
+    # Load the Jinja2 environment
+    env = Environment(loader=PackageLoader("behavysis_pipeline", "script_templates"))
+    # Get the template
+    template = env.get_template("dlc_subproc.py")
+    # Render the template with variables a, b, and c
+    rendered_template = template.render(
+        in_fp_ls=in_fp_ls,
+        model_fp=model_fp,
+        dlc_out_dir=dlc_out_dir,
+        gputouse=gputouse,
+    )
+    # Writing the script to a file
+    os.makedirs(temp_dir, exist_ok=True)
+    script_fp = os.path.join(temp_dir, f"dlc_subproc_{gputouse}.py")
     with open(script_fp, "w", encoding="utf-8") as f:
-        f.write(
-            f"""
-import deeplabcut
-
-for video in {in_fp_ls}:
-    try:
-        deeplabcut.analyze_videos(
-            config=r'{dlc_config_path}',
-            videos=[video],
-            videotype='mp4',
-            destfolder=r'{dlc_out_dir}',
-            gputouse={gputouse},
-            save_as_csv=False,
-            calibrate=False,
-            identity_only=False,
-            allow_growth=False,
-        )
-    except Exception as e:
-        print(f'Error', e)
-"""
-        )
-
-    # Running the DLC subprocess
+        f.write(rendered_template)
+    # Running the DLC subprocess in a separate conda env
     cmd = [
         os.environ["CONDA_EXE"],
         "run",

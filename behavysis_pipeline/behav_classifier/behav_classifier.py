@@ -7,9 +7,9 @@ from __future__ import annotations
 import logging
 import os
 import shutil
-from enum import Enum
-from typing import TYPE_CHECKING, Callable, Optional
+from typing import TYPE_CHECKING, Callable
 
+from .clf_templates import ClfTemplates
 import joblib
 import matplotlib.pyplot as plt
 import numpy as np
@@ -17,28 +17,19 @@ import pandas as pd
 import seaborn as sns
 from behavysis_core.constants import (
     BEHAV_CN,
-    BEHAV_IN,
-    FEATURES_CN,
     BehavColumns,
     Folders,
 )
+from behavysis_core.data_models.pydantic_base_model import PydanticBaseModel
 from behavysis_core.mixins.behav_mixin import BehavMixin
 from behavysis_core.mixins.df_io_mixin import DFIOMixin
 from behavysis_core.mixins.features_mixin import FeaturesMixin
 from behavysis_core.mixins.io_mixin import IOMixin
 from imblearn.under_sampling import RandomUnderSampler
-from keras.layers import (
-    Conv1D,
-    Dense,
-    Dropout,
-    Flatten,
-    Input,
-    MaxPooling1D,
-)
 from keras.models import Model
 from keras.utils import plot_model
+from pydantic import ConfigDict
 from sklearn.base import BaseEstimator
-from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import (
     classification_report,
     confusion_matrix,
@@ -47,31 +38,43 @@ from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import MinMaxScaler
 
-from .behav_classifier_configs import BehavClassifierConfigs
 
 if TYPE_CHECKING:
     from behavysis_pipeline.pipeline.project import Project
 
-
-class Datasets(Enum):
-    ALL = "all"
-    TRAIN = "train"
-    TEST = "test"
-
-
 X_ID = "x"
 Y_ID = "y"
-SUBSAMPLED = "sub"
 
-COMB_IN = ["experiments", *BEHAV_IN]
-COMB_X_CN = FEATURES_CN
-CN = BEHAV_CN
+BEHAV_MODELS_SUBDIR = "behav_models"
+
+
+class BehavClassifierConfigs(PydanticBaseModel):
+    """_summary_"""
+
+    model_config = ConfigDict(extra="forbid")
+
+    train_fraction: float = 0.8
+    undersampling_strategy: float = 0.1
+    seed: int = 42
+    pcutoff: float = 0.5
+    behaviour_name: str = "BehaviourName"
+
+    window_frames: int = 5
+
+    clf_structure: str = "clf"  # Classifier type (defined in ClfTemplates)
 
 
 class BehavClassifier:
     """
-    BehavClassifier class peforms behav classifier model preparation, training, saving,
+    BehavClassifier abstract class peforms behav classifier model preparation, training, saving,
     evaluation, and inference.
+    
+    Attributes
+    ----------
+    configs_fp: str
+        _description_
+    clf: Model | BaseEstimator
+        _description_
     """
 
     configs_fp: str
@@ -129,7 +132,7 @@ class BehavClassifier:
         )
         # For each behaviour, making a new BehavClassifier instance
         behavs_ls = y_df.columns.to_list()
-        models_dir = os.path.join(proj.root_dir, "behav_models")
+        models_dir = os.path.join(proj.root_dir, BEHAV_MODELS_SUBDIR)
         models_ls = [cls.create_new_model(models_dir, behav) for behav in behavs_ls]
         # Importing data from project to "beham_models" folder (only need one model for this)
         if len(models_ls) > 0:
@@ -253,7 +256,10 @@ class BehavClassifier:
         """
         # data stores
         id_ls = [X_ID, Y_ID]
-        df_dict = {X_ID: None, Y_ID: None}
+        df_dict = {
+            X_ID: None,
+            Y_ID: None,
+        }
         read_func_ls = {
             X_ID: FeaturesMixin.read_feather,  # features extracted
             Y_ID: BehavMixin.read_feather,  # behaviours scored
@@ -326,14 +332,15 @@ class BehavClassifier:
         y = y.fillna(0)
         # Setting -1 to 0 (i.e. "undecided" to "no behaviour")
         y = y.map(lambda x: 0 if x == -1 else x)
-        # Converting MultiIndex columns to single columns
+        # Filtering out the prob and pred columns (in the `outcomes` level)
         cols_filter = np.isin(
             y.columns.get_level_values(BEHAV_CN[1]),
             [BehavColumns.PROB.value, BehavColumns.PRED.value],
             invert=True,
         )
         y = y.loc[:, cols_filter]
-        # Setting the column names from `(behav, outcome)` to `{behav}__{outcome}`
+        # Converting MultiIndex columns to single columns by
+        # setting the column names from `(behav, outcome)` to `{behav}__{outcome}`
         y.columns = [
             f"{i[0]}" if i[1] == BehavColumns.ACTUAL.value else f"{i[0]}__{i[1]}"
             for i in y.columns
@@ -483,24 +490,27 @@ class BehavClassifier:
     # PIPELINE FOR CLASSIFIER TRAINING AND INFERENCE
     #################################################
 
-    def pipeline_build(self, clf_init_f: Optional[Callable] = None):
+    def pipeline_build(self, clf_init_f: Callable) -> None:
         """
         Makes a classifier and saves it to the model's root directory.
 
-        Currently using the DNN classifier.
+        Callable is a method from `ClfTemplates`.
         """
         # Preparing data
         x, y = self.prepare_data_training()
         # Splitting into train and test sets
         x_train, x_test, y_train, y_test = self.train_test_split(x, y)
-        # Initialising the model (cnn, dnn, or rf)
-        clf_init_f = self.clf_dnn_init if clf_init_f is None else clf_init_f
-        self.clf = clf_init_f()
+        # Initialising the model
+        self.clf = clf_init_f(self)
         # Evaluating the model (training on train, testing on test)
         self.clf_train(x_train, y_train)
         self.clf_eval(x_test, y_test)
         # Training the model (on all data)
         self.clf_train(x, y)
+        # Updating the model configs
+        configs = self.configs
+        configs.clf_structure = clf_init_f.__name__
+        configs.write_json(self.configs_fp)
         # Saving the model to disk
         self.clf_save()
 
@@ -510,7 +520,7 @@ class BehavClassifier:
 
         Pipeline is:
         - Preprocess `x` df. Refer to
-        [behavysis_pipeline.behav_classifier.BehavClassifier.preprocess_x][] for details.
+        [behavysis_pipeline.behav_classifier.BehavClassifier.preproc_x][] for details.
         - Makes predictions and returns the predicted behaviours.
         """
         # Saving index for later
@@ -542,7 +552,7 @@ class BehavClassifier:
         """
         joblib.dump(self.clf, self.clf_fp)
 
-    def clf_train(self, x: np.array, y: np.array):
+    def clf_train(self, x: np.array, y: np.array) -> None:
         """
         __summary__
         """
@@ -551,16 +561,19 @@ class BehavClassifier:
                 x,
                 y,
                 batch_size=64,
-                epochs=200,
+                epochs=100,
                 validation_split=0.1,
                 shuffle=True,
                 verbose=1,
                 callbacks=None,
             )
         elif isinstance(self.clf, BaseEstimator):
-            self.clf.fit(x, y)
+            self.clf.fit(
+                x,
+                y,
+            )
         else:
-            raise ValueError("Model is not a valid type")
+            raise ValueError("Please implement (either keras or sklearn)")
 
     def clf_predict(self, x: np.ndarray) -> pd.DataFrame:
         """
@@ -581,13 +594,13 @@ class BehavClassifier:
             outcomes   :  "prob"   "pred"
             ```
         """
-        # Getting probabilities from model
         if isinstance(self.clf, Model):
             y_probs = self.clf.predict(x)
         elif isinstance(self.clf, BaseEstimator):
             y_probs = self.clf.predict_proba(x)[:, 1]
         else:
             raise ValueError("Model is not a valid type")
+        # Making predictions from probabilities (and pcutoff)
         y_preds = (y_probs > self.configs.pcutoff).astype(int)
         # Making df
         pred_df = BehavMixin.init_df(np.arange(x.shape[0]))
@@ -637,6 +650,63 @@ class BehavClassifier:
         logc_fig.savefig(os.path.join(eval_dir, f"{name}_logc.png"))
         # Return evaluations
         return y_eval, metrics_fig, pcutoffs_fig, logc_fig
+
+    #################################################
+    # COMPREHENSIVE EVALUATION FUNCTIONS
+    #################################################
+
+    def clf_eval_compare(self, eval_name: str, x_test: np.ndarray, y_test: np.ndarray):
+        """
+        Making and saving evaluation metrics for the classifier, with a given name.
+        """
+        eval_dir = os.path.join(
+            self.root_dir, "compare_evals", self.configs.behaviour_name
+        )
+        os.makedirs(eval_dir, exist_ok=True)
+        e, m, p, l = self.clf_eval(x_test, y_test)
+        e.to_feather(os.path.join(eval_dir, f"{eval_name}_e.feather"))
+        m.savefig(os.path.join(eval_dir, f"{eval_name}_m.png"))
+        p.savefig(os.path.join(eval_dir, f"{eval_name}_p.png"))
+        l.savefig(os.path.join(eval_dir, f"{eval_name}_l.png"))
+
+    def clf_eval_compare_all(self):
+        """
+        Making classifier for all available templates.
+
+        Notes
+        -----
+        Takes a long time to run.
+        """
+        # Saving existing clf
+        clf = self.clf
+        # Getting data
+        # train and test data
+        x, y = self.prepare_data_training()
+        x_train, x_test, y_train, y_test = self.train_test_split(x, y)
+        # # Adding noise
+        # noise = 0.05
+        # x_train += np.random.normal(0, noise, x_train.shape)
+        # x_test += np.random.normal(0, noise, x_test.shape)
+        # All data
+        x, y = self.combine_dfs()
+        x = self.prepare_data(x)
+        y = y[(self.configs.behaviour_name, BehavColumns.ACTUAL.value)]
+        y = np.vectorize(lambda i: 0 if i == -1 else i)(y)
+        # Getting eval for each classifier in ClfTemplates
+        init_f_ls = [
+            init_f for init_f in dir(ClfTemplates) if not init_f.startswith("__")
+        ]
+        for init_f in init_f_ls:
+            # Making classifier
+            self.clf = init_f(self)
+            # Training
+            self.clf_train(x_train, y_train)
+            # Evaluating on test data
+            self.eval_classifier(init_f.__name__, x_test, y_test)
+            # Evaluating on all data
+            self.eval_classifier(f"{init_f.__name__}_all", x, y)
+        # Restoring clf
+        self.clf = clf
 
     #################################################
     # EVALUATION METRICS FUNCTIONS
@@ -753,62 +823,6 @@ class BehavClassifier:
         # )
         return y_eval_summary
 
-    #################################################
-    # CNN CLASSIFIER
-    #################################################
-
-    def clf_cnn_init(self):
-        """
-        x features is (samples, window, features).
-        y outcome is (samples, class).
-        """
-        # Input layers
-        # 546 is number of SimBA features
-        inputs = Input(shape=(self.configs.window_frames * 2 + 1, 546))
-        # Hidden layers
-        x = Conv1D(32, 3, activation="relu")(inputs)
-        x = MaxPooling1D(2)(x)
-        x = Conv1D(64, 3, activation="relu")(x)
-        x = MaxPooling1D(2)(x)
-        x = Flatten()(x)
-        x = Dense(64, activation="relu")(x)
-        x = Dropout(0.5)(x)
-        # Binary classification problem (probability output)
-        outputs = Dense(1, activation="sigmoid")(x)
-        # Create the model
-        self.clf = Model(inputs=inputs, outputs=outputs)
-        # Compile the model
-        self.clf.compile(
-            optimizer="adam", loss="binary_crossentropy", metrics=["accuracy"]
-        )
-        # Returning classifier model
-        return self.clf
-
-    def clf_dnn_init(self):
-        """
-        x features is (samples, features).
-        y outcome is (samples, class).
-        """
-        # Input layers
-        # 546 is number of SimBA features
-        input_shape = (546,)
-        inputs = Input(shape=input_shape)
-        # Hidden layers
-        # l = Dense(256, activation="relu")(inputs)  # 32, 64, 256
-        # l = Dropout(0.5)(l)
-        x = Dense(64, activation="relu")(inputs)  # 32, 64, 256
-        x = Dropout(0.5)(x)
-        # Binary classification problem (probability output)
-        outputs = Dense(1, activation="sigmoid")(x)
-        # Create the model
-        self.clf = Model(inputs=inputs, outputs=outputs)
-        # Compiling model
-        self.clf.compile(
-            optimizer="adam", loss="binary_crossentropy", metrics=["accuracy"]
-        )
-        # Returning classifier model
-        return self.clf
-
     def clf_nn_visualize(self):
         """
         __summary__
@@ -831,25 +845,6 @@ class BehavClassifier:
             show_trainable=False,
         )
 
-    def clf_rf_init(self):
-        """
-        x features is (samples, features).
-        y outcome is (samples, class).
-        """
-        # Creating Gradient Boosting Classifier
-        # self.clf = GradientBoostingClassifier(
-        #     n_estimators=200,
-        #     learning_rate=0.1,
-        #     # max_depth=3,
-        #     random_state=0,
-        #     verbose=1,
-        # )
-        self.clf = RandomForestClassifier(
-            n_estimators=2000,
-            max_depth=3,
-            random_state=0,
-            n_jobs=16,
-            verbose=1,
-        )
-        # Returning classifier model
-        return self.clf
+
+# To run on specific GPU (all processes must be within context)
+# os.environ["CUDA_VISIBLE_DEVICES"] = str(1)

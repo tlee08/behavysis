@@ -1,0 +1,14 @@
+# install: conda env create -f conda_env.yaml
+# update: conda env update -f conda_env.yaml --prune
+
+name: simba
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.9
+  - pip
+  - ipykernel
+  - nb_conda
+  - pip:
+      - Simba-UW-tf-dev

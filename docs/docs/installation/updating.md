@@ -1,11 +1,7 @@
-# Updating behavysis_pipeline
+# Updating
 
 **Step 1:**
-In the terminal, navigate to the `behavysis_pipeline` folder:
-
-```zsh
-cd <path/to/behavysis_pipeline>
-```
+Download the `conda_env.yaml` file from [here](https://github.com/tlee08/behavysis_pipeline/blob/main/conda_env.yaml)
 
 **Step 2:**
 Run the following command to update `behavysis_pipeline`:
