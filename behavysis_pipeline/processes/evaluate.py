@@ -34,7 +34,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
-from behavysis_core.constants import IndivColumns, BehavColumns
+from behavysis_core.constants import IndivColumns, BehavColumns, KEYPOINTS_CN, KEYPOINTS_IN
 from behavysis_core.data_models.experiment_configs import ExperimentConfigs
 from behavysis_core.mixins.behav_mixin import BehavMixin
 from behavysis_core.mixins.diagnostics_mixin import DiagnosticsMixin
@@ -42,14 +42,15 @@ from behavysis_core.mixins.io_mixin import IOMixin
 from behavysis_core.mixins.keypoints_mixin import KeypointsMixin
 from tqdm import trange
 
-#####################################################################
-#               MAKE KEYPOINTS PLOTS
-#####################################################################
 
 
 class Evaluate:
     """__summary__"""
 
+    ###############################################################################################
+    #               MAKE KEYPOINTS PLOTS
+    ###############################################################################################
+    
     @staticmethod
     def keypoints_plot(
         vid_fp: str,
@@ -70,18 +71,22 @@ class Evaluate:
         # If overwrite is False, checking if we should skip processing
         if not overwrite and os.path.exists(out_fp):
             return DiagnosticsMixin.warning_msg()
+
         # Getting necessary config parameters
+        configs = ExperimentConfigs.read_json(configs_fp)
+        configs_filt = configs.user.evaluate.keypoints_plot
+        bpts = configs.get_ref(configs_filt.bodyparts)
+        
         # Read the file
         dlc_df = KeypointsMixin.clean_headings(KeypointsMixin.read_feather(dlc_fp))
-        # Getting indivs and bpts list
-        _, bpts = KeypointsMixin.get_headings(dlc_df)
-        cols_to_keep = dlc_df.columns.get_level_values("bodyparts").isin(bpts)
+        # Checking the bodyparts specified in the configs exist in the dataframe
+        KeypointsMixin.check_bpts_exist(dlc_df, bpts)
         # Making data-long ways
+        idx = pd.IndexSlice
         dlc_df = (
-            dlc_df.loc[:, cols_to_keep]
-            .stack(["individuals", "bodyparts"], dropna=False)
-            .reset_index()
-            .rename(columns={"level_0": "frame"})
+            dlc_df.loc[:, idx[:. :, bpts]]
+            .stack([KEYPOINTS_CN[1], KEYPOINTS_CN[2]], dropna=False)
+            .reset_index(names=KEYPOINTS_IN)
         )
         g = sns.FacetGrid(
             dlc_df,
@@ -102,10 +107,61 @@ class Evaluate:
         g.figure.clf()
         # Returning outcome string
         return outcome
+    
+    ###############################################################################################
+    # MAKE BEHAVIOUR PLOTS
+    ###############################################################################################
 
-    #####################################################################
+    @staticmethod
+    def behav_plot(
+        behavs_fp: str,
+        out_dir: str,
+        configs_fp: str,
+        overwrite: bool,
+    ) -> str:
+        """
+        Make behaviour evaluation plot of the predicted and actual behaviours through time.
+        """
+        outcome = ""
+        # Getting necessary config parameters
+        configs = ExperimentConfigs.read_json(configs_fp)
+        configs_filt = configs.user.evaluate.behav_plot
+        fps = configs.auto.formatted_vid.fps
+        # If overwrite is False, checking if we should skip processing
+        if not overwrite and os.path.exists(out_fp):
+            return DiagnosticsMixin.warning_msg()
+        
+        name = IOMixin.get_name(behavs_fp)
+        out_dir = os.path.join(out_dir, Evaluate.behav_plot.__name__)
+        out_fp = os.path.join(out_dir, f"{name}.png")
+        os.makedirs(out_dir, exist_ok=True)
+        # Getting necessary config parameters
+        # Read the file
+        behavs_df = BehavMixin.read_feather(behavs_fp)
+        # Making data-long ways
+        behavs_df = behavs_df.stack("behaviours").reset_index().rename(columns={"level_0": "frame"})
+        g = sns.FacetGrid(
+            behavs_df,
+            col="behaviours",
+            col_wrap=2,
+            height=4,
+        )
+        g.map_dataframe(
+            sns.lineplot,
+            x="frame",
+            y="outcome",
+            alpha=0.4,
+        )
+        g.add_legend()
+        # Saving plot
+        g.savefig(out_fp)
+        g.figure.clf()
+        # Returning outcome string
+        return outcome
+
+    ###############################################################################################
     #               MAKE KEYPOINTS VIDEO
-    #####################################################################
+    ###############################################################################################
 
     @staticmethod
     def eval_vid(
@@ -130,6 +186,7 @@ class Evaluate:
         # If overwrite is False, checking if we should skip processing
         if not overwrite and os.path.exists(out_fp):
             return DiagnosticsMixin.warning_msg()
+
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
         configs_filt = configs.user.evaluate.eval_vid
@@ -188,28 +245,23 @@ class Evaluate:
 
         # MAKING ANNOTATED VIDEO
         # Settings the funcs for how to annotate the video
-        funcs = list()
+        funcs: list[Callable[[np.ndarray, int], np.ndarray]] = list()
         for f_name in funcs_names:
             if f_name == "johansson":
                 outcome += f"Added {f_name} to video. \n"
-                new_func: Callable[[np.ndarray, int], np.ndarray] = (
-                    lambda frame, i: annot_johansson(frame)
-                )
+                funcs.append(lambda frame, i: annot_johansson(frame))
             elif f_name == "keypoints":
                 outcome += f"Added {f_name} to video. \n"
-                new_func: Callable[[np.ndarray, int], np.ndarray] = (
+                funcs.append(
                     lambda frame, i: annot_keypoints(
                         frame, dlc_df.loc[i], indivs_bpts_ls, colours, pcutoff, radius
                     )
                 )
             elif f_name == "behavs":
                 outcome += f"Added {f_name} to video. \n"
-                new_func: Callable[[np.ndarray, int], np.ndarray] = (
-                    lambda frame, i: annot_behav(frame, behavs_df.loc[i], behavs_ls)
-                )
+                funcs.append(lambda frame, i: annot_behav(frame, behavs_df.loc[i], behavs_ls))
             else:
                 continue
-            funcs.append(new_func)
         # Open the input video
         in_cap = cv2.VideoCapture(vid_fp)
         fps = in_cap.get(cv2.CAP_PROP_FPS)
