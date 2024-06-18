@@ -25,14 +25,14 @@ import logging
 import os
 import re
 
-from jinja2 import Environment, PackageLoader
 import pandas as pd
-from behavysis_core.constants import KEYPOINTS_CN, KEYPOINTS_IN
+from behavysis_core.constants import KeypointsCN, KeypointsIN
 from behavysis_core.data_models.experiment_configs import ExperimentConfigs
 from behavysis_core.mixins.df_io_mixin import DFIOMixin
 from behavysis_core.mixins.io_mixin import IOMixin
 from behavysis_core.mixins.keypoints_mixin import KeypointsMixin
 from behavysis_core.mixins.subproc_mixin import SubprocMixin
+from jinja2 import Environment, PackageLoader
 
 
 class RunDLC:
@@ -206,8 +206,8 @@ def export_2_feather(name: str, in_dir: str, out_dir: str) -> str:
         # Reading the .h5 file
         df = pd.DataFrame(pd.read_hdf(name_fp))
         # Setting the column and index level names
-        df.index.name = KEYPOINTS_IN
-        df.columns.names = KEYPOINTS_CN
+        df.index.name = DFIOMixin.enum_to_list(KeypointsIN)
+        df.columns.names = DFIOMixin.enum_to_list(KeypointsCN)
         # Imputing na values with 0
         df = df.fillna(0)
         # Checking df

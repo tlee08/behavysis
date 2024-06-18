@@ -24,7 +24,7 @@ from typing import Callable, Optional
 import numpy as np
 import pandas as pd
 import seaborn as sns
-from behavysis_core.constants import AGG_ANALYSIS_CN, ANALYSIS_CN, ANALYSIS_IN
+from behavysis_core.constants import AggAnalysisCN, AnalysisCN, AnalysisIN
 from behavysis_core.data_models.experiment_configs import ExperimentConfigs
 from behavysis_core.mixins.behav_mixin import BehavMixin
 from behavysis_core.mixins.df_io_mixin import DFIOMixin
@@ -88,8 +88,10 @@ class AnalyseMixin:
             _description_
         """
         return pd.DataFrame(
-            index=pd.Index(frame_vect, name=ANALYSIS_IN),
-            columns=pd.MultiIndex.from_tuples((), names=ANALYSIS_CN),
+            index=pd.Index(frame_vect, name=DFIOMixin.enum_to_list(AnalysisIN)),
+            columns=pd.MultiIndex.from_tuples(
+                (), names=DFIOMixin.enum_to_list(AnalysisCN)
+            ),
         )
 
     @staticmethod
@@ -106,9 +108,9 @@ class AnalyseMixin:
         # Checking for null values
         assert not df.isnull().values.any(), "The dataframe contains null values. Be sure to run interpolate_points first."
         # Checking that the index levels are correct
-        DFIOMixin.check_df_index_names(df, ANALYSIS_IN)
+        DFIOMixin.check_df_index_names(df, DFIOMixin.enum_to_list(AnalysisIN))
         # Checking that the column levels are correct
-        DFIOMixin.check_df_column_names(df, ANALYSIS_CN)
+        DFIOMixin.check_df_column_names(df, DFIOMixin.enum_to_list(AnalysisCN))
 
     @staticmethod
     def read_feather(fp: str) -> pd.DataFrame:
@@ -272,7 +274,7 @@ class AggAnalyse:
             )
             summary_df = pd.concat([summary_df, summary_df_i], axis=0)
         summary_df.index = analysis_df.columns
-        summary_df.columns.name = AGG_ANALYSIS_CN[2]
+        summary_df.columns.name = AggAnalysisCN.MEASURES.value
         # Returning summary_df
         return summary_df
 
@@ -324,7 +326,7 @@ class AggAnalyse:
             )
             summary_df = pd.concat([summary_df, summary_df_i], axis=0)
         summary_df.index = analysis_df.columns
-        summary_df.columns.name = AGG_ANALYSIS_CN[2]
+        summary_df.columns.name = AggAnalysisCN.MEASURES.value
         # Returning summary_df
         return summary_df
 
@@ -350,9 +352,9 @@ class AggAnalyse:
         grouped_df = analysis_df.groupby(bin_sec)
         binned_df = grouped_df.apply(
             lambda x: summary_func(x, fps)
-            .unstack(ANALYSIS_CN)
-            .reorder_levels(AGG_ANALYSIS_CN)
-            .sort_index(level=ANALYSIS_CN)
+            .unstack(DFIOMixin.enum_to_list(AnalysisCN))
+            .reorder_levels(DFIOMixin.enum_to_list(AggAnalysisCN))
+            .sort_index(level=DFIOMixin.enum_to_list(AnalysisCN))
         )
         binned_df.index.name = "bin_sec"
         # returning binned_df
@@ -369,7 +371,9 @@ class AggAnalyse:
         """
         # Making binned_df long
         binned_stacked_df = (
-            binned_df.stack(ANALYSIS_CN)[agg_column].rename("value").reset_index()
+            binned_df.stack(DFIOMixin.init_df(AnalysisCN))[agg_column]
+            .rename("value")
+            .reset_index()
         )
         # Plotting line graph
         g = sns.relplot(

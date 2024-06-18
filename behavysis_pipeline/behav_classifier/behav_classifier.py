@@ -9,14 +9,13 @@ import os
 import shutil
 from typing import TYPE_CHECKING, Callable
 
-from .clf_templates import ClfTemplates
 import joblib
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
 from behavysis_core.constants import (
-    BEHAV_CN,
+    BehavCN,
     BehavColumns,
     Folders,
 )
@@ -38,6 +37,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import MinMaxScaler
 
+from .clf_templates import ClfTemplates
 
 if TYPE_CHECKING:
     from behavysis_pipeline.pipeline.project import Project
@@ -68,7 +68,7 @@ class BehavClassifier:
     """
     BehavClassifier abstract class peforms behav classifier model preparation, training, saving,
     evaluation, and inference.
-    
+
     Attributes
     ----------
     configs_fp: str
@@ -334,7 +334,7 @@ class BehavClassifier:
         y = y.map(lambda x: 0 if x == -1 else x)
         # Filtering out the prob and pred columns (in the `outcomes` level)
         cols_filter = np.isin(
-            y.columns.get_level_values(BEHAV_CN[1]),
+            y.columns.get_level_values(BehavCN.OUTCOMES.value),
             [BehavColumns.PROB.value, BehavColumns.PRED.value],
             invert=True,
         )

@@ -1,12 +1,9 @@
 import os
 
-from behavysis_core.constants import BehavColumns
 from behavysis_core.data_models.experiment_configs import ExperimentConfigs
 from behavysis_core.mixins.behav_mixin import BehavMixin
 from behavysis_core.mixins.df_io_mixin import DFIOMixin
 from behavysis_core.mixins.io_mixin import IOMixin
-
-from behavysis_pipeline.behav_classifier import BehavClassifier
 
 
 class Export:
@@ -42,27 +39,18 @@ class Export:
         # Reading the configs file
         configs = ExperimentConfigs.read_json(configs_fp)
         models_ls = configs.user.classify_behaviours
+        # Getting the behav_outcomes dict from the configs file
+        behav_outcomes = {
+            configs.get_ref(model.configs.behaviour_name): configs.get_ref(
+                model.configs.user_behavs
+            )
+            for model in models_ls
+        }
         # Reading file
         in_df = BehavMixin.read_feather(in_fp)
-        # Keeping the `actual`, `pred`, and all user_behavs columns
-        out_df = BehavMixin.init_df(in_df.index)
-        a = BehavColumns.ACTUAL.value
-        p = BehavColumns.PRED.value
-        for model_config in models_ls:
-            # Getting configs
-            model_fp = configs.get_ref(model_config.model_fp)
-            model = BehavClassifier.load(model_fp)
-            behav = configs.get_ref(model.configs.behaviour_name)
-            user_behavs = configs.get_ref(model_config.user_behavs)
-            # Adding pred and actual columns
-            out_df[(behav, p)] = in_df[(behav, p)].values
-            out_df[(behav, a)] = 0
-            # Adding user behavs to the "outcome" column level
-            for i in user_behavs:
-                out_df[(behav, i)] = 0
-        # Ordering by "behaviours" level
-        out_df = out_df.sort_index(axis=1, level="behaviours")
+        # Making the output df (with all user_behav outcome columns)
+        BehavMixin.include_outcome_behavs(in_df, behav_outcomes)
         # Writing file
-        DFIOMixin.write_feather(out_df, out_fp)
+        DFIOMixin.write_feather(in_df, out_fp)
         # Returning outcome
         return "predicted_behavs to scored_behavs\n"

@@ -34,7 +34,14 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
-from behavysis_core.constants import IndivColumns, BehavColumns, KEYPOINTS_CN, KEYPOINTS_IN
+from behavysis_core.constants import (
+    BehavCN,
+    BehavColumns,
+    BehavIN,
+    IndivColumns,
+    KeypointsCN,
+    KeypointsIN,
+)
 from behavysis_core.data_models.experiment_configs import ExperimentConfigs
 from behavysis_core.mixins.behav_mixin import BehavMixin
 from behavysis_core.mixins.diagnostics_mixin import DiagnosticsMixin
@@ -43,14 +50,13 @@ from behavysis_core.mixins.keypoints_mixin import KeypointsMixin
 from tqdm import trange
 
 
-
 class Evaluate:
     """__summary__"""
 
     ###############################################################################################
     #               MAKE KEYPOINTS PLOTS
     ###############################################################################################
-    
+
     @staticmethod
     def keypoints_plot(
         vid_fp: str,
@@ -76,7 +82,7 @@ class Evaluate:
         configs = ExperimentConfigs.read_json(configs_fp)
         configs_filt = configs.user.evaluate.keypoints_plot
         bpts = configs.get_ref(configs_filt.bodyparts)
-        
+
         # Read the file
         dlc_df = KeypointsMixin.clean_headings(KeypointsMixin.read_feather(dlc_fp))
         # Checking the bodyparts specified in the configs exist in the dataframe
@@ -84,9 +90,12 @@ class Evaluate:
         # Making data-long ways
         idx = pd.IndexSlice
         dlc_df = (
-            dlc_df.loc[:, idx[:. :, bpts]]
-            .stack([KEYPOINTS_CN[1], KEYPOINTS_CN[2]], dropna=False)
-            .reset_index(names=KEYPOINTS_IN)
+            dlc_df.loc[:, idx[:, bpts]]
+            .stack(
+                [KeypointsCN.INDIVIDUALS.value, KeypointsCN.BODYPARTS.value],
+                dropna=False,
+            )
+            .reset_index(names=KeypointsIN.FRAME.value)
         )
         g = sns.FacetGrid(
             dlc_df,
@@ -107,7 +116,7 @@ class Evaluate:
         g.figure.clf()
         # Returning outcome string
         return outcome
-    
+
     ###############################################################################################
     # MAKE BEHAVIOUR PLOTS
     ###############################################################################################
@@ -123,23 +132,25 @@ class Evaluate:
         Make behaviour evaluation plot of the predicted and actual behaviours through time.
         """
         outcome = ""
-        # Getting necessary config parameters
-        configs = ExperimentConfigs.read_json(configs_fp)
-        configs_filt = configs.user.evaluate.behav_plot
-        fps = configs.auto.formatted_vid.fps
-        # If overwrite is False, checking if we should skip processing
-        if not overwrite and os.path.exists(out_fp):
-            return DiagnosticsMixin.warning_msg()
-        
         name = IOMixin.get_name(behavs_fp)
         out_dir = os.path.join(out_dir, Evaluate.behav_plot.__name__)
         out_fp = os.path.join(out_dir, f"{name}.png")
         os.makedirs(out_dir, exist_ok=True)
+        # If overwrite is False, checking if we should skip processing
+        if not overwrite and os.path.exists(out_fp):
+            return DiagnosticsMixin.warning_msg()
+
         # Getting necessary config parameters
+        # configs = ExperimentConfigs.read_json(configs_fp)
+        # configs_filt = configs.user.evaluate.behav_plot
+        # fps = configs.auto.formatted_vid.fps
+
         # Read the file
         behavs_df = BehavMixin.read_feather(behavs_fp)
         # Making data-long ways
-        behavs_df = behavs_df.stack("behaviours").reset_index().rename(columns={"level_0": "frame"})
+        behavs_df = behavs_df.stack(BehavCN.BEHAVIOURS.value).reset_index(
+            names=BehavIN.FRAME.value
+        )
         g = sns.FacetGrid(
             behavs_df,
             col="behaviours",
@@ -148,7 +159,7 @@ class Evaluate:
         )
         g.map_dataframe(
             sns.lineplot,
-            x="frame",
+            x=BehavIN.FRAME.value,
             y="outcome",
             alpha=0.4,
         )
@@ -259,7 +270,9 @@ class Evaluate:
                 )
             elif f_name == "behavs":
                 outcome += f"Added {f_name} to video. \n"
-                funcs.append(lambda frame, i: annot_behav(frame, behavs_df.loc[i], behavs_ls))
+                funcs.append(
+                    lambda frame, i: annot_behav(frame, behavs_df.loc[i], behavs_ls)
+                )
             else:
                 continue
         # Open the input video

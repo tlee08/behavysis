@@ -17,6 +17,7 @@ from behavysis_core.constants import (
     TEMP_DIR,
     Folders,
 )
+from behavysis_core.mixins.df_io_mixin import DFIOMixin
 from behavysis_core.mixins.diagnostics_mixin import DiagnosticsMixin
 
 from behavysis_pipeline.processes import (
@@ -75,7 +76,7 @@ class Experiment:
                 + f'Please specify a file that exists in "{root_dir}", in one of the'
                 + " following folder WITH the correct file extension name:\n"
                 + "    - "
-                + "\n    - ".join([i.value for i in Folders])
+                + "\n    - ".join(DFIOMixin.enum_to_list(Folders))
             )
         self.name = name
         self.root_dir = os.path.abspath(root_dir)

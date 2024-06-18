@@ -3,8 +3,9 @@ from io import BytesIO
 
 import numpy as np
 import pandas as pd
-from behavysis_core.constants import KEYPOINTS_CN, KEYPOINTS_IN
+from behavysis_core.constants import KeypointsCN, KeypointsIN
 from behavysis_core.data_models.experiment_configs import ExperimentConfigs
+from behavysis_core.mixins.df_io_mixin import DFIOMixin
 
 from behavysis_pipeline.processes.calculate_params import (
     CalculateParams,
@@ -41,8 +42,8 @@ def make_dlc_df_for_dur(sections_params_ls, columns):
     dlc_df.columns = pd.MultiIndex.from_frame(columns_df)
     dlc_df = dlc_df.sort_index(level=["individuals", "bodyparts"], axis=1)
     # Setting index and column level names
-    dlc_df.index.name = KEYPOINTS_IN
-    dlc_df.columns.name = KEYPOINTS_CN
+    dlc_df.index.name = DFIOMixin.enum_to_list(KeypointsIN)
+    dlc_df.columns.name = DFIOMixin.enum_to_list(KeypointsCN)
     # Returning dlc_df
     return dlc_df
 
