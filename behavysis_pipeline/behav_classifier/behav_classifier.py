@@ -14,7 +14,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
-import torch.nn as nn
 from behavysis_core.constants import (
     BehavCN,
     BehavColumns,
@@ -26,8 +25,6 @@ from behavysis_core.mixins.df_io_mixin import DFIOMixin
 from behavysis_core.mixins.features_mixin import FeaturesMixin
 from behavysis_core.mixins.io_mixin import IOMixin
 from imblearn.under_sampling import RandomUnderSampler
-from keras.models import Model
-from keras.utils import plot_model
 from pydantic import ConfigDict
 from sklearn.base import BaseEstimator
 from sklearn.metrics import (
@@ -38,7 +35,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import MinMaxScaler
 
-from .clf_templates import ClfTemplates
+from .clf_templates import CLF_TEMPLATES
 
 if TYPE_CHECKING:
     from behavysis_pipeline.pipeline.project import Project
@@ -47,6 +44,8 @@ X_ID = "x"
 Y_ID = "y"
 
 BEHAV_MODELS_SUBDIR = "behav_models"
+
+GENERIC_BEHAV_LABELS = ["nil", "behav"]
 
 
 class BehavClassifierConfigs(PydanticBaseModel):
@@ -74,12 +73,12 @@ class BehavClassifier:
     ----------
     configs_fp: str
         _description_
-    clf: Model | BaseEstimator
+    clf: BaseEstimator
         _description_
     """
 
     configs_fp: str
-    clf: Model | BaseEstimator
+    clf: BaseEstimator
 
     def __init__(self, configs_fp: str) -> None:
         """
@@ -502,7 +501,7 @@ class BehavClassifier:
         # Splitting into train and test sets
         x_train, x_test, y_train, y_test = self.train_test_split(x, y)
         # Initialising the model
-        self.clf = clf_init_f(self)
+        self.clf = clf_init_f(x.shape[1])
         # Evaluating the model (training on train, testing on test)
         self.clf_train(x_train, y_train)
         self.clf_eval(x_test, y_test)
@@ -557,31 +556,12 @@ class BehavClassifier:
         """
         __summary__
         """
-        if isinstance(self.clf, Model):
-            h = self.clf.fit(
-                x,
-                y,
-                batch_size=kwargs.get("batch_size", 64),
-                epochs=kwargs.get("epochs", 5),
-                validation_split=kwargs.get("validation_split", 0.2),
-                shuffle=kwargs.get("shuffle", True),
-                verbose=kwargs.get("verbose", 1),
-                callbacks=kwargs.get("callbacks", None),
-            )
-        elif isinstance(self.clf, nn.Module):
-            self.clf.fit(
-                x,
-                y,
-                batch_size=kwargs.get("batch_size", 64),
-                epochs=kwargs.get("epochs", 5),
-            )
-        elif isinstance(self.clf, BaseEstimator):
-            self.clf.fit(
-                x,
-                y,
-            )
-        else:
-            raise ValueError("Please implement (either keras or sklearn)")
+        self.clf.fit(
+            x,
+            y,
+            batch_size=kwargs.get("batch_size", 128),
+            epochs=kwargs.get("epochs", 200),
+        )
 
     def clf_predict(self, x: np.ndarray) -> pd.DataFrame:
         """
@@ -602,14 +582,8 @@ class BehavClassifier:
             outcomes   :  "prob"   "pred"
             ```
         """
-        if isinstance(self.clf, Model):
-            y_probs = self.clf.predict(x)
-        if isinstance(self.clf, nn.Module):
-            y_probs = self.clf.predict(x)
-        elif isinstance(self.clf, BaseEstimator):
-            y_probs = self.clf.predict_proba(x)[:, 1]
-        else:
-            raise ValueError("Model is not a valid type")
+        # Getting probabilities
+        y_probs = self.clf.predict(x)
         # Making predictions from probabilities (and pcutoff)
         y_preds = (y_probs > self.configs.pcutoff).astype(int)
         # Making df
@@ -618,6 +592,10 @@ class BehavClassifier:
         pred_df[(self.configs.behaviour_name, BehavColumns.PRED.value)] = y_preds
         # Returning predicted behavs
         return pred_df
+
+    #################################################
+    # COMPREHENSIVE EVALUATION FUNCTIONS
+    #################################################
 
     def clf_eval(
         self, x: np.ndarray, y: np.ndarray
@@ -661,10 +639,6 @@ class BehavClassifier:
         # Return evaluations
         return y_eval, metrics_fig, pcutoffs_fig, logc_fig
 
-    #################################################
-    # COMPREHENSIVE EVALUATION FUNCTIONS
-    #################################################
-
     def clf_eval_compare(self, eval_name: str, x_test: np.ndarray, y_test: np.ndarray):
         """
         Making and saving evaluation metrics for the classifier, with a given name.
@@ -703,14 +677,9 @@ class BehavClassifier:
         y = y[(self.configs.behaviour_name, BehavColumns.ACTUAL.value)]
         y = np.vectorize(lambda i: 0 if i == -1 else i)(y)
         # Getting eval for each classifier in ClfTemplates
-        init_f_ls = [
-            getattr(ClfTemplates, init_f)
-            for init_f in dir(ClfTemplates)
-            if not init_f.startswith("__")
-        ]
-        for init_f in init_f_ls:
+        for init_f in CLF_TEMPLATES:
             # Making classifier
-            self.clf = init_f(self)
+            self.clf = init_f(x.shape[1])
             # Training
             self.clf_train(x_train, y_train)
             # Evaluating on test data
@@ -729,7 +698,13 @@ class BehavClassifier:
         """
         __summary__
         """
-        print(classification_report(y_true, y_pred))
+        print(
+            classification_report(
+                y_true,
+                y_pred,
+                target_names=GENERIC_BEHAV_LABELS,
+            )
+        )
         # Making confusion matrix
         fig, ax = plt.subplots(figsize=(7, 7))
         sns.heatmap(
@@ -738,10 +713,12 @@ class BehavClassifier:
             fmt="d",
             cmap="viridis",
             cbar=False,
-            xticklabels=["nil", "fight"],
-            yticklabels=["nil", "fight"],
+            xticklabels=GENERIC_BEHAV_LABELS,
+            yticklabels=GENERIC_BEHAV_LABELS,
             ax=ax,
         )
+        ax.set_xlabel("Predicted")
+        ax.set_ylabel("True")
         return fig
 
     @staticmethod
@@ -758,10 +735,15 @@ class BehavClassifier:
         accuracies = np.zeros(pcutoffs.shape[0])
         for i, pcutoff in enumerate(pcutoffs):
             y_pred = y_prob > pcutoff
-            report = classification_report(y_true, y_pred, output_dict=True)
-            precisions[i] = report["1"]["precision"]
-            recalls[i] = report["1"]["recall"]
-            f1[i] = report["1"]["f1-score"]
+            report = classification_report(
+                y_true,
+                y_pred,
+                target_names=GENERIC_BEHAV_LABELS,
+                output_dict=True,
+            )
+            precisions[i] = report[GENERIC_BEHAV_LABELS[1]]["precision"]
+            recalls[i] = report[GENERIC_BEHAV_LABELS[1]]["recall"]
+            f1[i] = report[GENERIC_BEHAV_LABELS[1]]["f1-score"]
             accuracies[i] = report["accuracy"]
         # Making figure
         fig, ax = plt.subplots(figsize=(10, 7))
@@ -834,29 +816,3 @@ class BehavClassifier:
         #     ax=ax,
         # )
         return y_eval_summary
-
-    def clf_nn_visualize(self):
-        """
-        __summary__
-        """
-        # model.summary()
-        # Making file names
-        name = self.configs.behaviour_name
-        fp = os.path.join(self.root_dir, "eval", f"{name}_architecture.png")
-        # Saving model architecture
-        return plot_model(
-            self.clf,
-            to_file=fp,
-            show_shapes=True,
-            show_dtype=True,
-            show_layer_names=True,
-            rankdir="TB",
-            expand_nested=False,
-            dpi=200,
-            show_layer_activations=True,
-            show_trainable=False,
-        )
-
-
-# To run on specific GPU (all processes must be within context)
-# os.environ["CUDA_VISIBLE_DEVICES"] = str(1)

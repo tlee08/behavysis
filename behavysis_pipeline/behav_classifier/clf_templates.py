@@ -5,121 +5,164 @@ _summary_
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
+
+import torch.nn as nn
+import torch.optim as optim
 from sklearn.ensemble import RandomForestClassifier
 
-
-from keras.layers import Dense, Dropout, Input
-from keras.models import Model
+from .base_torch_model import BaseTorchModel
 
 if TYPE_CHECKING:
-    from .behav_classifier import BehavClassifier
+    pass
 
 
-class ClfTemplates:
-    """
-    Model templates for `BehavClassifier.clf`.
-    """
-
-    @staticmethod
-    def rf(model: BehavClassifier) -> RandomForestClassifier:
+class RF1(RandomForestClassifier):
+    def __init__(self, input_shape):
         """
         x features is (samples, features).
         y outcome is (samples, class).
         """
-        # Creating Gradient Boosting Classifier
-        # clf = GradientBoostingClassifier(
-        #     n_estimators=200,
-        #     learning_rate=0.1,
-        #     # max_depth=3,
-        #     random_state=0,
-        #     verbose=1,
-        # )
-        clf = RandomForestClassifier(
+        super().__init__(
             n_estimators=2000,
             max_depth=3,
             random_state=0,
             n_jobs=16,
             verbose=1,
         )
-        # Returning classifier model
-        return clf
+        self.input_shape = input_shape
 
-    # @staticmethod
-    # def cnn_1(model: BehavClassifier) -> Model:
-    #     """
-    #     x features is (samples, window, features).
-    #     y outcome is (samples, class).
-    #     """
-    #     # Input layers
-    #     # 546 is number of SimBA features
-    #     inputs = Input(shape=(model.configs.window_frames * 2 + 1, 546))
-    #     # Hidden layers
-    #     x = Conv1D(32, 3, activation="relu")(inputs)
-    #     x = MaxPooling1D(2)(x)
-    #     x = Conv1D(64, 3, activation="relu")(x)
-    #     x = MaxPooling1D(2)(x)
-    #     x = Flatten()(x)
-    #     x = Dense(64, activation="relu")(x)
-    #     x = Dropout(0.5)(x)
-    #     # Binary classification problem (probability output)
-    #     outputs = Dense(1, activation="sigmoid")(x)
-    #     # Create the model
-    #     model.clf = Model(inputs=inputs, outputs=outputs)
-    #     # Compile the model
-    #     model.clf.compile(
-    #         optimizer="adam", loss="binary_crossentropy", metrics=["accuracy"]
-    #     )
-    #     # Returning classifier model
-    #     return model.clf
+    def fit(self, x, y, *args, **kwargs):
+        super().fit(x, y)
+        return self
 
-    @staticmethod
-    def dnn_1(model: BehavClassifier) -> Model:
-        """
-        x features is (samples, features).
-        y outcome is (samples, class).
-        """
-        # Input layers
-        # 546 is number of SimBA features
-        input_shape = (546,)
-        inputs = Input(shape=input_shape)
-        # Hidden layers
-        # l = Dense(256, activation="relu")(inputs)  # 32, 64, 256
-        # l = Dropout(0.5)(l)
-        x = Dense(64, activation="relu")(inputs)  # 32, 64, 256
-        x = Dropout(0.5)(x)
-        # Binary classification problem (probability output)
-        outputs = Dense(1, activation="sigmoid")(x)
-        # Create the model
-        clf = Model(inputs=inputs, outputs=outputs)
-        # Compiling model
-        clf.compile(optimizer="adam", loss="binary_crossentropy", metrics=["accuracy"])
-        # Returning classifier model
-        return clf
+    def predict(self, x):
+        return super().predict_proba(x)[:, 1]
 
-    @staticmethod
-    def dnn_2(model: BehavClassifier) -> Model:
-        """ """
-        # FRAME DNN MODEL #2
-        # Create the model
-        inputs = Input(shape=(546,))
-        l = Dense(32, activation="relu")(inputs)  # 32, 64, 256
-        l = Dropout(0.5)(l)
-        outputs = Dense(1, activation="sigmoid")(l)
-        clf = Model(inputs=inputs, outputs=outputs)
-        clf.compile(optimizer="adam", loss="binary_crossentropy", metrics=["accuracy"])
-        return clf
 
-    @staticmethod
-    def dnn_3(model: BehavClassifier) -> Model:
-        """ """
-        # TESTING FRAME DNN MODEL #3
-        # Create the model
-        inputs = Input(shape=(546,))
-        l = Dense(256, activation="relu")(inputs)  # 32, 64, 256
-        l = Dropout(0.5)(l)
-        l = Dense(64, activation="relu")(inputs)  # 32, 64, 256
-        l = Dropout(0.5)(l)
-        outputs = Dense(1, activation="sigmoid")(l)
-        clf = Model(inputs=inputs, outputs=outputs)
-        clf.compile(optimizer="adam", loss="binary_crossentropy", metrics=["accuracy"])
-        return clf
+class DNN1(BaseTorchModel):
+    def __init__(self, input_shape):
+        super().__init__()
+        # Define the layers
+        self.fc1 = nn.Linear(input_shape, 64)
+        self.relu1 = nn.ReLU()
+        self.dropout1 = nn.Dropout(0.5)
+        self.fc2 = nn.Linear(64, 1)
+        self.sigmoid1 = nn.Sigmoid()
+        # Define the loss function and optimizer
+        self.criterion: nn.Module = nn.BCELoss()
+        self.optimizer: optim.Optimizer = optim.Adam(self.parameters())
+        # Setting the device (GPU or CPU)
+        self.device = self.device
+
+    def forward(self, x):
+        out = self.fc1(x)
+        out = self.relu1(out)
+        out = self.dropout1(out)
+        out = self.fc2(out)
+        out = self.sigmoid1(out)
+        return out
+
+
+class DNN2(BaseTorchModel):
+    def __init__(self, input_shape):
+        super().__init__()
+        # Define the layers
+        self.fc1 = nn.Linear(input_shape, 32)
+        self.relu1 = nn.ReLU()
+        self.dropout1 = nn.Dropout(0.5)
+        self.fc2 = nn.Linear(32, 1)
+        self.sigmoid1 = nn.Sigmoid()
+        # Define the loss function and optimizer
+        self.criterion: nn.Module = nn.BCELoss()
+        self.optimizer: optim.Optimizer = optim.Adam(self.parameters())
+        # Setting the device (GPU or CPU)
+        self.device = self.device
+
+    def forward(self, x):
+        out = self.fc1(x)
+        out = self.relu1(out)
+        out = self.dropout1(out)
+        out = self.fc2(out)
+        out = self.sigmoid1(out)
+        return out
+
+
+class DNN3(BaseTorchModel):
+    def __init__(self, input_shape):
+        super().__init__()
+        # Define the layers
+        self.fc1 = nn.Linear(input_shape, 256)
+        self.relu1 = nn.ReLU()
+        self.dropout1 = nn.Dropout(0.5)
+        self.fc2 = nn.Linear(256, 64)
+        self.relu2 = nn.ReLU()
+        self.dropout2 = nn.Dropout(0.5)
+        self.fc3 = nn.Linear(64, 1)
+        self.sigmoid1 = nn.Sigmoid()
+        # Define the loss function and optimizer
+        self.criterion: nn.Module = nn.BCELoss()
+        self.optimizer: optim.Optimizer = optim.Adam(self.parameters())
+        # Setting the device (GPU or CPU)
+        self.device = self.device
+
+    def forward(self, x):
+        out = self.fc1(x)
+        out = self.relu1(out)
+        out = self.dropout1(out)
+        out = self.fc2(out)
+        out = self.relu2(out)
+        out = self.dropout2(out)
+        out = self.fc3(out)
+        out = self.sigmoid1(out)
+        return out
+
+
+class CNN1(BaseTorchModel):
+    """
+    x features is (samples, window, features).
+    y outcome is (samples, class).
+    """
+
+    def __init__(self, input_shape):
+        super().__init__()
+        # Define the layers
+        self.conv1 = nn.Conv1d(input_shape[2], 32, kernel_size=3)
+        self.relu1 = nn.ReLU()
+        self.maxpool1 = nn.MaxPool1d(kernel_size=2)
+        self.conv2 = nn.Conv1d(32, 64, kernel_size=3)
+        self.relu2 = nn.ReLU()
+        self.maxpool2 = nn.MaxPool1d(kernel_size=2)
+        self.flatten = nn.Flatten()
+        self.fc1 = nn.Linear(64 * ((input_shape[1] - 2) // 2 - 2), 64)
+        self.relu3 = nn.ReLU()
+        self.dropout = nn.Dropout(0.5)
+        self.fc2 = nn.Linear(64, 1)
+        self.sigmoid1 = nn.Sigmoid()
+        # Define the loss function and optimizer
+        self.criterion: nn.Module = nn.BCELoss()
+        self.optimizer: optim.Optimizer = optim.Adam(self.parameters())
+        # Setting the device (GPU or CPU)
+        self.device = self.device
+
+    def forward(self, x):
+        out = self.conv1(x)
+        out = self.relu1(out)
+        out = self.maxpool1(out)
+        out = self.conv2(out)
+        out = self.relu2(out)
+        out = self.maxpool2(out)
+        out = self.flatten(out)
+        out = self.fc1(out)
+        out = self.relu3(out)
+        out = self.dropout(out)
+        out = self.fc2(out)
+        out = self.sigmoid1(out)
+        return out
+
+
+CLF_TEMPLATES = [
+    RF1,
+    DNN1,
+    DNN2,
+    DNN3,
+]

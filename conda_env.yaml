@@ -11,6 +11,5 @@ dependencies:
   - ipykernel
   - nb_conda
   - ffmpeg
-  - tensorflow-gpu
   - pip:
       - behavysis_pipeline
