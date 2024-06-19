@@ -1,14 +1,17 @@
 import os
 
-
-from behavysis_core.mixins.behav_mixin import BehavMixin
 from behavysis_pipeline.behav_classifier import BehavClassifier
 from behavysis_pipeline.behav_classifier.clf_templates import ClfTemplates
 from behavysis_pipeline.pipeline import Project
 
+from behavysis_core.mixins.behav_mixin import BehavMixin
+
 if __name__ == "__main__":
     root_dir = "."
     overwrite = True
+
+    # Choose GPU
+    os.environ["CUDA_VISIBLE_DEVICES"] = str(0)
 
     # Option 1: From BORIS
     # Define behaviours in BORIS
