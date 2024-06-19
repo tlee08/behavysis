@@ -24,7 +24,7 @@ from typing import Callable, Optional
 import numpy as np
 import pandas as pd
 import seaborn as sns
-from behavysis_core.constants import AggAnalysisCN, AnalysisCN, AnalysisIN
+from behavysis_core.constants import AggAnalysisCN, AnalysisCN, AnalysisIN, Coords
 from behavysis_core.data_models.experiment_configs import ExperimentConfigs
 from behavysis_core.mixins.behav_mixin import BehavMixin
 from behavysis_core.mixins.df_io_mixin import DFIOMixin
@@ -137,8 +137,8 @@ class AnalyseMixin:
         )
         g = sns.relplot(
             data=analysis_stacked_df,
-            x="x",
-            y="y",
+            x=Coords.X.value,
+            y=Coords.Y.value,
             hue=measure,
             col="individuals",
             kind="scatter",
@@ -159,8 +159,8 @@ class AnalyseMixin:
         for ax in g.axes:
             sns.lineplot(
                 data=roi_df,
-                x="x",
-                y="y",
+                x=Coords.X.value,
+                y=Coords.y.value,
                 color=(1, 0, 0),
                 linewidth=1,
                 marker="+",
@@ -189,21 +189,23 @@ class AnalyseMixin:
         # To loop back to the first point at the end
         first_roi_pt = pd.DataFrame(roi_df.iloc[0]).T
         roi_df = pd.concat((roi_df, first_roi_pt), axis=0, ignore_index=True)
+        # Making x and y aliases
+        x = Coords.X.value
+        y = Coords.Y.value
         # For each edge
         for i in range(roi_df.shape[0] - 1):
             # Getting corner points of edge
             c1 = roi_df.iloc[i]
             c2 = roi_df.iloc[i + 1]
             # Getting whether point-y is between corners-y
-            y_between = (c1["y"] > pt["y"]) != (c2["y"] > pt["y"])
+            y_between = (c1[y] > pt[y]) != (c2[y] > pt[y])
             # Getting whether point-x is to the left (less than) the intersection of corners-x
             x_left_of = (
-                pt["x"]
-                < (c2["x"] - c1["x"]) * (pt["y"] - c1["y"]) / (c2["y"] - c1["y"])
-                + c1["x"]
+                pt[x] < (c2[x] - c1[x]) * (pt[y] - c1[y]) / (c2[y] - c1[y]) + c1[x]
             )
             if y_between and x_left_of:
                 crossings += 1
+        # Odd number of crossings means point is in region
         return crossings % 2 == 1
 
     @staticmethod
@@ -213,20 +215,21 @@ class AnalyseMixin:
         """__summary__"""
         res_df = AnalyseMixin.init_df(dlc_df.index)
         idx = pd.IndexSlice
+        # Making x and y aliases
+        x = Coords.X.value
+        y = Coords.Y.value
+        # For each individual, getting whether they are in the ROI (in each frame)
         for indiv in indivs:
             # Getting average body center (x, y) for each individual
-            res_df[(indiv, "x")] = (
-                dlc_df.loc[:, idx[indiv, bpts, "x"]].mean(axis=1).values
-            )
-            res_df[(indiv, "y")] = (
-                dlc_df.loc[:, idx[indiv, bpts, "y"]].mean(axis=1).values
-            )
-            # Determining if the indiv is outside the boundaries
+            res_df[(indiv, x)] = dlc_df.loc[:, idx[indiv, bpts, x]].mean(axis=1).values
+            res_df[(indiv, y)] = dlc_df.loc[:, idx[indiv, bpts, y]].mean(axis=1).values
+            # Determining if the indiv body center is in the ROI
             res_df[(indiv, "in_roi")] = (
                 res_df[indiv]
                 .apply(lambda pt: AnalyseMixin.pt_in_roi(pt, roi_df), axis=1)
                 .astype(np.int8)
             )
+        # Returning res_df with ROI for each individual
         return res_df
 
 
@@ -248,15 +251,17 @@ class AggAnalyse:
         str
             The outcome string.
         """
-        summary_df = pd.DataFrame()
         # Getting summary stats for each individual
-        for name, vect in analysis_df.items():
+        summary_df_ls = np.zeros(analysis_df.shape[1], dtype="object")
+        for i, col in enumerate(analysis_df.columns):
+            # Getting column vector of individual-measure
+            vect = analysis_df[col]
             # Handling edge case where columns are empty
             vect = np.array([0]) if vect.shape[0] == 0 else vect
             # Setting columns to type float
             vect = vect.astype(np.float64)
             # Aggregating stats
-            summary_df_i = (
+            summary_df_ls[i] = (
                 pd.Series(
                     {
                         "mean": np.nanmean(vect),
@@ -267,12 +272,13 @@ class AggAnalyse:
                         "Q3": np.nanquantile(vect, q=0.75),
                         "max": np.nanmax(vect),
                     },
-                    name=name,
+                    name=col,
                 )
-                .to_frame()
-                .T
+                # .to_frame()
+                # .T
             )
-            summary_df = pd.concat([summary_df, summary_df_i], axis=0)
+        summary_df = pd.concat(summary_df_ls, axis=0)
+        # Setting the index and columns
         summary_df.index = analysis_df.columns
         summary_df.columns.name = AggAnalysisCN.MEASURES.value
         # Returning summary_df
@@ -294,11 +300,15 @@ class AggAnalyse:
         str
             The outcome string.
         """
-        summary_df = pd.DataFrame()
         # Getting summary stats for each individual
-        for name, vect in analysis_df.items():
+        summary_df_ls = np.zeros(analysis_df.shape[1], dtype="object")
+        for i, col in enumerate(analysis_df.columns):
+            # Getting column vector of individual-measure
+            vect = analysis_df[col]
             # Getting duration of each behav bout
             bouts = BehavMixin.vect_2_bouts(vect == 1)["dur"]
+            # Converting bouts duration from frames to seconds
+            bouts = bouts / fps
             # Getting bout frequency (before it is overwritten if empty)
             bout_freq = bouts.shape[0]
             # Handling edge case where bouts is empty
@@ -310,14 +320,14 @@ class AggAnalyse:
                 pd.Series(
                     {
                         "bout_freq": bout_freq,
-                        "bout_dur_total": np.nansum(bouts) / fps,
-                        "bout_dur_mean": np.nanmean(bouts) / fps,
-                        "bout_dur_std": np.nanstd(bouts) / fps,
-                        "bout_dur_min": np.nanmin(bouts) / fps,
-                        "bout_dur_Q1": np.nanquantile(bouts, q=0.25) / fps,
-                        "bout_dur_median": np.nanmedian(bouts) / fps,
-                        "bout_dur_Q3": np.nanquantile(bouts, q=0.75) / fps,
-                        "bout_dur_max": np.nanmax(bouts) / fps,
+                        "bout_dur_total": np.nansum(bouts),
+                        "bout_dur_mean": np.nanmean(bouts),
+                        "bout_dur_std": np.nanstd(bouts),
+                        "bout_dur_min": np.nanmin(bouts),
+                        "bout_dur_Q1": np.nanquantile(bouts, q=0.25),
+                        "bout_dur_median": np.nanmedian(bouts),
+                        "bout_dur_Q3": np.nanquantile(bouts, q=0.75),
+                        "bout_dur_max": np.nanmax(bouts),
                     },
                     name=name,
                 )
@@ -325,6 +335,7 @@ class AggAnalyse:
                 .T
             )
             summary_df = pd.concat([summary_df, summary_df_i], axis=0)
+        # Setting the index and columns
         summary_df.index = analysis_df.columns
         summary_df.columns.name = AggAnalysisCN.MEASURES.value
         # Returning summary_df

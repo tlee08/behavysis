@@ -37,7 +37,7 @@ from behavysis_pipeline.pipeline import Experiment, Project
 
 
 # Makes graphs non-interactive (saves memory)
-matplotlib.use("Agg")
+matplotlib.use("Agg")  # QtAgg
 
 sns.set_theme(style=PLOT_STYLE)
 

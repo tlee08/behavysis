@@ -406,7 +406,7 @@ class Experiment:
         """
         # Exporting 6_predicted_behavs df to 7_scored_behavs folder
         return self._process_scaffold(
-            (Export.behav_export,),
+            (Export.predbehav_2_scoredbehav,),
             in_fp=self.get_fp(Folders.PREDICTED_BEHAVS.value),
             out_fp=self.get_fp(Folders.SCORED_BEHAVS.value),
             configs_fp=self.get_fp(Folders.CONFIGS.value),

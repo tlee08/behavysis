@@ -38,9 +38,9 @@ from behavysis_core.constants import (
     BehavCN,
     BehavColumns,
     BehavIN,
+    Coords,
     IndivColumns,
     KeypointsCN,
-    KeypointsIN,
 )
 from behavysis_core.data_models.experiment_configs import ExperimentConfigs
 from behavysis_core.mixins.behav_mixin import BehavMixin
@@ -82,32 +82,33 @@ class Evaluate:
         configs = ExperimentConfigs.read_json(configs_fp)
         configs_filt = configs.user.evaluate.keypoints_plot
         bpts = configs.get_ref(configs_filt.bodyparts)
+        fps = configs.auto.formatted_vid.fps
 
         # Read the file
-        dlc_df = KeypointsMixin.clean_headings(KeypointsMixin.read_feather(dlc_fp))
+        df = KeypointsMixin.clean_headings(KeypointsMixin.read_feather(dlc_fp))
         # Checking the bodyparts specified in the configs exist in the dataframe
-        KeypointsMixin.check_bpts_exist(dlc_df, bpts)
+        KeypointsMixin.check_bpts_exist(df, bpts)
         # Making data-long ways
         idx = pd.IndexSlice
-        dlc_df = (
-            dlc_df.loc[:, idx[:, bpts]]
-            .stack(
-                [KeypointsCN.INDIVIDUALS.value, KeypointsCN.BODYPARTS.value],
-                dropna=False,
-            )
-            .reset_index(names=KeypointsIN.FRAME.value)
+        df = (
+            df.loc[:, idx[:, bpts]]
+            .stack([KeypointsCN.INDIVIDUALS.value, KeypointsCN.BODYPARTS.value])
+            .reset_index()
         )
+        # Adding the timestamp column
+        df["timestamp"] = df[BehavIN.FRAME.value] / fps
+        # Making plot
         g = sns.FacetGrid(
-            dlc_df,
-            col="individuals",
-            col_wrap=2,
-            height=4,
+            df,
+            row=KeypointsCN.INDIVIDUALS.value,
+            height=5,
+            aspect=10,
         )
         g.map_dataframe(
             sns.lineplot,
-            x="frame",
-            y="likelihood",
-            hue="bodyparts",
+            x="timestamp",
+            y=Coords.LIKELIHOOD.value,
+            hue=KeypointsCN.BODYPARTS.value,
             alpha=0.4,
         )
         g.add_legend()
@@ -123,6 +124,8 @@ class Evaluate:
 
     @staticmethod
     def behav_plot(
+        vid_fp: str,
+        dlc_fp: str,
         behavs_fp: str,
         out_dir: str,
         configs_fp: str,
@@ -141,26 +144,32 @@ class Evaluate:
             return DiagnosticsMixin.warning_msg()
 
         # Getting necessary config parameters
-        # configs = ExperimentConfigs.read_json(configs_fp)
+        configs = ExperimentConfigs.read_json(configs_fp)
         # configs_filt = configs.user.evaluate.behav_plot
-        # fps = configs.auto.formatted_vid.fps
+        fps = configs.auto.formatted_vid.fps
 
         # Read the file
-        behavs_df = BehavMixin.read_feather(behavs_fp)
+        df = BehavMixin.read_feather(behavs_fp)
         # Making data-long ways
-        behavs_df = behavs_df.stack(BehavCN.BEHAVIOURS.value).reset_index(
-            names=BehavIN.FRAME.value
+        df = (
+            df.stack([BehavCN.BEHAVIOURS.value, BehavCN.OUTCOMES.value])
+            .reset_index()
+            .rename(columns={0: "value"})
         )
+        # Adding the timestamp column
+        df["timestamp"] = df[BehavIN.FRAME.value] / fps
+        # Making plot
         g = sns.FacetGrid(
-            behavs_df,
-            col="behaviours",
-            col_wrap=2,
-            height=4,
+            df,
+            row=BehavCN.BEHAVIOURS.value,
+            height=5,
+            aspect=10,
         )
         g.map_dataframe(
             sns.lineplot,
-            x=BehavIN.FRAME.value,
-            y="outcome",
+            x="timestamp",
+            y="value",
+            hue=BehavCN.OUTCOMES.value,
             alpha=0.4,
         )
         g.add_legend()

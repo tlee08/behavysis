@@ -19,15 +19,13 @@ str
 
 """
 
-import os
 from typing import Literal
 
 import numpy as np
 import pandas as pd
-from behavysis_core.constants import IndivColumns
+from behavysis_core.constants import Coords, IndivColumns
 from behavysis_core.data_models.experiment_configs import ExperimentConfigs
 from behavysis_core.mixins.df_io_mixin import DFIOMixin
-from behavysis_core.mixins.diagnostics_mixin import DiagnosticsMixin
 from behavysis_core.mixins.io_mixin import IOMixin
 from behavysis_core.mixins.keypoints_mixin import KeypointsMixin
 from pydantic import BaseModel
@@ -120,11 +118,15 @@ class Preprocess:
         # Setting low-likelihood points to Nan to later interpolate
         for scorer, indiv, bp in unique_cols:
             # Imputing Nan likelihood points with 0
-            df[(scorer, indiv, bp, "likelihood")].fillna(value=0, inplace=True)
+            df[(scorer, indiv, bp, Coords.LIKELIHOOD.value)].fillna(
+                value=0, inplace=True
+            )
             # Setting x and y coordinates of points that have low likelihood to Nan
-            to_remove = df[(scorer, indiv, bp, "likelihood")] < configs_filt.pcutoff
-            df.loc[to_remove, (scorer, indiv, bp, "x")] = np.nan
-            df.loc[to_remove, (scorer, indiv, bp, "y")] = np.nan
+            to_remove = (
+                df[(scorer, indiv, bp, Coords.LIKELIHOOD.value)] < configs_filt.pcutoff
+            )
+            df.loc[to_remove, (scorer, indiv, bp, Coords.X.value)] = np.nan
+            df.loc[to_remove, (scorer, indiv, bp, Coords.Y.value)] = np.nan
         # linearly interpolating Nan x and y points.
         # Also backfilling points at the start.
         # Also forward filling points at the end.
@@ -221,7 +223,7 @@ def aggregate_df(
     """
     l0 = df.columns.unique(0)[0]
     df_aggr = pd.DataFrame(index=df.index)
-    for coord in ["x", "y"]:
+    for coord in [Coords.X.value, Coords.Y.value]:
         # Getting the coordinates of the colour marking in each frame
         df_aggr[("mark", coord)] = df[l0, IndivColumns.SINGLE.value, marking, coord]
         idx = pd.IndexSlice
@@ -232,8 +234,12 @@ def aggregate_df(
     # Getting the distance between each mouse and the colour marking in each frame
     for indiv in indivs:
         df_aggr[(indiv, "dist")] = np.sqrt(
-            np.square(df_aggr[(indiv, "x")] - df_aggr[("mark", "x")])
-            + np.square(df_aggr[(indiv, "y")] - df_aggr[("mark", "y")])
+            np.square(
+                df_aggr[(indiv, Coords.X.value)] - df_aggr[("mark", Coords.X.value)]
+            )
+            + np.square(
+                df_aggr[(indiv, Coords.Y.value)] - df_aggr[("mark", Coords.Y.value)]
+            )
         )
     # Formatting columns as a MultiIndex
     df_aggr.columns = pd.MultiIndex.from_tuples(df_aggr.columns)

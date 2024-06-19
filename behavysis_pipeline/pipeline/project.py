@@ -21,6 +21,7 @@ from behavysis_core.constants import (
 )
 from behavysis_core.data_models.experiment_configs import ConfigsAuto, ExperimentConfigs
 from behavysis_core.mixins.df_io_mixin import DFIOMixin
+from behavysis_core.mixins.diagnostics_mixin import DiagnosticsMixin
 from behavysis_core.mixins.io_mixin import IOMixin
 from behavysis_core.mixins.multiproc_mixin import MultiprocMixin
 from natsort import natsort_keygen, natsorted
@@ -555,8 +556,10 @@ class Project:
         pd.DataFrame
             The pandas DataFrame of the diagnostics file.
         """
+        # Getting filepath
         fp = os.path.join(self.root_dir, DIAGNOSTICS_DIR, f"{name}.csv")
-        return pd.read_csv(fp, index_col=0)
+        # Reading from file
+        return DiagnosticsMixin.load_diagnostics(fp)
 
     def save_diagnostics(self, name: str, df: pd.DataFrame) -> None:
         """
@@ -569,12 +572,10 @@ class Project:
         df : pd.DataFrame
             The pandas DataFrame to write to the diagnostics file.
         """
-        # Getting diagnostics filepath for given name
+        # Getting filepath
         fp = os.path.join(self.root_dir, DIAGNOSTICS_DIR, f"{name}.csv")
-        # Making a folder if it does not exist
-        os.makedirs(os.path.split(fp)[0], exist_ok=True)
-        # Writing diagnostics file
-        df.to_csv(fp)
+        # Writing to file
+        DiagnosticsMixin.save_diagnostics(df, fp)
 
     #####################################################################
     #               IMPORT EXPERIMENTS METHODS
@@ -634,19 +635,19 @@ class Project:
         # If there are no experiments, then return
         if not self.experiments:
             return
-        # Making diagnostics DataFrame of all the files associated with each experiment that exists
-        cols_ls = [f.value for f in Folders]
-        rows_ls = list(self.experiments)
-        shape = (len(rows_ls), len(cols_ls))
-        dd_arr = np.apply_along_axis(
-            lambda i: os.path.isfile(self.experiments[i[1]].get_fp(i[0])),
-            axis=0,
-            arr=np.array(np.meshgrid(cols_ls, rows_ls)).reshape((2, np.prod(shape))),
-        ).reshape(shape)
-        # Creating the diagnostics DataFrame
-        dd_df = pd.DataFrame(dd_arr, index=rows_ls, columns=cols_ls)
-        # Saving the diagnostics DataFrame
-        self.save_diagnostics("import_experiments", dd_df)
+        # # Making diagnostics DataFrame of all the files associated with each experiment that exists
+        # cols_ls = [f.value for f in Folders]
+        # rows_ls = list(self.experiments)
+        # shape = (len(rows_ls), len(cols_ls))
+        # dd_arr = np.apply_along_axis(
+        #     lambda i: os.path.isfile(self.experiments[i[1]].get_fp(i[0])),
+        #     axis=0,
+        #     arr=np.array(np.meshgrid(cols_ls, rows_ls)).reshape((2, np.prod(shape))),
+        # ).reshape(shape)
+        # # Creating the diagnostics DataFrame
+        # dd_df = pd.DataFrame(dd_arr, index=rows_ls, columns=cols_ls)
+        # # Saving the diagnostics DataFrame
+        # self.save_diagnostics("import_experiments", dd_df)
 
     #####################################################################
     #                CONFIGS DIAGONOSTICS METHODS

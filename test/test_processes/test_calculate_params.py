@@ -3,7 +3,7 @@ from io import BytesIO
 
 import numpy as np
 import pandas as pd
-from behavysis_core.constants import KeypointsCN, KeypointsIN
+from behavysis_core.constants import Coords, KeypointsCN, KeypointsIN
 from behavysis_core.data_models.experiment_configs import ExperimentConfigs
 from behavysis_core.mixins.df_io_mixin import DFIOMixin
 
@@ -28,19 +28,21 @@ def make_dlc_df_for_dur(sections_params_ls, columns):
     dlc_df = pd.concat(
         (dlc_df_x, dlc_df_y, dlc_df_l),
         axis=1,
-        keys=("x", "y", "likelihood"),
-        names=["coords", "bodyparts"],
+        keys=DFIOMixin.enum_to_list(Coords),
+        names=[KeypointsCN.COORDS.value, KeypointsCN.BODYPARTS.value],
     )
     # Wrangling column names and order
     columns_df = dlc_df.columns.to_frame(index=False)
-    columns_df["scorer"] = "scorer"
+    columns_df[KeypointsCN.SCORER.value] = KeypointsCN.SCORER.value
     cols_subsect = np.random.choice(columns, 3)
-    columns_df["individuals"] = columns_df["bodyparts"].apply(
-        lambda x: ("animal" if np.isin(x, cols_subsect) else "single")
-    )
-    columns_df = columns_df[["scorer", "individuals", "bodyparts", "coords"]]
+    columns_df[KeypointsCN.INDIVIDUALS.value] = columns_df[
+        KeypointsCN.BODYPARTS.value
+    ].apply(lambda x: ("animal" if np.isin(x, cols_subsect) else "single"))
+    columns_df = columns_df[DFIOMixin.enum_to_list(KeypointsCN)]
     dlc_df.columns = pd.MultiIndex.from_frame(columns_df)
-    dlc_df = dlc_df.sort_index(level=["individuals", "bodyparts"], axis=1)
+    dlc_df = dlc_df.sort_index(
+        level=[KeypointsCN.INDIVIDUALS.value, KeypointsCN.BODYPARTS.value], axis=1
+    )
     # Setting index and column level names
     dlc_df.index.name = DFIOMixin.enum_to_list(KeypointsIN)
     dlc_df.columns.name = DFIOMixin.enum_to_list(KeypointsCN)
