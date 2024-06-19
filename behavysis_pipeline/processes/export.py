@@ -69,7 +69,7 @@ class Export:
         start_frame = configs.get_ref(configs.auto.start_frame)
         stop_frame = configs.get_ref(configs.auto.stop_frame) + 1
         # Importing the boris file to the Behav df format
-        df = BehavMixin.import_boris_tsv(src_fp, start_frame, stop_frame, configs)
+        df = BehavMixin.import_boris_tsv(src_fp, start_frame, stop_frame)
         # Writing file
         DFIOMixin.write_feather(df, dst_fp)
         # Returning outcome
