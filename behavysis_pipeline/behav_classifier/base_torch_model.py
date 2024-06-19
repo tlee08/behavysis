@@ -37,7 +37,7 @@ class BaseTorchModel(nn.Module):
         batch_size: int = 64,
     ):
         # Making data loaders
-        loader = BaseTorchModel.np_2_loader(x, y, batch_size=batch_size, shuffle=False)
+        loader = BaseTorchModel.np_2_loader(x, y, batch_size=batch_size, shuffle=True)
         # Training the model
         for epoch in range(epochs):
             # Train the model for one epoch
