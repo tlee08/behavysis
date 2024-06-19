@@ -4,16 +4,11 @@ _summary_
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 import torch.nn as nn
 import torch.optim as optim
 from sklearn.ensemble import RandomForestClassifier
 
 from .base_torch_model import BaseTorchModel
-
-if TYPE_CHECKING:
-    pass
 
 
 class RF1(RandomForestClassifier):
