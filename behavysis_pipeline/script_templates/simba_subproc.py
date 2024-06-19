@@ -218,9 +218,9 @@ def main() -> None:
     Assumes input is column-selected csv, and output is csv in simba_proj >> features_extracted dir.
     """
     # Getting directories from cmd args
-    simba_dir = "{{ simba_dir }}"
-    dlc_dir = "{{ dlc_dir }}"
-    configs_dir = "{{ configs_dir }}"
+    simba_dir = r"{{ simba_dir }}"
+    dlc_dir = r"{{ dlc_dir }}"
+    configs_dir = r"{{ configs_dir }}"
     # Making SimBA project
     if not os.path.exists(simba_dir):
         FeatureExtractor.simba_make_proj(simba_dir, ["placeholder"])
