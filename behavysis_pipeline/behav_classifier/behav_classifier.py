@@ -14,6 +14,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
+import torch.nn as nn
 from behavysis_core.constants import (
     BehavCN,
     BehavColumns,
@@ -552,7 +553,7 @@ class BehavClassifier:
         """
         joblib.dump(self.clf, self.clf_fp)
 
-    def clf_train(self, x: np.array, y: np.array) -> None:
+    def clf_train(self, x: np.array, y: np.array, **kwargs) -> None:
         """
         __summary__
         """
@@ -560,12 +561,19 @@ class BehavClassifier:
             h = self.clf.fit(
                 x,
                 y,
-                batch_size=64,
-                epochs=100,
-                validation_split=0.1,
-                shuffle=True,
-                verbose=1,
-                callbacks=None,
+                batch_size=kwargs.get("batch_size", 64),
+                epochs=kwargs.get("epochs", 5),
+                validation_split=kwargs.get("validation_split", 0.2),
+                shuffle=kwargs.get("shuffle", True),
+                verbose=kwargs.get("verbose", 1),
+                callbacks=kwargs.get("callbacks", None),
+            )
+        elif isinstance(self.clf, nn.Module):
+            self.clf.fit(
+                x,
+                y,
+                batch_size=kwargs.get("batch_size", 64),
+                epochs=kwargs.get("epochs", 5),
             )
         elif isinstance(self.clf, BaseEstimator):
             self.clf.fit(
@@ -595,6 +603,8 @@ class BehavClassifier:
             ```
         """
         if isinstance(self.clf, Model):
+            y_probs = self.clf.predict(x)
+        if isinstance(self.clf, nn.Module):
             y_probs = self.clf.predict(x)
         elif isinstance(self.clf, BaseEstimator):
             y_probs = self.clf.predict_proba(x)[:, 1]
@@ -694,7 +704,9 @@ class BehavClassifier:
         y = np.vectorize(lambda i: 0 if i == -1 else i)(y)
         # Getting eval for each classifier in ClfTemplates
         init_f_ls = [
-            init_f for init_f in dir(ClfTemplates) if not init_f.startswith("__")
+            getattr(ClfTemplates, init_f)
+            for init_f in dir(ClfTemplates)
+            if not init_f.startswith("__")
         ]
         for init_f in init_f_ls:
             # Making classifier
@@ -702,9 +714,9 @@ class BehavClassifier:
             # Training
             self.clf_train(x_train, y_train)
             # Evaluating on test data
-            self.eval_classifier(init_f.__name__, x_test, y_test)
+            self.clf_eval_compare(f"{init_f.__name__}_test", x_test, y_test)
             # Evaluating on all data
-            self.eval_classifier(f"{init_f.__name__}_all", x, y)
+            self.clf_eval_compare(f"{init_f.__name__}_all", x, y)
         # Restoring clf
         self.clf = clf
 
