@@ -1,10 +1,10 @@
 import os
 
-from behavysis_pipeline.behav_classifier import BehavClassifier
-from behavysis_pipeline.behav_classifier.clf_templates import ClfTemplates
-from behavysis_pipeline.pipeline import Project
-
 from behavysis_core.mixins.behav_mixin import BehavMixin
+
+from behavysis_pipeline.behav_classifier import BehavClassifier
+from behavysis_pipeline.behav_classifier.clf_templates import DNN1
+from behavysis_pipeline.pipeline import Project
 
 if __name__ == "__main__":
     root_dir = "."
@@ -50,4 +50,4 @@ if __name__ == "__main__":
     model.clf_eval_compare_all()
     # MANUALLY LOOK AT THE BEST CLASSIFIER AND SELECT
     # Example
-    model.pipeline_build(ClfTemplates.dnn_1)
+    model.pipeline_build(DNN1)
