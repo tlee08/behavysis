@@ -225,8 +225,8 @@ def export_2_feather(in_fp: str, out_fp: str, index: pd.Index) -> str:
     # Setting index to same as dlc preprocessed df
     df.index = index
     # Setting index and column level names
-    df.index.name = DFIOMixin.enum_to_list(FeaturesIN)
-    df.columns.name = DFIOMixin.enum_to_list(FeaturesCN)
+    df.index.names = DFIOMixin.enum_to_list(FeaturesIN)
+    df.columns.names = DFIOMixin.enum_to_list(FeaturesCN)
     # Checking df
     FeaturesMixin.check_df(df)
     # Saving SimBA extracted features df as feather

@@ -206,7 +206,7 @@ def export_2_feather(name: str, in_dir: str, out_dir: str) -> str:
         # Reading the .h5 file
         df = pd.DataFrame(pd.read_hdf(name_fp))
         # Setting the column and index level names
-        df.index.name = DFIOMixin.enum_to_list(KeypointsIN)
+        df.index.names = DFIOMixin.enum_to_list(KeypointsIN)
         df.columns.names = DFIOMixin.enum_to_list(KeypointsCN)
         # Imputing na values with 0
         df = df.fillna(0)

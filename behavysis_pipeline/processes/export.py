@@ -5,6 +5,8 @@ from behavysis_core.mixins.behav_mixin import BehavMixin
 from behavysis_core.mixins.df_io_mixin import DFIOMixin
 from behavysis_core.mixins.io_mixin import IOMixin
 
+from behavysis_pipeline.behav_classifier import BehavClassifier
+
 
 class Export:
     """__summary__"""
@@ -43,17 +45,17 @@ class Export:
         models_ls = configs.user.classify_behaviours
         # Getting the behav_outcomes dict from the configs file
         behav_outcomes = {
-            configs.get_ref(model.configs.behaviour_name): configs.get_ref(
-                model.configs.user_behavs
-            )
+            BehavClassifier.load(
+                model.model_fp
+            ).configs.behaviour_name: configs.get_ref(model.user_behavs)
             for model in models_ls
         }
         # Reading file
         in_df = BehavMixin.read_feather(src_fp)
         # Making the output df (with all user_behav outcome columns)
-        BehavMixin.include_outcome_behavs(in_df, behav_outcomes)
+        out_df = BehavMixin.include_outcome_behavs(in_df, behav_outcomes)
         # Writing file
-        DFIOMixin.write_feather(in_df, dst_fp)
+        DFIOMixin.write_feather(out_df, dst_fp)
         # Returning outcome
         return "predicted_behavs to scored_behavs\n"
 

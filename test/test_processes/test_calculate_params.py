@@ -44,8 +44,8 @@ def make_dlc_df_for_dur(sections_params_ls, columns):
         level=[KeypointsCN.INDIVIDUALS.value, KeypointsCN.BODYPARTS.value], axis=1
     )
     # Setting index and column level names
-    dlc_df.index.name = DFIOMixin.enum_to_list(KeypointsIN)
-    dlc_df.columns.name = DFIOMixin.enum_to_list(KeypointsCN)
+    dlc_df.index.names = DFIOMixin.enum_to_list(KeypointsIN)
+    dlc_df.columns.names = DFIOMixin.enum_to_list(KeypointsCN)
     # Returning dlc_df
     return dlc_df
 

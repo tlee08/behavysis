@@ -89,7 +89,7 @@ class ClassifyBehaviours:
         # Concatenating predictions to a single dataframe
         behavs_df = pd.concat(behav_preds_ls, axis=1)
         # Setting the index and column names
-        behavs_df.index.name = DFIOMixin.enum_to_list(BehavIN)
+        behavs_df.index.names = DFIOMixin.enum_to_list(BehavIN)
         behavs_df.columns.names = DFIOMixin.enum_to_list(BehavCN)
         # Checking df
         BehavMixin.check_df(behavs_df)

@@ -321,8 +321,8 @@ class Experiment:
         # Exporting 3_dlc df to 4_preprocessed folder
         dd = self._process_scaffold(
             (Export.feather_2_feather,),
-            in_fp=self.get_fp(Folders.DLC.value),
-            out_fp=self.get_fp(Folders.PREPROCESSED.value),
+            src_fp=self.get_fp(Folders.DLC.value),
+            dst_fp=self.get_fp(Folders.PREPROCESSED.value),
             overwrite=overwrite,
         )
         # If there is an error, OR warning (indicates not to ovewrite), then return early
@@ -407,8 +407,8 @@ class Experiment:
         # Exporting 6_predicted_behavs df to 7_scored_behavs folder
         return self._process_scaffold(
             (Export.predbehav_2_scoredbehav,),
-            in_fp=self.get_fp(Folders.PREDICTED_BEHAVS.value),
-            out_fp=self.get_fp(Folders.SCORED_BEHAVS.value),
+            src_fp=self.get_fp(Folders.PREDICTED_BEHAVS.value),
+            dst_fp=self.get_fp(Folders.SCORED_BEHAVS.value),
             configs_fp=self.get_fp(Folders.CONFIGS.value),
             overwrite=overwrite,
         )
