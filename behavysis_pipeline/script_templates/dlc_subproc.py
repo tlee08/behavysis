@@ -3,10 +3,10 @@ import deeplabcut
 for video in {{ in_fp_ls }}:
     try:
         deeplabcut.analyze_videos(
-            config="{{ model_fp}}",
+            config=r"{{ model_fp}}",
             videos=[video],
             videotype="mp4",
-            destfolder="{{ dlc_out_dir }}",
+            destfolder=r"{{ dlc_out_dir }}",
             gputouse={{ gputouse }},
             save_as_csv=False,
             calibrate=False,

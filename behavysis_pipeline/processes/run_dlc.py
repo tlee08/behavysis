@@ -75,7 +75,7 @@ class RunDLC:
 
         # Exporting the h5 to feather the out_dir
         export_2_feather(in_fp, dlc_out_dir, out_dir)
-        IOMixin.silent_rm(dlc_out_dir)
+        # IOMixin.silent_rm(dlc_out_dir)
 
         return outcome
 
@@ -139,7 +139,7 @@ class RunDLC:
         # Exporting the h5 to feather the out_dir
         for in_fp in in_fp_ls:
             export_2_feather(in_fp, dlc_out_dir, out_dir)
-        IOMixin.silent_rm(dlc_out_dir)
+        # IOMixin.silent_rm(dlc_out_dir)
         # Returning outcome
         return outcome
 
@@ -188,7 +188,7 @@ def run_dlc_subproc(
     # SubprocMixin.run_subproc_fstream(cmd)
     SubprocMixin.run_subproc_console(cmd)
     # Removing the script file
-    IOMixin.silent_rm(script_fp)
+    # IOMixin.silent_rm(script_fp)
 
 
 def export_2_feather(name: str, in_dir: str, out_dir: str) -> str:
