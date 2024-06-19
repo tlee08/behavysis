@@ -51,3 +51,17 @@ if __name__ == "__main__":
     # MANUALLY LOOK AT THE BEST CLASSIFIER AND SELECT
     # Example
     model.pipeline_build(DNN1)
+
+    # Example of using model for inference
+    # Loading a BehavModel
+    model = BehavClassifier.load(
+        os.path.join(root_dir, "behav_models", f"{behav}.json")
+    )
+    # Getting data
+    x, y = model.prepare_data_training()
+    # Splitting into train and test sets
+    x_train, x_test, y_train, y_test = model.train_test_split(x, y)
+    # Loading classifier
+    model.clf_load()
+    # Evaluating classifier (results stored in "eval" folder)
+    model.clf_eval(x_test, y_test)
