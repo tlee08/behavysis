@@ -28,6 +28,8 @@ class BaseTorchModel(nn.Module):
             self.cpu()
         if "cuda" in self.device.type:
             self.cuda(self.device)
+        # TODO: allow different optimisers
+        self.optimizer = optim.Adam(self.parameters())
 
     def fit(
         self,
