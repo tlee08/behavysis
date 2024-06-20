@@ -32,7 +32,6 @@ from behavysis_core.mixins.df_io_mixin import DFIOMixin
 from behavysis_core.mixins.io_mixin import IOMixin
 from behavysis_core.mixins.keypoints_mixin import KeypointsMixin
 from behavysis_core.mixins.subproc_mixin import SubprocMixin
-from jinja2 import Environment, PackageLoader
 
 
 class RunDLC:
@@ -157,24 +156,20 @@ def run_dlc_subproc(
     NOTE: any dlc processing error for each video that occur during the subprocess
     will be printed to the console and the process will continue to the next video.
     """
-    # Generating a script to run the DLC analysis
     # TODO: implement for and try for each video and get errors?? Maybe save a log to a file
-    # Load the Jinja2 environment
-    env = Environment(loader=PackageLoader("behavysis_pipeline", "script_templates"))
-    # Get the template
-    template = env.get_template("dlc_subproc.py")
-    # Render the template with variables a, b, and c
-    rendered_template = template.render(
+    # Saving the script to a file
+    script_fp = os.path.join(temp_dir, f"dlc_subproc_{gputouse}.py")
+    IOMixin.save_template(
+        "dlc_subproc.py",
+        "behavysis_pipeline",
+        "script_templates",
+        script_fp,
+        
         in_fp_ls=in_fp_ls,
         model_fp=model_fp,
         dlc_out_dir=dlc_out_dir,
         gputouse=gputouse,
     )
-    # Writing the script to a file
-    os.makedirs(temp_dir, exist_ok=True)
-    script_fp = os.path.join(temp_dir, f"dlc_subproc_{gputouse}.py")
-    with open(script_fp, "w", encoding="utf-8") as f:
-        f.write(rendered_template)
     # Running the DLC subprocess in a separate conda env
     cmd = [
         os.environ["CONDA_EXE"],

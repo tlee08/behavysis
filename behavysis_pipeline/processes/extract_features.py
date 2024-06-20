@@ -13,7 +13,7 @@ from behavysis_core.mixins.io_mixin import IOMixin
 from behavysis_core.mixins.keypoints_mixin import KeypointsMixin
 from behavysis_core.mixins.multiproc_mixin import MultiprocMixin
 from behavysis_core.mixins.subproc_mixin import SubprocMixin
-from jinja2 import Environment, PackageLoader
+
 
 # Order of bodyparts is from
 # - https://github.com/sgoldenlab/simba/blob/master/docs/Multi_animal_pose.md
@@ -163,21 +163,18 @@ def run_simba_subproc(
         Directory path of config files corresponding to DLC dataframes in dlc_dir.
         For each DLC dataframe file, there should be a config file with the same name.
     """
-    # Load the Jinja2 environment
-    env = Environment(loader=PackageLoader("behavysis_pipeline", "script_templates"))
-    # Get the template
-    template = env.get_template("simba_subproc.py")
-    # Render the template with variables a, b, and c
-    rendered_template = template.render(
+    # Saving the script to a file
+    script_fp = os.path.join(temp_dir, f"simba_subproc_{cpid}.py")
+    IOMixin.save_template(
+        "simba_subproc.py",
+        "behavysis_pipeline",
+        "script_templates",
+        script_fp,
+        
         simba_dir=simba_dir,
         dlc_dir=dlc_dir,
         configs_dir=configs_dir,
     )
-    # Writing the script to a file
-    os.makedirs(temp_dir, exist_ok=True)
-    script_fp = os.path.join(temp_dir, f"simba_subproc_{cpid}.py")
-    with open(script_fp, "w", encoding="utf-8") as f:
-        f.write(rendered_template)
     # Running the Simba subprocess in a separate conda env
     cmd = [
         os.environ["CONDA_EXE"],
@@ -190,6 +187,8 @@ def run_simba_subproc(
     ]
     # SubprocMixin.run_subproc_fstream(cmd)
     SubprocMixin.run_subproc_console(cmd)
+    # Removing the script file
+    IOMixin.silent_rm(script_fp)
     return "Ran SimBA feature extraction script.\n"
 
 
