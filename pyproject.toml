@@ -12,15 +12,23 @@ python = "^3.9"
 seaborn = "^0.13.2"
 scikit-learn = "^1.4.2"
 imbalanced-learn = "^0.12.2"
-torch = "^2.3.1"
 Jinja2 = "^3.1.4"
 behavysis_core = "^0.1.1"
+torch = {version = "^2.3.1+cu121", source = "torch"}
+torchvision = {version = "^0.18.1+cu121", source = "torch"}
+torchaudio = {version = "^2.3.1+cu121", source = "torch"}
 
 [tool.poetry.group.dev.dependencies]
 behavysis_core = { path = "../behavysis_core", develop = true }
 ruff = "^0.4.8"
 mkdocs-material = "^9.5.18"
 mkdocstrings-python = "^1.9.2"
+
+
+[[tool.poetry.source]]
+name = "torch"
+url = "https://download.pytorch.org/whl/cu121"
+priority = "explicit"
 
 [build-system]
 requires = ["poetry-core"]
