@@ -36,6 +36,7 @@ class RF1(RandomForestClassifier):
 
 class DNN1(BaseTorchModel):
     def __init__(self, input_shape):
+        # Initialising the parent class
         super().__init__()
         # Define the layers
         self.fc1 = nn.Linear(input_shape, 64)
