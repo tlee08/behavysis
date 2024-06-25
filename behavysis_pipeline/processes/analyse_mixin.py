@@ -88,7 +88,7 @@ class AnalyseMixin:
             _description_
         """
         return pd.DataFrame(
-            index=pd.Index(frame_vect, name=DFIOMixin.enum_to_list(AnalysisIN)),
+            index=pd.Index(frame_vect, name=DFIOMixin.enum_to_list(AnalysisIN)[0]),
             columns=pd.MultiIndex.from_tuples(
                 (), names=DFIOMixin.enum_to_list(AnalysisCN)
             ),

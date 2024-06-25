@@ -29,6 +29,7 @@ class FormatVid:
     """
 
     @staticmethod
+    @IOMixin.overwrite_check()
     def format_vid(in_fp: str, out_fp: str, configs_fp: str, overwrite: bool) -> str:
         """
         Formats the input video with the given parameters.

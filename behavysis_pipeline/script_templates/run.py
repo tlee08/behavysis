@@ -17,7 +17,7 @@ if __name__ == "__main__":
 
     proj.nprocs = 5
 
-    default_configs_fp = os.path.join(proj_dir, "default.json")
+    default_configs_fp = os.path.join(proj_dir, "default_configs.json")
     proj.update_configs(
         default_configs_fp,
         overwrite="user",
