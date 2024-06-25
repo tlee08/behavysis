@@ -160,7 +160,7 @@ class AnalyseMixin:
             sns.lineplot(
                 data=roi_df,
                 x=Coords.X.value,
-                y=Coords.y.value,
+                y=Coords.Y.value,
                 color=(1, 0, 0),
                 linewidth=1,
                 marker="+",
@@ -274,13 +274,14 @@ class AggAnalyse:
                     },
                     name=col,
                 )
-                # .to_frame()
-                # .T
+                .to_frame()
+                .T
             )
+        # Concatenating summary_df_ls
         summary_df = pd.concat(summary_df_ls, axis=0)
         # Setting the index and columns
         summary_df.index = analysis_df.columns
-        summary_df.columns.name = AggAnalysisCN.MEASURES.value
+        summary_df.columns.name = AggAnalysisCN.AGGS.value
         # Returning summary_df
         return summary_df
 
@@ -316,7 +317,7 @@ class AggAnalyse:
             # Setting bouts to type float
             bouts = bouts.astype(np.float64)
             # Aggregating stats
-            summary_df_i = (
+            summary_df_ls[i] = (
                 pd.Series(
                     {
                         "bout_freq": bout_freq,
@@ -329,15 +330,16 @@ class AggAnalyse:
                         "bout_dur_Q3": np.nanquantile(bouts, q=0.75),
                         "bout_dur_max": np.nanmax(bouts),
                     },
-                    name=name,
+                    name=col,
                 )
                 .to_frame()
                 .T
             )
-            summary_df = pd.concat([summary_df, summary_df_i], axis=0)
+        # Concatenating summary_df_ls
+        summary_df = pd.concat(summary_df_ls, axis=0)
         # Setting the index and columns
         summary_df.index = analysis_df.columns
-        summary_df.columns.name = AggAnalysisCN.MEASURES.value
+        summary_df.columns.name = AggAnalysisCN.AGGS.value
         # Returning summary_df
         return summary_df
 
@@ -382,7 +384,7 @@ class AggAnalyse:
         """
         # Making binned_df long
         binned_stacked_df = (
-            binned_df.stack(DFIOMixin.init_df(AnalysisCN))[agg_column]
+            binned_df.stack(DFIOMixin.enum_to_list(AnalysisCN))[agg_column]
             .rename("value")
             .reset_index()
         )

@@ -67,7 +67,7 @@ class FormatVid:
         )
 
         # Saving video metadata to configs dict
-        outcome += FormatVid.get_vid_metadata(in_fp, out_fp, configs_fp, overwrite)
+        outcome += FormatVid.get_vid_metadata(in_fp, out_fp, configs_fp, True)
         return outcome
 
     @staticmethod

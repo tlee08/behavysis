@@ -322,7 +322,7 @@ class Experiment:
         dd = self._process_scaffold(
             (Export.feather_2_feather,),
             src_fp=self.get_fp(Folders.DLC.value),
-            dst_fp=self.get_fp(Folders.PREPROCESSED.value),
+            out_fp=self.get_fp(Folders.PREPROCESSED.value),
             overwrite=overwrite,
         )
         # If there is an error, OR warning (indicates not to ovewrite), then return early
@@ -408,7 +408,7 @@ class Experiment:
         return self._process_scaffold(
             (Export.predbehav_2_scoredbehav,),
             src_fp=self.get_fp(Folders.PREDICTED_BEHAVS.value),
-            dst_fp=self.get_fp(Folders.SCORED_BEHAVS.value),
+            out_fp=self.get_fp(Folders.SCORED_BEHAVS.value),
             configs_fp=self.get_fp(Folders.CONFIGS.value),
             overwrite=overwrite,
         )

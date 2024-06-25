@@ -110,6 +110,10 @@ class RunDLC:
                     os.path.join(out_dir, f"{IOMixin.get_name(i)}.feather")
                 )
             ]
+        
+        # If there are no videos to process, return
+        if len(in_fp_ls) == 0:
+            return outcome
 
         # Getting the DLC model config path
         # Getting the names of the files that need processing
