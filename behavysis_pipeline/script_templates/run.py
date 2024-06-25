@@ -5,7 +5,7 @@ import os
 import pandas as pd
 
 from behavysis_pipeline import Project
-from behavysis_pipeline.processes import FormatVideo, CalculateParams, Analyse, Evaluate, Preprocess
+from behavysis_pipeline.processes import FormatVid, CalculateParams, Analyse, Evaluate, Preprocess
 
 if __name__ == "__main__":
     overwrite = True
@@ -72,13 +72,6 @@ if __name__ == "__main__":
     proj.extract_features(overwrite)
     proj.classify_behaviours(overwrite)
     proj.export_behaviours(overwrite)
-
-    for exp in proj.get_experiments():
-        behavs_df = pd.read_feather(exp.get_fp("7_scored_behavs"))
-        behavs_df[("fight", "actual")] = behavs_df[("fight", "actual")].map(
-            lambda x: 1 if x == -1 else 0
-        )
-        behavs_df.to_feather(exp.get_fp("7_scored_behavs"))
 
     proj.behav_analyse()
 
