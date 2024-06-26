@@ -563,7 +563,7 @@ class BehavClassifier:
             epochs=kwargs.get("epochs", 200),
         )
 
-    def clf_predict(self, x: np.ndarray) -> pd.DataFrame:
+    def clf_predict(self, x: np.ndarray, **kwargs) -> pd.DataFrame:
         """
         Making predictions using the given model and preprocessed features.
         Assumes the x array is already preprocessed.
