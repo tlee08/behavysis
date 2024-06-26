@@ -67,11 +67,10 @@ class FormatVid:
         )
 
         # Saving video metadata to configs dict
-        outcome += FormatVid.get_vid_metadata(in_fp, out_fp, configs_fp, True)
+        outcome += FormatVid.get_vid_metadata(in_fp, out_fp, configs_fp, overwrite)
         return outcome
 
     @staticmethod
-    @IOMixin.overwrite_check()
     def get_vid_metadata(
         in_fp: str, out_fp: str, configs_fp: str, overwrite: bool
     ) -> str:
@@ -88,7 +87,7 @@ class FormatVid:
         configs_fp : str
             The JSON configs filepath.
         overwrite : bool
-            Whether to overwrite the output file (if it exists).
+            Whether to overwrite the output file (if it exists). IGNORED
 
         Returns
         -------

@@ -6,9 +6,10 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - python=3.9
+  - python=3.10
   - pip
   - ipykernel
   - nb_conda
   - pip:
+      # - Simba-UW-tf-dev
       - Simba-UW-tf-dev
