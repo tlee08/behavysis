@@ -62,14 +62,14 @@ class Export:
     @staticmethod
     @IOMixin.overwrite_check()
     def boris_2_behav(
-        src_fp: str, out_fp: str, configs_fp: str, overwrite: bool
+        src_fp: str, out_fp: str, configs_fp: str, behavs_ls: list[str], overwrite: bool
     ) -> str:
         # Reading the configs file
         configs = ExperimentConfigs.read_json(configs_fp)
         start_frame = configs.get_ref(configs.auto.start_frame)
         stop_frame = configs.get_ref(configs.auto.stop_frame) + 1
         # Importing the boris file to the Behav df format
-        df = BehavMixin.import_boris_tsv(src_fp, start_frame, stop_frame)
+        df = BehavMixin.import_boris_tsv(src_fp, behavs_ls, start_frame, stop_frame)
         # Writing file
         DFIOMixin.write_feather(df, out_fp)
         # Returning outcome

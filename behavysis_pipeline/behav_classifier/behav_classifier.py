@@ -616,7 +616,7 @@ class BehavClassifier:
             Figure showing the logistic curve for different predicted probabilities.
         """
         # Making eval dir
-        eval_dir = os.path.join(self.root_dir, "eval")
+        eval_dir = os.path.join(self.root_dir, "eval", self.configs.behaviour_name)
         name = self.configs.behaviour_name
         os.makedirs(eval_dir, exist_ok=True)
         # Making eval df
@@ -629,13 +629,13 @@ class BehavClassifier:
         y_true = y_eval[self.configs.behaviour_name, BehavColumns.ACTUAL.value]
         # Making confusion matrix figure
         metrics_fig = self.eval_conf_matr(y_true, y_pred)
-        metrics_fig.savefig(os.path.join(eval_dir, f"{name}_confm.png"))
+        metrics_fig.savefig(os.path.join(eval_dir, "confm.png"))
         # Making performance for different pcutoffs figure
         pcutoffs_fig = self.eval_metrics_pcutoffs(y_true, y_prob)
-        pcutoffs_fig.savefig(os.path.join(eval_dir, f"{name}_pcutoffs.png"))
+        pcutoffs_fig.savefig(os.path.join(eval_dir, "pcutoffs.png"))
         # Logistic curve
         logc_fig = self.eval_logc(y_true, y_prob)
-        logc_fig.savefig(os.path.join(eval_dir, f"{name}_logc.png"))
+        logc_fig.savefig(os.path.join(eval_dir, "logc.png"))
         # Return evaluations
         return y_eval, metrics_fig, pcutoffs_fig, logc_fig
 
