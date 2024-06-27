@@ -7,7 +7,7 @@ from __future__ import annotations
 import logging
 import os
 import shutil
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING, Callable, Optional
 
 import joblib
 import matplotlib.pyplot as plt
@@ -22,9 +22,6 @@ from behavysis_core.constants import (
 from behavysis_core.data_models.pydantic_base_model import PydanticBaseModel
 from behavysis_core.mixins.behav_mixin import BehavMixin
 from behavysis_core.mixins.df_io_mixin import DFIOMixin
-from behavysis_core.mixins.features_mixin import FeaturesMixin
-from behavysis_core.mixins.io_mixin import IOMixin
-from imblearn.under_sampling import RandomUnderSampler
 from pydantic import ConfigDict
 from sklearn.base import BaseEstimator
 from sklearn.metrics import (
@@ -62,6 +59,8 @@ class BehavClassifierConfigs(PydanticBaseModel):
     window_frames: int = 5
 
     clf_structure: str = "clf"  # Classifier type (defined in ClfTemplates)
+    batch_size: int = 256
+    epochs: int = 20
 
 
 class BehavClassifier:
@@ -122,13 +121,8 @@ class BehavClassifier:
             The loaded BehavClassifier instance.
         """
         # Getting the list of behaviours
-        y_df = BehavClassifier.preproc_y(
-            pd.concat(
-                [
-                    BehavMixin.read_feather(exp.get_fp(Folders.SCORED_BEHAVS.value))
-                    for exp in proj.get_experiments()
-                ],
-            )
+        y_df = cls.wrangle_columns_y(
+            cls.combine(os.path.join(proj.root_dir, Folders.SCORED_BEHAVS.value))
         )
         # For each behaviour, making a new BehavClassifier instance
         behavs_ls = y_df.columns.to_list()
@@ -242,6 +236,14 @@ class BehavClassifier:
     #            COMBINING DFS TO SINGLE DF
     #################################################
 
+    @staticmethod
+    def combine(src_dir):
+        data_dict = {
+            os.path.splitext(i)[0]: pd.read_feather(os.path.join(src_dir, i))
+            for i in os.listdir(os.path.join(src_dir))
+        }
+        return pd.concat(data_dict.values(), axis=0, keys=data_dict.keys())
+
     def combine_dfs(self) -> tuple[pd.DataFrame, pd.DataFrame]:
         """
         Combines the data into a single `X` df, `y` df, and index.
@@ -254,37 +256,13 @@ class BehavClassifier:
         y : pd.DataFrame
             Outcomes dataframe of all experiments in the `y` directory
         """
-        # data stores
-        id_ls = [X_ID, Y_ID]
-        df_dict = {
-            X_ID: None,
-            Y_ID: None,
-        }
-        read_func_ls = {
-            X_ID: FeaturesMixin.read_feather,  # features extracted
-            Y_ID: BehavMixin.read_feather,  # behaviours scored
-        }
-        # Reading in each x and y df and storing in data dict
-        for df_id in id_ls:
-            # Making a list of dfs fpr each df in the given data directory
-            df_dir = os.path.join(self.root_dir, df_id)
-            df_ls = np.zeros(len(os.listdir(df_dir)), dtype=object)
-            for i, fp in enumerate(os.listdir(df_dir)):
-                name = IOMixin.get_name(fp)
-                x_fp = os.path.join(df_dir, f"{name}.feather")
-                df_ls[i] = pd.concat(
-                    [read_func_ls[df_id](x_fp)],
-                    axis=0,
-                    keys=[name],
-                    names=["experiment"],
-                )
-            # Concatenating the list of dfs together to make the combined x and y dfs
-            df_dict[df_id] = pd.concat(df_ls)
+        # Getting the x and y dfs
+        x = BehavClassifier.combine(os.path.join(self.root_dir, X_ID))
+        y = BehavClassifier.combine(os.path.join(self.root_dir, Y_ID))
         # Getting the intersection pf the x and y row indexes
-        index = df_dict[X_ID].index.intersection(df_dict[Y_ID].index)
-        # Filtering on this index intersection
-        x = df_dict[X_ID].loc[index]
-        y = df_dict[Y_ID].loc[index]
+        index = x.index.intersection(y.index)
+        x = x.loc[index]
+        y = y.loc[index]
         # Returning the x and y dfs
         return x, y
 
@@ -292,7 +270,8 @@ class BehavClassifier:
     #            PREPROCESSING DFS
     #################################################
 
-    def preproc_x_fit(self, x: pd.DataFrame) -> None:
+    @staticmethod
+    def preproc_x_fit(x: np.ndarray, preproc_fp: str) -> None:
         """
         __summary__
         """
@@ -301,37 +280,23 @@ class BehavClassifier:
         # Fitting pipeline
         preproc_pipe.fit(x)
         # Saving pipeline
-        joblib.dump(preproc_pipe, self.preproc_fp)
+        joblib.dump(preproc_pipe, preproc_fp)
 
-    def preproc_x(self, x: pd.DataFrame) -> pd.DataFrame:
+    @staticmethod
+    def preproc_x(x: np.ndarray, preproc_fp: str) -> np.ndarray:
         """
         The preprocessing steps are:
         - MinMax scaling (using previously fitted MinMaxScaler)
         """
         # Loading in pipeline
-        preproc_pipe = joblib.load(self.preproc_fp)
+        preproc_pipe = joblib.load(preproc_fp)
         # Uses trained fit for preprocessing new data
-        x = pd.DataFrame(
-            preproc_pipe.transform(x),
-            index=x.index,
-            columns=x.columns,
-        )
+        x = preproc_pipe.transform(x)
         # Returning df
         return x
 
     @staticmethod
-    def preproc_y(y: pd.DataFrame) -> pd.DataFrame:
-        """
-        The preprocessing steps are:
-        - Imputing NaN values with 0
-        - Setting -1 to 0
-        - Converting the MultiIndex columns from `(behav, outcome)` to `{behav}__{outcome}`,
-        by expanding the `actual` and all specific outcome columns of each behav.
-        """
-        # Imputing NaN values with 0
-        y = y.fillna(0)
-        # Setting -1 to 0 (i.e. "undecided" to "no behaviour")
-        y = y.map(lambda x: 0 if x == -1 else x)
+    def wrangle_columns_y(y: pd.DataFrame) -> pd.DataFrame:
         # Filtering out the prob and pred columns (in the `outcomes` level)
         cols_filter = np.isin(
             y.columns.get_level_values(BehavCN.OUTCOMES.value),
@@ -345,84 +310,39 @@ class BehavClassifier:
             f"{i[0]}" if i[1] == BehavColumns.ACTUAL.value else f"{i[0]}__{i[1]}"
             for i in y.columns
         ]
-        # Returning df
         return y
 
-    def resample(self, y: pd.Series) -> pd.MultiIndex:
+    @staticmethod
+    def preproc_y(y: np.ndarray) -> np.ndarray:
         """
-        Uses the resampling strategy and seed in configs.
-        Returns the index for resampling. This can then
-        be used to filter the X and y dfs.
+        The preprocessing steps are:
+        - Imputing NaN values with 0
+        - Setting -1 to 0
+        - Converting the MultiIndex columns from `(behav, outcome)` to `{behav}__{outcome}`,
+        by expanding the `actual` and all specific outcome columns of each behav.
+        """
+        # Imputing NaN values with 0
+        y = np.nan_to_num(y, nan=0)
+        # Setting -1 to 0 (i.e. "undecided" to "no behaviour")
+        y = np.maximum(y, 0)
+        # Returning arr
+        return y
 
-        Notes
-        -----
-        Only indices within the window frame range are considered for resampling.
-        """
-        index = y.index
-        n = self.configs.window_frames
-        # Getting only valid indexes (i.e. where window can be applied - won't go out of bounds)
-        valid_index = pd.MultiIndex.from_frame(
-            index.to_frame(index=False)
-            .groupby("experiment")["frame"]
-            .apply(lambda x: x.iloc[n:-n])
-            .reset_index("experiment")
-        ).sort_values()
-        # Undersampling and getting resampled index
-        resampled_index = pd.MultiIndex.from_frame(
-            RandomUnderSampler(
-                sampling_strategy=self.configs.undersampling_strategy,
-                random_state=self.configs.seed,
-            ).fit_resample(X=valid_index.to_frame(index=False), y=y.loc[valid_index])[0]
-        ).sort_values()
-        # Returning resampled index
-        return resampled_index
-
-    def make_windows(
-        self, df: pd.DataFrame, resampled_index: pd.MultiIndex
-    ) -> np.ndarray:
-        """
-        Returns np array of (samples, frames, features).
-
-        Notes
-        -----
-        Anything that is on the edge of the window will be padded with bfilled and ffilled.
-        This introduces synthetic data.
-        """
-        # NOTE: synthesising data by padding with bfill and ffill
-        # for window size
-        fpad = df.iloc[np.repeat(0, self.configs.window_frames)]
-        fpad.index = np.repeat(None, self.configs.window_frames)
-        bpad = df.iloc[np.repeat(-1, self.configs.window_frames)]
-        bpad.index = np.repeat(None, self.configs.window_frames)
-        df = pd.concat([fpad, df, bpad])
-        # Getting array of index numbers
-        resampled_arr = [df.index.get_loc(i) for i in resampled_index]
-        n = self.configs.window_frames
-        # Making arrays of (samples, window, features)
-        return np.stack([df.iloc[i - n : i + n + 1].values for i in resampled_arr])
-
-    def train_test_split(self, x, y):
-        """
-        Splitting into train and test sets
-        """
-        # Splitting into train and test sets
-        x_train, x_test, y_train, y_test = train_test_split(
-            x,
-            y,
-            test_size=1 - self.configs.train_fraction,
-            stratify=y,
+    @staticmethod
+    def undersample(y: np.ndarray, ratio: float) -> np.ndarray:
+        y_index = np.arange(y.shape[0])
+        index_t = y_index[y == 1]
+        index_f = np.random.choice(
+            y_index[y == 0], size=int(index_t.shape[0] / ratio), replace=False
         )
-        # Manual split to separate bouts themselves
-        # split = int(x.shape[0] * self.configs.train_fraction)
-        # x_train, x_test = x[:split], x[split:]
-        # y_train, y_test = y[:split], y[split:]
-        return x_train, x_test, y_train, y_test
+        index = np.union1d(index_t, index_f)
+        return index
 
     #################################################
     #            PIPELINE FOR DATA PREP
     #################################################
 
-    def prepare_data_training(self) -> tuple[np.ndarray, np.ndarray]:
+    def prepare_data_training(self) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
         Prepares the data (`x` and `y`) in the model for training.
         Data is taken from the model's `x` and `y` dirs.
@@ -448,22 +368,16 @@ class BehavClassifier:
         # Combining dfs from x and y directories (individual experiment data)
         x, y = self.combine_dfs()
         # Fitting the preprocessor pipeline
-        self.preproc_x_fit(x)
+        self.preproc_x_fit(x, self.preproc_fp)
         # Preprocessing x df
-        x = self.preproc_x(x)
+        x = self.preproc_x(x, self.preproc_fp)
         # Preprocessing y df
+        y = self.wrangle_columns_y(y)[self.configs.behaviour_name].values
         y = self.preproc_y(y)
-        # Selecting y class
-        y = y[self.configs.behaviour_name]
         # Resampling indexes using y classes
-        index = self.resample(y)
-        # Making x (windowed) array
-        # x = self.make_windows(x, index)
-        x = x.loc[index].values
-        # Making y array
-        y = y.loc[index].values.reshape(-1, 1)
-        # Returning x and y
-        return x, y
+        index = self.undersample(y, self.configs.undersampling_strategy)
+        # Returning x, y, and index to use
+        return x, y, index
 
     def prepare_data(self, x: pd.DataFrame) -> np.ndarray:
         """
@@ -479,10 +393,7 @@ class BehavClassifier:
             Features array in the format: `(samples, window, features)`
         """
         # Preprocessing x df
-        x = self.preproc_x(x)
-        # Making x (windowed) array
-        # x = self.make_windows(x, x.index)
-        x = x.values
+        x = self.preproc_x(x, self.preproc_fp)
         # Returning x
         return x
 
@@ -497,16 +408,25 @@ class BehavClassifier:
         Callable is a method from `ClfTemplates`.
         """
         # Preparing data
-        x, y = self.prepare_data_training()
+        x, y, index = self.prepare_data_training()
         # Splitting into train and test sets
-        x_train, x_test, y_train, y_test = self.train_test_split(x, y)
+        ind_train, ind_test = train_test_split(
+            index,
+            test_size=1 - self.configs.train_fraction,
+            stratify=y[index],
+        )
         # Initialising the model
         self.clf = clf_init_f(x.shape[1])
-        # Evaluating the model (training on train, testing on test)
-        self.clf_train(x_train, y_train)
-        self.clf_eval(x_test, y_test)
-        # Training the model (on all data)
-        self.clf_train(x, y)
+        # Training the model
+        self.clf.fit(
+            x=x,
+            y=y,
+            index=ind_train,
+            batch_size=self.configs.batch_size,
+            epochs=self.configs.epochs,
+        )
+        # Evaluating the model
+        self.clf_eval(x, y, ind_test)
         # Updating the model configs
         configs = self.configs
         configs.clf_structure = clf_init_f.__name__
@@ -530,7 +450,7 @@ class BehavClassifier:
         # Loading the model
         self.clf_load()
         # Making predictions
-        y_eval = self.clf_predict(x)
+        y_eval = self.clf_predict(x, self.configs.batch_size)
         # Settings the index
         y_eval.index = index
         # Returning predictions
@@ -552,18 +472,12 @@ class BehavClassifier:
         """
         joblib.dump(self.clf, self.clf_fp)
 
-    def clf_train(self, x: np.array, y: np.array, **kwargs) -> None:
-        """
-        __summary__
-        """
-        self.clf.fit(
-            x,
-            y,
-            batch_size=kwargs.get("batch_size", 128),
-            epochs=kwargs.get("epochs", 200),
-        )
-
-    def clf_predict(self, x: np.ndarray, **kwargs) -> pd.DataFrame:
+    def clf_predict(
+        self,
+        x: np.ndarray,
+        batch_size: int,
+        index: Optional[np.ndarray] = None,
+    ) -> pd.DataFrame:
         """
         Making predictions using the given model and preprocessed features.
         Assumes the x array is already preprocessed.
@@ -583,11 +497,16 @@ class BehavClassifier:
             ```
         """
         # Getting probabilities
-        y_probs = self.clf.predict(x)
+        index = np.arange(x.shape[0]) if index is None else index
+        y_probs = self.clf.predict(
+            x=x,
+            index=index,
+            batch_size=batch_size,
+        )
         # Making predictions from probabilities (and pcutoff)
         y_preds = (y_probs > self.configs.pcutoff).astype(int)
         # Making df
-        pred_df = BehavMixin.init_df(np.arange(x.shape[0]))
+        pred_df = BehavMixin.init_df(index)
         pred_df[(self.configs.behaviour_name, BehavColumns.PROB.value)] = y_probs
         pred_df[(self.configs.behaviour_name, BehavColumns.PRED.value)] = y_preds
         # Returning predicted behavs
@@ -598,7 +517,7 @@ class BehavClassifier:
     #################################################
 
     def clf_eval(
-        self, x: np.ndarray, y: np.ndarray
+        self, x: np.ndarray, y: np.ndarray, index: Optional[np.ndarray] = None
     ) -> tuple[pd.DataFrame, plt.Figure, plt.Figure, plt.Figure]:
         """
         Evaluates the classifier performance on the given x and y data.
@@ -620,8 +539,9 @@ class BehavClassifier:
         name = self.configs.behaviour_name
         os.makedirs(eval_dir, exist_ok=True)
         # Making eval df
-        y_eval = self.clf_predict(x)
-        y_eval[(self.configs.behaviour_name, BehavColumns.ACTUAL.value)] = y
+        index = np.arange(x.shape[0]) if index is None else index
+        y_eval = self.clf_predict(x=x, index=index, batch_size=self.configs.batch_size)
+        y_eval[(self.configs.behaviour_name, BehavColumns.ACTUAL.value)] = y[index]
         DFIOMixin.write_feather(y_eval, os.path.join(eval_dir, f"{name}_eval.feather"))
         # Getting individual columns
         y_prob = y_eval[self.configs.behaviour_name, BehavColumns.PROB.value]
@@ -639,7 +559,13 @@ class BehavClassifier:
         # Return evaluations
         return y_eval, metrics_fig, pcutoffs_fig, logc_fig
 
-    def clf_eval_compare(self, eval_name: str, x_test: np.ndarray, y_test: np.ndarray):
+    def clf_eval_compare(
+        self,
+        eval_name: str,
+        x_test: np.ndarray,
+        y_test: np.ndarray,
+        index: Optional[np.ndarray] = None,
+    ):
         """
         Making and saving evaluation metrics for the classifier, with a given name.
         """
@@ -647,7 +573,7 @@ class BehavClassifier:
             self.root_dir, "compare_evals", self.configs.behaviour_name
         )
         os.makedirs(eval_dir, exist_ok=True)
-        e, m, p, l = self.clf_eval(x_test, y_test)
+        e, m, p, l = self.clf_eval(x_test, y_test, index)
         e.to_feather(os.path.join(eval_dir, f"{eval_name}_e.feather"))
         m.savefig(os.path.join(eval_dir, f"{eval_name}_m.png"))
         p.savefig(os.path.join(eval_dir, f"{eval_name}_p.png"))
@@ -663,29 +589,34 @@ class BehavClassifier:
         """
         # Saving existing clf
         clf = self.clf
-        # Getting data
-        # train and test data
-        x, y = self.prepare_data_training()
-        x_train, x_test, y_train, y_test = self.train_test_split(x, y)
+        # Preparing data
+        x, y, index = self.prepare_data_training()
+        # Splitting into train and test sets
+        ind_train, ind_test = train_test_split(
+            index,
+            test_size=1 - self.configs.train_fraction,
+            stratify=y[index],
+        )
         # # Adding noise
         # noise = 0.05
         # x_train += np.random.normal(0, noise, x_train.shape)
         # x_test += np.random.normal(0, noise, x_test.shape)
-        # All data
-        x, y = self.combine_dfs()
-        x = self.prepare_data(x)
-        y = y[(self.configs.behaviour_name, BehavColumns.ACTUAL.value)]
-        y = np.vectorize(lambda i: 0 if i == -1 else i)(y)
         # Getting eval for each classifier in ClfTemplates
-        for init_f in CLF_TEMPLATES:
+        for clf_init_f in CLF_TEMPLATES:
             # Making classifier
-            self.clf = init_f(x.shape[1])
+            self.clf = clf_init_f(x.shape[1])
             # Training
-            self.clf_train(x_train, y_train)
+            self.clf.fit(
+                x=x,
+                y=y,
+                index=ind_train,
+                batch_size=self.configs.batch_size,
+                epochs=self.configs.epochs,
+            )
             # Evaluating on test data
-            self.clf_eval_compare(f"{init_f.__name__}_test", x_test, y_test)
+            self.clf_eval_compare(f"{clf_init_f.__name__}_test", x, y, ind_test)
             # Evaluating on all data
-            self.clf_eval_compare(f"{init_f.__name__}_all", x, y)
+            self.clf_eval_compare(f"{clf_init_f.__name__}_all", x, y)
         # Restoring clf
         self.clf = clf
 
