@@ -26,8 +26,6 @@ from behavysis_core.mixins.io_mixin import IOMixin
 from behavysis_core.mixins.multiproc_mixin import MultiprocMixin
 from natsort import natsort_keygen, natsorted
 
-from jinja2 import Environment, PackageLoader
-
 from behavysis_pipeline.pipeline.experiment import Experiment
 from behavysis_pipeline.processes.run_dlc import RunDLC
 
@@ -171,41 +169,6 @@ class Project:
         self.root_dir = os.path.abspath(root_dir)
         self.experiments = {}
         self.nprocs = 4
-
-    #####################################################################
-    #               MAKING PROJECTS
-    #####################################################################
-
-    @classmethod
-    def make_project(clf, root_dir, overwrite: bool = False) -> None:
-        """
-        Makes a project instance and imports all experiments in the project folder.
-        
-        Also copies the `run.py` script and `default_configs.json` to the root_dir.
-        """
-        # Making the project root folder
-        os.makedirs(root_dir, exist_ok=True)
-        # Making the project instance
-        proj = clf(root_dir)
-        # Making each subfolder
-        for f in Folders:
-            os.makedirs(os.path.join(proj.root_dir, f.value), exist_ok=True)
-        # Copying the default_configs.json and run.py files to the project folder
-        for i in ["default_configs.json", "run.py"]:
-            # Getting the file path
-            dst_fp = os.path.join(proj.root_dir, i)
-            # If not overwrite and file exists, then don't overwrite
-            if not overwrite and os.path.exists(dst_fp):
-                continue
-            # Saving the template to the file
-            IOMixin.save_template(
-                i,
-                "behavysis_pipeline",
-                "script_templates",
-                dst_fp,
-            )
-        # returning the project instance
-        return proj
 
     #####################################################################
     #               GETTER METHODS

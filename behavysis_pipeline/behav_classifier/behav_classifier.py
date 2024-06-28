@@ -637,7 +637,7 @@ class BehavClassifier:
         # Return evaluations
         return y_eval, report_dict, metrics_fig, pcutoffs_fig, logc_fig
 
-    def clf_eval_compare_all(self):
+    def clf_eval_all(self):
         """
         Making classifier for all available templates.
 

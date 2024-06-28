@@ -9,27 +9,20 @@ interpretable plotted and tabulated data for different analysises. This pipeline
 - Extracting meaningful data analysis from the preprocessed coordinates file
 """
 
-#####################################################################
-#               FILTERING STDOUT WARNINGS
-#####################################################################
-
+import logging
 import logging.config
 import warnings
-
-warnings.filterwarnings("ignore")
-
-#####################################################################
-#         IMPORTING MODULES (INCL. RELATIVE AND 3RD PARTY)
-#####################################################################
-
-import logging
 
 import matplotlib
 import matplotlib.pyplot as plt
 import seaborn as sns
 from behavysis_core.constants import PLOT_DPI, PLOT_STYLE
 
-from behavysis_pipeline.pipeline import Experiment, Project
+#####################################################################
+#               FILTERING STDOUT WARNINGS
+#####################################################################
+
+warnings.filterwarnings("ignore")
 
 #####################################################################
 #           INITIALISE MPL PLOTTING PARAMETERS

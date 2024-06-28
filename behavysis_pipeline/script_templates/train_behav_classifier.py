@@ -43,7 +43,7 @@ if __name__ == "__main__":
     model_fp = os.path.join(root_dir, "behav_models", f"{behav}.json")
     model = BehavClassifier.load(model_fp)
     # Testing all different classifiers
-    model.clf_eval_compare_all()
+    model.clf_eval_all()
     # MANUALLY LOOK AT THE BEST CLASSIFIER AND SELECT
     model.pipeline_build(DNN1)
 

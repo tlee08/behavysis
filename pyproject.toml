@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "behavysis_pipeline"
-version = "0.1.5"
+version = "0.1.6"
 description = "An animal behaviour processing and analysis package"
 authors = ["BowenLab"]
 license = "LGPL-3.0-or-later"
@@ -31,6 +31,10 @@ mkdocstrings-python = "^1.9.2"
 name = "torch"
 url = "https://download.pytorch.org/whl/cu121"
 priority = "explicit"
+
+[tool.poetry.scripts]
+behavysis_make_project = "behavysis_pipeline.__main__:make_project"
+behavysis_make_classifier = "behavysis_pipeline.__main__:make_behav_classifier"
 
 [build-system]
 requires = ["poetry-core"]
