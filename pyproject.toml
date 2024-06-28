@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "behavysis_pipeline"
-version = "0.1.7"
+version = "0.1.9"
 description = "An animal behaviour processing and analysis package"
 authors = ["BowenLab"]
 license = "LGPL-3.0-or-later"

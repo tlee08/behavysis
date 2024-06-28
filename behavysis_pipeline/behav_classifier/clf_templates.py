@@ -4,6 +4,7 @@ _summary_
 
 from __future__ import annotations
 
+import pandas as pd
 import torch.nn as nn
 import torch.optim as optim
 from sklearn.ensemble import RandomForestClassifier
@@ -26,9 +27,12 @@ class RF1(RandomForestClassifier):
             verbose=1,
         )
 
-    def fit(self, x, y, *args, **kwargs):
-        super().fit(x, y)
-        return self
+    def fit(self, x, y, index, *args, **kwargs):
+        super().fit(x[index], y[index])
+        return pd.DataFrame(
+            index=pd.Index([], name="epoch"),
+            columns=["loss", "vloss"],
+        )
 
     def predict(self, x, *args, **kwargs):
         return super().predict_proba(x)[:, 1]
