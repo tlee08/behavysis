@@ -1,10 +1,13 @@
 [tool.poetry]
 name = "behavysis_pipeline"
-version = "0.1.2"
+version = "0.1.5"
 description = "An animal behaviour processing and analysis package"
 authors = ["BowenLab"]
 license = "LGPL-3.0-or-later"
 readme = "README.md"
+homepage = "https://tlee08.github.io/behavysis_pipeline"
+repository = "https://github.com/tlee08/behavysis_pipeline"
+documentation = "https://tlee08.github.io/behavysis_pipeline"
 packages = [{ include = "behavysis_pipeline" }]
 
 [tool.poetry.dependencies]
@@ -14,9 +17,9 @@ scikit-learn = "^1.4.2"
 imbalanced-learn = "^0.12.2"
 Jinja2 = "^3.1.4"
 behavysis_core = "^0.1.3"
-torch = {version = "==2.3.1+cu121", source = "torch"}
-torchvision = {version = "==0.18.1+cu121", source = "torch"}
-torchaudio = {version = "==2.3.1+cu121", source = "torch"}
+torch = {version = "^2.3.1", source = "torch"}
+torchvision = {version = "^0.18.1", source = "torch"}
+torchaudio = {version = "^2.3.1", source = "torch"}
 
 [tool.poetry.group.dev.dependencies]
 behavysis_core = { path = "../behavysis_core", develop = true }
