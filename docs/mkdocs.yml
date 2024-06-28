@@ -55,6 +55,7 @@ plugins:
             - https://docs.python.org/3/objects.inv
             - https://numpy.org/doc/stable/objects.inv
             - https://pandas.pydata.org/docs/objects.inv
+            - https://pytorch.org/docs/stable/objects.inv
           options:
             show_root_heading: true
             docstring_style: numpy
@@ -87,3 +88,4 @@ nav:
     - reference/experiment.md
     - reference/processes.md
     - reference/behav_classifier.md
+    - reference/behav_classifier_templates.md

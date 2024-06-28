@@ -12,11 +12,12 @@ from .base_torch_model import BaseTorchModel
 
 
 class RF1(RandomForestClassifier):
+    """
+    x features is (samples, features).
+    y outcome is (samples, class).
+    """
+
     def __init__(self):
-        """
-        x features is (samples, features).
-        y outcome is (samples, class).
-        """
         super().__init__(
             n_estimators=2000,
             max_depth=3,
@@ -34,6 +35,11 @@ class RF1(RandomForestClassifier):
 
 
 class DNN1(BaseTorchModel):
+    """
+    x features is (samples, window, features).
+    y outcome is (samples, class).
+    """
+
     def __init__(self):
         # Initialising the parent class
         super().__init__(546, 0)
@@ -65,6 +71,11 @@ class DNN1(BaseTorchModel):
 
 
 class DNN2(BaseTorchModel):
+    """
+    x features is (samples, window, features).
+    y outcome is (samples, class).
+    """
+
     def __init__(self):
         # Initialising the parent class
         super().__init__(546, 0)
@@ -96,6 +107,11 @@ class DNN2(BaseTorchModel):
 
 
 class DNN3(BaseTorchModel):
+    """
+    x features is (samples, window, features).
+    y outcome is (samples, class).
+    """
+
     def __init__(self):
         # Initialising the parent class
         super().__init__(546, 0)

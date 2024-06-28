@@ -71,9 +71,9 @@ class BehavClassifier:
 
     Attributes
     ----------
-    configs_fp: str
+    configs_fp
         _description_
-    clf: BaseEstimator
+    clf
         _description_
     """
 
@@ -86,7 +86,7 @@ class BehavClassifier:
 
         Parameters
         ----------
-        configs_fp : str
+        configs_fp :
             _description_
         """
         # Storing configs json fp
@@ -113,12 +113,12 @@ class BehavClassifier:
 
         Parameters
         ----------
-        proj : Project
+        proj :
             The Project instance.
 
         Returns
         -------
-        BehavClassifier
+        :
             The loaded BehavClassifier instance.
         """
         # Getting the list of behaviours
@@ -225,9 +225,9 @@ class BehavClassifier:
 
         Parameters
         ----------
-        x_dir : str
+        x_dir :
             _description_
-        y_dir : str
+        y_dir :
             _description_
         """
         # For each x and y directory
@@ -263,9 +263,9 @@ class BehavClassifier:
 
         Returns
         -------
-        x : pd.DataFrame
+        x :
             Features dataframe of all experiments in the `x` directory
-        y : pd.DataFrame
+        y :
             Outcomes dataframe of all experiments in the `y` directory
         """
         # Getting the x and y dfs
@@ -311,6 +311,19 @@ class BehavClassifier:
 
     @staticmethod
     def wrangle_columns_y(y: pd.DataFrame) -> pd.DataFrame:
+        """
+        _summary_
+
+        Parameters
+        ----------
+        y :
+            _description_
+
+        Returns
+        -------
+        :
+            _description_
+        """
         # Filtering out the prob and pred columns (in the `outcomes` level)
         cols_filter = np.isin(
             y.columns.get_level_values(BehavCN.OUTCOMES.value),
