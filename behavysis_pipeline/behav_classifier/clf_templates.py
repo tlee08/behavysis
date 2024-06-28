@@ -35,6 +35,7 @@ class RF1(RandomForestClassifier):
         )
 
     def predict(self, x, index, *args, **kwargs):
+        print(index.shape)
         return super().predict_proba(x[index])[:, 1]
 
 
