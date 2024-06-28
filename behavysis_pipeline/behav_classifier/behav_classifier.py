@@ -54,7 +54,7 @@ class BehavClassifierConfigs(PydanticBaseModel):
 
     behaviour_name: str = "BehaviourName"
     seed: int = 42
-    undersample_ratio: float = 0.1
+    undersample_ratio: float = 0.2
 
     clf_structure: str = "clf"  # Classifier type (defined in ClfTemplates)
     pcutoff: float = 0.5
