@@ -146,7 +146,7 @@ class BaseTorchModel(nn.Module):
         return probs_all
 
     @staticmethod
-    def np_2_loader(*args, batch_size: int = 1, shuffle: bool = False) -> DataLoader:
+    def np_loader(*args, batch_size: int = 1, shuffle: bool = False) -> DataLoader:
         return DataLoader(
             TensorDataset(*(torch.tensor(i, dtype=torch.float) for i in args)),
             batch_size=batch_size,
@@ -160,9 +160,11 @@ class BaseTorchModel(nn.Module):
         index: Optional[np.ndarray] = None,
         batch_size: int = 1,
     ) -> DataLoader:
-        ds = TrainTimeSeriesDataset(x, y, index, window_frames=self.window_frames)
+        ds = MemoizedTimeSeriesDataset(
+            x=x, y=y, index=index, window_frames=self.window_frames
+        )
         return DataLoader(ds, batch_size=batch_size, shuffle=True)
-        # return self.np_2_loader(x, y, batch_size=batch_size, shuffle=shuffle)
+        # return self.np_loader(x, y, batch_size=batch_size, shuffle=shuffle)
 
     def predict_loader(
         self,
@@ -170,45 +172,43 @@ class BaseTorchModel(nn.Module):
         index: Optional[np.ndarray] = None,
         batch_size: int = 1,
     ) -> DataLoader:
-        ds = InferenceTimeSeriesDataset(x, index, window_frames=self.window_frames)
+        ds = TimeSeriesDataset(x=x, index=index, window_frames=self.window_frames)
         return DataLoader(ds, batch_size=batch_size, shuffle=False)
-        # return self.np_2_loader(x, batch_size=batch_size, shuffle=shuffle)
+        # return self.np_loader(x, batch_size=batch_size, shuffle=shuffle)
 
 
-class BaseTimeSeriesDataset(Dataset):
-    data: np.ndarray
-    labels: np.ndarray
+class TimeSeriesDataset(Dataset):
+    x: np.ndarray
+    y: np.ndarray
     index: np.ndarray
     window_frames: int
 
     def __init__(
         self,
-        data: np.ndarray,
-        labels: np.ndarray,
-        index: np.ndarray,
-        window_frames: int,
+        x: np.ndarray,
+        y: Optional[np.ndarray] = None,
+        index: Optional[np.ndarray] = None,
+        window_frames: Optional[int] = 5,
     ):
-        # Padding the data
-        data = BaseTimeSeriesDataset.pad_arr(data, window_frames)
+        # Checking that the index
+        if y is not None:
+            assert x.shape[0] == y.shape[0]
+
+        # Padding x (for frames on either side)
+        x = self.pad_arr(x, window_frames)
         # Storing the data and labels
-        self.x = data
-        self.y = labels
-        self.index = index if index is not None else np.arange(data.shape[0])
+        self.x = x
+        self.y = y if y is not None else np.zeros(x.shape[0])
+        self.index = index if index is not None else np.arange(x.shape[0])
         self.window_frames = window_frames
 
     @staticmethod
-    def pad_arr(x: np.ndarray, window_frames: int) -> np.ndarray:
+    def pad_arr(x: np.ndarray, n: int) -> np.ndarray:
         """
         synthesising data by padding with bfill and ffill
         for window size
         """
-        return np.concatenate(
-            [
-                x[np.repeat(0, window_frames)],
-                x,
-                x[np.repeat(-1, window_frames)],
-            ]
-        )
+        return np.concatenate([x[np.repeat(0, n)], x, x[np.repeat(-1, n)]])
 
     def __len__(self):
         return self.index.shape[0]
@@ -219,75 +219,33 @@ class BaseTimeSeriesDataset(Dataset):
         `i` is the index of the label.
         ALSO, `i` is middle of data because of padding.
         """
-        # Get the actual index
+        # Get the actual index (because `index` is the index of `self.index`)
         i = self.index[index]
         # Calculate start and end of the window
         # Because of data padding, the start is i and end is i + 2 * window_frames + 1
         start = i
         end = i + 2 * self.window_frames + 1
         # Extract the window and label and convert to torch tensors
-        window = torch.tensor(self.x[start:end], dtype=torch.float)
-        label = torch.tensor(self.y[i], dtype=torch.float).reshape(1)
-        # Transpose for CNN models
-        window = window.transpose(0, 1)
+        x_i = torch.tensor(self.x[start:end], dtype=torch.float).transpose(1, 0)
+        y_i = torch.tensor(self.y[i], dtype=torch.float).reshape(1)
         # Return
-        return window, label
+        return x_i, y_i
 
 
-class TrainTimeSeriesDataset(BaseTimeSeriesDataset):
-    def __init__(
-        self,
-        data: np.ndarray,
-        labels: np.ndarray,
-        index: Optional[np.ndarray] = None,
-        window_frames: Optional[int] = 5,
-    ):
-        # TODO: add a check for the index
-        # Inner join filtering indexes
-        # index = data.index.intersection(labels.index)
-        # data = data.loc[index]
-        # labels = labels.loc[index]
-
-        super().__init__(
-            data,
-            labels,
-            index,
-            window_frames,
-        )
+class MemoizedTimeSeriesDataset(TimeSeriesDataset):
+    def __init__(self, x, y, index, window_frames):
+        super().__init__(x, y, index, window_frames)
         # For memoization
         self.memo = {}
 
     def __getitem__(self, index: int):
-        """
-        NOTE:
-        `i` is the index of the label.
-        ALSO, `i` is middle of data because of padding. TODO: feels flimsy.
-        """
         # Return memoized result
         if index in self.memo:
             return self.memo[index]
-        # Otherwise, calculate
-        window, label = super().__getitem__(index)
-        # Memoize the result
-        self.memo[index] = window, label
-        # Return
-        return window, label
-
-
-class InferenceTimeSeriesDataset(BaseTimeSeriesDataset):
-    def __init__(
-        self,
-        data: np.ndarray,
-        index: Optional[np.ndarray] = None,
-        window_frames: Optional[int] = 5,
-    ):
-        super().__init__(
-            data,
-            np.zeros(data.shape[0]),
-            index,
-            window_frames,
-        )
-
-    def __getitem__(self, index: int):
-        window, _ = super().__getitem__(index)
-        return (window,)
+        else:
+            # Otherwise, calculate
+            window, label = super().__getitem__(index)
+            # Memoize the result
+            self.memo[index] = window, label
+            # Return
+            return window, label

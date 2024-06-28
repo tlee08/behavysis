@@ -1,0 +1,98 @@
+{
+  "user": {
+    "format_vid": {
+      "width_px": null,
+      "height_px": null,
+      "fps": null,
+      "start_sec": null,
+      "stop_sec": null
+    },
+    "run_dlc": {
+      "model_fp": "."
+    },
+    "calculate_params": {
+      "exp_dur": {
+        "bodyparts": [
+          "b",
+          "c",
+          "e"
+        ],
+        "window_sec": 1.0,
+        "pcutoff": 0.9
+      }
+    },
+    "preprocess": {},
+    "extract_features": {
+      "individuals": [
+        "mouse1marked",
+        "mouse2unmarked"
+      ],
+      "bodyparts": [
+        "LeftEar",
+        "RightEar",
+        "Nose",
+        "BodyCentre",
+        "LeftFlankMid",
+        "RightFlankMid",
+        "TailBase1",
+        "TailTip4"
+      ]
+    },
+    "classify_behaviours": [],
+    "analyse": {
+      "bins_sec": [
+        30,
+        60,
+        120
+      ],
+      "custom_bins_sec": [
+        60,
+        120,
+        300,
+        600
+      ]
+    },
+    "evaluate": {
+      "keypoints_plot": {
+        "bodyparts": [
+          "LeftEar",
+          "RightEar",
+          "Nose",
+          "BodyCentre",
+          "LeftFlankMid",
+          "RightFlankMid",
+          "TailBase1",
+          "TailTip4"
+        ]
+      },
+      "eval_vid": {
+        "funcs": [
+          "keypoints"
+        ],
+        "pcutoff": 0.8,
+        "colour_level": "individuals",
+        "radius": 3,
+        "cmap": "rainbow"
+      }
+    }
+  },
+  "auto": {
+    "raw_vid": {
+      "fps": null,
+      "width_px": null,
+      "height_px": null,
+      "total_frames": null
+    },
+    "formatted_vid": {
+      "fps": 15.0,
+      "width_px": null,
+      "height_px": null,
+      "total_frames": null
+    },
+    "px_per_mm": null,
+    "start_frame": null,
+    "stop_frame": null,
+    "exp_dur_frames": 990
+  },
+  "ref": {}
+}
