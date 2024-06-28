@@ -69,7 +69,9 @@ class BaseTorchModel(nn.Module):
         # Training the model
         for epoch in range(epochs):
             # Training model for one epoch
-            loss = self._train_epoch(train_ld, self.criterion, self.optimizer)
+            loss = self._train_epoch(
+                train_ld, self.criterion, self.optimizer, verbose=True
+            )
             # Validate model
             vloss = self._validate(val_ld, self.criterion)
             # Printing loss
@@ -83,16 +85,21 @@ class BaseTorchModel(nn.Module):
         return history
 
     def _train_epoch(
-        self, ld: DataLoader, criterion: nn.Module, optimizer: optim.Optimizer
-    ):
+        self,
+        ld: DataLoader,
+        criterion: nn.Module,
+        optimizer: optim.Optimizer,
+        verbose: bool = False,
+    ) -> float:
         # Switch the model to training mode
         self.train()
-        # Wrap the loader in tqdm to show a progress bar
-        tqdm_ld = tqdm(ld)
+        # If verbose, then wrap the loader in tqdm to show a progress bar
+        if verbose:
+            ld = tqdm(ld)
         # To store the running loss
-        running_loss = 0.0
+        loss = 0.0
         # Iterate over the data batches
-        for data in tqdm_ld:
+        for data in ld:
             # get the inputs
             inputs, labels = data
             inputs = inputs.to(self.device)
@@ -108,17 +115,27 @@ class BaseTorchModel(nn.Module):
             # Update learning weights
             optimizer.step()
             # print statistics
-            running_loss += loss.item()
-        return running_loss
+            loss += loss.item()
+        # Scaling loss by number of batches
+        loss /= len(ld)
+        # Converting loss to float
+        loss = loss.cpu().detach().numpy().item()
+        # Returning loss
+        return loss
 
-    def _validate(self, ld: DataLoader, criterion: nn.Module):
+    def _validate(self, ld: DataLoader, criterion: nn.Module) -> float:
         # Calculating loss across an entire dataset (i.e. data loader)
         # Running inference
-        outputs = self._inference(ld)
+        outputs = self._inference(ld, verbose=False)
         # Getting the actual labels
-        y = np.concatenate([i[1].numpy() for i in ld])
+        y = torch.concatenate([i[1] for i in ld]).to(self.device)
         # Calculating the loss
         loss = criterion(outputs, y)
+        # Scaling loss by number of batches
+        loss /= len(ld)
+        # Converting loss to float
+        loss = loss.cpu().numpy().item()
+        # Returning loss
         return loss
 
     def predict(
@@ -130,30 +147,31 @@ class BaseTorchModel(nn.Module):
         # Making data loaders
         loader = self.predict_loader(x, index, batch_size=batch_size)
         # Running inference
-        probs = self._inference(loader)
+        probs = self._inference(loader, verbose=True)
+        # Converting probabilities to numpy array
+        probs = probs.cpu().numpy()
         # Returning the probabilities vector
         return probs
 
-    def _inference(self, loader: DataLoader) -> np.ndarray:
+    def _inference(self, ld: DataLoader, verbose: bool = False) -> torch.Tensor:
         # Switch the model to evaluation mode
         self.eval()
         # List to store the predictions
-        probs_all = np.zeros(shape=(len(loader.dataset), 1))
-        # Wrap the loader in tqdm to show a progress bar
-        tqdm_loader = tqdm(loader)
+        probs_all = torch.zeros((len(ld.dataset), 1), device=self.device)
+        # If verbose, then wrap the loader in tqdm to show a progress bar
+        if verbose:
+            ld = tqdm(ld)
         # Keeping track of number of predictions made
         n = 0
         # No need to track gradients for inference, so wrap in no_grad()
         with torch.no_grad():
             # Iterate over the data batches
-            for data in tqdm_loader:
+            for data in ld:
                 # Getting inputs
                 inputs = data[0]
                 inputs = inputs.to(self.device)
                 # Running inference to get outputs
                 probs = self(inputs)
-                # Converting probabilities to numpy array
-                probs = probs.to(device="cpu", dtype=torch.float).numpy()
                 # Storing the probabilities
                 probs_all[n : n + probs.shape[0]] = probs
                 n += probs.shape[0]

@@ -24,7 +24,6 @@ from behavysis_core.data_models.pydantic_base_model import PydanticBaseModel
 from behavysis_core.mixins.behav_mixin import BehavMixin
 from behavysis_core.mixins.df_io_mixin import DFIOMixin
 from pydantic import ConfigDict
-from sklearn.base import BaseEstimator
 from sklearn.metrics import (
     classification_report,
     confusion_matrix,
@@ -32,6 +31,8 @@ from sklearn.metrics import (
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import MinMaxScaler
+
+from behavysis_pipeline.behav_classifier.base_torch_model import BaseTorchModel
 
 from .clf_templates import CLF_TEMPLATES
 
@@ -77,7 +78,7 @@ class BehavClassifier:
     """
 
     configs_fp: str
-    clf: BaseEstimator
+    clf: BaseTorchModel
 
     def __init__(self, configs_fp: str) -> None:
         """
@@ -595,10 +596,12 @@ class BehavClassifier:
         # Making eval df
         index = np.arange(x.shape[0]) if index is None else index
         y_eval = self.clf_predict(x=x, index=index, batch_size=self.configs.batch_size)
+        # Including `actual` lables in `y_eval`
+        y_eval[self.configs.behaviour_name, BehavColumns.ACTUAL.value] = y[index]
         # Getting individual columns
         y_prob = y_eval[self.configs.behaviour_name, BehavColumns.PROB.value]
         y_pred = y_eval[self.configs.behaviour_name, BehavColumns.PRED.value]
-        y_true = y[index]
+        y_true = y_eval[self.configs.behaviour_name, BehavColumns.ACTUAL.value]
         # Making classification report
         report_dict = self.eval_report(y_true, y_pred)
         # Making confusion matrix figure
@@ -653,7 +656,8 @@ class BehavClassifier:
             )
             # Saving history
             self.clf_eval_save_history(history, name=clf_name)
-            # Evaluating on test data
+            # Evaluating on train and test data
+            self.clf_eval(x, y, index=ind_train, name=f"{clf_name}_train")
             self.clf_eval(x, y, index=ind_test, name=f"{clf_name}_test")
         # Restoring clf
         self.clf = clf

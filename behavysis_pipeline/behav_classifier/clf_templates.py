@@ -29,7 +29,7 @@ class RF1(RandomForestClassifier):
         super().fit(x, y)
         return self
 
-    def predict(self, x):
+    def predict(self, x, *args, **kwargs):
         return super().predict_proba(x)[:, 1]
 
 
@@ -229,7 +229,7 @@ class CNN2(BaseTorchModel):
 
 
 CLF_TEMPLATES = [
-    # RF1,
+    RF1,
     DNN1,
     DNN2,
     DNN3,
