@@ -12,7 +12,7 @@ from .base_torch_model import BaseTorchModel
 
 
 class RF1(RandomForestClassifier):
-    def __init__(self, input_shape):
+    def __init__(self):
         """
         x features is (samples, features).
         y outcome is (samples, class).
@@ -24,7 +24,6 @@ class RF1(RandomForestClassifier):
             n_jobs=16,
             verbose=1,
         )
-        self.input_shape = input_shape
 
     def fit(self, x, y, *args, **kwargs):
         super().fit(x, y)
@@ -35,9 +34,9 @@ class RF1(RandomForestClassifier):
 
 
 class DNN1(BaseTorchModel):
-    def __init__(self, nfeatures: int):
+    def __init__(self):
         # Initialising the parent class
-        super().__init__(nfeatures, 0)
+        super().__init__(546, 0)
         # Input shape
         flat_size = self.window_frames * 2 + 1
         flat_size = flat_size * self.nfeatures
@@ -66,9 +65,9 @@ class DNN1(BaseTorchModel):
 
 
 class DNN2(BaseTorchModel):
-    def __init__(self, nfeatures: int):
+    def __init__(self):
         # Initialising the parent class
-        super().__init__(nfeatures, 0)
+        super().__init__(546, 0)
         # Input shape
         flat_size = self.window_frames * 2 + 1
         flat_size = flat_size * self.nfeatures
@@ -97,9 +96,9 @@ class DNN2(BaseTorchModel):
 
 
 class DNN3(BaseTorchModel):
-    def __init__(self, nfeatures: int):
+    def __init__(self):
         # Initialising the parent class
-        super().__init__(nfeatures, 0)
+        super().__init__(546, 0)
         # Input shape
         flat_size = self.window_frames * 2 + 1
         flat_size = flat_size * self.nfeatures
@@ -139,9 +138,9 @@ class CNN1(BaseTorchModel):
     y outcome is (samples, class).
     """
 
-    def __init__(self, nfeatures: int):
+    def __init__(self):
         # Initialising the parent class
-        super().__init__(nfeatures, 10)
+        super().__init__(546, 10)
         # Define the layers
         self.conv1 = nn.Conv1d(self.nfeatures, 64, kernel_size=2)
         self.relu1 = nn.ReLU()
@@ -184,9 +183,9 @@ class CNN2(BaseTorchModel):
     y outcome is (samples, class).
     """
 
-    def __init__(self, nfeatures: int):
+    def __init__(self):
         # Initialising the parent class
-        super().__init__(nfeatures, 10)
+        super().__init__(546, 10)
         # Define the layers
         self.conv1 = nn.Conv1d(self.nfeatures, 64, kernel_size=3)
         self.relu1 = nn.ReLU()

@@ -191,17 +191,27 @@ class BehavClassifier:
     @property
     def root_dir(self) -> str:
         """Returns the model's root directory"""
-        return os.path.split(self.configs_fp)[0]
+        return os.path.dirname(self.configs_fp)
 
     @property
     def clf_fp(self) -> str:
         """Returns the model's filepath"""
-        return os.path.join(self.root_dir, f"{self.configs.behaviour_name}.sav")
+        path = os.path.join(self.root_dir, self.configs.behaviour_name, "model.sav")
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        return path
 
     @property
     def preproc_fp(self) -> str:
         """Returns the model's preprocessor filepath"""
-        return os.path.join(self.root_dir, f"{self.configs.behaviour_name}_preproc.sav")
+        path = os.path.join(self.root_dir, self.configs.behaviour_name, "preproc.sav")
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        return path
+
+    def eval_dir(self) -> str:
+        """Returns the model's evaluation directory"""
+        path = os.path.join(self.root_dir, self.configs.behaviour_name, "eval")
+        os.makedirs(path, exist_ok=True)
+        return path
 
     #################################################
     #            IMPORTING DATA TO MODEL
@@ -416,7 +426,7 @@ class BehavClassifier:
             stratify=y[index],
         )
         # Initialising the model
-        self.clf = clf_init_f(x.shape[1])
+        self.clf = clf_init_f()
         # Training the model
         self.clf.fit(
             x=x,
@@ -517,7 +527,11 @@ class BehavClassifier:
     #################################################
 
     def clf_eval(
-        self, x: np.ndarray, y: np.ndarray, index: Optional[np.ndarray] = None
+        self,
+        x: np.ndarray,
+        y: np.ndarray,
+        index: Optional[np.ndarray] = None,
+        name: Optional[str] = "",
     ) -> tuple[pd.DataFrame, plt.Figure, plt.Figure, plt.Figure]:
         """
         Evaluates the classifier performance on the given x and y data.
@@ -534,50 +548,28 @@ class BehavClassifier:
         logc_fig : mpl.Figure
             Figure showing the logistic curve for different predicted probabilities.
         """
-        # Making eval dir
-        eval_dir = os.path.join(self.root_dir, "eval", self.configs.behaviour_name)
-        name = self.configs.behaviour_name
-        os.makedirs(eval_dir, exist_ok=True)
         # Making eval df
         index = np.arange(x.shape[0]) if index is None else index
         y_eval = self.clf_predict(x=x, index=index, batch_size=self.configs.batch_size)
-        y_eval[(self.configs.behaviour_name, BehavColumns.ACTUAL.value)] = y[index]
-        DFIOMixin.write_feather(y_eval, os.path.join(eval_dir, f"{name}_eval.feather"))
         # Getting individual columns
         y_prob = y_eval[self.configs.behaviour_name, BehavColumns.PROB.value]
         y_pred = y_eval[self.configs.behaviour_name, BehavColumns.PRED.value]
-        y_true = y_eval[self.configs.behaviour_name, BehavColumns.ACTUAL.value]
+        y_true = y[index]
         # Making confusion matrix figure
         metrics_fig = self.eval_conf_matr(y_true, y_pred)
-        metrics_fig.savefig(os.path.join(eval_dir, "confm.png"))
         # Making performance for different pcutoffs figure
         pcutoffs_fig = self.eval_metrics_pcutoffs(y_true, y_prob)
-        pcutoffs_fig.savefig(os.path.join(eval_dir, "pcutoffs.png"))
         # Logistic curve
         logc_fig = self.eval_logc(y_true, y_prob)
-        logc_fig.savefig(os.path.join(eval_dir, "logc.png"))
+        # Saving data and figures
+        DFIOMixin.write_feather(
+            y_eval, os.path.join(self.eval_dir, f"{name}_eval.feather")
+        )
+        metrics_fig.savefig(os.path.join(self.eval_dir, f"{name}_confm.png"))
+        pcutoffs_fig.savefig(os.path.join(self.eval_dir, f"{name}_pcutoffs.png"))
+        logc_fig.savefig(os.path.join(self.eval_dir, f"{name}_logc.png"))
         # Return evaluations
         return y_eval, metrics_fig, pcutoffs_fig, logc_fig
-
-    def clf_eval_compare(
-        self,
-        eval_name: str,
-        x_test: np.ndarray,
-        y_test: np.ndarray,
-        index: Optional[np.ndarray] = None,
-    ):
-        """
-        Making and saving evaluation metrics for the classifier, with a given name.
-        """
-        eval_dir = os.path.join(
-            self.root_dir, "compare_evals", self.configs.behaviour_name
-        )
-        os.makedirs(eval_dir, exist_ok=True)
-        e, m, p, l = self.clf_eval(x_test, y_test, index)
-        e.to_feather(os.path.join(eval_dir, f"{eval_name}_e.feather"))
-        m.savefig(os.path.join(eval_dir, f"{eval_name}_m.png"))
-        p.savefig(os.path.join(eval_dir, f"{eval_name}_p.png"))
-        l.savefig(os.path.join(eval_dir, f"{eval_name}_l.png"))
 
     def clf_eval_compare_all(self):
         """
@@ -603,8 +595,9 @@ class BehavClassifier:
         # x_test += np.random.normal(0, noise, x_test.shape)
         # Getting eval for each classifier in ClfTemplates
         for clf_init_f in CLF_TEMPLATES:
+            clf_name = clf_init_f.__name__
             # Making classifier
-            self.clf = clf_init_f(x.shape[1])
+            self.clf = clf_init_f()
             # Training
             self.clf.fit(
                 x=x,
@@ -614,9 +607,9 @@ class BehavClassifier:
                 epochs=self.configs.epochs,
             )
             # Evaluating on test data
-            self.clf_eval_compare(f"{clf_init_f.__name__}_test", x, y, ind_test)
+            self.clf_eval(x, y, index=ind_test, name=f"{clf_name}_test")
             # Evaluating on all data
-            self.clf_eval_compare(f"{clf_init_f.__name__}_all", x, y)
+            self.clf_eval(x, y, name=f"{clf_name}_all")
         # Restoring clf
         self.clf = clf
 
