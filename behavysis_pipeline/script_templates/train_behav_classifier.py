@@ -40,7 +40,7 @@ if __name__ == "__main__":
 
     # Loading a BehavModel
     behav = "fight"
-    model_fp = os.path.join(root_dir, "behav_models", f"{behav}.json")
+    model_fp = os.path.join(root_dir, "behav_models", behav)
     model = BehavClassifier.load(model_fp)
     # Testing all different classifiers
     model.clf_eval_all()

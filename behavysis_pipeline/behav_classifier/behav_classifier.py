@@ -39,9 +39,6 @@ from .clf_templates import CLF_TEMPLATES
 if TYPE_CHECKING:
     from behavysis_pipeline.pipeline.project import Project
 
-X_ID = "x"
-Y_ID = "y"
-
 BEHAV_MODELS_SUBDIR = "behav_models"
 
 GENERIC_BEHAV_LABELS = ["nil", "behav"]
@@ -75,32 +72,27 @@ class BehavClassifier:
         _description_
     clf
         _description_
+
+    Parameters
+    ----------
+    model_dir :
+        _description_
     """
 
-    configs_fp: str
+    model_dir: str
     clf: BaseTorchModel
 
-    def __init__(self, configs_fp: str) -> None:
-        """
-        Make a BehavClassifier instance.
-
-        Parameters
-        ----------
-        configs_fp :
-            _description_
-        """
-        # Storing configs json fp
-        self.configs_fp = configs_fp
+    def __init__(self, model_dir: str) -> None:
+        # Storing model directory path
+        self.model_dir = os.path.abspath(model_dir)
         self.clf = None
         # Trying to read in configs json. Making a new one if it doesn't exist
         try:
-            configs = BehavClassifierConfigs.read_json(self.configs_fp)
+            self.configs
             logging.info("Reading existing model configs")
         except FileNotFoundError:
-            configs = BehavClassifierConfigs()
+            self.configs = BehavClassifierConfigs()
             logging.info("Making new model configs")
-        # Saving configs
-        configs.write_json(self.configs_fp)
 
     #################################################
     # CREATE MODEL METHODS
@@ -127,8 +119,8 @@ class BehavClassifier:
         )
         # For each behaviour, making a new BehavClassifier instance
         behavs_ls = y_df.columns.to_list()
-        models_dir = os.path.join(proj.root_dir, BEHAV_MODELS_SUBDIR)
-        models_ls = [cls.create_new_model(models_dir, behav) for behav in behavs_ls]
+        model_dir = os.path.join(proj.root_dir, BEHAV_MODELS_SUBDIR)
+        models_ls = [cls.create_new_model(model_dir, behav) for behav in behavs_ls]
         # Importing data from project to "beham_models" folder (only need one model for this)
         if len(models_ls) > 0:
             models_ls[0].import_data(
@@ -143,13 +135,12 @@ class BehavClassifier:
         """
         Creating a new BehavClassifier model in the given directory
         """
-        configs_fp = os.path.join(root_dir, f"{behaviour_name}.json")
         # Making new BehavClassifier instance
-        inst = cls(configs_fp)
+        inst = cls(root_dir)
         # Updating configs with project data
         configs = inst.configs
         configs.behaviour_name = behaviour_name
-        configs.write_json(inst.configs_fp)
+        inst.configs = configs
         # Returning model
         return inst
 
@@ -157,13 +148,12 @@ class BehavClassifier:
         """
         Creating a new BehavClassifier model in the given directory
         """
-        configs_fp = os.path.join(root_dir, f"{behaviour_name}.json")
         # Making new BehavClassifier instance
-        inst = self.create_new_model(configs_fp, behaviour_name)
+        inst = self.create_new_model(root_dir, behaviour_name)
         # Using current instance's configs (but using given behaviour_name)
         configs = self.configs
         configs.behaviour_name = behaviour_name
-        configs.write_json(inst.configs_fp)
+        inst.configs = configs
         # Returning model
         return inst
 
@@ -172,48 +162,63 @@ class BehavClassifier:
     #################################################
 
     @classmethod
-    def load(cls, configs_fp: str) -> BehavClassifier:
+    def load(cls, model_dir: str) -> BehavClassifier:
         """
         Reads the model from the expected model file.
         """
-        if not os.path.isfile(configs_fp):
-            raise FileNotFoundError(f"The model file does not exist: {configs_fp}")
-        return cls(configs_fp)
+        if not os.path.exists(model_dir):
+            raise FileNotFoundError(f"The model does not exist: {model_dir}")
+        return cls(model_dir)
 
     #################################################
     #            GETTER AND SETTERS
     #################################################
 
     @property
+    def configs_fp(self) -> str:
+        """Returns the model's root directory"""
+        return os.path.join(self.model_dir, "configs.json")
+
+    @property
     def configs(self) -> BehavClassifierConfigs:
         """Returns the config model from the expected config file."""
         return BehavClassifierConfigs.read_json(self.configs_fp)
 
-    @property
-    def root_dir(self) -> str:
-        """Returns the model's root directory"""
-        return os.path.dirname(self.configs_fp)
+    @configs.setter
+    def configs(self, configs: BehavClassifierConfigs) -> None:
+        """Sets the configs to the given configs."""
+        configs.write_json(self.configs_fp)
 
     @property
     def clf_fp(self) -> str:
         """Returns the model's filepath"""
-        path = os.path.join(self.root_dir, self.configs.behaviour_name, "model.sav")
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-        return path
+        return os.path.join(self.model_dir, "model.sav")
 
     @property
     def preproc_fp(self) -> str:
         """Returns the model's preprocessor filepath"""
-        path = os.path.join(self.root_dir, self.configs.behaviour_name, "preproc.sav")
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-        return path
+        return os.path.join(self.model_dir, "preproc.sav")
 
     @property
     def eval_dir(self) -> str:
         """Returns the model's evaluation directory"""
-        path = os.path.join(self.root_dir, self.configs.behaviour_name, "eval")
-        os.makedirs(path, exist_ok=True)
-        return path
+        return os.path.join(self.model_dir, "eval")
+
+    @property
+    def x_dir(self) -> str:
+        """
+        Returns the model's x directory.
+        It gets the x directory from the parent directory of the model directory.
+        """
+        return os.path.join(os.path.dirname(self.model_dir), "x")
+
+    @property
+    def y_dir(self) -> str:
+        """
+        Returns the model's x directory.
+        It gets the x directory from the parent directory of the model directory.
+        """
+        return os.path.join(os.path.dirname(self.model_dir), "y")
 
     #################################################
     #            IMPORTING DATA TO MODEL
@@ -231,8 +236,7 @@ class BehavClassifier:
             _description_
         """
         # For each x and y directory
-        for in_dir, id in ((x_dir, X_ID), (y_dir, Y_ID)):
-            out_dir = os.path.join(self.root_dir, id)
+        for in_dir, out_dir in ((x_dir, self.x_dir), (y_dir, self.y_dir)):
             os.makedirs(out_dir, exist_ok=True)
             # Copying each file to model root directory
             for fp in os.listdir(in_dir):
@@ -269,8 +273,8 @@ class BehavClassifier:
             Outcomes dataframe of all experiments in the `y` directory
         """
         # Getting the x and y dfs
-        x = BehavClassifier.combine(os.path.join(self.root_dir, X_ID))
-        y = BehavClassifier.combine(os.path.join(self.root_dir, Y_ID))
+        x = self.combine(self.x_dir)
+        y = self.combine(self.y_dir)
         # Getting the intersection pf the x and y row indexes
         index = x.index.intersection(y.index)
         x = x.loc[index]
@@ -488,7 +492,7 @@ class BehavClassifier:
         # Updating the model configs
         configs = self.configs
         configs.clf_structure = clf_init_f.__name__
-        configs.write_json(self.configs_fp)
+        self.configs = configs
         # Saving the model to disk
         self.clf_save()
 
@@ -520,13 +524,13 @@ class BehavClassifier:
 
     def clf_load(self):
         """
-        Loads the model stored in `<root_dir>/<behav_name>.sav` to the model attribute.
+        Loads the model's classifier.
         """
         self.clf = joblib.load(self.clf_fp)
 
     def clf_save(self):
         """
-        Saves the model's classifier to `<root_dir>/<behav_name>.sav`.
+        Saves the model's classifier
         """
         joblib.dump(self.clf, self.clf_fp)
 
