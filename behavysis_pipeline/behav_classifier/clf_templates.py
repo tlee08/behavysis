@@ -34,8 +34,8 @@ class RF1(RandomForestClassifier):
             columns=["loss", "vloss"],
         )
 
-    def predict(self, x, *args, **kwargs):
-        return super().predict_proba(x)[:, 1]
+    def predict(self, x, index, *args, **kwargs):
+        return super().predict_proba(x[index])[:, 1]
 
 
 class DNN1(BaseTorchModel):
