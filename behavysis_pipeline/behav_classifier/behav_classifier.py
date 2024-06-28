@@ -4,6 +4,7 @@ _summary_
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 import shutil
@@ -50,17 +51,16 @@ class BehavClassifierConfigs(PydanticBaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    train_fraction: float = 0.8
-    undersampling_strategy: float = 0.1
-    seed: int = 42
-    pcutoff: float = 0.5
     behaviour_name: str = "BehaviourName"
-
-    window_frames: int = 5
+    seed: int = 42
+    undersample_ratio: float = 0.1
 
     clf_structure: str = "clf"  # Classifier type (defined in ClfTemplates)
+    pcutoff: float = 0.5
+    test_split: float = 0.2
+    val_split: float = 0.2
     batch_size: int = 256
-    epochs: int = 20
+    epochs: int = 50
 
 
 class BehavClassifier:
@@ -207,6 +207,7 @@ class BehavClassifier:
         os.makedirs(os.path.dirname(path), exist_ok=True)
         return path
 
+    @property
     def eval_dir(self) -> str:
         """Returns the model's evaluation directory"""
         path = os.path.join(self.root_dir, self.configs.behaviour_name, "eval")
@@ -273,6 +274,8 @@ class BehavClassifier:
         index = x.index.intersection(y.index)
         x = x.loc[index]
         y = y.loc[index]
+        # Assert that x and y are the same length
+        assert x.shape[0] == y.shape[0]
         # Returning the x and y dfs
         return x, y
 
@@ -339,20 +342,25 @@ class BehavClassifier:
         return y
 
     @staticmethod
-    def undersample(y: np.ndarray, ratio: float) -> np.ndarray:
-        y_index = np.arange(y.shape[0])
-        index_t = y_index[y == 1]
-        index_f = np.random.choice(
-            y_index[y == 0], size=int(index_t.shape[0] / ratio), replace=False
-        )
-        index = np.union1d(index_t, index_f)
-        return index
+    def undersample(index: np.ndarray, y: np.ndarray, ratio: float) -> np.ndarray:
+        # Assert that index and y are the same length
+        assert index.shape[0] == y.shape[0]
+        # Getting array of True indices
+        t = index[y == 1]
+        # Getting array of False indices
+        f = index[y == 0]
+        # Undersampling the False indices
+        f = np.random.choice(f, size=int(t.shape[0] / ratio), replace=False)
+        # Combining the True and False indices
+        uindex = np.union1d(t, f)
+        # Returning the undersampled index
+        return uindex
 
     #################################################
     #            PIPELINE FOR DATA PREP
     #################################################
 
-    def prepare_data_training(self) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def prepare_data_training(self) -> tuple[np.ndarray, np.ndarray]:
         """
         Prepares the data (`x` and `y`) in the model for training.
         Data is taken from the model's `x` and `y` dirs.
@@ -361,12 +369,8 @@ class BehavClassifier:
         - Combining dfs from x and y directories (individual experiment data)
         - Ensures the x and y dfs have the same index, and are in the same row order
         - Preprocesses x df. Refer to `preprocess_x` for details.
-        - Preprocesses y df. Refer to `preprocess_y` for details.
         - Selects the y class (given in the configs file) from the y df.
-        - Resamples the index, using the y vector's values and the
-            undersampling strategy and seed in the configs.
-        - Makes the X windowed array, using the resampled index.
-        - Makes the y outcomes array, using the resampled index.
+        - Preprocesses y df. Refer to `preprocess_y` for details.
 
         Returns
         -------
@@ -384,10 +388,43 @@ class BehavClassifier:
         # Preprocessing y df
         y = self.wrangle_columns_y(y)[self.configs.behaviour_name].values
         y = self.preproc_y(y)
-        # Resampling indexes using y classes
-        index = self.undersample(y, self.configs.undersampling_strategy)
         # Returning x, y, and index to use
-        return x, y, index
+        return x, y
+
+    def prepare_data_training_pipeline(
+        self,
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        """
+        Prepares the data for the training pipeline.
+
+        Performs the following:
+        - Preprocesses `x` and `y` data. Refer to `prepare_data_training` for details.
+        - Splits into training and test indexes.
+            - The training indexes are undersampled to the ratio given in the configs.
+
+        Returns:
+            A tuple containing four numpy arrays:
+            - x: The input data.
+            - y: The target labels.
+            - ind_train: The indexes for the training data.
+            - ind_test: The indexes for the testing data.
+        """
+        # Preparing data
+        x, y = self.prepare_data_training()
+        # Getting entire index
+        index = np.arange(x.shape[0])
+        # Splitting into train and test indexes
+        ind_train, ind_test = train_test_split(
+            index,
+            test_size=self.configs.test_split,
+            stratify=y[index],
+        )
+        # Undersampling training index
+        ind_train = self.undersample(
+            ind_train, y[ind_train], self.configs.undersample_ratio
+        )
+        # Return
+        return x, y, ind_train, ind_test
 
     def prepare_data(self, x: pd.DataFrame) -> np.ndarray:
         """
@@ -418,23 +455,20 @@ class BehavClassifier:
         Callable is a method from `ClfTemplates`.
         """
         # Preparing data
-        x, y, index = self.prepare_data_training()
-        # Splitting into train and test sets
-        ind_train, ind_test = train_test_split(
-            index,
-            test_size=1 - self.configs.train_fraction,
-            stratify=y[index],
-        )
+        x, y, ind_train, ind_test = self.prepare_data_training_pipeline()
         # Initialising the model
         self.clf = clf_init_f()
         # Training the model
-        self.clf.fit(
+        history = self.clf.fit(
             x=x,
             y=y,
             index=ind_train,
             batch_size=self.configs.batch_size,
             epochs=self.configs.epochs,
+            val_split=self.configs.val_split,
         )
+        # Saving history
+        self.clf_eval_save_history(history)
         # Evaluating the model
         self.clf_eval(x, y, ind_test)
         # Updating the model configs
@@ -526,13 +560,23 @@ class BehavClassifier:
     # COMPREHENSIVE EVALUATION FUNCTIONS
     #################################################
 
+    def clf_eval_save_history(self, history: pd.DataFrame, name: Optional[str] = ""):
+        # Saving history df
+        DFIOMixin.write_feather(
+            history, os.path.join(self.eval_dir, f"{name}_history.feather")
+        )
+        # Making and saving history figure
+        fig, ax = plt.subplots(figsize=(10, 7))
+        sns.lineplot(data=history, ax=ax)
+        fig.savefig(os.path.join(self.eval_dir, f"{name}_history.png"))
+
     def clf_eval(
         self,
         x: np.ndarray,
         y: np.ndarray,
         index: Optional[np.ndarray] = None,
         name: Optional[str] = "",
-    ) -> tuple[pd.DataFrame, plt.Figure, plt.Figure, plt.Figure]:
+    ) -> tuple[pd.DataFrame, dict, plt.Figure, plt.Figure, plt.Figure]:
         """
         Evaluates the classifier performance on the given x and y data.
         Saves the `metrics_fig` and `pcutoffs_fig` to the model's root directory.
@@ -555,6 +599,8 @@ class BehavClassifier:
         y_prob = y_eval[self.configs.behaviour_name, BehavColumns.PROB.value]
         y_pred = y_eval[self.configs.behaviour_name, BehavColumns.PRED.value]
         y_true = y[index]
+        # Making classification report
+        report_dict = self.eval_report(y_true, y_pred)
         # Making confusion matrix figure
         metrics_fig = self.eval_conf_matr(y_true, y_pred)
         # Making performance for different pcutoffs figure
@@ -565,11 +611,15 @@ class BehavClassifier:
         DFIOMixin.write_feather(
             y_eval, os.path.join(self.eval_dir, f"{name}_eval.feather")
         )
+        with open(os.path.join(self.eval_dir, f"{name}_report.json"), "w") as f:
+            json.dump(report_dict, f)
         metrics_fig.savefig(os.path.join(self.eval_dir, f"{name}_confm.png"))
         pcutoffs_fig.savefig(os.path.join(self.eval_dir, f"{name}_pcutoffs.png"))
         logc_fig.savefig(os.path.join(self.eval_dir, f"{name}_logc.png"))
+        # Print classification report
+        print(json.dumps(report_dict, indent=4))
         # Return evaluations
-        return y_eval, metrics_fig, pcutoffs_fig, logc_fig
+        return y_eval, report_dict, metrics_fig, pcutoffs_fig, logc_fig
 
     def clf_eval_compare_all(self):
         """
@@ -582,14 +632,8 @@ class BehavClassifier:
         # Saving existing clf
         clf = self.clf
         # Preparing data
-        x, y, index = self.prepare_data_training()
-        # Splitting into train and test sets
-        ind_train, ind_test = train_test_split(
-            index,
-            test_size=1 - self.configs.train_fraction,
-            stratify=y[index],
-        )
-        # # Adding noise
+        x, y, ind_train, ind_test = self.prepare_data_training_pipeline()
+        # # Adding noise (TODO: use with augmentation)
         # noise = 0.05
         # x_train += np.random.normal(0, noise, x_train.shape)
         # x_test += np.random.normal(0, noise, x_test.shape)
@@ -599,17 +643,18 @@ class BehavClassifier:
             # Making classifier
             self.clf = clf_init_f()
             # Training
-            self.clf.fit(
+            history = self.clf.fit(
                 x=x,
                 y=y,
                 index=ind_train,
                 batch_size=self.configs.batch_size,
                 epochs=self.configs.epochs,
+                val_split=self.configs.val_split,
             )
+            # Saving history
+            self.clf_eval_save_history(history, name=clf_name)
             # Evaluating on test data
             self.clf_eval(x, y, index=ind_test, name=f"{clf_name}_test")
-            # Evaluating on all data
-            self.clf_eval(x, y, name=f"{clf_name}_all")
         # Restoring clf
         self.clf = clf
 
@@ -618,17 +663,22 @@ class BehavClassifier:
     #################################################
 
     @staticmethod
+    def eval_report(y_true: pd.Series, y_pred: pd.Series) -> dict:
+        """
+        __summary__
+        """
+        return classification_report(
+            y_true,
+            y_pred,
+            target_names=GENERIC_BEHAV_LABELS,
+            output_dict=True,
+        )
+
+    @staticmethod
     def eval_conf_matr(y_true: pd.Series, y_pred: pd.Series) -> plt.Figure:
         """
         __summary__
         """
-        print(
-            classification_report(
-                y_true,
-                y_pred,
-                target_names=GENERIC_BEHAV_LABELS,
-            )
-        )
         # Making confusion matrix
         fig, ax = plt.subplots(figsize=(7, 7))
         sns.heatmap(

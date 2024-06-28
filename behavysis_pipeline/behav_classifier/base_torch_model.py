@@ -1,9 +1,11 @@
 from typing import Optional
 
 import numpy as np
+import pandas as pd
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader, Dataset, TensorDataset
 from tqdm import tqdm
 
@@ -48,35 +50,49 @@ class BaseTorchModel(nn.Module):
         x: np.ndarray,
         y: np.ndarray,
         index: np.ndarray,
-        epochs: int,
         batch_size: int,
+        epochs: int,
+        val_split: float,
     ):
+        # Split data into training and validation sets
+        ind_train, ind_val = train_test_split(
+            index, stratify=y[index], test_size=val_split
+        )
         # Making data loaders
-        loader = self.fit_loader(x, y, index, batch_size=batch_size)
+        train_ld = self.fit_loader(x, y, ind_train, batch_size=batch_size)
+        val_ld = self.fit_loader(x, y, ind_val, batch_size=batch_size)
+        # Storing training history
+        history = pd.DataFrame(
+            index=pd.Index(np.arange(epochs), name="epoch"),
+            columns=["loss", "vloss"],
+        )
         # Training the model
         for epoch in range(epochs):
-            # Train the model for one epoch
-            loss = self._train_epoch(loader, self.criterion, self.optimizer)
-            # Validate the model
-            # vloss = self._validate(test_loader, criterion)
-            # Print the loss
+            # Training model for one epoch
+            loss = self._train_epoch(train_ld, self.criterion, self.optimizer)
+            # Validate model
+            vloss = self._validate(val_ld, self.criterion)
+            # Printing loss
             print(f"epochs: {epoch+1}/{epochs}")
             print(f"loss: {loss:.3f}")
-            # print(f"loss: {loss:.3f}, vloss: {vloss:.3f}")
+            print(f"loss: {loss:.3f}, vloss: {vloss:.3f}")
+            # Storing loss
+            history.loc[epoch, "loss"] = loss
+            history.loc[epoch, "vloss"] = vloss
+        # Return history
+        return history
 
     def _train_epoch(
-        self,
-        loader: DataLoader,
-        criterion: nn.Module,
-        optimizer: optim.Optimizer,
+        self, ld: DataLoader, criterion: nn.Module, optimizer: optim.Optimizer
     ):
         # Switch the model to training mode
         self.train()
         # Wrap the loader in tqdm to show a progress bar
-        tqdm_loader = tqdm(loader)
+        tqdm_ld = tqdm(ld)
+        # To store the running loss
+        running_loss = 0.0
         # Iterate over the data batches
-        for data in tqdm_loader:
-            running_loss = 0.0
+        for data in tqdm_ld:
             # get the inputs
             inputs, labels = data
             inputs = inputs.to(self.device)
@@ -95,31 +111,22 @@ class BaseTorchModel(nn.Module):
             running_loss += loss.item()
         return running_loss
 
-    def _validate(
-        self,
-        val_loader: DataLoader,
-        criterion: nn.Module,
-    ):
-        # Switch the model to evaluation
-        self.eval()
-        running_vloss = 0.0
-        with torch.no_grad():
-            for i, vdata in enumerate(val_loader):
-                vinputs, vlabels = vdata
-                vinputs = vinputs.to(self.device)
-                vlabels = vlabels.to(self.device)
-                voutputs = self(vinputs)
-                vloss = criterion(voutputs, vlabels)
-                running_vloss += vloss
-        avg_vloss = running_vloss / (i + 1)
-        return avg_vloss
+    def _validate(self, ld: DataLoader, criterion: nn.Module):
+        # Calculating loss across an entire dataset (i.e. data loader)
+        # Running inference
+        outputs = self._inference(ld)
+        # Getting the actual labels
+        y = np.concatenate([i[1].numpy() for i in ld])
+        # Calculating the loss
+        loss = criterion(outputs, y)
+        return loss
 
     def predict(
         self,
         x: np.ndarray,
         batch_size: int,
         index: Optional[np.ndarray] = None,
-    ):
+    ) -> np.ndarray:
         # Making data loaders
         loader = self.predict_loader(x, index, batch_size=batch_size)
         # Running inference
@@ -127,22 +134,29 @@ class BaseTorchModel(nn.Module):
         # Returning the probabilities vector
         return probs
 
-    def _inference(self, loader: DataLoader):
+    def _inference(self, loader: DataLoader) -> np.ndarray:
         # Switch the model to evaluation mode
         self.eval()
         # List to store the predictions
-        probs_all = np.zeros(shape=(0, 1))
+        probs_all = np.zeros(shape=(len(loader.dataset), 1))
         # Wrap the loader in tqdm to show a progress bar
         tqdm_loader = tqdm(loader)
+        # Keeping track of number of predictions made
+        n = 0
         # No need to track gradients for inference, so wrap in no_grad()
         with torch.no_grad():
             # Iterate over the data batches
             for data in tqdm_loader:
+                # Getting inputs
                 inputs = data[0]
                 inputs = inputs.to(self.device)
-                outputs = self(inputs)
-                probs = outputs.to(device="cpu", dtype=torch.float)
-                probs_all = np.append(probs_all, probs.numpy(), axis=0)
+                # Running inference to get outputs
+                probs = self(inputs)
+                # Converting probabilities to numpy array
+                probs = probs.to(device="cpu", dtype=torch.float).numpy()
+                # Storing the probabilities
+                probs_all[n : n + probs.shape[0]] = probs
+                n += probs.shape[0]
         return probs_all
 
     @staticmethod
