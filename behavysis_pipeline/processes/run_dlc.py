@@ -110,7 +110,7 @@ class RunDLC:
                     os.path.join(out_dir, f"{IOMixin.get_name(i)}.feather")
                 )
             ]
-        
+
         # If there are no videos to process, return
         if len(in_fp_ls) == 0:
             return outcome
@@ -166,9 +166,8 @@ def run_dlc_subproc(
     IOMixin.save_template(
         "dlc_subproc.py",
         "behavysis_pipeline",
-        "script_templates",
+        "templates",
         script_fp,
-        
         in_fp_ls=in_fp_ls,
         model_fp=model_fp,
         dlc_out_dir=dlc_out_dir,

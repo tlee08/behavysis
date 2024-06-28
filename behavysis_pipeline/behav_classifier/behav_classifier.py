@@ -166,7 +166,7 @@ class BehavClassifier:
         """
         Reads the model from the expected model file.
         """
-        if not os.path.exists(model_dir):
+        if not os.path.isdir(model_dir):
             raise FileNotFoundError(f"The model does not exist: {model_dir}")
         return cls(model_dir)
 
@@ -243,7 +243,7 @@ class BehavClassifier:
                 in_fp = os.path.join(in_dir, fp)
                 out_fp = os.path.join(out_dir, fp)
                 # If not overwriting and out file already exists, then skip
-                if not overwrite and os.path.exists(out_fp):
+                if not overwrite and os.path.isfile(out_fp):
                     continue
                 # Copying file
                 shutil.copyfile(in_fp, out_fp)

@@ -2,10 +2,14 @@
 
 import os
 
-import pandas as pd
-
 from behavysis_pipeline import Project
-from behavysis_pipeline.processes import FormatVid, CalculateParams, Analyse, Evaluate, Preprocess
+from behavysis_pipeline.processes import (
+    Analyse,
+    CalculateParams,
+    Evaluate,
+    FormatVid,
+    Preprocess,
+)
 
 if __name__ == "__main__":
     overwrite = True

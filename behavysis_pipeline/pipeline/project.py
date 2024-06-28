@@ -286,14 +286,17 @@ class Project:
         logging.info("Running %s", method.__name__)
         # Running
         dd_ls = scaffold_func(method, *args, **kwargs)
-        # Processing all experiments
-        df = (
-            pd.DataFrame(dd_ls).set_index("experiment").sort_index(key=natsort_keygen())
-        )
-        # Updating the diagnostics file at each step
-        self.save_diagnostics(method.__name__, df)
-        # Finishing
-        logging.info("Finished %s!\n%s\n%s\n", method.__name__, STR_DIV, STR_DIV)
+        if len(dd_ls) > 0:
+            # Processing all experiments
+            df = (
+                pd.DataFrame(dd_ls)
+                .set_index("experiment")
+                .sort_index(key=natsort_keygen())
+            )
+            # Updating the diagnostics file at each step
+            self.save_diagnostics(method.__name__, df)
+            # Finishing
+            logging.info("Finished %s!\n%s\n%s\n", method.__name__, STR_DIV, STR_DIV)
 
     #####################################################################
     #               BATCH PROCESSING METHODS

@@ -14,7 +14,6 @@ from behavysis_core.mixins.keypoints_mixin import KeypointsMixin
 from behavysis_core.mixins.multiproc_mixin import MultiprocMixin
 from behavysis_core.mixins.subproc_mixin import SubprocMixin
 
-
 # Order of bodyparts is from
 # - https://github.com/sgoldenlab/simba/blob/master/docs/Multi_animal_pose.md
 # - https://github.com/sgoldenlab/simba/blob/master/docs/Tutorial_DLC.md
@@ -168,9 +167,8 @@ def run_simba_subproc(
     IOMixin.save_template(
         "simba_subproc.py",
         "behavysis_pipeline",
-        "script_templates",
+        "templates",
         script_fp,
-        
         simba_dir=simba_dir,
         dlc_dir=dlc_dir,
         configs_dir=configs_dir,

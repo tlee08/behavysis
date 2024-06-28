@@ -34,8 +34,9 @@ url = "https://download.pytorch.org/whl/cu121"
 priority = "explicit"
 
 [tool.poetry.scripts]
-behavysis_make_project = "behavysis_pipeline.__main__:make_project"
-behavysis_make_classifier = "behavysis_pipeline.__main__:make_behav_classifier"
+behavysis_make_project = "behavysis_pipeline.scripts.make_project:main"
+behavysis_make_classifier = "behavysis_pipeline.scripts.make_classifier:main"
+behavysis_project_gui = "behavysis_pipeline.scripts.project_gui:run_script"
 
 [build-system]
 requires = ["poetry-core"]
