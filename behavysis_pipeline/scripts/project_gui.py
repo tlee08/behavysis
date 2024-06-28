@@ -2,12 +2,15 @@ import json
 import os
 import subprocess
 
+import pandas as pd
 import streamlit as st
 from behavysis_core.data_models.experiment_configs import ExperimentConfigs
 from behavysis_core.mixins.io_mixin import IOMixin
 
 from behavysis_pipeline.pipeline.project import Project
+from behavysis_pipeline.processes.calculate_params import CalculateParams
 from behavysis_pipeline.processes.extract_features import run_simba_subproc
+from behavysis_pipeline.processes.preprocess import Preprocess
 from behavysis_pipeline.processes.run_dlc import run_dlc_subproc
 
 #####################################################################
@@ -15,11 +18,37 @@ from behavysis_pipeline.processes.run_dlc import run_dlc_subproc
 #####################################################################
 
 
+def status_wrapper(func):
+    def wrapper(*args, **kwargs):
+        with st.status("Processing...", expanded=True) as status:
+            func(*args, **kwargs)
+            status.update(label="Done!", state="complete", expanded=True)
+            # Attempting to read the corresponding diagnostics df
+            try:
+                proj = st.session_state.get("proj", None)
+                if proj is not None:
+                    df = proj.load_diagnostics(func.__name__)
+                    st.dataframe(df)
+            except FileNotFoundError:
+                pass
+
+    return wrapper
+
+
+def get_class_methods(cls):
+    return [
+        getattr(cls, method)
+        for method in dir(cls)
+        if callable(getattr(cls, method)) and not method.startswith("__")
+    ]
+
+
 def init_project(proj_dir: str):
     st.session_state["proj"] = Project(proj_dir)
     st.success("Project Initialised")
 
 
+@status_wrapper
 def import_experiments(proj: Project):
     proj.import_experiments()
     st.success("Experiments imported")
@@ -35,6 +64,7 @@ def upload_configs(configs_f):
         st.session_state["configs"] = configs
 
 
+@status_wrapper
 def update_configs(proj: Project, configs: dict, overwrite: str):
     # Writing configs to temp file
     configs_fp = os.path.join(proj.root_dir, ".temp", "temp_configs.json")
@@ -48,20 +78,59 @@ def update_configs(proj: Project, configs: dict, overwrite: str):
     st.success("Configs Updated")
 
 
+@status_wrapper
+def calculate_params(proj: Project, method_checks: dict):
+    # Getting list of methods to run
+    methods = [method for method, check in method_checks.values() if check]
+    # Running methods
+    proj.calculate_params(methods)
+    # Success message
+    st.success("Parameters Calculated")
+
+
+@status_wrapper
+def preprocess(proj: Project, method_checks: dict, overwrite: bool):
+    # Getting list of methods to run
+    methods = [method for method, check in method_checks.values() if check]
+    # Running methods
+    proj.preprocess(methods, overwrite)
+    # Success message
+    st.success("Parameters Calculated")
+
+
 #####################################################################
 # Streamlit pages
 #####################################################################
 
 
-def page_init_project():
+def page_header(title):
     # Recalling session state variables
     proj: Project = st.session_state.get("proj", None)
     root_dir = proj.root_dir if proj is not None else "UNSET"
     # Title
-    st.title("Init Project")
-    st.subheader(f"project: {root_dir}")
+    st.title(title)
+    # Project overview
+    with st.sidebar:
+        st.subheader(f"project: {root_dir}")
+        if proj is not None:
+            st.dataframe(
+                pd.DataFrame(
+                    proj.experiments.keys(),
+                    columns=["Experiments"],
+                )
+            )
+        else:
+            st.write("No project initialised")
+
+
+def page_init_project():
+    page_header("Init Project")
+    # Recalling session state variables
+    proj: Project = st.session_state.get("proj", None)
+    root_dir = proj.root_dir if proj is not None else "UNSET"
+    # Page description
     st.write("This page is for making a new Behavysis project.")
-    # User input: project root folder
+    # Text input: project root folder
     proj_dir = st.text_input("Root Directory", ".")
     proj_dir = "/run/user/1000/gvfs/smb-share:server=shared.sydney.edu.au,share=research-data/PRJ-BowenLab/TimLee/resources/project_ma"
     # Button: Get project
@@ -80,13 +149,11 @@ def page_init_project():
 
 
 def page_update_configs():
+    page_header("Update Configs")
     # Recalling session state variables
     proj: Project = st.session_state.get("proj", None)
     configs = st.session_state.get("configs", None)
-    root_dir = proj.root_dir if proj is not None else "UNSET"
-    # Title
-    st.title("Update Configs")
-    st.subheader(f"project: {root_dir}")
+    # Page description
     st.write("This page is for making a new Behavysis project.")
     # User input: selecting default configs file
     configs_f = st.file_uploader(
@@ -95,12 +162,14 @@ def page_update_configs():
         disabled=proj is None,
     )
     upload_configs(configs_f)
-    # Button: Update configs
-    overwrite_options = ["user", "all"]
+    # Select box: overwrite option
     overwrite_selected = st.selectbox(
-        "Select an option", options=overwrite_options, disabled=configs is None
+        "Select an option",
+        options=["user", "all"],
+        disabled=configs is None,
     )
-    btn_update = st.button(
+    # Button: Update configs
+    st.button(
         "Update Configs",
         on_click=update_configs,
         args=(proj, configs, overwrite_selected),
@@ -109,61 +178,92 @@ def page_update_configs():
 
 
 def page_run_dlc():
+    page_header("Run DLC")
     # TODO: have a selector for DLC model
     # Recalling session state variables
     proj: Project = st.session_state.get("proj", None)
-    configs = st.session_state.get("configs", None)
-    root_dir = proj.root_dir if proj is not None else "UNSET"
-    # Title
-    st.title("Update Configs")
-    st.subheader(f"project: {root_dir}")
+    # Page description
     st.write("This page is for making a new Behavysis project.")
 
 
 def page_calculate_params():
-    # TODO: have a selector for functions to run.
+    page_header("Calculate Params")
     # TODO: For each function, have a configs updater.
     # Recalling session state variables
     proj: Project = st.session_state.get("proj", None)
-    configs = st.session_state.get("configs", None)
-    root_dir = proj.root_dir if proj is not None else "UNSET"
-    # Title
-    st.title("Update Configs")
-    st.subheader(f"project: {root_dir}")
-    st.write("This page is for making a new Behavysis project.")
+    # Page description
+    st.write(
+        "Calculate the project's inherent parameters "
+        + "from the video and DLC keypoints data"
+    )
+    # List of checkboxes for each method
+    st.subheader("Select Methods to Run")
+    methods = get_class_methods(CalculateParams)
+    method_checks = {
+        method.__name__: (
+            method,
+            st.checkbox(method.__name__, disabled=proj is None),
+        )
+        for method in methods
+    }
+    # Button: Run selected methods
+    st.button(
+        "Calculate Parameters",
+        on_click=calculate_params,
+        args=(proj, method_checks),
+        disabled=proj is None,
+    )
 
 
 def page_preprocess():
+    page_header("Preprocess")
+    # TODO: For each function, have a configs updater.
     # Recalling session state variables
     proj: Project = st.session_state.get("proj", None)
-    configs = st.session_state.get("configs", None)
-    root_dir = proj.root_dir if proj is not None else "UNSET"
-    # Title
-    st.title("Update Configs")
-    st.subheader(f"project: {root_dir}")
-    st.write("This page is for making a new Behavysis project.")
+    # Page description
+    st.write(
+        "Calculate the project's inherent parameters "
+        + "from the video and DLC keypoints data"
+    )
+    # List of checkboxes for each method
+    st.subheader("Select Methods to Run")
+    methods = get_class_methods(Preprocess)
+    method_checks = {
+        method.__name__: (
+            method,
+            st.checkbox(method.__name__, disabled=proj is None),
+        )
+        for method in methods
+    }
+    st.subheader("Overwrite Existing Files")
+    # Checkbox: Overwrite
+    overwrite = st.checkbox(
+        "Overwrite",
+        disabled=proj is None,
+    )
+    # Button: Run selected methods
+    st.button(
+        "Calculate Parameters",
+        on_click=preprocess,
+        args=(proj, method_checks, overwrite),
+        disabled=proj is None,
+    )
 
 
 def page_extract_features():
+    page_header("Extract Features")
     # Recalling session state variables
     proj: Project = st.session_state.get("proj", None)
-    configs = st.session_state.get("configs", None)
-    root_dir = proj.root_dir if proj is not None else "UNSET"
-    # Title
-    st.title("Update Configs")
-    st.subheader(f"project: {root_dir}")
+    # Page description
     st.write("This page is for making a new Behavysis project.")
 
 
 def page_classify_behaviours():
+    page_header("Classify Behaviours")
     # TODO: have a selector for behaviour classifier
     # Recalling session state variables
     proj: Project = st.session_state.get("proj", None)
-    configs = st.session_state.get("configs", None)
-    root_dir = proj.root_dir if proj is not None else "UNSET"
-    # Title
-    st.title("Update Configs")
-    st.subheader(f"project: {root_dir}")
+    # Page description
     st.write("This page is for making a new Behavysis project.")
 
 
