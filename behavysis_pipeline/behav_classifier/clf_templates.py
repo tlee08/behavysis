@@ -47,7 +47,7 @@ class DNN1(BaseTorchModel):
 
     def __init__(self):
         # Initialising the parent class
-        super().__init__(546, 0)
+        super().__init__(498, 0)  # 546
         # Input shape
         flat_size = self.window_frames * 2 + 1
         flat_size = flat_size * self.nfeatures
@@ -83,7 +83,7 @@ class DNN2(BaseTorchModel):
 
     def __init__(self):
         # Initialising the parent class
-        super().__init__(546, 0)
+        super().__init__(498, 0)  # 546
         # Input shape
         flat_size = self.window_frames * 2 + 1
         flat_size = flat_size * self.nfeatures
@@ -119,7 +119,7 @@ class DNN3(BaseTorchModel):
 
     def __init__(self):
         # Initialising the parent class
-        super().__init__(546, 0)
+        super().__init__(498, 0)  # 546
         # Input shape
         flat_size = self.window_frames * 2 + 1
         flat_size = flat_size * self.nfeatures
@@ -161,7 +161,7 @@ class CNN1(BaseTorchModel):
 
     def __init__(self):
         # Initialising the parent class
-        super().__init__(546, 10)
+        super().__init__(498, 10)  # 546
         # Define the layers
         self.conv1 = nn.Conv1d(self.nfeatures, 64, kernel_size=2)
         self.relu1 = nn.ReLU()
@@ -206,7 +206,7 @@ class CNN2(BaseTorchModel):
 
     def __init__(self):
         # Initialising the parent class
-        super().__init__(546, 10)
+        super().__init__(498, 10)  # 546
         # Define the layers
         self.conv1 = nn.Conv1d(self.nfeatures, 64, kernel_size=3)
         self.relu1 = nn.ReLU()
@@ -254,6 +254,6 @@ CLF_TEMPLATES = [
     DNN1,
     DNN2,
     DNN3,
-    CNN1,
-    CNN2,
+    # CNN1,
+    # CNN2,
 ]

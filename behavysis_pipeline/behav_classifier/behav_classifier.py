@@ -135,8 +135,10 @@ class BehavClassifier:
         """
         Creating a new BehavClassifier model in the given directory
         """
+        # Getting model directory
+        model_dir = os.path.join(root_dir, behaviour_name)
         # Making new BehavClassifier instance
-        inst = cls(root_dir)
+        inst = cls(model_dir)
         # Updating configs with project data
         configs = inst.configs
         configs.behaviour_name = behaviour_name
@@ -811,3 +813,35 @@ class BehavClassifier:
         #     ax=ax,
         # )
         return y_eval_summary
+
+
+# import pandas as pd
+# import seaborn as sns
+# import matplotlib.pyplot as plt
+
+# from sklearn.preprocessing import MinMaxScaler
+
+# x = pd.read_feather('/run/user/1000/gvfs/smb-share:server=shared.sydney.edu.au,share=research-data/PRJ-BowenLab/TimLee/resources/behav_models/behav_huddling/behav_models/x/608DVR_CH2_5_9_66_20240506121732.feather')
+# y =  pd.read_feather('/run/user/1000/gvfs/smb-share:server=shared.sydney.edu.au,share=research-data/PRJ-BowenLab/TimLee/resources/behav_models/behav_huddling/behav_models/y/608DVR_CH2_5_9_66_20240506121732.feather')
+
+# # Preproc
+# x = MinMaxScaler().fit_transform(x.values)
+# y = y[("huddling", "actual")].values.reshape(-1, 1)
+
+# fig, axes = plt.subplots(ncols=2)
+# sns.heatmap(
+#     x,
+#     ax=axes[0]
+# )
+# axes[0].set(
+#     xticklabels=[],
+#     yticklabels=[],
+# )
+# sns.heatmap(
+#     y,
+#     ax=axes[1]
+# )
+# axes[1].set(
+#     xticklabels=[],
+#     yticklabels=[],
+# )

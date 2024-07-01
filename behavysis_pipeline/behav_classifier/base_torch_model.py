@@ -222,10 +222,12 @@ class TimeSeriesDataset(Dataset):
         index: Optional[np.ndarray] = None,
         window_frames: Optional[int] = 5,
     ):
-        # Checking that the index
+        # Checking that the indexes are equal
         if y is not None:
             assert x.shape[0] == y.shape[0]
-
+        # Removing the x-y-l columns (only derived features kept)
+        # 2 (indivs) * 8 (bpts) * 3 (coords) = 48 (columns)
+        x = x[:, 48:]
         # Padding x (for frames on either side)
         x = self.pad_arr(x, window_frames)
         # Storing the data and labels

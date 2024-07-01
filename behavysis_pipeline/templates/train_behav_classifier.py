@@ -56,6 +56,8 @@ if __name__ == "__main__":
     # Example of using model for inference
     # Loading a BehavModel
     model = BehavClassifier.load(model_fp)
+    # Loading classifier
+    model.clf_load()
     # Getting data
     x = pd.read_feather("path/to/features_extracted.feather")
     # Running inference
