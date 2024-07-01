@@ -254,6 +254,6 @@ CLF_TEMPLATES = [
     DNN1,
     DNN2,
     DNN3,
-    # CNN1,
-    # CNN2,
+    CNN1,
+    CNN2,
 ]
