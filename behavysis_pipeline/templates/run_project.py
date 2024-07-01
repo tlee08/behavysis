@@ -70,14 +70,15 @@ if __name__ == "__main__":
             Analyse.freezing,
         )
     )
-    proj.collate_analysis_binned()
-    proj.collate_analysis_summary()
 
     proj.extract_features(overwrite)
     proj.classify_behaviours(overwrite)
     proj.export_behaviours(overwrite)
 
     proj.behav_analyse()
+
+    proj.collate_analysis_binned()
+    proj.collate_analysis_summary()
 
     proj.evaluate(
         (
