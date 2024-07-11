@@ -17,21 +17,23 @@ scikit-learn = "^1.4.2"
 imbalanced-learn = "^0.12.2"
 Jinja2 = "^3.1.4"
 behavysis_core = "^0.1.3"
-torch = {version = "^2.3.1", source = "torch"}
-torchvision = {version = "^0.18.1", source = "torch"}
-torchaudio = {version = "^2.3.1", source = "torch"}
+behavysis_classifier = "^0.1.1"
+# torch = {version = "^2.3.1", source = "torch"}
+# torchvision = {version = "^0.18.1", source = "torch"}
+# torchaudio = {version = "^2.3.1", source = "torch"}
 streamlit = "^1.36.0"
 
 [tool.poetry.group.dev.dependencies]
 behavysis_core = { path = "../behavysis_core", develop = true }
+behavysis_classifier = { path = "../behavysis_classifier", develop = true }
 ruff = "^0.4.8"
 mkdocs-material = "^9.5.18"
 mkdocstrings-python = "^1.9.2"
 
-[[tool.poetry.source]]
-name = "torch"
-url = "https://download.pytorch.org/whl/cu121"
-priority = "explicit"
+# [[tool.poetry.source]]
+# name = "torch"
+# url = "https://download.pytorch.org/whl/cu121"
+# priority = "explicit"
 
 [tool.poetry.scripts]
 behavysis_make_project = "behavysis_pipeline.scripts.make_project:main"
