@@ -14,7 +14,7 @@ packages = [{ include = "behavysis_pipeline" }]
 python = "^3.10"
 Jinja2 = "^3.1.4"
 behavysis_core = "^0.1.3"
-behavysis_classifier = "^0.1.1"
+behavysis_classifier = "^0.1.12"
 # torch = {version = "^2.3.1", source = "torch"}
 # torchvision = {version = "^0.18.1", source = "torch"}
 # torchaudio = {version = "^2.3.1", source = "torch"}
@@ -34,7 +34,6 @@ mkdocstrings-python = "^1.9.2"
 
 [tool.poetry.scripts]
 behavysis_make_project = "behavysis_pipeline.scripts.make_project:main"
-behavysis_make_classifier = "behavysis_pipeline.scripts.make_classifier:main"
 behavysis_project_gui = "behavysis_pipeline.scripts.project_gui:run_script"
 
 [build-system]
