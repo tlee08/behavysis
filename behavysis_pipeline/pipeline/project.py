@@ -25,7 +25,8 @@ from behavysis_core.mixins.diagnostics_mixin import DiagnosticsMixin
 from behavysis_core.mixins.io_mixin import IOMixin
 from behavysis_core.mixins.multiproc_mixin import MultiprocMixin
 from natsort import natsort_keygen, natsorted
-
+import dask
+from dask.distributed import Client, LocalCluster
 from behavysis_pipeline.pipeline.experiment import Experiment
 from behavysis_pipeline.processes.run_dlc import RunDLC
 
@@ -240,13 +241,21 @@ class Project:
         method(exp, *args, **kwargs)
         ```
         """
-        # Create a Pool of processes
-        with Pool(processes=self.nprocs) as p:
-            # Apply method to each experiment in self.get_experiments() in parallel
-            return p.map(
-                Project._process_scaffold_mp_worker,
-                [(method, exp, args, kwargs) for exp in self.get_experiments()],
-            )
+        # # Create a Pool of processes
+        # with Pool(processes=self.nprocs) as p:
+        #     # Apply method to each experiment in self.get_experiments() in parallel
+        #     return p.map(
+        #         Project._process_scaffold_mp_worker,
+        #         [(method, exp, args, kwargs) for exp in self.get_experiments()],
+        #     )
+        cluster = LocalCluster(n_workers=self.nprocs, threads_per_worker=1)
+        client = Client(cluster)
+        f_d_ls = [
+            dask.delayed(method)(exp, *args, **kwargs) for exp in self.get_experiments()
+        ]
+        dd_ls = dask.compute(f_d_ls)
+        client.close()
+        cluster.close()
 
     def _process_scaffold_sp(
         self, method: Callable, *args: Any, **kwargs: Any
