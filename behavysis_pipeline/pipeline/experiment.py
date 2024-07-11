@@ -28,7 +28,7 @@ from behavysis_pipeline.processes import (
     RunDLC,
     UpdateConfigs,
 )
-
+from prefect import flow, task
 
 class Experiment:
     """
@@ -127,6 +127,7 @@ class Experiment:
     #               EXPERIMENT PROCESSING SCAFFOLD METHODS
     #####################################################################
 
+    @flow
     def _process_scaffold(
         self,
         funcs: tuple[Callable, ...],
