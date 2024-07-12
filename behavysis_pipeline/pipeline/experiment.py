@@ -162,6 +162,7 @@ class Experiment:
         for f in funcs:
             # Running each func and saving outcome
             try:
+                f_task = task(f)
                 dd[f.__name__] = f(*args, **kwargs)
                 dd[f.__name__] += f"SUCCESS: {DiagnosticsMixin.success_msg()}\n"
             except Exception as e:
