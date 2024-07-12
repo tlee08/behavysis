@@ -40,6 +40,7 @@ class Export:
         src_fp: str, out_fp: str, configs_fp: str, overwrite: bool
     ) -> str:
         """__summary__"""
+        # TODO: use this in 6_pred_behavs
         # Reading the configs file
         configs = ExperimentConfigs.read_json(configs_fp)
         models_ls = configs.user.classify_behaviours

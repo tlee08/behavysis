@@ -65,29 +65,37 @@ class ClassifyBehaviours:
         # Initialising y_preds df
         # Getting predictions for each classifier model and saving
         # in a list of pd.DataFrames
-        behav_preds_ls = np.zeros(len(models_ls), dtype="object")
+        df_ls = np.zeros(len(models_ls), dtype="object")
         for i, model_config in enumerate(models_ls):
             # Getting model (clf, pcutoff, min_window_frames)
             model_fp = configs.get_ref(model_config.model_fp)
             model = BehavClassifier.load(model_fp)
+            behav_name = model.configs.behaviour_name
             pcutoff = configs.get_ref(model_config.pcutoff)
             pcutoff = model.configs.pcutoff if pcutoff is None else pcutoff
             min_window_frames = configs.get_ref(model_config.min_window_frames)
             # Running the clf pipeline
             df_i = model.pipeline_run(features_df)
             # Getting prob and pred column names
-            prob_col = (model.configs.behaviour_name, BehavColumns.PROB.value)
-            pred_col = (model.configs.behaviour_name, BehavColumns.PRED.value)
+            prob_col = (behav_name, BehavColumns.PROB.value)
+            pred_col = (behav_name, BehavColumns.PRED.value)
+            actual_col = (behav_name, BehavColumns.ACTUAL.value)
             # Using pcutoff to get binary predictions
             df_i[pred_col] = (df_i[prob_col] > pcutoff).astype(int)
             # Filling in small non-behav bouts
             df_i[pred_col] = merge_bouts(df_i[pred_col], min_window_frames)
+            # NOTE: do we need "actual" and "user-defined"?
+            # Including "actual" column and setting behav frames to -1
+            df_i[actual_col] = df_i[pred_col].values * -1
+            # Including user-defined sub-behav columns
+            for user_behav in model_config.user_behavs:
+                df_i[(behav_name, user_behav)] = 0
             # Adding model predictions df to list
-            behav_preds_ls[i] = df_i
+            df_ls[i] = df_i
             # Logging outcome
             outcome += f"Completed {model.configs.behaviour_name} classification.\n"
         # Concatenating predictions to a single dataframe
-        behavs_df = pd.concat(behav_preds_ls, axis=1)
+        behavs_df = pd.concat(df_ls, axis=1)
         # Setting the index and column names
         behavs_df.index.names = DFIOMixin.enum_to_list(BehavIN)
         behavs_df.columns.names = DFIOMixin.enum_to_list(BehavCN)
