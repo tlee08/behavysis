@@ -709,7 +709,17 @@ class Project:
     #            COMBINING ANALYSIS DATA ACROSS EXPS METHODS
     #####################################################################
 
-    def collate_analysis_binned(self) -> None:
+    def collate_analysis(self) -> None:
+        """
+        Combines an analysis of all the experiments together to generate combined h5 files for:
+        - Each binned data. The index is (bin) and columns are (expName, indiv, measure).
+        - The summary data. The index is (expName, indiv, measure) and columns are
+        (statistics -e.g., mean).
+        """
+        self._collate_analysis_binned()
+        self._collate_analysis_summary()
+
+    def _collate_analysis_binned(self) -> None:
         """
         Combines an analysis of all the experiments together to generate combined h5 files for:
         - Each binned data. The index is (bin) and columns are (expName, indiv, measure).
@@ -717,8 +727,6 @@ class Project:
         # Initialising the process and logging description
         description = "Combining binned analysis"
         logging.info("%s...", description)
-        # dd_df = pd.DataFrame()
-
         # AGGREGATING BINNED DATA
         # NOTE: need a more robust way of getting the list of bin sizes
         analysis_dir = os.path.join(self.root_dir, ANALYSIS_DIR)
@@ -729,28 +737,20 @@ class Project:
         bin_sizes_sec = np.append(bin_sizes_sec, "custom")
         # Searching through all the analysis subdir
         for i in os.listdir(analysis_dir):
-            if i == "aggregate_analysis":
-                continue
-            analysis_subdir = os.path.join(analysis_dir, i)
             for bin_i in bin_sizes_sec:
-                total_df = pd.DataFrame()
-                out_fp = os.path.join(analysis_subdir, f"__ALL_binned_{bin_i}.feather")
+                df_ls = []
                 for exp in self.get_experiments():
                     in_fp = os.path.join(
-                        analysis_subdir, f"binned_{bin_i}", f"{exp.name}.feather"
+                        analysis_dir, i, f"binned_{bin_i}", f"{exp.name}.feather"
                     )
                     if os.path.isfile(in_fp):
-                        # Reading exp summary df
-                        df = DFIOMixin.read_feather(in_fp)
-                        # Prepending experiment name to column MultiIndex
-                        df = pd.concat(
-                            [df], keys=[exp.name], names=["experiment"], axis=1
-                        )
-                        # Concatenating total_df with df across columns
-                        total_df = pd.concat([total_df, df], axis=1)
-                    DFIOMixin.write_feather(total_df, out_fp)
+                        df_ls.append(DFIOMixin.read_feather(in_fp))
+                # Concatenating total_df with df across columns, with experiment name to column MultiIndex
+                df = pd.concat(df_ls, keys=[exp.name], names=["experiment"], axis=1)
+                out_fp = os.path.join(analysis_dir, i, f"__ALL_binned_{bin_i}.feather")
+                DFIOMixin.write_feather(df, out_fp)
 
-    def collate_analysis_summary(self) -> None:
+    def _collate_analysis_summary(self) -> None:
         """
         Combines an analysis of all the experiments together to generate combined h5 files for:
         - The summary data. The index is (expName, indiv, measure) and columns are
@@ -759,29 +759,17 @@ class Project:
         # Initialising the process and logging description
         description = "Combining summary analysis"
         logging.info("%s...", description)
-        # dd_df = pd.DataFrame()
-
         # AGGREGATING SUMMARY DATA
         analysis_dir = os.path.join(self.root_dir, ANALYSIS_DIR)
         # Searching through all the analysis subdir
         for i in os.listdir(analysis_dir):
-            if i == "aggregate_analysis":
-                continue
-            analysis_subdir = os.path.join(analysis_dir, i)
-            total_df = pd.DataFrame()
-            out_fp = os.path.join(analysis_subdir, "__ALL_summary.feather")
+            df_ls = []
             for exp in self.get_experiments():
-                in_fp = os.path.join(analysis_subdir, "summary", f"{exp.name}.feather")
+                in_fp = os.path.join(analysis_dir, i, "summary", f"{exp.name}.feather")
                 if os.path.isfile(in_fp):
                     # Reading exp summary df
-                    df = DFIOMixin.read_feather(in_fp)
-                    # Prepending experiment name to index MultiIndex
-                    df = pd.concat([df], keys=[exp.name], names=["experiment"], axis=0)
-                    # Concatenating total_df with df down rows
-                    total_df = pd.concat([total_df, df], axis=0)
-            DFIOMixin.write_feather(total_df, out_fp)
-            DFIOMixin.write_feather(total_df, out_fp)
-            DFIOMixin.write_feather(total_df, out_fp)
-            DFIOMixin.write_feather(total_df, out_fp)
-            DFIOMixin.write_feather(total_df, out_fp)
+                    df_ls.append(DFIOMixin.read_feather(in_fp))
+            out_fp = os.path.join(analysis_dir, i, "__ALL_summary.feather")
+            # Concatenating total_df with df across columns, with experiment name to column MultiIndex
+            total_df = pd.concat(df_ls, keys=[exp.name], names=["experiment"], axis=0)
             DFIOMixin.write_feather(total_df, out_fp)
