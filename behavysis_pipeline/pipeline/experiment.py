@@ -9,6 +9,7 @@ import os
 from typing import Any, Callable
 
 import numpy as np
+
 from behavysis_core.constants import (
     ANALYSIS_DIR,
     EVALUATE_DIR,
@@ -19,7 +20,6 @@ from behavysis_core.constants import (
 )
 from behavysis_core.mixins.df_io_mixin import DFIOMixin
 from behavysis_core.mixins.diagnostics_mixin import DiagnosticsMixin
-
 from behavysis_pipeline.processes import (
     BehavAnalyse,
     ClassifyBehaviours,
@@ -28,7 +28,7 @@ from behavysis_pipeline.processes import (
     RunDLC,
     UpdateConfigs,
 )
-from prefect import flow, task
+
 
 class Experiment:
     """
@@ -127,7 +127,6 @@ class Experiment:
     #               EXPERIMENT PROCESSING SCAFFOLD METHODS
     #####################################################################
 
-    @flow
     def _process_scaffold(
         self,
         funcs: tuple[Callable, ...],
@@ -162,7 +161,6 @@ class Experiment:
         for f in funcs:
             # Running each func and saving outcome
             try:
-                f_task = task(f)
                 dd[f.__name__] = f(*args, **kwargs)
                 dd[f.__name__] += f"SUCCESS: {DiagnosticsMixin.success_msg()}\n"
             except Exception as e:

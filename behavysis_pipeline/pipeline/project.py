@@ -9,9 +9,13 @@ import re
 from multiprocessing import Pool
 from typing import Any, Callable
 
+import dask
 import numpy as np
 import pandas as pd
 import seaborn as sns
+from dask.distributed import Client, LocalCluster
+from natsort import natsort_keygen, natsorted
+
 from behavysis_core.constants import (
     ANALYSIS_DIR,
     DIAGNOSTICS_DIR,
@@ -24,9 +28,6 @@ from behavysis_core.mixins.df_io_mixin import DFIOMixin
 from behavysis_core.mixins.diagnostics_mixin import DiagnosticsMixin
 from behavysis_core.mixins.io_mixin import IOMixin
 from behavysis_core.mixins.multiproc_mixin import MultiprocMixin
-from natsort import natsort_keygen, natsorted
-import dask
-from dask.distributed import Client, LocalCluster
 from behavysis_pipeline.pipeline.experiment import Experiment
 from behavysis_pipeline.processes.run_dlc import RunDLC
 
@@ -215,10 +216,10 @@ class Project:
     #               PROJECT PROCESSING SCAFFOLD METHODS
     #####################################################################
 
-    @staticmethod
-    def _process_scaffold_mp_worker(args_tuple: tuple):
-        method, exp, args, kwargs = args_tuple
-        return method(exp, *args, **kwargs)
+    # @staticmethod
+    # def _process_scaffold_mp_worker(args_tuple: tuple):
+    #     method, exp, args, kwargs = args_tuple
+    #     return method(exp, *args, **kwargs)
 
     def _process_scaffold_mp(
         self, method: Callable, *args: Any, **kwargs: Any
@@ -256,6 +257,7 @@ class Project:
         dd_ls = dask.compute(f_d_ls)
         client.close()
         cluster.close()
+        return dd_ls
 
     def _process_scaffold_sp(
         self, method: Callable, *args: Any, **kwargs: Any
@@ -281,7 +283,6 @@ class Project:
         # Processing all experiments and storing process outcomes as list of dicts
         return [method(exp, *args, **kwargs) for exp in self.get_experiments()]
 
-    @flow
     def _process_scaffold(self, method: Callable, *args: Any, **kwargs: Any) -> None:
         """
         Runs the given method on all experiments in the project.
@@ -640,7 +641,7 @@ class Project:
                 except ValueError as e:  # do not add invalid files
                     logging.info("failed: %s    --    %s:\n%s", f.value, j, e)
                     failed.append(name)
-        # Printing outcome of imported and failed experiments
+        # Logging outcome of imported and failed experiments
         logging.info("Experiments imported successfully:")
         logging.info("%s\n\n", "\n".join([f"    - {i}" for i in self.experiments]))
         logging.info("Experiments failed to import:")
@@ -670,7 +671,7 @@ class Project:
         """
         Collates the auto fields of the configs of all experiments into a DataFrame.
         """
-        # Initialising the process and printing the description
+        # Initialising the process and logging description
         description = "Combining binned analysis"
         logging.info("%s...", description)
         # Getting all the auto field keys
@@ -713,7 +714,7 @@ class Project:
         Combines an analysis of all the experiments together to generate combined h5 files for:
         - Each binned data. The index is (bin) and columns are (expName, indiv, measure).
         """
-        # Initialising the process and printing the description
+        # Initialising the process and logging description
         description = "Combining binned analysis"
         logging.info("%s...", description)
         # dd_df = pd.DataFrame()
@@ -755,7 +756,7 @@ class Project:
         - The summary data. The index is (expName, indiv, measure) and columns are
         (statistics -e.g., mean).
         """
-        # Initialising the process and printing the description
+        # Initialising the process and logging description
         description = "Combining summary analysis"
         logging.info("%s...", description)
         # dd_df = pd.DataFrame()
