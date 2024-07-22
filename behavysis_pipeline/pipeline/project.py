@@ -254,7 +254,7 @@ class Project:
         f_d_ls = [
             dask.delayed(method)(exp, *args, **kwargs) for exp in self.get_experiments()
         ]
-        dd_ls = dask.compute(f_d_ls)
+        dd_ls = dask.compute(*f_d_ls)
         client.close()
         cluster.close()
         return dd_ls
@@ -346,7 +346,7 @@ class Project:
         self._process_scaffold(method, *args, **kwargs)
 
     @functools.wraps(Experiment.run_dlc)
-    def run_dlc(self, gputouse: int = None, overwrite: bool = False) -> None:
+    def run_dlc(self, gputouse: int | None = None, overwrite: bool = False) -> None:
         """
         Batch processing corresponding to
         [behavysis_pipeline.pipeline.experiment.Experiment.run_dlc][]

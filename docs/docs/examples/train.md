@@ -6,8 +6,8 @@
 import os
 
 from behavysis_core.mixins.behav_mixin import BehavMixin
-from behavysis_pipeline.behav_classifier import BehavClassifier
-from behavysis_pipeline.behav_classifier.clf_templates import ClfTemplates
+from behavysis_classifier import BehavClassifier
+from behavysis_classifier.clf_models.clf_templates import ClfTemplates
 from behavysis_pipeline.pipeline import Project
 
 if __name__ == "__main__":

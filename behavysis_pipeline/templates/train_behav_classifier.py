@@ -2,8 +2,8 @@ import os
 
 import pandas as pd
 
-from behavysis_pipeline.behav_classifier import BehavClassifier
-from behavysis_pipeline.behav_classifier.clf_templates import DNN1
+from behavysis_classifier import BehavClassifier
+from behavysis_classifier.clf_models.clf_templates import DNN1
 from behavysis_pipeline.pipeline import Project
 from behavysis_pipeline.processes import Export
 
@@ -22,10 +22,10 @@ if __name__ == "__main__":
         name = os.path.splitext(i)[0]
         print(name)
         outcome = Export.boris_2_behav(
-            os.path.join(boris_dir, f"{name}.tsv"),
-            os.path.join(behav_dir, f"{name}.feather"),
-            os.path.join(config_dir, f"{name}.json"),
-            behavs_ls,
+            src_fp=os.path.join(boris_dir, f"{name}.tsv"),
+            out_fp=os.path.join(behav_dir, f"{name}.feather"),
+            configs_fp=os.path.join(config_dir, f"{name}.json"),
+            behavs_ls=behavs_ls,
             overwrite=overwrite,
         )
     # Making BehavClassifier objects

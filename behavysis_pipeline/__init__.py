@@ -16,6 +16,7 @@ import warnings
 import matplotlib
 import matplotlib.pyplot as plt
 import seaborn as sns
+
 from behavysis_core.constants import PLOT_DPI, PLOT_STYLE
 
 #####################################################################
@@ -41,4 +42,4 @@ plt.rcParams["savefig.dpi"] = PLOT_DPI
 #           SETTING UP LOGGING
 #####################################################################
 
-logging.basicConfig(level=logging.INFO)
+# logging.basicConfig(level=logging.INFO)
