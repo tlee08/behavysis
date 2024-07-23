@@ -21,6 +21,7 @@ from __future__ import annotations
 import os
 
 import numpy as np
+
 from behavysis_core.constants import AnalysisCN, BehavCN, BehavColumns
 from behavysis_core.data_models.experiment_configs import ExperimentConfigs
 from behavysis_core.mixins.behav_mixin import BehavMixin
@@ -56,14 +57,12 @@ class BehavAnalyse:
         behavs_df = behavs_df.fillna(0).map(lambda x: np.maximum(0, x))
         # Getting the behaviour names and each user_behav for the behaviour
         # Not incl. the `pred` or `prob` (`prob` shouldn't be here anyway) column
-        columns = behavs_df.columns[
-            np.isin(
-                behavs_df.columns.to_frame(index=False)[BehavCN.OUTCOMES.value],
-                [BehavColumns.PROB.value, BehavColumns.PRED.value],
-                invert=True,
-            )
-        ]
-        behavs_df = behavs_df[columns]
+        columns = np.isin(
+            behavs_df.columns.get_level_values(BehavCN.OUTCOMES.value),
+            [BehavColumns.PROB.value, BehavColumns.PRED.value],
+            invert=True,
+        )
+        behavs_df = behavs_df.loc[:, columns]
         # Writing the behavs_df to the fbf file
         fbf_fp = os.path.join(out_dir, "fbf", f"{name}.feather")
         DFIOMixin.write_feather(behavs_df, fbf_fp)
