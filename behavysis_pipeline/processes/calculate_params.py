@@ -222,6 +222,8 @@ class CalculateParams:
         df.iloc[:, 0] = df.iloc[:, 0].astype(str)
         # Asserting that the name and col_name is in the df
         print(f"Name is {name}")
+        print(df.iloc[:, 0].values)
+        print(name in df.iloc[:, 0].values)
         assert (
             name in df.iloc[:, 0].values
         ), f"{name} not in {csv_fp}. Update the `name` parameter in the configs file."
