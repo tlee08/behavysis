@@ -190,8 +190,9 @@ class CalculateParams:
         (filepath specified in config file).
 
         Expects value to be in seconds (so will convert to frames).
-        Also expects the csv_fp to be a csv file with the following format,
-        where the first column is the name of the video and the second column is the start time.
+        Also expects the csv_fp to be a csv file,
+        where the first column is the name of the video and the second column
+        is the start time.
 
         Notes
         -----
@@ -220,6 +221,7 @@ class CalculateParams:
         df = pd.read_csv(csv_fp, index_col=0)
         df.iloc[:, 0] = df.iloc[:, 0].astype(str)
         # Asserting that the name and col_name is in the df
+        print(f"Name is {name}")
         assert (
             name in df.iloc[:, 0].values
         ), f"{name} not in {csv_fp}. Update the `name` parameter in the configs file."
