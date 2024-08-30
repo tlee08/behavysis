@@ -218,6 +218,7 @@ class CalculateParams:
             name = IOMixin.get_name(dlc_fp)
         # Reading csv_fp
         df = pd.read_csv(csv_fp, index_col=0)
+        df[0] = df[0].astype(str)
         # Asserting that the name and col_name is in the df
         assert (
             name in df.index
