@@ -190,6 +190,8 @@ class CalculateParams:
         (filepath specified in config file).
 
         Expects value to be in seconds (so will convert to frames).
+        Also expects the csv_fp to be a csv file with the following format,
+        where the first column is the name of the video and the second column is the start time.
 
         Notes
         -----
@@ -200,7 +202,6 @@ class CalculateParams:
                 - start_frame_from_csv
                     - csv_fp: str
                     - name: None | str
-                    - col_name: str
         ```
         """
         outcome = ""
@@ -212,21 +213,17 @@ class CalculateParams:
         fps = configs.auto.formatted_vid.fps
         csv_fp = configs.get_ref(configs_filt.csv_fp)
         name = configs.get_ref(configs_filt.name)
-        col_name = configs.get_ref(configs_filt.col_name)
         # Using the name of the video as the name of the experiment if not specified
         if name is None:
             name = IOMixin.get_name(dlc_fp)
-        # Getting start sec value from csv
+        # Reading csv_fp
         df = pd.read_csv(csv_fp, index_col=0)
         # Asserting that the name and col_name is in the df
         assert (
             name in df.index
         ), f"{name} not in {csv_fp}. Update the `name` parameter in the configs file."
-        assert (
-            col_name in df.columns
-        ), f"{col_name} not in {csv_fp}. Update the `col_name` parameter in the configs file."
         # Getting start time in seconds
-        start_sec = df.loc[name][col_name].values[0]
+        start_sec = df[df.iloc[:, 0] == name].iloc[0, 1]
         # Converting to start frame
         start_frame = int(np.round(start_sec * fps, 0))
         # Writing to configs
@@ -340,7 +337,6 @@ class Model_start_frame_from_csv(BaseModel):
 
     csv_fp: str = ""
     name: str | None = None
-    col_name: str = "seconds"
 
 
 class Model_check_exists(BaseModel):
