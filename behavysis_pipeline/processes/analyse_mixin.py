@@ -19,11 +19,12 @@ str
 from __future__ import annotations
 
 import os
-from typing import Callable, Optional
+from typing import Callable
 
 import numpy as np
 import pandas as pd
 import seaborn as sns
+
 from behavysis_core.constants import AggAnalysisCN, AnalysisCN, AnalysisIN, Coords
 from behavysis_core.data_models.experiment_configs import ExperimentConfigs
 from behavysis_core.mixins.behav_mixin import BehavMixin
@@ -418,8 +419,8 @@ class AggAnalyse:
         out_dir: str,
         name: str,
         fps: float,
-        bins_ls: Optional[list],
-        cbins_ls: Optional[list],
+        bins_ls: None | list,
+        cbins_ls: None | list,
     ) -> str:
         """
         _summary_
@@ -441,8 +442,8 @@ class AggAnalyse:
         out_dir: str,
         name: str,
         fps: float,
-        bins_ls: Optional[list],
-        cbins_ls: Optional[list],
+        bins_ls: None | list,
+        cbins_ls: None | list,
     ) -> str:
         """
         _summary_
@@ -466,8 +467,8 @@ class AggAnalyse:
         fps: float,
         summary_func: Callable[[pd.DataFrame, float], pd.DataFrame],
         agg_column: str,
-        bins_ls: Optional[list],
-        cbins_ls: Optional[list],
+        bins_ls: None | list,
+        cbins_ls: None | list,
     ) -> str:
         """
         _summary_

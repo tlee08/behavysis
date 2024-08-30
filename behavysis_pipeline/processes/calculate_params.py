@@ -20,6 +20,7 @@ from pydantic import BaseModel, ConfigDict
 
 from behavysis_core.constants import Coords, IndivColumns
 from behavysis_core.data_models.experiment_configs import ExperimentConfigs
+from behavysis_core.mixins.io_mixin import IOMixin
 from behavysis_core.mixins.keypoints_mixin import KeypointsMixin
 
 
@@ -83,6 +84,7 @@ class CalculateParams:
         configs.auto.start_frame = start_frame
         # configs.auto.start_sec = start_frame / fps
         configs.write_json(configs_fp)
+        # Returning outcome
         return outcome
 
     @staticmethod
@@ -108,24 +110,21 @@ class CalculateParams:
         dur_sec = configs.get_ref(configs_filt.dur_sec)
         start_frame = configs.auto.start_frame
         fps = configs.auto.formatted_vid.fps
-        auto_stop_frame = configs.auto.formatted_vid.total_frames
+        total_frames = configs.auto.formatted_vid.total_frames
         # Asserting that the necessary auto configs are valid
         assert (
             start_frame is not None
         ), "start_frame is None. Please calculate start_frame first."
         assert fps is not None, "fps is None. Please calculate fps first."
-        assert (
-            auto_stop_frame is not None
-        ), "total_frames is None. Please calculate total_frames first."
         # Calculating stop_frame
         dur_frames = int(dur_sec * fps)
         stop_frame = start_frame + dur_frames
         # Make a warning if the use-specified dur_sec is larger than the duration of the video.
-        if auto_stop_frame is None:
+        if total_frames is None:
             outcome += (
                 "WARNING: The length of the video itself has not been calculated yet."
             )
-        elif stop_frame > auto_stop_frame:
+        elif stop_frame > total_frames:
             outcome += (
                 "WARNING: The user specified dur_sec in the configs file is greater "
                 + "than the actual length of the video. Please check to see if this video is "
@@ -136,6 +135,7 @@ class CalculateParams:
         configs.auto.stop_frame = stop_frame
         # configs.auto.stop_sec = stop_frame / fps
         configs.write_json(configs_fp)
+        # Returning outcome
         return outcome
 
     @staticmethod
@@ -161,7 +161,7 @@ class CalculateParams:
         dlc_df = KeypointsMixin.clean_headings(KeypointsMixin.read_feather(dlc_fp))
         # Getting likehoods of subject (given bpts) existing in each frame
         df_lhoods = calc_likelihoods(dlc_df, bpts, window_frames)
-        # Determining start time. Start frame is the first frame of the rolling window's range
+        # Determining exist times from rolling average windows
         df_lhoods["exists"] = df_lhoods["rolling"] > pcutoff
         # Getting when subject first and last exists in video
         exp_dur_frames = 0
@@ -180,6 +180,61 @@ class CalculateParams:
         configs.auto.exp_dur_frames = exp_dur_frames
         # configs.auto.exp_dur_secs = exp_dur_frames / fps
         configs.write_json(configs_fp)
+        # Returning outcome
+        return outcome
+
+    @staticmethod
+    def start_frame_from_csv(dlc_fp: str, configs_fp: str) -> str:
+        """
+        Reads the start time of the experiment from a given CSV file
+        (filepath specified in config file).
+
+        Expects value to be in seconds (so will convert to frames).
+
+        Notes
+        -----
+        The config file must contain the following parameters:
+        ```
+        - user
+            - calculate_params
+                - start_frame_from_csv
+                    - csv_fp: str
+                    - name: None | str
+                    - col_name: str
+        ```
+        """
+        outcome = ""
+        # Getting necessary config parameters
+        configs = ExperimentConfigs.read_json(configs_fp)
+        configs_filt = Model_start_frame_from_csv(
+            **configs.user.calculate_params.start_frame_from_csv
+        )
+        fps = configs.auto.formatted_vid.fps
+        csv_fp = configs.get_ref(configs_filt.csv_fp)
+        name = configs.get_ref(configs_filt.name)
+        col_name = configs.get_ref(configs_filt.col_name)
+        # Using the name of the video as the name of the experiment if not specified
+        if name is None:
+            name = IOMixin.get_name(dlc_fp)
+        # Getting start sec value from csv
+        df = pd.read_csv(csv_fp, index_col=0)
+        # Asserting that the name and col_name is in the df
+        assert (
+            name in df.index
+        ), f"{name} not in {csv_fp}. Update the `name` parameter in the configs file."
+        assert (
+            col_name in df.columns
+        ), f"{col_name} not in {csv_fp}. Update the `col_name` parameter in the configs file."
+        # Getting start time in seconds
+        start_sec = df.loc[name][col_name].values[0]
+        # Converting to start frame
+        start_frame = int(np.round(start_sec * fps, 0))
+        # Writing to configs
+        configs = ExperimentConfigs.read_json(configs_fp)
+        configs.auto.start_frame = start_frame
+        # configs.auto.start_sec = start_frame / fps
+        configs.write_json(configs_fp)
+        # Returning outcome
         return outcome
 
     @staticmethod
@@ -243,6 +298,7 @@ class CalculateParams:
         configs = ExperimentConfigs.read_json(configs_fp)
         configs.auto.px_per_mm = px_per_mm
         configs.write_json(configs_fp)
+        # Returning outcome
         return outcome
 
 
@@ -275,6 +331,16 @@ class Model_stop_frame(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     dur_sec: float | str = 0
+
+
+class Model_start_frame_from_csv(BaseModel):
+    """_summary_"""
+
+    model_config = ConfigDict(extra="forbid")
+
+    csv_fp: str = ""
+    name: str | None = None
+    col_name: str = "seconds"
 
 
 class Model_check_exists(BaseModel):
