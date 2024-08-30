@@ -218,14 +218,14 @@ class CalculateParams:
         if name is None:
             name = IOMixin.get_name(dlc_fp)
         # Reading csv_fp
-        df = pd.read_csv(csv_fp)
-        df.iloc[:, 0] = df.iloc[:, 0].astype(str)
+        df = pd.read_csv(csv_fp, index_col=0)
+        df.index = df.index.astype(str)
         # Asserting that the name and col_name is in the df
         assert (
-            name in df.iloc[:, 0].values
+            name in df.index.values
         ), f"{name} not in {csv_fp}. Update the `name` parameter in the configs file."
         # Getting start time in seconds
-        start_sec = df[df.iloc[:, 0] == name].iloc[0, 1]
+        start_sec = df.loc[name][0]
         # Converting to start frame
         start_frame = int(np.round(start_sec * fps, 0))
         # Writing to configs
