@@ -28,6 +28,33 @@ class CalculateParams:
     """__summary__"""
 
     @staticmethod
+    def dlc_scorer_name(dlc_fp: str, configs_fp: str) -> str:
+        """
+        Get the name of the scorer used in the DLC analysis.
+
+        Parameters
+        ----------
+        dlc_fp : str
+            The filepath to the DLC file.
+
+        Returns
+        -------
+        str
+            The name of the scorer.
+        """
+        outcome = ""
+        # Reading dataframe
+        dlc_df = KeypointsMixin.read_feather(dlc_fp)
+        # Getting scorer name
+        scorer_name = dlc_df.columns.get_level_values(0)[0]
+        # Writing to configs
+        configs = ExperimentConfigs.read_json(configs_fp)
+        configs.auto.scorer_name = scorer_name
+        configs.write_json(configs_fp)
+        # Returning outcome
+        return outcome
+
+    @staticmethod
     def start_frame(
         dlc_fp: str,
         configs_fp: str,
@@ -54,7 +81,7 @@ class CalculateParams:
         outcome = ""
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
-        configs_filt = Model_check_exists(**configs.user.calculate_params.start_frame)
+        configs_filt = Model_check_exists(**configs.user.calculate_params.start_frame)  # type: ignore
         bpts = configs.get_ref(configs_filt.bodyparts)
         window_sec = configs.get_ref(configs_filt.window_sec)
         pcutoff = configs.get_ref(configs_filt.pcutoff)
@@ -106,7 +133,7 @@ class CalculateParams:
         outcome = ""
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
-        configs_filt = Model_stop_frame(**configs.user.calculate_params.stop_frame)
+        configs_filt = Model_stop_frame(**configs.user.calculate_params.stop_frame)  # type: ignore
         dur_sec = configs.get_ref(configs_filt.dur_sec)
         start_frame = configs.auto.start_frame
         fps = configs.auto.formatted_vid.fps
@@ -148,7 +175,7 @@ class CalculateParams:
         outcome = ""
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
-        configs_filt = Model_check_exists(**configs.user.calculate_params.exp_dur)
+        configs_filt = Model_check_exists(**configs.user.calculate_params.exp_dur)  # type: ignore
         bpts = configs.get_ref(configs_filt.bodyparts)
         window_sec = configs.get_ref(configs_filt.window_sec)
         pcutoff = configs.get_ref(configs_filt.pcutoff)

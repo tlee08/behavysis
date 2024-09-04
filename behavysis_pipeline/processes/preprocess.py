@@ -111,7 +111,7 @@ class Preprocess:
         outcome = ""
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
-        configs_filt = Model_interpolate(**configs.user.preprocess.interpolate)
+        configs_filt = Model_interpolate(**configs.user.preprocess.interpolate)  # type: ignore
         # Reading file
         df = KeypointsMixin.read_feather(in_fp)
         # Gettings the unique groups of (individual, bodypart) groups.
@@ -165,7 +165,7 @@ class Preprocess:
         df = KeypointsMixin.read_feather(in_fp)
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
-        configs_filt = Model_refine_ids(**configs.user.preprocess.refine_ids)
+        configs_filt = Model_refine_ids(**configs.user.preprocess.refine_ids)  # type: ignore
         marked = configs.get_ref(configs_filt.marked)
         unmarked = configs.get_ref(configs_filt.unmarked)
         marking = configs.get_ref(configs_filt.marking)
