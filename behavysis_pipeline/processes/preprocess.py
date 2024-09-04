@@ -91,6 +91,73 @@ class Preprocess:
 
     @staticmethod
     @IOMixin.overwrite_check()
+    def interpolate_stationary(
+        in_fp: str, out_fp: str, configs_fp: str, overwrite: bool
+    ) -> str:
+        """
+        If the point detection (above a certain threshold) is below a certain proportion, then the x and y coordinates are set to the given values (usually corners).
+        Otherwise, does nothing (encouraged to run Preprocess.interpolage afterwards).
+
+        Notes
+        -----
+        The config file must contain the following parameters:
+        ```
+        - user
+            - preprocess
+                - interpolate_stationary
+                    [
+                        - bodypart: str (assumed to be the "single" individual)
+                        - pcutoff: float (between 0 and 1)
+                        - pcutoff_all: float (between 0 and 1)
+                        - x: float (between 0 and 1 - proportion of the video width)
+                        - y: float (between 0 and 1 - proportion of the video height)
+                    ]
+        ```
+        """
+        outcome = ""
+        # Getting necessary config parameters list
+        configs = ExperimentConfigs.read_json(configs_fp)
+        configs_filt_ls = list(configs.user.preprocess.interpolate_stationary)  # type: ignore
+        scorer = configs.auto.scorer_name
+        width_px = configs.auto.formatted_vid.width_px
+        height_px = configs.auto.formatted_vid.height_px
+        if width_px is None or height_px is None:
+            raise ValueError(
+                "Width and height must be provided in the formatted video. Try running FormatVid.format_vid."
+            )
+        # Reading file
+        df = DFIOMixin.read_feather(in_fp)
+        # For each bodypart, filling in the given point
+        for configs_filt in configs_filt_ls:
+            # Getting config parameters
+            configs_filt = Model_el_interpolate_stationary(**configs_filt)
+            bodypart = configs_filt.bodypart
+            pcutoff = configs_filt.pcutoff
+            pcutoff_all = configs_filt.pcutoff_all
+            x = configs_filt.x
+            y = configs_filt.y
+            # Converting x and y from video proportions to pixel coordinates
+            x = x * width_px
+            y = y * height_px
+            # Getting "is_detected" for each frame for the bodypart
+            is_detected = (
+                df[(scorer, "single", bodypart, Coords.LIKELIHOOD.value)] >= pcutoff
+            )
+            # If the bodypart is detected in less than the given proportion of the video, then set the x and y coordinates to the given values
+            if is_detected.mean() < pcutoff_all:
+                df[(scorer, "single", bodypart, Coords.X.value)] = x
+                df[(scorer, "single", bodypart, Coords.Y.value)] = y
+                df[(scorer, "single", bodypart, Coords.LIKELIHOOD.value)] = pcutoff
+                outcome += f"{bodypart} is detected in less than {pcutoff_all} of the video. Setting x and y coordinates to ({x}, {y}).\n"
+            else:
+                outcome += f"{bodypart} is detected in more than {pcutoff_all} of the video. No need for interpolation.\n"
+        # Saving
+        DFIOMixin.write_feather(df, out_fp)
+        # Returning outcome
+        return outcome
+
+    @staticmethod
+    @IOMixin.overwrite_check()
     def interpolate(in_fp: str, out_fp: str, configs_fp: str, overwrite: bool) -> str:
         """
         "Smooths" out noticeable jitter of points, where the likelihood (and accuracy) of
@@ -132,7 +199,7 @@ class Preprocess:
         # Also backfilling points at the start.
         # Also forward filling points at the end.
         # Also imputing nan points with 0 (if the ENTIRE column is nan, then it's imputed)
-        df = df.interpolate(method="linear", axis=0).bfill().ffill()
+        df = df.interpolate(method="linear").bfill().ffill()
         # if df.isnull().values.any() then the entire column is nan (print warning)
         df = df.fillna(0)
         # Writing file
@@ -343,6 +410,16 @@ class Model_interpolate(BaseModel):
     """_summary_"""
 
     pcutoff: float | str = 0
+
+
+class Model_el_interpolate_stationary(BaseModel):
+    """_summary_"""
+
+    bodypart: str = ""
+    pcutoff: float = 0.8
+    pcutoff_all: float = 0.6
+    x: float = 0
+    y: float = 0
 
 
 class Model_refine_ids(BaseModel):
