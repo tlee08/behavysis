@@ -253,14 +253,15 @@ class Analyse:
         configs_filt: Model_in_roi,
         out_dir: str,
     ):
-        f_name = "in_roi"
         # Getting necessary config parameters
         fps, _, _, px_per_mm, bins_ls, cbins_ls = AnalyseMixin.get_configs(configs)
+        roi_name = configs.get_ref(configs_filt.roi_name)
         bpts = configs.get_ref(configs_filt.bodyparts)
         thresh_mm = configs.get_ref(configs_filt.thresh_mm)
         roi_corners = configs.get_ref(configs_filt.roi_corners)
         # Calculating more parameters
         thresh_px = thresh_mm / px_per_mm
+        f_name = f"in_roi_{roi_name}"
         # Checking bodyparts and roi_corners exist
         KeypointsMixin.check_bpts_exist(dlc_df, bpts)
         KeypointsMixin.check_bpts_exist(dlc_df, roi_corners)
