@@ -778,5 +778,6 @@ class Project:
                     names_ls.append(exp.name)
             out_fp = os.path.join(analysis_dir, i, "__ALL_summary.feather")
             # Concatenating total_df with df across columns, with experiment name to column MultiIndex
-            total_df = pd.concat(df_ls, keys=names_ls, names=["experiment"], axis=0)
-            DFIOMixin.write_feather(total_df, out_fp)
+            if len(df_ls) > 0:
+                total_df = pd.concat(df_ls, keys=names_ls, names=["experiment"], axis=0)
+                DFIOMixin.write_feather(total_df, out_fp)
