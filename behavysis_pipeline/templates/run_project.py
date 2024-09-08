@@ -77,8 +77,7 @@ if __name__ == "__main__":
 
     proj.behav_analyse()
 
-    proj.collate_analysis_binned()
-    proj.collate_analysis_summary()
+    proj.collate_analysis()
 
     proj.evaluate(
         (
