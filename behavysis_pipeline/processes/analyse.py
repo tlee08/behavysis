@@ -22,13 +22,14 @@ import os
 
 import numpy as np
 import pandas as pd
+from pydantic import BaseModel
+
 from behavysis_core.constants import AnalysisCN, IndivColumns
 from behavysis_core.data_models.experiment_configs import ExperimentConfigs
 from behavysis_core.mixins.behav_mixin import BehavMixin
 from behavysis_core.mixins.df_io_mixin import DFIOMixin
 from behavysis_core.mixins.io_mixin import IOMixin
 from behavysis_core.mixins.keypoints_mixin import KeypointsMixin
-from pydantic import BaseModel
 
 from .analyse_mixin import AggAnalyse, AnalyseMixin
 
@@ -232,64 +233,76 @@ class Analyse:
         # Calculating the deltas (changes in body position) between each frame for the subject
         configs = ExperimentConfigs.read_json(configs_fp)
         fps, _, _, px_per_mm, bins_ls, cbins_ls = AnalyseMixin.get_configs(configs)
-        configs_filt = Model_in_roi(**configs.user.analyse.in_roi)
-        bpts = configs.get_ref(configs_filt.bodyparts)
-        thresh_mm = configs.get_ref(configs_filt.thresh_mm)
-        tl = configs.get_ref(configs_filt.roi_top_left)
-        tr = configs.get_ref(configs_filt.roi_top_right)
-        bl = configs.get_ref(configs_filt.roi_bottom_left)
-        br = configs.get_ref(configs_filt.roi_bottom_right)
-        # Calculating more parameters
-        thresh_px = thresh_mm / px_per_mm
-
+        configs_filt_ls = list(**configs.user.analyse.in_roi)
         # Loading in dataframe
         dlc_df = KeypointsMixin.clean_headings(KeypointsMixin.read_feather(dlc_fp))
         # Checking body-centre bodypart exists
         KeypointsMixin.check_bpts_exist(dlc_df, bpts)
         # Getting indivs list
         indivs, _ = KeypointsMixin.get_headings(dlc_df)
-
-        # Getting average corner coordinates. Assumes arena does not move.
-        tl = dlc_df[(IndivColumns.SINGLE.value, tl)].mean()
-        tr = dlc_df[(IndivColumns.SINGLE.value, tr)].mean()
-        bl = dlc_df[(IndivColumns.SINGLE.value, bl)].mean()
-        br = dlc_df[(IndivColumns.SINGLE.value, br)].mean()
-        # Making roi_df of corners (with the thresh_px buffer)
-        roi_df = pd.DataFrame(
-            [
-                (tl["x"] - thresh_px, tl["y"] - thresh_px),
-                (tr["x"] + thresh_px, tr["y"] - thresh_px),
-                (br["x"] + thresh_px, br["y"] + thresh_px),
-                (bl["x"] - thresh_px, bl["y"] + thresh_px),
-            ],
-            columns=["x", "y"],
-        )
-        # Getting the (x, y, in-roi) df
+        # For each roi, calculate the in-roi status of the subject
         idx = pd.IndexSlice
-        res_df = AnalyseMixin.pt_in_roi_df(dlc_df, roi_df, indivs, bpts)
-        # Changing column MultiIndex names
-        res_df.columns = res_df.columns.set_levels(
-            ["x", "y", f_name], level=AnalysisCN.MEASURES.value
-        )
-        # Getting analysis_df
-        analysis_df = res_df.loc[:, idx[:, f_name]]
-        # Saving analysis_df
-        fbf_fp = os.path.join(out_dir, "fbf", f"{name}.feather")
-        DFIOMixin.write_feather(analysis_df, fbf_fp)
+        res_df_ls = []
+        for configs_filt in configs_filt_ls:
+            # Getting necessary config parameters
+            configs_filt = Model_in_roi(**configs_filt)
+            roi_name = configs_filt.roi_name
+            bpts = configs.get_ref(configs_filt.bodyparts)
+            thresh_mm = configs.get_ref(configs_filt.thresh_mm)
+            roi_corners = configs.get_ref(configs_filt.roi_corners)
+            # Calculating more parameters
+            thresh_px = thresh_mm / px_per_mm
+            # Getting the current region's name
+            f_name_i = f"{f_name}_{configs_filt.roi_name}"
+            # Getting average corner coordinates. Assumes arena does not move.
+            roi_corners_df = pd.DataFrame(
+                [dlc_df[(IndivColumns.SINGLE.value, pt)].mean() for pt in roi_corners]
+            ).drop(columns=["likelihood"])
+            # Adjusting x-y to have a distance dilation/erosion from the points themselves
+            roi_center = roi_corners_df.mean()
+            for i in roi_corners_df.index:
+                # Calculating angle from point to centre
+                theta = np.arctan2(
+                    roi_corners_df.loc[i, "y"] - roi_center["y"],
+                    roi_corners_df.loc[i, "x"] - roi_center["x"],
+                )
+                # Getting x, y distances so point is `thresh_px` closer to center
+                roi_corners_df.loc[i, "x"] = roi_corners_df.loc[i, "x"] - (
+                    thresh_px * np.cos(theta)
+                )
+                roi_corners_df.loc[i, "y"] = roi_corners_df.loc[i, "y"] - (
+                    thresh_px * np.sin(theta)
+                )
+            # Getting the (x, y, in-roi) df
+            res_df = AnalyseMixin.pt_in_roi_df(dlc_df, roi_corners_df, indivs, bpts)
+            # Changing column MultiIndex names
+            res_df.columns = res_df.columns.set_levels(
+                ["x", "y", f_name_i], level=AnalysisCN.MEASURES.value
+            )
 
+            # Getting analysis_df
+            analysis_df = res_df.loc[:, idx[:, f_name_i]]
+            # Saving analysis_df
+            fbf_fp = os.path.join(out_dir, "fbf", f"{name}.feather")
+            DFIOMixin.write_feather(analysis_df, fbf_fp)
+            # Adding to res_df list
+            res_df_ls.append(res_df)
+
+            # Summarising and binning analysis_df
+            AggAnalyse.summary_binned_behavs(
+                analysis_df,
+                out_dir,
+                name,
+                fps,
+                bins_ls,
+                cbins_ls,
+            )
+
+        res_df = pd.concat(res_df_ls, axis=1)
         # Generating scatterplot
         plot_fp = os.path.join(out_dir, "scatter_plot", f"{name}.png")
-        AnalyseMixin.make_location_scatterplot(res_df, roi_df, plot_fp, f_name)
+        AnalyseMixin.make_location_scatterplot(res_df, roi_corners_df, plot_fp, f_name)
 
-        # Summarising and binning analysis_df
-        AggAnalyse.summary_binned_behavs(
-            analysis_df,
-            out_dir,
-            name,
-            fps,
-            bins_ls,
-            cbins_ls,
-        )
         return outcome
 
     @staticmethod
@@ -555,9 +568,7 @@ class Model_freezing(BaseModel):
 class Model_in_roi(BaseModel):
     """_summary_"""
 
+    roi_name: str
     thresh_mm: float | str
-    roi_top_left: str | str
-    roi_top_right: str | str
-    roi_bottom_left: str | str
-    roi_bottom_right: str | str
+    roi_corners: list[str] | str
     bodyparts: list[str] | str
