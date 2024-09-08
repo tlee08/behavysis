@@ -145,7 +145,7 @@ class AnalyseMixin:
             kind="scatter",
             col_wrap=2,
             height=4,
-            aspect=1,
+            aspect=0.5 * analysis_stacked_df["individuals"].nunique(),
             alpha=0.8,
             linewidth=0,
             marker=".",
