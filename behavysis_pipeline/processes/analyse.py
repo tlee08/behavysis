@@ -236,8 +236,6 @@ class Analyse:
         configs_filt_ls = list(configs.user.analyse.in_roi)
         # Loading in dataframe
         dlc_df = KeypointsMixin.clean_headings(KeypointsMixin.read_feather(dlc_fp))
-        # Checking body-centre bodypart exists
-        KeypointsMixin.check_bpts_exist(dlc_df, bpts)
         # Getting indivs list
         indivs, _ = KeypointsMixin.get_headings(dlc_df)
         # For each roi, calculate the in-roi status of the subject
@@ -251,9 +249,11 @@ class Analyse:
             thresh_mm = configs.get_ref(configs_filt.thresh_mm)
             roi_corners = configs.get_ref(configs_filt.roi_corners)
             # Calculating more parameters
+            f_name_i = f"{f_name}_{roi_name}"
             thresh_px = thresh_mm / px_per_mm
-            # Getting the current region's name
-            f_name_i = f"{f_name}_{configs_filt.roi_name}"
+            # Checking bodyparts and roi_corners exist
+            KeypointsMixin.check_bpts_exist(dlc_df, bpts)
+            KeypointsMixin.check_bpts_exist(dlc_df, roi_corners)
             # Getting average corner coordinates. Assumes arena does not move.
             roi_corners_df = pd.DataFrame(
                 [dlc_df[(IndivColumns.SINGLE.value, pt)].mean() for pt in roi_corners]
