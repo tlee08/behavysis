@@ -748,9 +748,12 @@ class Project:
                         df_ls.append(DFIOMixin.read_feather(in_fp))
                         names_ls.append(exp.name)
                 # Concatenating total_df with df across columns, with experiment name to column MultiIndex
-                df = pd.concat(df_ls, keys=names_ls, names=["experiment"], axis=1)
-                out_fp = os.path.join(analysis_dir, i, f"__ALL_binned_{bin_i}.feather")
-                DFIOMixin.write_feather(df, out_fp)
+                if len(df_ls) > 0:
+                    df = pd.concat(df_ls, keys=names_ls, names=["experiment"], axis=1)
+                    out_fp = os.path.join(
+                        analysis_dir, i, f"__ALL_binned_{bin_i}.feather"
+                    )
+                    DFIOMixin.write_feather(df, out_fp)
 
     def _collate_analysis_summary(self) -> None:
         """
