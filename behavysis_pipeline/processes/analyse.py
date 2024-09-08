@@ -229,78 +229,87 @@ class Analyse:
         outcome = ""
         name = IOMixin.get_name(dlc_fp)
         f_name = Analyse.in_roi.__name__
-        out_dir = os.path.join(analysis_dir, f_name)
         # Calculating the deltas (changes in body position) between each frame for the subject
         configs = ExperimentConfigs.read_json(configs_fp)
         fps, _, _, px_per_mm, bins_ls, cbins_ls = AnalyseMixin.get_configs(configs)
         configs_filt_ls = list(configs.user.analyse.in_roi)
         # Loading in dataframe
         dlc_df = KeypointsMixin.clean_headings(KeypointsMixin.read_feather(dlc_fp))
-        # Getting indivs list
-        indivs, _ = KeypointsMixin.get_headings(dlc_df)
         # For each roi, calculate the in-roi status of the subject
-        idx = pd.IndexSlice
-        res_df_ls = []
         for configs_filt in configs_filt_ls:
             # Getting necessary config parameters
             configs_filt = Model_in_roi(**configs_filt)
-            roi_name = configs_filt.roi_name
-            bpts = configs.get_ref(configs_filt.bodyparts)
-            thresh_mm = configs.get_ref(configs_filt.thresh_mm)
-            roi_corners = configs.get_ref(configs_filt.roi_corners)
-            # Calculating more parameters
-            f_name_i = f"{f_name}_{roi_name}"
-            thresh_px = thresh_mm / px_per_mm
-            # Checking bodyparts and roi_corners exist
-            KeypointsMixin.check_bpts_exist(dlc_df, bpts)
-            KeypointsMixin.check_bpts_exist(dlc_df, roi_corners)
-            # Getting average corner coordinates. Assumes arena does not move.
-            roi_corners_df = pd.DataFrame(
-                [dlc_df[(IndivColumns.SINGLE.value, pt)].mean() for pt in roi_corners]
-            ).drop(columns=["likelihood"])
-            # Adjusting x-y to have a distance dilation/erosion from the points themselves
-            roi_center = roi_corners_df.mean()
-            for i in roi_corners_df.index:
-                # Calculating angle from point to centre
-                theta = np.arctan2(
-                    roi_corners_df.loc[i, "y"] - roi_center["y"],
-                    roi_corners_df.loc[i, "x"] - roi_center["x"],
-                )
-                # Getting x, y distances so point is `thresh_px` closer to center
-                roi_corners_df.loc[i, "x"] = roi_corners_df.loc[i, "x"] - (
-                    thresh_px * np.cos(theta)
-                )
-                roi_corners_df.loc[i, "y"] = roi_corners_df.loc[i, "y"] - (
-                    thresh_px * np.sin(theta)
-                )
-            # Getting the (x, y, in-roi) df
-            res_df = AnalyseMixin.pt_in_roi_df(dlc_df, roi_corners_df, indivs, bpts)
-            # Changing column MultiIndex names
-            res_df.columns = res_df.columns.set_levels(
-                ["x", "y", f_name_i], level=AnalysisCN.MEASURES.value
-            )
-
-            # Getting analysis_df
-            analysis_df = res_df.loc[:, idx[:, f_name_i]]
-            # Saving analysis_df
-            fbf_fp = os.path.join(out_dir, "fbf", f"{name}.feather")
-            DFIOMixin.write_feather(analysis_df, fbf_fp)
-            # Generating scatterplot
-            plot_fp = os.path.join(out_dir, "scatter_plot", f"{name}_{roi_name}.png")
-            AnalyseMixin.make_location_scatterplot(
-                res_df, roi_corners_df, plot_fp, f_name_i
-            )
-            # Summarising and binning analysis_df
-            AggAnalyse.summary_binned_behavs(
-                analysis_df,
-                out_dir,
-                name,
-                fps,
-                bins_ls,
-                cbins_ls,
-            )
+            roi_name = configs.get_ref(configs_filt.roi_name)
+            out_dir = os.path.join(analysis_dir, f"{f_name}_{roi_name}")
+            Analyse.in_roi_el(name, dlc_df, configs, configs_filt, out_dir)
         # Returning outcome
         return outcome
+
+    @staticmethod
+    def in_roi_el(
+        name: str,
+        dlc_df: pd.DataFrame,
+        configs: ExperimentConfigs,
+        configs_filt: Model_in_roi,
+        out_dir: str,
+    ):
+        f_name = "in_roi"
+        # Getting necessary config parameters
+        fps, _, _, px_per_mm, bins_ls, cbins_ls = AnalyseMixin.get_configs(configs)
+        bpts = configs.get_ref(configs_filt.bodyparts)
+        thresh_mm = configs.get_ref(configs_filt.thresh_mm)
+        roi_corners = configs.get_ref(configs_filt.roi_corners)
+        # Calculating more parameters
+        thresh_px = thresh_mm / px_per_mm
+        # Checking bodyparts and roi_corners exist
+        KeypointsMixin.check_bpts_exist(dlc_df, bpts)
+        KeypointsMixin.check_bpts_exist(dlc_df, roi_corners)
+        # Getting indivs list
+        indivs, _ = KeypointsMixin.get_headings(dlc_df)
+        # Getting average corner coordinates. Assumes arena does not move.
+        roi_corners_df = pd.DataFrame(
+            [dlc_df[(IndivColumns.SINGLE.value, pt)].mean() for pt in roi_corners]
+        ).drop(columns=["likelihood"])
+        # Adjusting x-y to have a distance dilation/erosion from the points themselves
+        roi_center = roi_corners_df.mean()
+        for i in roi_corners_df.index:
+            # Calculating angle from point to centre
+            theta = np.arctan2(
+                roi_corners_df.loc[i, "y"] - roi_center["y"],
+                roi_corners_df.loc[i, "x"] - roi_center["x"],
+            )
+            # Getting x, y distances so point is `thresh_px` closer to center
+            roi_corners_df.loc[i, "x"] = roi_corners_df.loc[i, "x"] - (
+                thresh_px * np.cos(theta)
+            )
+            roi_corners_df.loc[i, "y"] = roi_corners_df.loc[i, "y"] - (
+                thresh_px * np.sin(theta)
+            )
+        # Getting the (x, y, in-roi) df
+        res_df = AnalyseMixin.pt_in_roi_df(dlc_df, roi_corners_df, indivs, bpts)
+        # Changing column MultiIndex names
+        res_df.columns = res_df.columns.set_levels(
+            ["x", "y", f_name], level=AnalysisCN.MEASURES.value
+        )
+
+        # Getting analysis_df
+        idx = pd.IndexSlice
+        analysis_df = res_df.loc[:, idx[:, f_name]]
+        # Saving analysis_df
+        fbf_fp = os.path.join(out_dir, "fbf", f"{name}.feather")
+        DFIOMixin.write_feather(analysis_df, fbf_fp)
+        # Generating scatterplot
+        plot_fp = os.path.join(out_dir, "scatter_plot", f"{name}.png")
+        AnalyseMixin.make_location_scatterplot(res_df, roi_corners_df, plot_fp, f_name)
+        # Summarising and binning analysis_df
+        AggAnalyse.summary_binned_behavs(
+            analysis_df,
+            out_dir,
+            name,
+            fps,
+            bins_ls,
+            cbins_ls,
+        )
 
     @staticmethod
     def speed(
