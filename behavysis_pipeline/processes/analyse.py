@@ -285,9 +285,11 @@ class Analyse:
             # Saving analysis_df
             fbf_fp = os.path.join(out_dir, "fbf", f"{name}.feather")
             DFIOMixin.write_feather(analysis_df, fbf_fp)
-            # Adding to res_df list
-            res_df_ls.append(res_df)
-
+            # Generating scatterplot
+            plot_fp = os.path.join(out_dir, "scatter_plot", f"{name}.png")
+            AnalyseMixin.make_location_scatterplot(
+                res_df, roi_corners_df, plot_fp, f_name_i
+            )
             # Summarising and binning analysis_df
             AggAnalyse.summary_binned_behavs(
                 analysis_df,
@@ -297,12 +299,7 @@ class Analyse:
                 bins_ls,
                 cbins_ls,
             )
-
-        res_df = pd.concat(res_df_ls, axis=1)
-        # Generating scatterplot
-        plot_fp = os.path.join(out_dir, "scatter_plot", f"{name}.png")
-        AnalyseMixin.make_location_scatterplot(res_df, roi_corners_df, plot_fp, f_name)
-
+        # Returning outcome
         return outcome
 
     @staticmethod
