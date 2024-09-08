@@ -233,7 +233,7 @@ class Analyse:
         # Calculating the deltas (changes in body position) between each frame for the subject
         configs = ExperimentConfigs.read_json(configs_fp)
         fps, _, _, px_per_mm, bins_ls, cbins_ls = AnalyseMixin.get_configs(configs)
-        configs_filt_ls = list(**configs.user.analyse.in_roi)
+        configs_filt_ls = list(configs.user.analyse.in_roi)
         # Loading in dataframe
         dlc_df = KeypointsMixin.clean_headings(KeypointsMixin.read_feather(dlc_fp))
         # Checking body-centre bodypart exists
