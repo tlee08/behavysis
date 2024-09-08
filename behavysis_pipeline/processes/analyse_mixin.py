@@ -173,6 +173,7 @@ class AnalyseMixin:
                 legend=False,
                 ax=ax,
             )
+            ax.set_aspect("equal")
         # Setting fig titles and labels
         g.set_titles(col_template="{col_name}")
         g.figure.subplots_adjust(top=0.85)
