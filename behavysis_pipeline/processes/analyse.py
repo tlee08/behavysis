@@ -286,7 +286,7 @@ class Analyse:
             fbf_fp = os.path.join(out_dir, "fbf", f"{name}.feather")
             DFIOMixin.write_feather(analysis_df, fbf_fp)
             # Generating scatterplot
-            plot_fp = os.path.join(out_dir, "scatter_plot", f"{name}.png")
+            plot_fp = os.path.join(out_dir, "scatter_plot", f"{name}_{roi_name}.png")
             AnalyseMixin.make_location_scatterplot(
                 res_df, roi_corners_df, plot_fp, f_name_i
             )
