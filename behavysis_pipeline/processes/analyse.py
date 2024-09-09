@@ -292,7 +292,7 @@ class Analyse:
             pd.DataFrame(
                 analysis_df[i].apply(lambda x: "-".join(x.index[x == 1]), axis=1),
                 columns=pd.MultiIndex.from_tuples(
-                    ((i, "roi")), names=DFIOMixin.enum_to_list(AnalysisCN)
+                    [(i, "roi")], names=DFIOMixin.enum_to_list(AnalysisCN)
                 ),
             )
             for i in indivs
