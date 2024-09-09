@@ -239,7 +239,7 @@ class Analyse:
         # Getting indivs list
         indivs, _ = KeypointsMixin.get_headings(dlc_df)
         # Making analysis_df
-        analysis_df = AnalyseMixin.init_df(dlc_df.index)
+        analysis_df_ls = []
         # For each roi, calculate the in-roi status of the subject
         idx = pd.IndexSlice
         for configs_filt in configs_filt_ls:
@@ -275,22 +275,23 @@ class Analyse:
                 )
             # Getting the (x, y, in-roi) df
             res_df = AnalyseMixin.pt_in_roi_df(dlc_df, roi_corners_df, indivs, bpts)
-            analysis_df.loc[:, idx[:, f"roi_{roi_name}"]] = res_df.loc[
-                :, idx[:, "in_roi"]
-            ]
+            # Changing column MultiIndex names
+            res_df.columns = res_df.columns.set_levels(
+                ["x", "y", f"in_roi_{roi_name}"], level=AnalysisCN.MEASURES.value
+            )
+            # Saving to analysis_df list
+            analysis_df_ls.append(res_df.loc[:, idx[:, f"in_roi_{roi_name}"]])
+        # Concatenating all analysis_df_ls
+        analysis_df = pd.concat(analysis_df_ls, axis=1)
         # Saving analysis_df
         fbf_fp = os.path.join(out_dir, "fbf", f"{name}.feather")
         DFIOMixin.write_feather(analysis_df, fbf_fp)
         # Generating scatterplot
         # First getting scatter_in_roi columns
-        scatter_df_ls = []
-        for i in indivs:
-            for j in analysis_df.columns:
-                scatter_df_ls.append(
-                    analysis_df[(i, j)].apply(
-                        lambda x: "-".join(x.index[x == 1]), axis=1
-                    )
-                )
+        scatter_df_ls = [
+            analysis_df[i].apply(lambda x: "-".join(x.index[x == 1]), axis=1)
+            for i in indivs
+        ]
         # Concatenating, and including most recent x, y columns
         # TODO: any way to include all different "x", "y" to use?
         scatter_df = pd.concat(
