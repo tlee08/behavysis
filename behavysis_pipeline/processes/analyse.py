@@ -286,7 +286,7 @@ class Analyse:
         # Concatenating all analysis_df_ls and roi_corners_df_ls
         analysis_df = pd.concat(analysis_df_ls, axis=1)
         roi_c_df = pd.concat(roi_c_df_ls, keys=range(len(roi_c_df_ls))).reset_index(
-            names="group"
+            names=["group"]
         )
         # Saving analysis_df
         fbf_fp = os.path.join(out_dir, "fbf", f"{name}.feather")
