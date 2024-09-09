@@ -22,7 +22,7 @@ import os
 
 import numpy as np
 import pandas as pd
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from behavysis_core.constants import AnalysisCN, IndivColumns
 from behavysis_core.data_models.experiment_configs import ExperimentConfigs
@@ -621,6 +621,8 @@ class Analyse:
 class Model_speed(BaseModel):
     """_summary_"""
 
+    model_config = ConfigDict(extra="forbid")
+
     smoothing_sec: float | str
     bodyparts: list[str] | str
 
@@ -628,12 +630,16 @@ class Model_speed(BaseModel):
 class Model_social_distance(BaseModel):
     """_summary_"""
 
+    model_config = ConfigDict(extra="forbid")
+
     smoothing_sec: float | str
     bodyparts: list[str] | str
 
 
 class Model_freezing(BaseModel):
     """_summary_"""
+
+    model_config = ConfigDict(extra="forbid")
 
     window_sec: float | str
     thresh_mm: float | str
@@ -643,6 +649,8 @@ class Model_freezing(BaseModel):
 
 class Model_in_roi(BaseModel):
     """_summary_"""
+
+    model_config = ConfigDict(extra="forbid")
 
     roi_name: str
     thresh_mm: float | str
