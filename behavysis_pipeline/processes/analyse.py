@@ -288,23 +288,13 @@ class Analyse:
         DFIOMixin.write_feather(analysis_df, fbf_fp)
         # Generating scatterplot
         # First getting scatter_in_roi columns
-        scatter_df_ls = [
-            pd.DataFrame(
-                analysis_df[i].apply(lambda x: "-".join(x.index[x == 1]), axis=1),
-                columns=pd.MultiIndex.from_tuples(
-                    [(i, "roi")], names=DFIOMixin.enum_to_list(AnalysisCN)
-                ),
+        # TODO: any way to include all different "x", "y" to use, rather
+        # than the last res_df?
+        scatter_df = res_df.loc[:, idx[:, ["x", "y"]]]
+        for i in indivs:
+            scatter_df[(i, "roi")] = analysis_df[i].apply(
+                lambda x: "-".join(x.index[x == 1]), axis=1
             )
-            for i in indivs
-        ]
-        # Concatenating, and including most recent x, y columns
-        # TODO: any way to include all different "x", "y" to use?
-        scatter_df = pd.concat(
-            [res_df.loc[:, idx[:, ["x", "y"]]], *scatter_df_ls], axis=1
-        )
-        scatter_df.columns = pd.MultiIndex.from_tuples(
-            scatter_df.columns, names=DFIOMixin.enum_to_list(AnalysisCN)
-        )
         print(scatter_df)
         # Making and saving scatterplot
         plot_fp = os.path.join(out_dir, "scatter_plot", f"{name}.png")
