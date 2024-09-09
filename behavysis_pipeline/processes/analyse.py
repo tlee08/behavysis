@@ -297,6 +297,7 @@ class Analyse:
         scatter_df = pd.concat(
             [res_df.loc[:, idx[:, ["x", "y"]]], *scatter_df_ls], axis=1
         )
+        print(scatter_df)
         # Making and saving scatterplot
         plot_fp = os.path.join(out_dir, "scatter_plot", f"{name}.png")
         AnalyseMixin.make_location_scatterplot(
