@@ -144,7 +144,7 @@ class AnalyseMixin:
             col="individuals",
             kind="scatter",
             col_wrap=2,
-            height=4,
+            height=8,
             aspect=0.5 * analysis_stacked_df["individuals"].nunique(),
             alpha=0.8,
             linewidth=0,
@@ -156,10 +156,9 @@ class AnalyseMixin:
         g.axes[0].invert_yaxis()
         # Adding region definition (from roi_df) to the plot
         roi_c_df = pd.concat(
-            [roi_c_df, roi_c_df.groupby("group").first()], axis=0, ignore_index=True
+            [roi_c_df, roi_c_df.groupby("group").first()], ignore_index=True
         )
-        # first_row = pd.DataFrame(roi_c_df.iloc[0]).T
-        # roi_c_df = pd.concat((roi_c_df, first_row), ignore_index=True)
+        print(roi_c_df)
         for ax in g.axes:
             sns.lineplot(
                 data=roi_c_df,
