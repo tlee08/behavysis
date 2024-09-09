@@ -156,7 +156,8 @@ class AnalyseMixin:
         g.axes[0].invert_yaxis()
         # Adding region definition (from roi_df) to the plot
         roi_c_df = pd.concat(
-            [roi_c_df, roi_c_df.groupby("group").first()], ignore_index=True
+            [roi_c_df, roi_c_df.groupby("group").first().reset_index()],
+            ignore_index=True,
         )
         print(roi_c_df)
         print(roi_c_df.groupby("group").first())
