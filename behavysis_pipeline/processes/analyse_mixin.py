@@ -213,30 +213,6 @@ class AnalyseMixin:
         # Odd number of crossings means point is in region
         return crossings % 2 == 1
 
-    @staticmethod
-    def pt_in_roi_df(
-        dlc_df: pd.DataFrame, roi_df: pd.DataFrame, indivs: list[str], bpts: list[str]
-    ) -> pd.DataFrame:
-        """__summary__"""
-        res_df = AnalyseMixin.init_df(dlc_df.index)
-        idx = pd.IndexSlice
-        # Making x and y aliases
-        x = Coords.X.value
-        y = Coords.Y.value
-        # For each individual, getting whether they are in the ROI (in each frame)
-        for indiv in indivs:
-            # Getting average body center (x, y) for each individual
-            res_df[(indiv, x)] = dlc_df.loc[:, idx[indiv, bpts, x]].mean(axis=1).values
-            res_df[(indiv, y)] = dlc_df.loc[:, idx[indiv, bpts, y]].mean(axis=1).values
-            # Determining if the indiv body center is in the ROI
-            res_df[(indiv, "in_roi")] = (
-                res_df[indiv]
-                .apply(lambda pt: AnalyseMixin.pt_in_roi(pt, roi_df), axis=1)
-                .astype(np.int8)
-            )
-        # Returning res_df with ROI for each individual
-        return res_df
-
 
 class AggAnalyse:
     """__summary__"""

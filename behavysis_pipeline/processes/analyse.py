@@ -24,7 +24,7 @@ import numpy as np
 import pandas as pd
 from pydantic import BaseModel, ConfigDict
 
-from behavysis_core.constants import AnalysisCN, IndivColumns
+from behavysis_core.constants import AnalysisCN, Coords, IndivColumns
 from behavysis_core.data_models.experiment_configs import ExperimentConfigs
 from behavysis_core.mixins.behav_mixin import BehavMixin
 from behavysis_core.mixins.df_io_mixin import DFIOMixin
@@ -40,174 +40,6 @@ from .analyse_mixin import AggAnalyse, AnalyseMixin
 
 class Analyse:
     """__summary__"""
-
-    # @staticmethod
-    # def thigmotaxis(
-    #     dlc_fp: str,
-    #     analysis_dir: str,
-    #     configs_fp: str,
-    # ) -> str:
-    #     """
-    #     Determines the frames when the subject is in thigmotaxis.
-
-    #     Takes DLC data as input and returns the following analysis output:
-
-    #     - A feather file with the ROI data columns for each video frame (row)
-    #     - A png of the scatterplot of the subject's x-y position in every frame,
-    #     coloured by whether it was in ROI.
-    #     - A png of the bivariate histogram distribution of the subject's x-y position
-    #     for all frames, coloured by whether it was in ROI.
-    #     """
-    #     outcome = ""
-    #     name = IOMixin.get_name(dlc_fp)
-    #     f_name = Analyse.thigmotaxis.__name__
-    #     out_dir = os.path.join(analysis_dir, f_name)
-    #     # Getting necessary config parameters
-    #     configs = ExperimentConfigs.read_json(configs_fp)
-    #     fps, _, _, px_per_mm, bins_ls, cbins_ls = AnalyseMixin.get_configs(configs)
-    #     configs_filt = Model_in_roi(**configs.user.analyse.thigmotaxis)
-    #     bpts = configs.get_ref(configs_filt.bodyparts)
-    #     thresh_mm = configs.get_ref(configs_filt.thresh_mm)
-    #     tl = configs.get_ref(configs_filt.roi_top_left)
-    #     tr = configs.get_ref(configs_filt.roi_top_right)
-    #     br = configs.get_ref(configs_filt.roi_bottom_right)
-    #     bl = configs.get_ref(configs_filt.roi_bottom_left)
-    #     # Calculating more parameters
-    #     thresh_px = thresh_mm / px_per_mm
-
-    #     # Loading in dataframe
-    #     dlc_df = KeypointsMixin.clean_headings(KeypointsMixin.read_feather(dlc_fp))
-    #     # Checking body-centre bodypart exists
-    #     KeypointsMixin.check_bpts_exist(dlc_df, bpts)
-    #     # Getting indivs list
-    #     indivs, _ = KeypointsMixin.get_headings(dlc_df)
-
-    #     # Getting average corner coordinates. Assumes arena does not move.
-    #     tl = dlc_df[(IndivColumns.SINGLE.value, tl)].mean()
-    #     tr = dlc_df[(IndivColumns.SINGLE.value, tr)].mean()
-    #     br = dlc_df[(IndivColumns.SINGLE.value, br)].mean()
-    #     bl = dlc_df[(IndivColumns.SINGLE.value, bl)].mean()
-    #     # Making roi_df of corners (with the thresh_px buffer)
-    #     roi_df = pd.DataFrame(
-    #         [
-    #             (tl["x"] + thresh_px, tl["y"] + thresh_px),
-    #             (tr["x"] - thresh_px, tr["y"] + thresh_px),
-    #             (br["x"] - thresh_px, br["y"] - thresh_px),
-    #             (bl["x"] + thresh_px, bl["y"] - thresh_px),
-    #         ],
-    #         columns=["x", "y"],
-    #     )
-    #     # Getting the (x, y, in-roi) df
-    #     idx = pd.IndexSlice
-    #     res_df = AnalyseMixin.pt_in_roi_df(dlc_df, roi_df, indivs, bpts)
-    #     # Changing column MultiIndex names
-    #     res_df.columns = res_df.columns.set_levels(["x", "y", f_name], level=1)
-    #     # Setting thigmotaxis as OUTSIDE region (negative)
-    #     res_df.loc[:, idx[:, f_name]] = (res_df.loc[:, idx[:, f_name]] == 0).astype(
-    #         np.int8
-    #     )
-    #     # Getting analysis_df
-    #     analysis_df = res_df.loc[:, idx[:, f_name]]
-    #     # Saving analysis_df
-    #     fbf_fp = os.path.join(out_dir, "fbf", f"{name}.feather")
-    #     DFIOMixin.write_feather(analysis_df, fbf_fp)
-
-    #     # Generating scatterplot
-    #     plot_fp = os.path.join(out_dir, "scatter_plot", f"{name}.png")
-    #     AnalyseMixin.make_location_scatterplot(res_df, roi_df, plot_fp, f_name)
-
-    #     # Summarising and binning analysis_df
-    #     AggAnalyse.summary_binned_behavs(
-    #         analysis_df,
-    #         out_dir,
-    #         name,
-    #         fps,
-    #         bins_ls,
-    #         cbins_ls,
-    #     )
-    #     return outcome
-
-    # @staticmethod
-    # def center_crossing(
-    #     dlc_fp: str,
-    #     analysis_dir: str,
-    #     configs_fp: str,
-    # ) -> str:
-    #     """
-    #     Determines the frames when the subject is in center.
-
-    #     Takes DLC data as input and returns the following analysis output:
-
-    #     - A feather file with the ROI data columns for each video frame (row)
-    #     - A png of the scatterplot of the subject's x-y position in every frame, coloured by whether
-    #     it was in ROI.
-    #     - A png of the bivariate histogram distribution of the subject's x-y position for all
-    #     frames, coloured by whether it was in ROI.
-    #     """
-    #     outcome = ""
-    #     name = IOMixin.get_name(dlc_fp)
-    #     f_name = Analyse.center_crossing.__name__
-    #     out_dir = os.path.join(analysis_dir, f_name)
-    #     # Getting necessary config parameters
-    #     configs = ExperimentConfigs.read_json(configs_fp)
-    #     fps, _, _, px_per_mm, bins_ls, cbins_ls = AnalyseMixin.get_configs(configs)
-    #     configs_filt = Model_in_roi(**configs.user.analyse.center_crossing)
-    #     bpts = configs.get_ref(configs_filt.bodyparts)
-    #     thresh_mm = configs.get_ref(configs_filt.thresh_mm)
-    #     tl = configs.get_ref(configs_filt.roi_top_left)
-    #     tr = configs.get_ref(configs_filt.roi_top_right)
-    #     bl = configs.get_ref(configs_filt.roi_bottom_left)
-    #     br = configs.get_ref(configs_filt.roi_bottom_right)
-    #     # Calculating more parameters
-    #     thresh_px = thresh_mm / px_per_mm
-
-    #     # Loading in dataframe
-    #     dlc_df = KeypointsMixin.clean_headings(KeypointsMixin.read_feather(dlc_fp))
-    #     # Checking body-centre bodypart exists
-    #     KeypointsMixin.check_bpts_exist(dlc_df, bpts)
-    #     # Getting indivs list
-    #     indivs, _ = KeypointsMixin.get_headings(dlc_df)
-
-    #     # Getting average corner coordinates. Assumes arena does not move.
-    #     tl = dlc_df[(IndivColumns.SINGLE.value, tl)].mean()
-    #     tr = dlc_df[(IndivColumns.SINGLE.value, tr)].mean()
-    #     bl = dlc_df[(IndivColumns.SINGLE.value, bl)].mean()
-    #     br = dlc_df[(IndivColumns.SINGLE.value, br)].mean()
-    #     # Making roi_df of corners (with the thresh_px buffer)
-    #     roi_df = pd.DataFrame(
-    #         [
-    #             (tl["x"] + thresh_px, tl["y"] + thresh_px),
-    #             (tr["x"] - thresh_px, tr["y"] + thresh_px),
-    #             (br["x"] - thresh_px, br["y"] - thresh_px),
-    #             (bl["x"] + thresh_px, bl["y"] - thresh_px),
-    #         ],
-    #         columns=["x", "y"],
-    #     )
-    #     # Getting the (x, y, in-roi) df
-    #     idx = pd.IndexSlice
-    #     res_df = AnalyseMixin.pt_in_roi_df(dlc_df, roi_df, indivs, bpts)
-    #     # Changing column MultiIndex names
-    #     res_df.columns = res_df.columns.set_levels(["x", "y", f_name], level=1)
-    #     # Getting analysis_df
-    #     analysis_df = res_df.loc[:, idx[:, f_name]]
-    #     # Saving analysis_df
-    #     fbf_fp = os.path.join(out_dir, "fbf", f"{name}.feather")
-    #     DFIOMixin.write_feather(analysis_df, fbf_fp)
-
-    #     # Generating scatterplot
-    #     plot_fp = os.path.join(out_dir, "scatter_plot", f"{name}.png")
-    #     AnalyseMixin.make_location_scatterplot(res_df, roi_df, plot_fp, f_name)
-
-    #     # Summarising and binning analysis_df
-    #     AggAnalyse.summary_binned_behavs(
-    #         analysis_df,
-    #         out_dir,
-    #         name,
-    #         fps,
-    #         bins_ls,
-    #         cbins_ls,
-    #     )
-    #     return outcome
 
     @staticmethod
     def in_roi(
@@ -242,6 +74,8 @@ class Analyse:
         analysis_df_ls = []
         roi_c_df_ls = []
         # For each roi, calculate the in-roi status of the subject
+        x = Coords.X.value
+        y = Coords.Y.value
         idx = pd.IndexSlice
         for configs_filt in configs_filt_ls:
             # Getting necessary config parameters
@@ -265,18 +99,30 @@ class Analyse:
             for i in roi_c_df.index:
                 # Calculating angle from point to centre
                 theta = np.arctan2(
-                    roi_c_df.loc[i, "y"] - roi_center["y"],
-                    roi_c_df.loc[i, "x"] - roi_center["x"],
+                    roi_c_df.loc[i, y] - roi_center[y],
+                    roi_c_df.loc[i, x] - roi_center[x],
                 )
                 # Getting x, y distances so point is `thresh_px` closer to center
-                roi_c_df.loc[i, "x"] = roi_c_df.loc[i, "x"] - (
-                    thresh_px * np.cos(theta)
+                roi_c_df.loc[i, x] = roi_c_df.loc[i, x] - (thresh_px * np.cos(theta))
+                roi_c_df.loc[i, y] = roi_c_df.loc[i, y] - (thresh_px * np.sin(theta))
+            # Making the res_df
+            res_df = AnalyseMixin.init_df(dlc_df.index)
+            # For each individual, getting the in-roi status
+            for indiv in indivs:
+                # Getting average body center (x, y) for each individual
+                res_df[(indiv, x)] = (
+                    dlc_df.loc[:, idx[indiv, bpts, x]].mean(axis=1).values  # type: ignore
                 )
-                roi_c_df.loc[i, "y"] = roi_c_df.loc[i, "y"] - (
-                    thresh_px * np.sin(theta)
+                res_df[(indiv, y)] = (
+                    dlc_df.loc[:, idx[indiv, bpts, y]].mean(axis=1).values  # type: ignore
                 )
-            # Getting the (x, y, in-roi) df
-            res_df = AnalyseMixin.pt_in_roi_df(dlc_df, roi_c_df, indivs, bpts)
+                # Determining if the indiv body center is in the ROI
+                res_df[(indiv, "in_roi")] = (
+                    res_df[indiv]
+                    .apply(lambda pt: AnalyseMixin.pt_in_roi(pt, roi_c_df), axis=1)
+                    .astype(np.int8)
+                )
+            # Inverting in_roi status if is_in is False
             if not is_in:
                 res_df.loc[:, idx[:, "in_roi"]] = ~res_df.loc[:, idx[:, "in_roi"]]  # type: ignore
             # Changing column MultiIndex names
