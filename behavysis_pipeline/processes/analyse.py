@@ -291,7 +291,7 @@ class Analyse:
         scatter_df_ls = [
             pd.DataFrame(
                 analysis_df[i].apply(lambda x: "-".join(x.index[x == 1]), axis=1),
-                index=pd.MultiIndex.from_tuples(
+                columns=pd.MultiIndex.from_tuples(
                     ((i, "roi")), names=DFIOMixin.enum_to_list(AnalysisCN)
                 ),
             )
