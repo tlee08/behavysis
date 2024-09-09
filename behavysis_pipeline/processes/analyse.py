@@ -282,12 +282,21 @@ class Analyse:
         fbf_fp = os.path.join(out_dir, "fbf", f"{name}.feather")
         DFIOMixin.write_feather(analysis_df, fbf_fp)
         # Generating scatterplot
-        scatter_df = res_df.loc[:, idx[:, ["x", "y"]]]
+        # First getting scatter_in_roi columns
+        scatter_df_ls = []
         for i in indivs:
             for j in analysis_df.columns:
-                scatter_df[(i, "roi")] = analysis_df[(i, j)].apply(
-                    lambda x: "-".join(x.index[x == 1]), axis=1
+                scatter_df_ls.append(
+                    analysis_df[(i, j)].apply(
+                        lambda x: "-".join(x.index[x == 1]), axis=1
+                    )
                 )
+        # Concatenating, and including most recent x, y columns
+        # TODO: any way to include all different "x", "y" to use?
+        scatter_df = pd.concat(
+            [res_df.loc[:, idx[:, ["x", "y"]]], *scatter_df_ls], axis=1
+        )
+        # Making and saving scatterplot
         plot_fp = os.path.join(out_dir, "scatter_plot", f"{name}.png")
         AnalyseMixin.make_location_scatterplot(
             scatter_df, roi_corners_df, plot_fp, "roi"
