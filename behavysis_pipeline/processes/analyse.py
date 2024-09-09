@@ -240,6 +240,7 @@ class Analyse:
         indivs, _ = KeypointsMixin.get_headings(dlc_df)
         # Making analysis_df
         analysis_df_ls = []
+        roi_c_df_ls = []
         # For each roi, calculate the in-roi status of the subject
         idx = pd.IndexSlice
         for configs_filt in configs_filt_ls:
@@ -255,34 +256,38 @@ class Analyse:
             KeypointsMixin.check_bpts_exist(dlc_df, bpts)
             KeypointsMixin.check_bpts_exist(dlc_df, roi_corners)
             # Getting average corner coordinates. Assumes arena does not move.
-            roi_corners_df = pd.DataFrame(
+            roi_c_df = pd.DataFrame(
                 [dlc_df[(IndivColumns.SINGLE.value, pt)].mean() for pt in roi_corners]
             ).drop(columns=["likelihood"])
             # Adjusting x-y to have a distance dilation/erosion from the points themselves
-            roi_center = roi_corners_df.mean()
-            for i in roi_corners_df.index:
+            roi_center = roi_c_df.mean()
+            for i in roi_c_df.index:
                 # Calculating angle from point to centre
                 theta = np.arctan2(
-                    roi_corners_df.loc[i, "y"] - roi_center["y"],
-                    roi_corners_df.loc[i, "x"] - roi_center["x"],
+                    roi_c_df.loc[i, "y"] - roi_center["y"],
+                    roi_c_df.loc[i, "x"] - roi_center["x"],
                 )
                 # Getting x, y distances so point is `thresh_px` closer to center
-                roi_corners_df.loc[i, "x"] = roi_corners_df.loc[i, "x"] - (
+                roi_c_df.loc[i, "x"] = roi_c_df.loc[i, "x"] - (
                     thresh_px * np.cos(theta)
                 )
-                roi_corners_df.loc[i, "y"] = roi_corners_df.loc[i, "y"] - (
+                roi_c_df.loc[i, "y"] = roi_c_df.loc[i, "y"] - (
                     thresh_px * np.sin(theta)
                 )
             # Getting the (x, y, in-roi) df
-            res_df = AnalyseMixin.pt_in_roi_df(dlc_df, roi_corners_df, indivs, bpts)
+            res_df = AnalyseMixin.pt_in_roi_df(dlc_df, roi_c_df, indivs, bpts)
             # Changing column MultiIndex names
             res_df.columns = res_df.columns.set_levels(
                 ["x", "y", f"in_roi_{roi_name}"], level=AnalysisCN.MEASURES.value
             )
-            # Saving to analysis_df list
+            # Saving to analysis_df and roi_corners_df list
             analysis_df_ls.append(res_df.loc[:, idx[:, f"in_roi_{roi_name}"]])
-        # Concatenating all analysis_df_ls
+            roi_c_df_ls.append(roi_c_df)
+        # Concatenating all analysis_df_ls and roi_corners_df_ls
         analysis_df = pd.concat(analysis_df_ls, axis=1)
+        roi_c_df = pd.concat(roi_c_df_ls, keys=range(len(roi_c_df_ls))).reset_index(
+            names="group"
+        )
         # Saving analysis_df
         fbf_fp = os.path.join(out_dir, "fbf", f"{name}.feather")
         DFIOMixin.write_feather(analysis_df, fbf_fp)
@@ -295,12 +300,9 @@ class Analyse:
             scatter_df[(i, "roi")] = analysis_df[i].apply(
                 lambda x: "-".join(x.index[x == 1]), axis=1
             )
-        print(scatter_df)
         # Making and saving scatterplot
         plot_fp = os.path.join(out_dir, "scatter_plot", f"{name}.png")
-        AnalyseMixin.make_location_scatterplot(
-            scatter_df, roi_corners_df, plot_fp, "roi"
-        )
+        AnalyseMixin.make_location_scatterplot(scatter_df, roi_c_df, plot_fp, "roi")
         # Summarising and binning analysis_df
         AggAnalyse.summary_binned_behavs(
             analysis_df,

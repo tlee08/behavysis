@@ -127,7 +127,7 @@ class AnalyseMixin:
 
     @staticmethod
     def make_location_scatterplot(
-        analysis_df: pd.DataFrame, roi_df: pd.DataFrame, out_fp, measure: str
+        analysis_df: pd.DataFrame, roi_c_df: pd.DataFrame, out_fp, measure: str
     ):
         """
         Expects analysis_df index levels to be (frame,),
@@ -155,14 +155,18 @@ class AnalyseMixin:
         # Invert the y axis
         g.axes[0].invert_yaxis()
         # Adding region definition (from roi_df) to the plot
-        first_row = pd.DataFrame(roi_df.iloc[0]).T
-        roi_df = pd.concat((roi_df, first_row), ignore_index=True)
+        roi_c_df = pd.concat(
+            [roi_c_df, roi_c_df.groupby("group").first()], axis=0, ignore_index=True
+        )
+        # first_row = pd.DataFrame(roi_c_df.iloc[0]).T
+        # roi_c_df = pd.concat((roi_c_df, first_row), ignore_index=True)
         for ax in g.axes:
             sns.lineplot(
-                data=roi_df,
+                data=roi_c_df,
                 x=Coords.X.value,
                 y=Coords.Y.value,
-                color=(1, 0, 0),
+                hue="group",
+                # color=(1, 0, 0),
                 linewidth=1,
                 marker="+",
                 markeredgecolor=(1, 0, 0),
