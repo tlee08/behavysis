@@ -289,13 +289,21 @@ class Analyse:
         # Generating scatterplot
         # First getting scatter_in_roi columns
         scatter_df_ls = [
-            analysis_df[i].apply(lambda x: "-".join(x.index[x == 1]), axis=1)
+            pd.DataFrame(
+                analysis_df[i].apply(lambda x: "-".join(x.index[x == 1]), axis=1),
+                index=pd.MultiIndex.from_tuples(
+                    ((i, "roi")), names=DFIOMixin.enum_to_list(AnalysisCN)
+                ),
+            )
             for i in indivs
         ]
         # Concatenating, and including most recent x, y columns
         # TODO: any way to include all different "x", "y" to use?
         scatter_df = pd.concat(
             [res_df.loc[:, idx[:, ["x", "y"]]], *scatter_df_ls], axis=1
+        )
+        scatter_df.columns = pd.MultiIndex.from_tuples(
+            scatter_df.columns, names=DFIOMixin.enum_to_list(AnalysisCN)
         )
         print(scatter_df)
         # Making and saving scatterplot
