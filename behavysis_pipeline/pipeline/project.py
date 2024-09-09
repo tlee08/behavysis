@@ -782,15 +782,14 @@ class Project:
                 total_df = pd.concat(df_ls, keys=names_ls, names=["experiment"], axis=0)
                 DFIOMixin.write_feather(total_df, out_fp)
 
-    def in_roi_comb(self):
+    def in_roi_comb(self) -> None:
         # Cleaning analysis for ONLY multi-ROI
         analysis_dir = os.path.join(self.root_dir, "8_analysis")
-        out_dir = os.path.join(self.root_dir, "8_analysis", "roi_combined")
+        out_dir = os.path.join(analysis_dir, "roi_combined")
         os.makedirs(out_dir, exist_ok=True)
         idx = pd.IndexSlice
         cols_to_keep = ["bout_dur_total", "bout_freq"]
         # For binned
-        # for i in ["30", "60", "120", "300", "custom"]:
         df_dict_ls = {}
         for i in [i for i in os.listdir(analysis_dir) if re.search("^in_roi_", i)]:
             analysis_subdir = os.path.join(analysis_dir, i)
