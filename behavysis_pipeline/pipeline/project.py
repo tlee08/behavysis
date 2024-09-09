@@ -781,3 +781,47 @@ class Project:
             if len(df_ls) > 0:
                 total_df = pd.concat(df_ls, keys=names_ls, names=["experiment"], axis=0)
                 DFIOMixin.write_feather(total_df, out_fp)
+
+    def in_roi_comb(self):
+        # Cleaning analysis for ONLY multi-ROI
+        analysis_dir = os.path.join(self.root_dir, "8_analysis")
+        out_dir = os.path.join(self.root_dir, "8_analysis", "roi_combined")
+        os.makedirs(out_dir, exist_ok=True)
+        idx = pd.IndexSlice
+        cols_to_keep = ["bout_dur_total", "bout_freq"]
+        # For binned
+        # for i in ["30", "60", "120", "300", "custom"]:
+        df_dict_ls = {}
+        for i in [i for i in os.listdir(analysis_dir) if re.search("^in_roi_", i)]:
+            analysis_subdir = os.path.join(analysis_dir, i)
+            # Getting binned dataframes
+            for j in os.listdir(analysis_subdir):
+                if re.search("^__ALL_binned_.*.feather$", i):
+                    # Reading
+                    df = pd.read_feather(os.path.join(analysis_subdir, j))
+                    # Selecting columns
+                    df = df.loc[:, idx[:, :, :, cols_to_keep]]
+                    if j not in df_dict_ls:
+                        df_dict_ls[j] = []
+                    # Saving to list
+                    df_dict_ls[j].append(df)
+        for i_k, i_v in df_dict_ls.items():
+            # Concatenating
+            df = pd.concat(i_v, axis=1)
+            # Grouping by experiment
+            df = df[natsorted(df.columns, key=lambda x: x[0])]
+            # Saving
+            df.to_feather(os.path.join(out_dir, i_k))
+        # For summary
+        df_ls = []
+        for j in [i for i in os.listdir(analysis_dir) if re.search("^in_roi_", i)]:
+            # Reading
+            df = pd.read_feather(os.path.join(analysis_dir, j, "__ALL_summary.feather"))
+            # Selecting columns
+            df = df[cols_to_keep]
+            # Saving to list
+            df_ls.append(df)
+        # Concatenating
+        df = pd.concat(df_ls)
+        # Saving
+        df.to_feather(os.path.join(out_dir, "__ALL_summary.feather"))
