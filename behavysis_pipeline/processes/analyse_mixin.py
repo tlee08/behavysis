@@ -159,8 +159,6 @@ class AnalyseMixin:
             [roi_c_df, roi_c_df.groupby("group").first().reset_index()],
             ignore_index=True,
         )
-        print(roi_c_df)
-        print(roi_c_df.groupby("group").first())
         for ax in g.axes:
             sns.lineplot(
                 data=roi_c_df,
