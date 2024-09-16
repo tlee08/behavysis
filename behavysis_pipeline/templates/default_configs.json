@@ -82,14 +82,14 @@
           "roi_name": "thigmo",
           "is_in": true,
           "thresh_mm": -5,
-          "roi_corners": ["TopLeft", "TopRight", "BottomRight", "BottomLeft"],
+          "roi_corners": "--corners",
           "bodyparts": "--bodyparts_front"
         },
         {
           "roi_name": "centre_crossing",
           "is_in": true,
           "thresh_mm": -20,
-          "roi_corners": ["TopLeft", "TopRight", "BottomRight", "BottomLeft"],
+          "roi_corners": "--corners",
           "bodyparts": "--bodyparts_front"
         }
       ],
@@ -130,10 +130,7 @@
       "TailBase1",
       "TailTip4"
     ],
-    "tl": "TopLeft",
-    "tr": "TopRight",
-    "bl": "BottomLeft",
-    "br": "BottomRight",
+    "corners": ["TopLeft", "TopRight", "BottomRight", "BottomLeft"],
     "min_window_frames": 2,
     "user_behavs": ["fight", "aggression"]
   }
