@@ -62,13 +62,17 @@ class AnalyseMixin:
         tuple[ float, float, float, float, list, list, ]
             _description_
         """
+        assert configs.auto.formatted_vid.fps
+        assert configs.auto.formatted_vid.width_px
+        assert configs.auto.formatted_vid.height_px
+        assert configs.auto.px_per_mm
         return (
-            configs.auto.formatted_vid.fps,
-            configs.auto.formatted_vid.width_px,
-            configs.auto.formatted_vid.height_px,
-            configs.auto.px_per_mm,
-            configs.get_ref(configs.user.analyse.bins_sec),
-            configs.get_ref(configs.user.analyse.custom_bins_sec),
+            float(configs.auto.formatted_vid.fps),
+            float(configs.auto.formatted_vid.width_px),
+            float(configs.auto.formatted_vid.height_px),
+            float(configs.auto.px_per_mm),
+            list(configs.get_ref(configs.user.analyse.bins_sec)),
+            list(configs.get_ref(configs.user.analyse.custom_bins_sec)),
         )
 
     @staticmethod
