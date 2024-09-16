@@ -102,9 +102,9 @@ class Analyse:
                     roi_c_df.loc[i, y] - roi_center[y],
                     roi_c_df.loc[i, x] - roi_center[x],
                 )
-                # Getting x, y distances so point is `thresh_px` closer to center
-                roi_c_df.loc[i, x] = roi_c_df.loc[i, x] - (thresh_px * np.cos(theta))
-                roi_c_df.loc[i, y] = roi_c_df.loc[i, y] - (thresh_px * np.sin(theta))
+                # Getting x, y distances so point is `thresh_px` padded (away) from center
+                roi_c_df.loc[i, x] = roi_c_df.loc[i, x] + (thresh_px * np.cos(theta))
+                roi_c_df.loc[i, y] = roi_c_df.loc[i, y] + (thresh_px * np.sin(theta))
             # Making the res_df
             res_df = AnalyseMixin.init_df(dlc_df.index)
             # For each individual, getting the in-roi status
@@ -126,7 +126,7 @@ class Analyse:
             if not is_in:
                 res_df.loc[:, idx[:, "in_roi"]] = ~res_df.loc[:, idx[:, "in_roi"]]  # type: ignore
             # Changing column MultiIndex names
-            res_df.columns = res_df.columns.set_levels(
+            res_df.columns = res_df.columns.set_levels(  # type: ignore
                 ["x", "y", f"in_roi_{roi_name}"], level=AnalysisCN.MEASURES.value
             )
             # Saving to analysis_df and roi_corners_df list

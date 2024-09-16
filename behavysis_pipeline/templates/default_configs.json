@@ -77,30 +77,22 @@
       }
     ],
     "analyse": {
-      "thigmotaxis": {
-        "thresh_mm": 50,
-        "roi_top_left": "--tl",
-        "roi_top_right": "--tr",
-        "roi_bottom_left": "--bl",
-        "roi_bottom_right": "--br",
-        "bodyparts": "--bodyparts-centre"
-      },
-      "center_crossing": {
-        "thresh_mm": 125,
-        "roi_top_left": "--tl",
-        "roi_top_right": "--tr",
-        "roi_bottom_left": "--bl",
-        "roi_bottom_right": "--br",
-        "bodyparts": "--bodyparts-centre"
-      },
-      "in_roi": {
-        "thresh_mm": 5,
-        "roi_top_left": "--tl",
-        "roi_top_right": "--tr",
-        "roi_bottom_left": "--bl",
-        "roi_bottom_right": "--br",
-        "bodyparts": ["Nose"]
-      },
+      "roi": [
+        {
+          "roi_name": "thigmo",
+          "is_in": true,
+          "thresh_mm": -5,
+          "roi_corners": ["TopLeft", "TopRight", "BottomRight", "BottomLeft"],
+          "bodyparts": "--bodyparts_front"
+        },
+        {
+          "roi_name": "centre_crossing",
+          "is_in": true,
+          "thresh_mm": -20,
+          "roi_corners": ["TopLeft", "TopRight", "BottomRight", "BottomLeft"],
+          "bodyparts": "--bodyparts_front"
+        }
+      ],
       "speed": {
         "smoothing_sec": 1,
         "bodyparts": "--bodyparts-centre"
