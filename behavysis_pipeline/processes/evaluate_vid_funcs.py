@@ -170,7 +170,7 @@ class Behavs(EvaluateVidFuncBase):
         cv2 frame array.
     """
 
-    behav = "behavs"
+    name = "behavs"
 
     def __init__(self, behavs_df, behavs_ls, **kwargs):
         self.behavs_df: pd.DataFrame = behavs_df
@@ -223,7 +223,30 @@ class Behavs(EvaluateVidFuncBase):
 
     @staticmethod
     def update_width(out_width):
+        # TODO: find a better way to update width (compounding x2 isn't sustainable for multiple funcs)
         return out_width * 2
+
+
+class Analysis(EvaluateVidFuncBase):
+    """
+    Annotates a text table in the top-left corner, with the format:
+    ```
+            actual pred
+    Behav_1   X     X
+    Behav_2         X
+    ...
+    """
+
+    name = "analysis"
+
+    def __init__(self, behavs_df, behavs_ls, **kwargs):
+        self.behavs_df: pd.DataFrame = behavs_df
+        self.behavs_ls = behavs_ls
+
+    def __call__(self, frame: np.ndarray, idx: int) -> np.ndarray:
+        # Initialising the behav frame panel
+        # TODO: use with pyqtgraph??
+        return frame
 
 
 class EvaluateVidFuncs(Enum):
@@ -232,3 +255,4 @@ class EvaluateVidFuncs(Enum):
     JOHANSSON = Johansson
     KEYPOINTS = Keypoints
     BEHAVS = Behavs
+    ANALYSIS = Analysis
