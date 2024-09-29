@@ -2,7 +2,7 @@ import os
 
 from behavysis_classifier import BehavClassifier
 from behavysis_core.data_models.experiment_configs import ExperimentConfigs
-from behavysis_core.mixins.behav_mixin import BehavMixin
+from behavysis_core.mixins.behav_df_mixin import BehavDfMixin
 from behavysis_core.mixins.df_io_mixin import DFIOMixin
 from behavysis_core.mixins.io_mixin import IOMixin
 
@@ -38,7 +38,7 @@ class Export:
     def predbehav_2_scoredbehav(
         src_fp: str, out_fp: str, configs_fp: str, overwrite: bool
     ) -> str:
-        """__summary__"""
+        """ """
         # TODO: use this in 6_pred_behavs
         # Reading the configs file
         configs = ExperimentConfigs.read_json(configs_fp)
@@ -51,9 +51,9 @@ class Export:
             for model in models_ls
         }
         # Reading file
-        in_df = BehavMixin.read_feather(src_fp)
+        in_df = BehavDfMixin.read_feather(src_fp)
         # Making the output df (with all user_behav outcome columns)
-        out_df = BehavMixin.include_outcome_behavs(in_df, behav_outcomes)
+        out_df = BehavDfMixin.include_outcome_behavs(in_df, behav_outcomes)
         # Writing file
         DFIOMixin.write_feather(out_df, out_fp)
         # Returning outcome
@@ -69,7 +69,7 @@ class Export:
         start_frame = configs.get_ref(configs.auto.start_frame)
         stop_frame = configs.get_ref(configs.auto.stop_frame) + 1
         # Importing the boris file to the Behav df format
-        df = BehavMixin.import_boris_tsv(src_fp, behavs_ls, start_frame, stop_frame)
+        df = BehavDfMixin.import_boris_tsv(src_fp, behavs_ls, start_frame, stop_frame)
         # Writing file
         DFIOMixin.write_feather(df, out_fp)
         # Returning outcome

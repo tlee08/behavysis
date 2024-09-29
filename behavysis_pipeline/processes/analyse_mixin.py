@@ -27,7 +27,7 @@ import seaborn as sns
 
 from behavysis_core.constants import AggAnalysisCN, AnalysisCN, AnalysisIN, Coords
 from behavysis_core.data_models.experiment_configs import ExperimentConfigs
-from behavysis_core.mixins.behav_mixin import BehavMixin
+from behavysis_core.mixins.behav_df_mixin import BehavDfMixin
 from behavysis_core.mixins.df_io_mixin import DFIOMixin
 
 #####################################################################
@@ -93,9 +93,9 @@ class AnalyseMixin:
             _description_
         """
         return pd.DataFrame(
-            index=pd.Index(frame_vect, name=DFIOMixin.enum_to_list(AnalysisIN)[0]),
+            index=pd.Index(frame_vect, name=DFIOMixin.enum2tuple(AnalysisIN)[0]),
             columns=pd.MultiIndex.from_tuples(
-                (), names=DFIOMixin.enum_to_list(AnalysisCN)
+                (), names=DFIOMixin.enum2tuple(AnalysisCN)
             ),
         )
 
@@ -113,9 +113,9 @@ class AnalyseMixin:
         # Checking for null values
         assert not df.isnull().values.any(), "The dataframe contains null values. Be sure to run interpolate_points first."
         # Checking that the index levels are correct
-        DFIOMixin.check_df_index_names(df, DFIOMixin.enum_to_list(AnalysisIN))
+        DFIOMixin.check_df_index_names(df, DFIOMixin.enum2tuple(AnalysisIN))
         # Checking that the column levels are correct
-        DFIOMixin.check_df_column_names(df, DFIOMixin.enum_to_list(AnalysisCN))
+        DFIOMixin.check_df_column_names(df, DFIOMixin.enum2tuple(AnalysisCN))
 
     @staticmethod
     def read_feather(fp: str) -> pd.DataFrame:
@@ -292,7 +292,7 @@ class AggAnalyse:
             # Getting column vector of individual-measure
             vect = analysis_df[col]
             # Getting duration of each behav bout
-            bouts = BehavMixin.vect_2_bouts(vect == 1)["dur"]
+            bouts = BehavDfMixin.vect_2_bouts(vect == 1)["dur"]
             # Converting bouts duration from frames to seconds
             bouts = bouts / fps
             # Getting bout frequency (before it is overwritten if empty)
@@ -350,9 +350,9 @@ class AggAnalyse:
         grouped_df = analysis_df.groupby(bin_sec)
         binned_df = grouped_df.apply(
             lambda x: summary_func(x, fps)
-            .unstack(DFIOMixin.enum_to_list(AnalysisCN))
-            .reorder_levels(DFIOMixin.enum_to_list(AggAnalysisCN))
-            .sort_index(level=DFIOMixin.enum_to_list(AnalysisCN))
+            .unstack(DFIOMixin.enum2tuple(AnalysisCN))
+            .reorder_levels(DFIOMixin.enum2tuple(AggAnalysisCN))
+            .sort_index(level=DFIOMixin.enum2tuple(AnalysisCN))
         )
         binned_df.index.name = "bin_sec"
         # returning binned_df
@@ -369,7 +369,7 @@ class AggAnalyse:
         """
         # Making binned_df long
         binned_stacked_df = (
-            binned_df.stack(DFIOMixin.enum_to_list(AnalysisCN))[agg_column]
+            binned_df.stack(DFIOMixin.enum2tuple(AnalysisCN))[agg_column]
             .rename("value")
             .reset_index()
         )

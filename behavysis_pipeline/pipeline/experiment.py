@@ -76,7 +76,7 @@ class Experiment:
                 + f'Please specify a file that exists in "{root_dir}", in one of the'
                 + " following folder WITH the correct file extension name:\n"
                 + "    - "
-                + "\n    - ".join(DFIOMixin.enum_to_list(Folders))
+                + "\n    - ".join(DFIOMixin.enum2tuple(Folders))
             )
         self.name = name
         self.root_dir = os.path.abspath(root_dir)

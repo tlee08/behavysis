@@ -26,11 +26,12 @@ import os
 import re
 
 import pandas as pd
+
 from behavysis_core.constants import KeypointsCN, KeypointsIN
 from behavysis_core.data_models.experiment_configs import ExperimentConfigs
 from behavysis_core.mixins.df_io_mixin import DFIOMixin
 from behavysis_core.mixins.io_mixin import IOMixin
-from behavysis_core.mixins.keypoints_mixin import KeypointsMixin
+from behavysis_core.mixins.keypoints_df_mixin import KeypointsMixin
 from behavysis_core.mixins.subproc_mixin import SubprocMixin
 
 
@@ -204,8 +205,8 @@ def export_2_feather(name: str, in_dir: str, out_dir: str) -> str:
         # Reading the .h5 file
         df = pd.DataFrame(pd.read_hdf(name_fp))
         # Setting the column and index level names
-        df.index.names = DFIOMixin.enum_to_list(KeypointsIN)
-        df.columns.names = DFIOMixin.enum_to_list(KeypointsCN)
+        df.index.names = DFIOMixin.enum2tuple(KeypointsIN)
+        df.columns.names = DFIOMixin.enum2tuple(KeypointsCN)
         # Imputing na values with 0
         df = df.fillna(0)
         # Checking df

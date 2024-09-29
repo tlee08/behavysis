@@ -26,10 +26,10 @@ from pydantic import BaseModel, ConfigDict
 
 from behavysis_core.constants import AnalysisCN, Coords, IndivColumns
 from behavysis_core.data_models.experiment_configs import ExperimentConfigs
-from behavysis_core.mixins.behav_mixin import BehavMixin
+from behavysis_core.mixins.behav_df_mixin import BehavDfMixin
 from behavysis_core.mixins.df_io_mixin import DFIOMixin
 from behavysis_core.mixins.io_mixin import IOMixin
-from behavysis_core.mixins.keypoints_mixin import KeypointsMixin
+from behavysis_core.mixins.keypoints_df_mixin import KeypointsMixin
 
 from .analyse_mixin import AggAnalyse, AnalyseMixin
 
@@ -376,7 +376,7 @@ class Analyse:
             ).astype(np.int8)
 
             # Getting start, stop, and duration of each freezing behav bout
-            freezingbouts_df = BehavMixin.vect_2_bouts(
+            freezingbouts_df = BehavDfMixin.vect_2_bouts(
                 analysis_df[(indiv, f_name)] == 1
             )
             # For each freezing bout, if there is less than window_frames, tehn

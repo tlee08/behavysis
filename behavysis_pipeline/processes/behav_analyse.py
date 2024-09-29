@@ -24,7 +24,7 @@ import numpy as np
 
 from behavysis_core.constants import AnalysisCN, BehavCN, BehavColumns
 from behavysis_core.data_models.experiment_configs import ExperimentConfigs
-from behavysis_core.mixins.behav_mixin import BehavMixin
+from behavysis_core.mixins.behav_df_mixin import BehavDfMixin
 from behavysis_core.mixins.df_io_mixin import DFIOMixin
 from behavysis_core.mixins.io_mixin import IOMixin
 
@@ -52,7 +52,7 @@ class BehavAnalyse:
         configs = ExperimentConfigs.read_json(configs_fp)
         fps, _, _, _, bins_ls, cbins_ls = AnalyseMixin.get_configs(configs)
         # Loading in dataframe
-        behavs_df = BehavMixin.read_feather(behavs_fp)
+        behavs_df = BehavDfMixin.read_feather(behavs_fp)
         # Setting all na and -1 values to 0
         behavs_df = behavs_df.fillna(0).map(lambda x: np.maximum(0, x))
         # Getting the behaviour names and each user_behav for the behaviour
@@ -68,7 +68,7 @@ class BehavAnalyse:
         DFIOMixin.write_feather(behavs_df, fbf_fp)
         # Updating the column level names of behavs_df
         # (summary_binned_behavs only works this way)
-        behavs_df.columns.names = DFIOMixin.enum_to_list(AnalysisCN)
+        behavs_df.columns.names = DFIOMixin.enum2tuple(AnalysisCN)
         # Making the summary and binned dataframes
         AggAnalyse.summary_binned_behavs(
             behavs_df,

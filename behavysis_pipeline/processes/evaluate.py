@@ -27,13 +27,13 @@ Given the `out_dir`, we save the files to `out_dir/<func_name>/<exp_name>.<ext>`
 """
 
 import os
-from typing import Callable, Sequence
 
 import cv2
 import matplotlib.pyplot as plt
-import numpy as np
 import pandas as pd
 import seaborn as sns
+from tqdm import trange
+
 from behavysis_core.constants import (
     BehavCN,
     BehavColumns,
@@ -43,11 +43,14 @@ from behavysis_core.constants import (
     KeypointsCN,
 )
 from behavysis_core.data_models.experiment_configs import ExperimentConfigs
-from behavysis_core.mixins.behav_mixin import BehavMixin
+from behavysis_core.mixins.behav_df_mixin import BehavDfMixin
 from behavysis_core.mixins.diagnostics_mixin import DiagnosticsMixin
 from behavysis_core.mixins.io_mixin import IOMixin
-from behavysis_core.mixins.keypoints_mixin import KeypointsMixin
-from tqdm import trange
+from behavysis_core.mixins.keypoints_df_mixin import KeypointsMixin
+from behavysis_pipeline.processes.evaluate_vid_funcs import (
+    EvaluateVidFuncBase,
+    EvaluateVidFuncs,
+)
 
 
 class Evaluate:
@@ -149,7 +152,7 @@ class Evaluate:
         fps = configs.auto.formatted_vid.fps
 
         # Read the file
-        df = BehavMixin.read_feather(behavs_fp)
+        df = BehavDfMixin.read_feather(behavs_fp)
         # Making data-long ways
         df = (
             df.stack([BehavCN.BEHAVIOURS.value, BehavCN.OUTCOMES.value])
@@ -197,7 +200,6 @@ class Evaluate:
         all experiments. The DLC model's config.yaml filepath must be specified in the `config_path`
         parameter in the `user` section of the config file.
         """
-
         outcome = ""
         name = IOMixin.get_name(vid_fp)
         out_dir = os.path.join(out_dir, Evaluate.eval_vid.__name__)
@@ -217,11 +219,18 @@ class Evaluate:
         cmap = configs.get_ref(configs_filt.cmap)
 
         # Modifying dlc_df and making list of how to select dlc_df components to optimise processing
+        # Specifically:
+        # - Filtering out "process" columns
+        # - Rounding and converting to correct dtypes - "x" and "y" values are ints
+        # - Changing the columns MultiIndex to a single-level index. For speedup
+        # - Making the corresponding colours list for each bodypart instance (colours depend on indiv/bpt)
+        # Getting dlc df
         dlc_df = KeypointsMixin.clean_headings(KeypointsMixin.read_feather(dlc_fp))
         # Filtering out IndivColumns.PROCESS.value columns
         if IndivColumns.PROCESS.value in dlc_df.columns.unique("individuals"):
             dlc_df.drop(columns=IndivColumns.PROCESS.value, level="individuals")
         # Getting (indivs, bpts) MultiIndex
+        # TODO: make explicitly selecting (indivs, bpts) levels
         indivs_bpts_ls = dlc_df.columns.droplevel("coords").unique()
         # Rounding and converting to correct dtypes - "x" and "y" values are ints
         dlc_df = dlc_df.fillna(0)
@@ -240,19 +249,23 @@ class Evaluate:
             :, [2, 1, 0, 3]
         ]
 
+        # Modifying behavs_df to optimise processing
+        # Specifically:
+        # - Making sure all relevant behaviour outcome columns exist by imputing
+        # - Changing the columns MultiIndex to a single-level index. For speedup
         # Getting behavs df
         try:
-            behavs_df = BehavMixin.read_feather(behavs_fp)
+            behavs_df = BehavDfMixin.read_feather(behavs_fp)
         except FileNotFoundError:
             outcome += (
                 "WARNING: behavs file not found or could not be loaded."
                 + "Disregarding behaviour."
                 + "If you have run the behaviour classifier, please check this file.\n"
             )
-            behavs_df = BehavMixin.init_df(dlc_df.index)
+            behavs_df = BehavDfMixin.init_df(dlc_df.index)
         # Getting list of behaviours
         behavs_ls = behavs_df.columns.unique("behaviours")
-        # Making sure all relevant behaviour outcome columns exist
+        # Making sure all relevant behaviour outcome columns exist (imputing with 0 if not)
         for behav in behavs_ls:
             for i in BehavColumns:
                 i = i.value
@@ -264,35 +277,38 @@ class Evaluate:
         ]
 
         # MAKING ANNOTATED VIDEO
+        # Storing output vid dimensions
+        # as they can change depending on funcs_names
+        out_width = int(in_cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        out_height = int(in_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         # Settings the funcs for how to annotate the video
-        funcs: list[Callable[[np.ndarray, int], np.ndarray]] = list()
-        for f_name in funcs_names:
-            if f_name == "johansson":
-                outcome += f"Added {f_name} to video. \n"
-                funcs.append(lambda frame, i: annot_johansson(frame))
-            elif f_name == "keypoints":
-                outcome += f"Added {f_name} to video. \n"
+        funcs: list[EvaluateVidFuncBase] = list()
+        # NOTE: the order of the funcs is static (determined by EvaluateVidFuncs)
+        for i in EvaluateVidFuncs:
+            if i.value.name in funcs_names:
+                # If the func is in the list of funcs to run
+                # then init, add to the funcs list, and update dimensions
+                outcome += f"Added {i} to video. \n"
                 funcs.append(
-                    lambda frame, i: annot_keypoints(
-                        frame, dlc_df.loc[i], indivs_bpts_ls, colours, pcutoff, radius
+                    i.value(
+                        dlc_df=dlc_df,
+                        behavs_df=behavs_df,
+                        indivs_bpts_ls=indivs_bpts_ls,
+                        colours=colours,
+                        pcutoff=pcutoff,
+                        radius=radius,
+                        behavs_ls=behavs_ls,
                     )
                 )
-            elif f_name == "behavs":
-                outcome += f"Added {f_name} to video. \n"
-                funcs.append(
-                    lambda frame, i: annot_behav(frame, behavs_df.loc[i], behavs_ls)
-                )
-            else:
-                continue
+                out_width = i.value.update_width(out_width)
+                out_height = i.value.update_height(out_height)
         # Open the input video
         in_cap = cv2.VideoCapture(vid_fp)
         fps = in_cap.get(cv2.CAP_PROP_FPS)
-        width = int(in_cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        height = int(in_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         total_frames = int(in_cap.get(cv2.CAP_PROP_FRAME_COUNT))
         # Define the codec and create VideoWriter object
         out_cap = cv2.VideoWriter(
-            out_fp, cv2.VideoWriter_fourcc(*"mp4v"), fps, (width, height)
+            out_fp, cv2.VideoWriter_fourcc(*"mp4v"), fps, (out_width, out_height)
         )
         # Annotating each frame using the created functions
         outcome += annotate(in_cap, out_cap, funcs, total_frames)
@@ -306,7 +322,7 @@ class Evaluate:
 def annotate(
     in_cap: cv2.VideoCapture,
     out_cap: cv2.VideoWriter,
-    funcs: Sequence[Callable],
+    funcs: list[EvaluateVidFuncBase],
     n: int,
 ) -> str:
     """
@@ -331,10 +347,12 @@ def annotate(
     str
         Outcome string.
     """
+    # TODO: NOTE: The funcs themselves will modify the frame size.
+    # Not self-contained or modular but a workaround for now. Maybe have an enum for each func with frame params?
     outcome = ""
     # Annotating frames
     for i in trange(n):
-        # Reading next frame
+        # Reading next vid frame
         ret, frame = in_cap.read()
         if ret is False:
             break
@@ -348,117 +366,3 @@ def annotate(
         out_cap.write(frame)
     # Returning outcome string
     return outcome
-
-
-def annot_johansson(frame: np.ndarray) -> np.ndarray:
-    """
-    Making black frame, in the style of Johansson.
-    This means we see only the keypoints (i.e., what SimBA will see)
-
-    Parameters
-    ----------
-    frame : np.ndarray
-        cv2 frame array.
-
-    Returns
-    -------
-    np.ndarray
-        cv2 frame array.
-    """
-    return np.zeros(frame.shape, dtype=np.uint8)
-
-
-def annot_keypoints(
-    frame: np.ndarray,
-    row: pd.Series | pd.DataFrame,
-    indivs_bpts_ls: Sequence[tuple[str, str]],
-    colours: Sequence[tuple[float, float, float, float]],
-    pcutoff: float,
-    radius: int,
-) -> np.ndarray:
-    """
-    Adding the keypoints (given in `row`) to the frame.
-
-    Parameters
-    ----------
-    frame : np.ndarray
-        cv2 frame array.
-    row : pd.Series
-        row in DLC dataframe.
-    indivs_bpts_ls : Sequence[tuple[str, str]]
-        list of `(indiv, bpt)` tuples to include.
-    colours : Sequence[tuple[float, float, float, float]]
-        list of colour tuples, which correspond to each `indivs_bpts_ls` element.
-    pcutoff : float
-        _description_
-    radius : int
-        _description_
-
-    Returns
-    -------
-    np.ndarray
-        cv2 frame array.
-    """
-    # Making the bpts keypoints annot
-    for i, (indiv, bpt) in enumerate(indivs_bpts_ls):
-        if row[f"{indiv}_{bpt}_likelihood"] >= pcutoff:
-            cv2.circle(
-                frame,
-                (int(row[f"{indiv}_{bpt}_x"]), int(row[f"{indiv}_{bpt}_y"])),
-                radius=radius,
-                color=colours[i],
-                thickness=-1,
-            )
-    return frame
-
-
-def annot_behav(
-    frame: np.ndarray,
-    row: pd.Series,
-    behavs_ls: Sequence[str] | pd.Index,
-) -> np.ndarray:
-    """
-    Annotates a text table in the top-left corner, with the format:
-    ```
-            actual pred
-    Behav_1   X     X
-    Behav_2         X
-    ...
-    ```
-
-    Parameters
-    ----------
-    frame : np.ndarray
-        cv2 frame array.
-    row : pd.Series
-        row in scored_behavs dataframe.
-    behavs_ls : tuple[str]
-        list of behaviours to include.
-
-    Returns
-    -------
-    np.ndarray
-        cv2 frame array.
-    """
-    # colour = (3, 219, 252)  # Yellow
-    colour = (0, 0, 0)  # Black
-    # Making outcome headings
-    for j, outcome in enumerate((BehavColumns.PRED, BehavColumns.ACTUAL)):
-        outcome = outcome.value
-        x = 120 + j * 40
-        y = 50
-        cv2.putText(frame, outcome, (x, y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, colour, 2)
-    # Making behav rows
-    for i, behav in enumerate(behavs_ls):
-        x = 20
-        y = 100 + i * 30
-        # Annotating with label
-        cv2.putText(frame, behav, (x, y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, colour, 2)
-        for j, outcome in enumerate((BehavColumns.PRED, BehavColumns.ACTUAL)):
-            outcome = outcome.value
-            x = 120 + j * 40
-            if row[f"{behav}_{outcome}"] == 1:
-                cv2.putText(
-                    frame, "X", (x, y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, colour, 2
-                )
-    return frame
