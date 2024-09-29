@@ -149,7 +149,7 @@ class Evaluate:
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
         # configs_filt = configs.user.evaluate.behav_plot
-        fps = configs.auto.formatted_vid.fps
+        fps = float(configs.auto.formatted_vid.fps)
 
         # Read the file
         df = BehavDfMixin.read_feather(behavs_fp)
@@ -245,7 +245,7 @@ class Evaluate:
         # Making the corresponding colours list for each bodypart instance
         # (colours depend on indiv/bpt)
         colours_i, _ = pd.factorize(indivs_bpts_ls.get_level_values(colour_level))
-        colours = (plt.get_cmap(cmap)(colours_i / colours_i.max()) * 255)[
+        colours = (plt.cm.get_cmap(cmap)(colours_i / colours_i.max()) * 255)[
             :, [2, 1, 0, 3]
         ]
 
@@ -276,11 +276,17 @@ class Evaluate:
             f"{behav}_{outcome}" for behav, outcome in behavs_df.columns
         ]
 
-        # MAKING ANNOTATED VIDEO
+        # OPENING INPUT VIDEO
+        # Open the input video
+        in_cap = cv2.VideoCapture(vid_fp)
         # Storing output vid dimensions
         # as they can change depending on funcs_names
         out_width = int(in_cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         out_height = int(in_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        fps = in_cap.get(cv2.CAP_PROP_FPS)
+        total_frames = int(in_cap.get(cv2.CAP_PROP_FRAME_COUNT))
+
+        # MAKING ANNOTATED VIDEO
         # Settings the funcs for how to annotate the video
         funcs: list[EvaluateVidFuncBase] = list()
         # NOTE: the order of the funcs is static (determined by EvaluateVidFuncs)
@@ -302,67 +308,29 @@ class Evaluate:
                 )
                 out_width = i.value.update_width(out_width)
                 out_height = i.value.update_height(out_height)
-        # Open the input video
-        in_cap = cv2.VideoCapture(vid_fp)
-        fps = in_cap.get(cv2.CAP_PROP_FPS)
-        total_frames = int(in_cap.get(cv2.CAP_PROP_FRAME_COUNT))
         # Define the codec and create VideoWriter object
         out_cap = cv2.VideoWriter(
             out_fp, cv2.VideoWriter_fourcc(*"mp4v"), fps, (out_width, out_height)
         )
         # Annotating each frame using the created functions
-        outcome += annotate(in_cap, out_cap, funcs, total_frames)
+        # TODO: NOTE: The funcs themselves will modify the frame size.
+        # Not self-contained or modular but a workaround for now. Maybe have an enum for each func with frame params?
+        # Annotating frames
+        for i in trange(total_frames):
+            # Reading next vid frame
+            ret, frame = in_cap.read()
+            if ret is False:
+                break
+            # Annotating frame
+            for f in funcs:
+                try:
+                    frame = f(frame, i)
+                except KeyError:
+                    pass
+            # Writing annotated frame to the VideoWriter
+            out_cap.write(frame)
         # Release video objects
         in_cap.release()
         out_cap.release()
         # Returning outcome string
         return outcome
-
-
-def annotate(
-    in_cap: cv2.VideoCapture,
-    out_cap: cv2.VideoWriter,
-    funcs: list[EvaluateVidFuncBase],
-    n: int,
-) -> str:
-    """
-    Given a frame, and the annotation functions to perform on it, returns the annotated frame.
-
-    Expects that each func in the array is given in the following form:
-    ```f(frame: np.ndarray, i: int) -> np.ndarray```
-
-    Parameters
-    ----------
-    in_cap : str
-        cv2 frame array.
-    out_cap : str
-        _description_
-    funcs : Sequence[Callable]
-        _description_
-    n : int
-        _description_
-
-    Returns
-    -------
-    str
-        Outcome string.
-    """
-    # TODO: NOTE: The funcs themselves will modify the frame size.
-    # Not self-contained or modular but a workaround for now. Maybe have an enum for each func with frame params?
-    outcome = ""
-    # Annotating frames
-    for i in trange(n):
-        # Reading next vid frame
-        ret, frame = in_cap.read()
-        if ret is False:
-            break
-        # Annotating frame
-        for f in funcs:
-            try:
-                frame = f(frame, i)
-            except KeyError:
-                pass
-        # Writing annotated frame to the VideoWriter
-        out_cap.write(frame)
-    # Returning outcome string
-    return outcome

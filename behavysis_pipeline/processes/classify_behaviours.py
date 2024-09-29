@@ -86,7 +86,7 @@ class ClassifyBehaviours:
             df_i[pred_col] = merge_bouts(df_i[pred_col], min_window_frames)
             # NOTE: do we need "actual" and "user-defined"?
             # Including "actual" column and setting behav frames to -1
-            df_i[actual_col] = df_i[pred_col].values * -1
+            df_i[actual_col] = df_i[pred_col].values * np.array(-1)
             # Including user-defined sub-behav columns
             for user_behav in model_config.user_behavs:
                 df_i[(behav_name, user_behav)] = 0
