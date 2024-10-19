@@ -32,8 +32,6 @@ import cv2
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
-from tqdm import trange
-
 from behavysis_core.constants import (
     BehavCN,
     BehavColumns,
@@ -47,6 +45,8 @@ from behavysis_core.mixins.behav_df_mixin import BehavDfMixin
 from behavysis_core.mixins.diagnostics_mixin import DiagnosticsMixin
 from behavysis_core.mixins.io_mixin import IOMixin
 from behavysis_core.mixins.keypoints_df_mixin import KeypointsMixin
+from tqdm import trange
+
 from behavysis_pipeline.processes.evaluate_vid_funcs import (
     EvaluateVidFuncBase,
     EvaluateVidFuncs,
@@ -291,12 +291,13 @@ class Evaluate:
         funcs: list[EvaluateVidFuncBase] = list()
         # NOTE: the order of the funcs is static (determined by EvaluateVidFuncs)
         for i in EvaluateVidFuncs:
-            if i.value.name in funcs_names:
+            func: EvaluateVidFuncBase = i.value
+            if func.name in funcs_names:
                 # If the func is in the list of funcs to run
                 # then init, add to the funcs list, and update dimensions
                 outcome += f"Added {i} to video. \n"
                 funcs.append(
-                    i.value(
+                    func(
                         dlc_df=dlc_df,
                         behavs_df=behavs_df,
                         indivs_bpts_ls=indivs_bpts_ls,
@@ -306,8 +307,8 @@ class Evaluate:
                         behavs_ls=behavs_ls,
                     )
                 )
-                out_width = i.value.update_width(out_width)
-                out_height = i.value.update_height(out_height)
+                out_width = func.update_width(out_width)
+                out_height = func.update_height(out_height)
         # Define the codec and create VideoWriter object
         out_cap = cv2.VideoWriter(
             out_fp, cv2.VideoWriter_fourcc(*"mp4v"), fps, (out_width, out_height)
