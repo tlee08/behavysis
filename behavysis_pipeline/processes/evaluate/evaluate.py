@@ -47,7 +47,7 @@ from behavysis_core.mixins.io_mixin import IOMixin
 from behavysis_core.mixins.keypoints_df_mixin import KeypointsMixin
 from tqdm import trange
 
-from behavysis_pipeline.processes.evaluate_vid_funcs import (
+from behavysis_pipeline.processes.evaluate.evaluate_vid_funcs import (
     EvaluateVidFuncBase,
     EvaluateVidFuncs,
 )
@@ -318,6 +318,9 @@ class Evaluate:
         # Not self-contained or modular but a workaround for now. Maybe have an enum for each func with frame params?
         # Annotating frames
         for i in trange(total_frames):
+            # TODO: make a base numpy image array (of correct final size)
+            # and superimpose frame in the portion of the array. That way,
+            # c componently more cleanly.
             # Reading next vid frame
             ret, frame = in_cap.read()
             if ret is False:
