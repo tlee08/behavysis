@@ -199,6 +199,8 @@ class Evaluate:
         Run the DLC model on the formatted video to generate a DLC annotated video and DLC file for
         all experiments. The DLC model's config.yaml filepath must be specified in the `config_path`
         parameter in the `user` section of the config file.
+
+        # TODO: implement analysis in eval vid.
         """
         outcome = ""
         name = IOMixin.get_name(vid_fp)
@@ -291,7 +293,7 @@ class Evaluate:
         funcs: list[EvaluateVidFuncBase] = list()
         # NOTE: the order of the funcs is static (determined by EvaluateVidFuncs)
         for i in EvaluateVidFuncs:
-            func: EvaluateVidFuncBase = i.value
+            func: type[EvaluateVidFuncBase] = i.value
             if func.name in funcs_names:
                 # If the func is in the list of funcs to run
                 # then init, add to the funcs list, and update dimensions
@@ -315,7 +317,8 @@ class Evaluate:
         )
         # Annotating each frame using the created functions
         # TODO: NOTE: The funcs themselves will modify the frame size.
-        # Not self-contained or modular but a workaround for now. Maybe have an enum for each func with frame params?
+        # Not self-contained or modular but this is a workaround for now.
+        # Maybe have an enum for each func with frame params?
         # Annotating frames
         for i in trange(total_frames):
             # TODO: make a base numpy image array (of correct final size)

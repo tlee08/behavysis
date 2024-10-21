@@ -31,22 +31,32 @@ from enum import Enum
 import cv2
 import numpy as np
 import pandas as pd
-
 from behavysis_core.constants import (
     BehavColumns,
 )
 
 
 class EvaluateVidFuncBase:
-    """__summary__"""
+    """
+    Calling the function returns the frame image (i.e. np.ndarray)
+    with the function applied.
+    """
 
     name = "evaluate_vid_func"
+
+    x: int
+    y: int
+    w: int
+    h: int
 
     def __init__(self, **kwargs):
         """
         Prepare function
         """
-        pass
+        self.x = 0
+        self.y = 0
+        self.w = 0
+        self.h = 0
 
     def __call__(self, frame: np.ndarray, idx: int) -> np.ndarray:
         """
@@ -55,19 +65,19 @@ class EvaluateVidFuncBase:
         # TODO: make an abstract func?
         return np.array(0)
 
-    @staticmethod
-    def update_width(out_width):
-        """
-        Updates the output videos width
-        """
-        return out_width
+    # @staticmethod
+    # def update_width(out_width):
+    #     """
+    #     Updates the output videos width
+    #     """
+    #     return out_width
 
-    @staticmethod
-    def update_height(out_height):
-        """
-        Updates the output videos height
-        """
-        return out_height
+    # @staticmethod
+    # def update_height(out_height):
+    #     """
+    #     Updates the output videos height
+    #     """
+    #     return out_height
 
 
 class Johansson(EvaluateVidFuncBase):
@@ -256,3 +266,48 @@ class EvaluateVidFuncs(Enum):
     KEYPOINTS = Keypoints
     BEHAVS = Behavs
     ANALYSIS = Analysis
+
+
+# TODO have a VidFuncOrganiser class, which has list of vid func objects and can
+# a) call them in order
+# b) organise where they are in the frame (x, y)
+# c) had vid metadata (height, width)
+# Then implement in evaluate
+class VidFuncOrganiser:
+    """__summary__"""
+
+    funcs: list[EvaluateVidFuncBase]
+    w_i: int
+    h_i: int
+    w_o: int
+    h_o: int
+
+    def __init__(self, funcs):
+        self.funcs = funcs
+        self.w_i = 0
+        self.h_i = 0
+        self.w_o = 0
+        self.h_o = 0
+
+    def update_w_h(self, w_i: int, h_i: int):
+        # Depends on funcs and input frame size
+        # Updating input frame size
+        self.w_i = w_i
+        self.h_i = h_i
+        # Updating output frame size
+        # TODO
+
+    def __call__(self, vid_frame: np.ndarray, idx: int):
+        # Initialise output arr (image) with given dimensions
+        arr = np.zeros((self.h, self.w, 3), dtype=np.uint8)
+        # For each function, get the outputted "video tile" and superimpose on arr
+        for func in self.funcs:
+            # Running func
+            arr_i = func(vid_frame, idx)
+            # Superimposing
+            arr[
+                func.y : func.y + func.h,
+                func.x : func.x + func.w,
+            ] = arr_i
+        # Returning output arr
+        return arr
