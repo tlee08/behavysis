@@ -320,7 +320,7 @@ class Evaluate:
         for i in trange(total_frames):
             # TODO: make a base numpy image array (of correct final size)
             # and superimpose frame in the portion of the array. That way,
-            # c componently more cleanly.
+            # components are added more cleanly.
             # Reading next vid frame
             ret, frame = in_cap.read()
             if ret is False:
