@@ -13,9 +13,6 @@ import dask
 import numpy as np
 import pandas as pd
 import seaborn as sns
-from dask.distributed import Client, LocalCluster
-from natsort import natsort_keygen, natsorted
-
 from behavysis_core.constants import (
     ANALYSIS_DIR,
     DIAGNOSTICS_DIR,
@@ -28,8 +25,12 @@ from behavysis_core.mixins.df_io_mixin import DFIOMixin
 from behavysis_core.mixins.diagnostics_mixin import DiagnosticsMixin
 from behavysis_core.mixins.io_mixin import IOMixin
 from behavysis_core.mixins.multiproc_mixin import MultiprocMixin
+from dask.distributed import LocalCluster
+from natsort import natsort_keygen, natsorted
+
 from behavysis_pipeline.pipeline.experiment import Experiment
 from behavysis_pipeline.processes.run_dlc import RunDLC
+from behavysis_pipeline.utils.dask_utils import cluster_proc_contxt
 
 
 class Project:
@@ -249,14 +250,17 @@ class Project:
         #         Project._process_scaffold_mp_worker,
         #         [(method, exp, args, kwargs) for exp in self.get_experiments()],
         #     )
-        cluster = LocalCluster(n_workers=self.nprocs, threads_per_worker=1)
-        client = Client(cluster)
-        f_d_ls = [
-            dask.delayed(method)(exp, *args, **kwargs) for exp in self.get_experiments()
-        ]
-        dd_ls = dask.compute(*f_d_ls)
-        client.close()
-        cluster.close()
+        # Starting a dask cluster
+        with cluster_proc_contxt(
+            LocalCluster(n_workers=self.nprocs, threads_per_worker=1)
+        ):
+            # Preparing all experiments for execution
+            f_d_ls = [
+                dask.delayed(method)(exp, *args, **kwargs)
+                for exp in self.get_experiments()
+            ]
+            # Executing in parallel
+            dd_ls = dask.compute(*f_d_ls)
         return dd_ls
 
     def _process_scaffold_sp(

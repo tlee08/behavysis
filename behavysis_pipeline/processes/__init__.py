@@ -4,8 +4,8 @@ _summary_
 
 from behavysis_core.data_models import experiment_configs
 
-from .analyse import Analyse
-from .behav_analyse import BehavAnalyse
+from .analyse.analyse import Analyse
+from .analyse.behav_analyse import BehavAnalyse
 from .calculate_params import CalculateParams
 from .classify_behaviours import ClassifyBehaviours
 from .evaluate import Evaluate

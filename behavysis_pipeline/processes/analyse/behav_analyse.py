@@ -21,7 +21,6 @@ from __future__ import annotations
 import os
 
 import numpy as np
-
 from behavysis_core.constants import AnalysisCN, BehavCN, BehavColumns
 from behavysis_core.data_models.experiment_configs import ExperimentConfigs
 from behavysis_core.mixins.behav_df_mixin import BehavDfMixin
