@@ -26,8 +26,6 @@ Notes
 Given the `out_dir`, we save the files to `out_dir/<func_name>/<exp_name>.<ext>`
 """
 
-from enum import Enum
-
 import cv2
 import numpy as np
 import pandas as pd
@@ -36,7 +34,7 @@ from behavysis_core.constants import (
 )
 
 
-class EvaluateVidFuncBase:
+class EvalVidFuncBase:
     """
     Calling the function returns the frame image (i.e. np.ndarray)
     with the function applied.
@@ -44,8 +42,6 @@ class EvaluateVidFuncBase:
 
     name = "evaluate_vid_func"
 
-    x: int
-    y: int
     w: int
     h: int
 
@@ -53,8 +49,6 @@ class EvaluateVidFuncBase:
         """
         Prepare function
         """
-        self.x = 0
-        self.y = 0
         self.w = 0
         self.h = 0
 
@@ -65,22 +59,8 @@ class EvaluateVidFuncBase:
         # TODO: make an abstract func?
         return np.array(0)
 
-    # @staticmethod
-    # def update_width(out_width):
-    #     """
-    #     Updates the output videos width
-    #     """
-    #     return out_width
 
-    # @staticmethod
-    # def update_height(out_height):
-    #     """
-    #     Updates the output videos height
-    #     """
-    #     return out_height
-
-
-class Johansson(EvaluateVidFuncBase):
+class Johansson(EvalVidFuncBase):
     """
     Making black frame, in the style of Johansson.
     This means we see only the keypoints (i.e., what SimBA will see)
@@ -98,14 +78,18 @@ class Johansson(EvaluateVidFuncBase):
 
     name = "johansson"
 
-    def __init__(self, **kwargs):
-        pass
+    def __init__(self, w_i: int, h_i: int, **kwargs):
+        self.w_i = w_i
+        self.h_i = h_i
 
     def __call__(self, frame: np.ndarray, idx: int) -> np.ndarray:
-        return np.zeros(frame.shape, dtype=np.uint8)
+        return np.zeros(
+            shape=(self.h_i, self.w_i, 3),
+            dtype=np.uint8,
+        )
 
 
-class Keypoints(EvaluateVidFuncBase):
+class Keypoints(EvalVidFuncBase):
     """
     Adding the keypoints (given in `row`) to the frame.
 
@@ -132,7 +116,19 @@ class Keypoints(EvaluateVidFuncBase):
 
     name = "keypoints"
 
-    def __init__(self, dlc_df, indivs_bpts_ls, colours, pcutoff, radius, **kwargs):
+    def __init__(
+        self,
+        w_i: int,
+        h_i: int,
+        dlc_df,
+        indivs_bpts_ls,
+        colours,
+        pcutoff,
+        radius,
+        **kwargs,
+    ):
+        self.w_i = w_i
+        self.h_i = h_i
         self.dlc_df: pd.DataFrame = dlc_df
         self.indivs_bpts_ls = indivs_bpts_ls
         self.colours = colours
@@ -141,7 +137,12 @@ class Keypoints(EvaluateVidFuncBase):
 
     def __call__(self, frame: np.ndarray, idx: int) -> np.ndarray:
         # Getting row
-        row = self.dlc_df.loc[idx]
+        # Also checking that the idx exists
+        # TODO: is this the fastest way?
+        try:
+            row = self.dlc_df.loc[idx]
+        except KeyError:
+            return frame
         # Making the bpts keypoints annot
         for i, (indiv, bpt) in enumerate(self.indivs_bpts_ls):
             if row[f"{indiv}_{bpt}_likelihood"] >= self.pcutoff:
@@ -155,7 +156,7 @@ class Keypoints(EvaluateVidFuncBase):
         return frame
 
 
-class Behavs(EvaluateVidFuncBase):
+class Behavs(EvalVidFuncBase):
     """
     Annotates a text table in the top-left corner, with the format:
     ```
@@ -182,20 +183,26 @@ class Behavs(EvaluateVidFuncBase):
 
     name = "behavs"
 
-    def __init__(self, behavs_df, behavs_ls, **kwargs):
+    def __init__(self, w_i: int, h_i: int, behavs_df, behavs_ls, **kwargs):
+        self.w_i = w_i
+        self.h_i = h_i
         self.behavs_df: pd.DataFrame = behavs_df
         self.behavs_ls = behavs_ls
 
     def __call__(self, frame: np.ndarray, idx: int) -> np.ndarray:
-        # Initialising the behav frame panel
-        # TODO: a more modular way for frame shape?
-        behav_frame = np.full(
-            shape=frame.shape,
+        # Initialising the behavs frame panel
+        behav_tile = np.full(
+            shape=(self.h_i, self.w_i, 3),
             fill_value=(255, 255, 255),
             dtype=np.uint8,
         )
         # Getting row
-        row = self.behavs_df.loc[idx]
+        # Also checking that the idx exists
+        # TODO: is this the fastest way?
+        try:
+            row = self.behavs_df.loc[idx]
+        except KeyError:
+            return behav_tile
         # colour = (3, 219, 252)  # Yellow
         colour = (0, 0, 0)  # Black
         # Making outcome headings
@@ -204,7 +211,7 @@ class Behavs(EvaluateVidFuncBase):
             x = 120 + j * 40
             y = 50
             cv2.putText(
-                behav_frame, outcome, (x, y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, colour, 2
+                behav_tile, outcome, (x, y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, colour, 2
             )
         # Making behav rows
         for i, behav in enumerate(self.behavs_ls):
@@ -212,14 +219,14 @@ class Behavs(EvaluateVidFuncBase):
             y = 100 + i * 30
             # Annotating with label
             cv2.putText(
-                behav_frame, behav, (x, y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, colour, 2
+                behav_tile, behav, (x, y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, colour, 2
             )
             for j, outcome in enumerate((BehavColumns.PRED, BehavColumns.ACTUAL)):
                 outcome = outcome.value
                 x = 120 + j * 40
                 if row[f"{behav}_{outcome}"] == 1:
                     cv2.putText(
-                        behav_frame,
+                        behav_tile,
                         "X",
                         (x, y),
                         cv2.FONT_HERSHEY_SIMPLEX,
@@ -227,17 +234,10 @@ class Behavs(EvaluateVidFuncBase):
                         colour,
                         2,
                     )
-        # Combining vid and behav frame panels
-        frame = np.concatenate((frame, behav_frame), axis=1)
         return frame
 
-    @staticmethod
-    def update_width(out_width):
-        # TODO: find a better way to update width (compounding x2 isn't sustainable for multiple funcs)
-        return out_width * 2
 
-
-class Analysis(EvaluateVidFuncBase):
+class Analysis(EvalVidFuncBase):
     """
     Annotates a text table in the top-left corner, with the format:
     ```
@@ -249,7 +249,9 @@ class Analysis(EvaluateVidFuncBase):
 
     name = "analysis"
 
-    def __init__(self, behavs_df, behavs_ls, **kwargs):
+    def __init__(self, w_i: int, h_i: int, behavs_df, behavs_ls, **kwargs):
+        self.w_i = w_i
+        self.h_i = h_i * 2
         self.behavs_df: pd.DataFrame = behavs_df
         self.behavs_ls = behavs_ls
 
@@ -259,55 +261,111 @@ class Analysis(EvaluateVidFuncBase):
         return frame
 
 
-class EvaluateVidFuncs(Enum):
-    """Enum of the evaluate video functions."""
-
-    JOHANSSON = Johansson
-    KEYPOINTS = Keypoints
-    BEHAVS = Behavs
-    ANALYSIS = Analysis
-
-
 # TODO have a VidFuncOrganiser class, which has list of vid func objects and can
 # a) call them in order
 # b) organise where they are in the frame (x, y)
 # c) had vid metadata (height, width)
 # Then implement in evaluate
+# NOTE: maybe have funcs_vid, funcs_behav, and funcs_analysis lists separately
+# for the tiles.
 class VidFuncOrganiser:
-    """__summary__"""
+    """
+    Given a list of the EvalVidFuncBase funcs to run in the constructor,
+    it can be called as a function to convert a video frame and df index
+    (corresponding to keypoints_df, behav_df, and analysis_fbf_df) to an
+    "evaluation frame", which is annotated with keypoints and tiled with
+    analysis/behav graphs.
 
-    funcs: list[EvaluateVidFuncBase]
+    Tiling is always:
+    +----------------------+
+    | vid       | analysis |
+    | keypoints | graphs   |
+    +-----------|          |
+    | behav     |          |
+    | graphs    |          |
+    +-----------+----------+
+    """
+
+    johansson: Johansson | None
+    keypoints: Keypoints | None
+    behavs: Behavs | None
+    analysis: Analysis | None
+
     w_i: int
     h_i: int
-    w_o: int
-    h_o: int
 
-    def __init__(self, funcs):
-        self.funcs = funcs
-        self.w_i = 0
-        self.h_i = 0
-        self.w_o = 0
-        self.h_o = 0
-
-    def update_w_h(self, w_i: int, h_i: int):
-        # Depends on funcs and input frame size
-        # Updating input frame size
+    def __init__(self, func_names: list[str], w_i: int, h_i: int, **kwargs):
+        """
+        NOTE: kwargs are the constructor parameters for
+        EvalVidFuncBase classes.
+        """
+        # Storing frame input dimensions
         self.w_i = w_i
         self.h_i = h_i
-        # Updating output frame size
-        # TODO
+
+        # Initialising funcs from func_names_ls
+        self.funcs = []
+        # NOTE: ORDER MATTERS so going through in predefined order
+        # Concatenating Vid, Behav, and Analysis funcs together in order
+        func_check_ls = [Johansson, Keypoints, Behavs, Analysis]
+        for func in func_check_ls:
+            setattr(self, func.name, None)
+        # Creating EvalVidFuncBase instances and adding to funcs list
+        for func in func_check_ls:
+            if func.name in func_names:
+                setattr(
+                    self,
+                    func.name,
+                    func(
+                        w_i=w_i,
+                        h_i=h_i,
+                        **kwargs,
+                        # dlc_df=dlc_df,
+                        # behavs_df=behavs_df,
+                        # indivs_bpts_ls=indivs_bpts_ls,
+                        # colours=colours,
+                        # pcutoff=pcutoff,
+                        # radius=radius,
+                        # behavs_ls=behavs_ls,
+                    ),
+                )
+
+    @property
+    def w_o(self):
+        # vid panel
+        w_o = self.w_i
+        # analysis panel
+        if self.analysis:
+            w_o = w_o * 2
+        return w_o
+
+    @property
+    def h_o(self):
+        # vid panel
+        h_o = self.h_i
+        # behav panel
+        if self.behavs:
+            h_o = h_o * 2
+        return h_o
 
     def __call__(self, vid_frame: np.ndarray, idx: int):
         # Initialise output arr (image) with given dimensions
-        arr = np.zeros((self.h, self.w, 3), dtype=np.uint8)
-        # For each function, get the outputted "video tile" and superimpose on arr
-        for func in self.funcs:
-            # Running func
-            arr_i = func(vid_frame, idx)
-            # Superimposing
-            arr[
-                func.y : func.y + func.h,
-                func.x : func.x + func.w,
-            ] = arr_i
+        arr_out = np.zeros((self.h_o, self.w_o, 3), dtype=np.uint8)
+        # For overwriting vid_frame
+        arr_video = np.copy(vid_frame)
+        # video tile
+        if self.johansson:
+            arr_video = self.johansson(arr_video, idx)
+        if self.keypoints:
+            arr_video = self.keypoints(arr_video, idx)
+        arr_out[: self.w_i, : self.h_i] = arr_video
+        # behavs tile
+        if self.behavs:
+            arr_behav = self.behavs(arr_video, idx)
+            arr_out[: self.w_i, self.h_i : self.h_o] = arr_behav
+        # analysis tile
+        if self.behavs:
+            arr_behav = self.behavs(arr_video, idx)
+            arr_out[self.w_i : self.w_o, : self.h_o] = arr_behav
         # Returning output arr
-        return arr
+        return arr_out

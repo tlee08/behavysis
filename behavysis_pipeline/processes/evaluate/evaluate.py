@@ -48,8 +48,7 @@ from behavysis_core.mixins.keypoints_df_mixin import KeypointsMixin
 from tqdm import trange
 
 from behavysis_pipeline.processes.evaluate.evaluate_vid_funcs import (
-    EvaluateVidFuncBase,
-    EvaluateVidFuncs,
+    VidFuncOrganiser,
 )
 
 
@@ -283,34 +282,26 @@ class Evaluate:
         in_cap = cv2.VideoCapture(vid_fp)
         # Storing output vid dimensions
         # as they can change depending on funcs_names
-        out_width = int(in_cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        out_height = int(in_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        in_width = int(in_cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        in_height = int(in_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         fps = in_cap.get(cv2.CAP_PROP_FPS)
         total_frames = int(in_cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
         # MAKING ANNOTATED VIDEO
-        # Settings the funcs for how to annotate the video
-        funcs: list[EvaluateVidFuncBase] = list()
-        # NOTE: the order of the funcs is static (determined by EvaluateVidFuncs)
-        for i in EvaluateVidFuncs:
-            func: type[EvaluateVidFuncBase] = i.value
-            if func.name in funcs_names:
-                # If the func is in the list of funcs to run
-                # then init, add to the funcs list, and update dimensions
-                outcome += f"Added {i} to video. \n"
-                funcs.append(
-                    func(
-                        dlc_df=dlc_df,
-                        behavs_df=behavs_df,
-                        indivs_bpts_ls=indivs_bpts_ls,
-                        colours=colours,
-                        pcutoff=pcutoff,
-                        radius=radius,
-                        behavs_ls=behavs_ls,
-                    )
-                )
-                out_width = func.update_width(out_width)
-                out_height = func.update_height(out_height)
+        # Making VidFuncOrganiser object to annotate each frame with
+        vid_func_org = VidFuncOrganiser(
+            func_names=funcs_names,
+            w_i=in_width,
+            h_i=in_height,
+            # kwargs for EvalVidFuncBase
+            dlc_df=dlc_df,
+            behavs_df=behavs_df,
+            indivs_bpts_ls=indivs_bpts_ls,
+            colours=colours,
+            pcutoff=pcutoff,
+            radius=radius,
+            behavs_ls=behavs_ls,
+        )
         # Define the codec and create VideoWriter object
         out_cap = cv2.VideoWriter(
             out_fp, cv2.VideoWriter_fourcc(*"mp4v"), fps, (out_width, out_height)
@@ -318,24 +309,16 @@ class Evaluate:
         # Annotating each frame using the created functions
         # TODO: NOTE: The funcs themselves will modify the frame size.
         # Not self-contained or modular but this is a workaround for now.
-        # Maybe have an enum for each func with frame params?
         # Annotating frames
         for i in trange(total_frames):
-            # TODO: make a base numpy image array (of correct final size)
-            # and superimpose frame in the portion of the array. That way,
-            # components are added more cleanly.
             # Reading next vid frame
             ret, frame = in_cap.read()
             if ret is False:
                 break
             # Annotating frame
-            for f in funcs:
-                try:
-                    frame = f(frame, i)
-                except KeyError:
-                    pass
+            arr_out = vid_func_org(frame, i)
             # Writing annotated frame to the VideoWriter
-            out_cap.write(frame)
+            out_cap.write(arr_out)
         # Release video objects
         in_cap.release()
         out_cap.release()
