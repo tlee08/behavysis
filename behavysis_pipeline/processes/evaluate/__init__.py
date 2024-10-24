@@ -187,8 +187,8 @@ class Evaluate:
     def eval_vid(
         vid_fp: str,
         dlc_fp: str,
-        behavs_fp: str,
-        # analysis_fp: str,
+        # behavs_fp: str,
+        analysis_fp: str,
         out_dir: str,
         configs_fp: str,
         overwrite: bool,
@@ -250,31 +250,32 @@ class Evaluate:
         ]
 
         # TODO: eventually ONLY need combined analysis df
-        # Modifying behavs_df to optimise processing
+        # Modifying analysis_df to optimise processing
         # Specifically:
         # - Making sure all relevant behaviour outcome columns exist by imputing
         # - Changing the columns MultiIndex to a single-level index. For speedup
         # Getting behavs df
         try:
-            behavs_df = BehavDfMixin.read_feather(behavs_fp)
+            analysis_df = BehavDfMixin.read_feather(analysis_fp)
         except FileNotFoundError:
             outcome += (
                 "WARNING: behavs file not found or could not be loaded."
                 + "Disregarding behaviour."
                 + "If you have run the behaviour classifier, please check this file.\n"
             )
-            behavs_df = BehavDfMixin.init_df(dlc_df.index)
+            analysis_df = BehavDfMixin.init_df(dlc_df.index)
         # Getting list of behaviours
-        behavs_ls = behavs_df.columns.unique("behaviours")
+        # TODO
+        analysis_ls = analysis_df.columns.unique("behaviours")
         # Making sure all relevant behaviour outcome columns exist (imputing with 0 if not)
-        for behav in behavs_ls:
+        for behav in analysis_ls:
             for i in BehavColumns:
                 i = i.value
-                if (behav, i) not in behavs_df:
-                    behavs_df[(behav, i)] = 0
+                if (behav, i) not in analysis_df:
+                    analysis_df[(behav, i)] = 0
         # Changing the columns MultiIndex to a single-level index. For speedup
-        behavs_df.columns = [
-            f"{behav}_{outcome}" for behav, outcome in behavs_df.columns
+        analysis_df.columns = [
+            f"{behav}_{outcome}" for behav, outcome in analysis_df.columns
         ]
 
         # OPENING INPUT VIDEO
@@ -295,12 +296,11 @@ class Evaluate:
             h_i=in_height,
             # kwargs for EvalVidFuncBase
             dlc_df=dlc_df,
-            behavs_df=behavs_df,
+            analysis_df=analysis_df,
             indivs_bpts_ls=indivs_bpts_ls,
             colours=colours,
             pcutoff=pcutoff,
             radius=radius,
-            behavs_ls=behavs_ls,
         )
         # Define the codec and create VideoWriter object
         out_cap = cv2.VideoWriter(

@@ -29,7 +29,6 @@ Given the `out_dir`, we save the files to `out_dir/<func_name>/<exp_name>.<ext>`
 import cv2
 import numpy as np
 import pandas as pd
-from behavysis_core.df_mixins.behav_df_mixin import BehavColumns
 
 
 class EvalVidFuncBase:
@@ -155,85 +154,85 @@ class Keypoints(EvalVidFuncBase):
         return frame
 
 
-class Behavs(EvalVidFuncBase):
-    """
-    Annotates a text table in the top-left corner, with the format:
-    ```
-            actual pred
-    Behav_1   X     X
-    Behav_2         X
-    ...
-    ```
+# class Behavs(EvalVidFuncBase):
+#     """
+#     Annotates a text table in the top-left corner, with the format:
+#     ```
+#             actual pred
+#     Behav_1   X     X
+#     Behav_2         X
+#     ...
+#     ```
 
-    Parameters
-    ----------
-    frame : np.ndarray
-        cv2 frame array.
-    row : pd.Series
-        row in scored_behavs dataframe.
-    behavs_ls : tuple[str]
-        list of behaviours to include.
+#     Parameters
+#     ----------
+#     frame : np.ndarray
+#         cv2 frame array.
+#     row : pd.Series
+#         row in scored_behavs dataframe.
+#     behavs_ls : tuple[str]
+#         list of behaviours to include.
 
-    Returns
-    -------
-    np.ndarray
-        cv2 frame array.
-    """
+#     Returns
+#     -------
+#     np.ndarray
+#         cv2 frame array.
+#     """
 
-    name = "behavs"
+#     name = "behavs"
 
-    def __init__(self, w_i: int, h_i: int, behavs_df, behavs_ls, **kwargs):
-        self.w_i = w_i
-        self.h_i = h_i
-        self.behavs_df: pd.DataFrame = behavs_df
-        self.behavs_ls = behavs_ls
+#     def __init__(self, w_i: int, h_i: int, behavs_df, behavs_ls, **kwargs):
+#         self.w_i = w_i
+#         self.h_i = h_i
+#         self.behavs_df: pd.DataFrame = behavs_df
+#         self.behavs_ls = behavs_ls
 
-    def __call__(self, frame: np.ndarray, idx: int) -> np.ndarray:
-        # Initialising the behavs frame panel
-        behav_tile = np.full(
-            shape=(self.h_i, self.w_i, 3),
-            fill_value=(255, 255, 255),
-            dtype=np.uint8,
-        )
-        # Getting row
-        # Also checking that the idx exists
-        # TODO: is this the fastest way?
-        try:
-            row = self.behavs_df.loc[idx]
-        except KeyError:
-            return behav_tile
-        # colour = (3, 219, 252)  # Yellow
-        colour = (0, 0, 0)  # Black
-        # Making outcome headings
-        for j, outcome in enumerate((BehavColumns.PRED, BehavColumns.ACTUAL)):
-            outcome = outcome.value
-            x = 120 + j * 40
-            y = 50
-            cv2.putText(
-                behav_tile, outcome, (x, y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, colour, 2
-            )
-        # Making behav rows
-        for i, behav in enumerate(self.behavs_ls):
-            x = 20
-            y = 100 + i * 30
-            # Annotating with label
-            cv2.putText(
-                behav_tile, behav, (x, y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, colour, 2
-            )
-            for j, outcome in enumerate((BehavColumns.PRED, BehavColumns.ACTUAL)):
-                outcome = outcome.value
-                x = 120 + j * 40
-                if row[f"{behav}_{outcome}"] == 1:
-                    cv2.putText(
-                        behav_tile,
-                        "X",
-                        (x, y),
-                        cv2.FONT_HERSHEY_SIMPLEX,
-                        0.5,
-                        colour,
-                        2,
-                    )
-        return behav_tile
+#     def __call__(self, frame: np.ndarray, idx: int) -> np.ndarray:
+#         # Initialising the behavs frame panel
+#         behav_tile = np.full(
+#             shape=(self.h_i, self.w_i, 3),
+#             fill_value=(255, 255, 255),
+#             dtype=np.uint8,
+#         )
+#         # Getting row
+#         # Also checking that the idx exists
+#         # TODO: is this the fastest way?
+#         try:
+#             row = self.behavs_df.loc[idx]
+#         except KeyError:
+#             return behav_tile
+#         # colour = (3, 219, 252)  # Yellow
+#         colour = (0, 0, 0)  # Black
+#         # Making outcome headings
+#         for j, outcome in enumerate((BehavColumns.PRED, BehavColumns.ACTUAL)):
+#             outcome = outcome.value
+#             x = 120 + j * 40
+#             y = 50
+#             cv2.putText(
+#                 behav_tile, outcome, (x, y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, colour, 2
+#             )
+#         # Making behav rows
+#         for i, behav in enumerate(self.behavs_ls):
+#             x = 20
+#             y = 100 + i * 30
+#             # Annotating with label
+#             cv2.putText(
+#                 behav_tile, behav, (x, y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, colour, 2
+#             )
+#             for j, outcome in enumerate((BehavColumns.PRED, BehavColumns.ACTUAL)):
+#                 outcome = outcome.value
+#                 x = 120 + j * 40
+#                 if row[f"{behav}_{outcome}"] == 1:
+#                     cv2.putText(
+#                         behav_tile,
+#                         "X",
+#                         (x, y),
+#                         cv2.FONT_HERSHEY_SIMPLEX,
+#                         0.5,
+#                         colour,
+#                         2,
+#                     )
+#         return behav_tile
 
 
 class Analysis(EvalVidFuncBase):
@@ -248,11 +247,14 @@ class Analysis(EvalVidFuncBase):
 
     name = "analysis"
 
-    def __init__(self, w_i: int, h_i: int, behavs_df, behavs_ls, **kwargs):
+    def __init__(self, w_i: int, h_i: int, analysis_df, behavs_ls, **kwargs):
         self.w_i = w_i
         self.h_i = h_i * 2
-        self.behavs_df: pd.DataFrame = behavs_df
+        self.analysis_df: pd.DataFrame = analysis_df
         self.behavs_ls = behavs_ls
+
+    def init_graph(self):
+        pass
 
     def __call__(self, frame: np.ndarray, idx: int) -> np.ndarray:
         # Initialising the behav frame panel
@@ -280,8 +282,8 @@ class VidFuncRunner:
     | vid       | analysis |
     | keypoints | graphs   |
     +-----------|          |
-    | behav     |          |
-    | graphs    |          |
+    | blank     |          |
+    |           |          |
     +-----------+----------+
     """
 
@@ -317,20 +319,10 @@ class VidFuncRunner:
                 setattr(
                     self,
                     func.name,
-                    func(
-                        w_i=w_i,
-                        h_i=h_i,
-                        **kwargs,
-                        # dlc_df=dlc_df,
-                        # behavs_df=behavs_df,
-                        # indivs_bpts_ls=indivs_bpts_ls,
-                        # colours=colours,
-                        # pcutoff=pcutoff,
-                        # radius=radius,
-                        # behavs_ls=behavs_ls,
-                    ),
+                    func(w_i=w_i, h_i=h_i, **kwargs),
                 )
 
+        # TODO: update w_o and h_o accoridng to analysis_df
         # Storing frame output dimensions
         # width
         # vid panel
