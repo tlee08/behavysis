@@ -21,18 +21,18 @@ str
     The outcome of the process.
 """
 
-import logging
 import os
 import re
 
 import pandas as pd
-
-from behavysis_core.constants import KeypointsCN, KeypointsIN
+from behavysis_core.constants import FramesIN
 from behavysis_core.data_models.experiment_configs import ExperimentConfigs
-from behavysis_core.mixins.df_io_mixin import DFIOMixin
+from behavysis_core.df_mixins.df_io_mixin import DFIOMixin
+from behavysis_core.df_mixins.keypoints_df_mixin import KeypointsCN, KeypointsMixin
 from behavysis_core.mixins.io_mixin import IOMixin
-from behavysis_core.mixins.keypoints_df_mixin import KeypointsMixin
 from behavysis_core.mixins.subproc_mixin import SubprocMixin
+
+DLC_HDF_KEY = "data"
 
 
 class RunDLC:
@@ -52,8 +52,6 @@ class RunDLC:
         Running custom DLC script to generate a DLC keypoints dataframe from a single video.
         """
         outcome = ""
-        # Specifying the GPU to use
-        gputouse = "None" if not gputouse else gputouse
         # Getting model_fp
         configs = ExperimentConfigs.read_json(configs_fp)
         model_fp = configs.get_ref(configs.user.run_dlc.model_fp)
@@ -93,10 +91,7 @@ class RunDLC:
         """
         outcome = ""
 
-        # Specifying the GPU to use
-        # and making the output directory
-        if not gputouse:
-            gputouse = "None"
+        # Specifying the GPU to use and making the output directory
         # Making output directories
         dlc_out_dir = os.path.join(temp_dir, f"dlc_{gputouse}")
         os.makedirs(dlc_out_dir, exist_ok=True)
@@ -142,7 +137,7 @@ class RunDLC:
 
         # Exporting the h5 to feather the out_dir
         for in_fp in in_fp_ls:
-            export_2_feather(in_fp, dlc_out_dir, out_dir)
+            outcome += export_2_feather(in_fp, dlc_out_dir, out_dir)
         IOMixin.silent_rm(dlc_out_dir)
         # Returning outcome
         return outcome
@@ -153,7 +148,7 @@ def run_dlc_subproc(
     in_fp_ls: list[str],
     dlc_out_dir: str,
     temp_dir: str,
-    gputouse: int,
+    gputouse: int | None,
 ):
     """
     Running the DLC subprocess in a separate process (i.e. separate conda env).
@@ -199,13 +194,14 @@ def export_2_feather(name: str, in_dir: str, out_dir: str) -> str:
     # Get the corresponding .h5 filename
     name_fp_ls = [i for i in os.listdir(in_dir) if re.search(rf"^{name}DLC.*\.h5$", i)]
     if len(name_fp_ls) == 0:
-        logging.info("No .h5 file found for %s.", name)
+        return f"WARNING: No .h5 file found for {name}."
     elif len(name_fp_ls) == 1:
         name_fp = os.path.join(in_dir, name_fp_ls[0])
         # Reading the .h5 file
+        # NOTE: may need DLC_HDF_KEY
         df = pd.DataFrame(pd.read_hdf(name_fp))
         # Setting the column and index level names
-        df.index.names = DFIOMixin.enum2tuple(KeypointsIN)
+        df.index.names = DFIOMixin.enum2tuple(FramesIN)
         df.columns.names = DFIOMixin.enum2tuple(KeypointsCN)
         # Imputing na values with 0
         df = df.fillna(0)
@@ -213,5 +209,6 @@ def export_2_feather(name: str, in_dir: str, out_dir: str) -> str:
         KeypointsMixin.check_df(df)
         # Writing the .feather file
         DFIOMixin.write_feather(df, os.path.join(out_dir, f"{name}.feather"))
+        return "Outputted DLC file successfully."
     else:
         raise ValueError(f"Multiple .h5 files found for {name}.")

@@ -29,7 +29,7 @@ from behavysis_core.data_models.experiment_configs import ExperimentConfigs
 from behavysis_core.df_mixins.bouts_df_mixin import BoutsDfMixin
 from behavysis_core.mixins.df_io_mixin import DFIOMixin
 
-from . import AggAnalysisCN, AnalysisCN, Coords
+from . import AnalysisAggCN, AnalysisCN, Coords
 
 #####################################################################
 #               ANALYSIS API FUNCS
@@ -267,7 +267,7 @@ class AggAnalyse:
         summary_df = pd.concat(summary_df_ls, axis=0)
         # Setting the index and columns
         summary_df.index = analysis_df.columns
-        summary_df.columns.name = AggAnalysisCN.AGGS.value
+        summary_df.columns.name = AnalysisAggCN.AGGS.value
         # Returning summary_df
         return summary_df
 
@@ -325,7 +325,7 @@ class AggAnalyse:
         summary_df = pd.concat(summary_df_ls, axis=0)
         # Setting the index and columns
         summary_df.index = analysis_df.columns
-        summary_df.columns.name = AggAnalysisCN.AGGS.value
+        summary_df.columns.name = AnalysisAggCN.AGGS.value
         # Returning summary_df
         return summary_df
 
@@ -352,7 +352,7 @@ class AggAnalyse:
         binned_df = grouped_df.apply(
             lambda x: summary_func(x, fps)
             .unstack(DFIOMixin.enum2tuple(AnalysisCN))
-            .reorder_levels(DFIOMixin.enum2tuple(AggAnalysisCN))
+            .reorder_levels(DFIOMixin.enum2tuple(AnalysisAggCN))
             .sort_index(level=DFIOMixin.enum2tuple(AnalysisCN))
         )
         binned_df.index.name = "bin_sec"

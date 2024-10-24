@@ -21,20 +21,20 @@ from __future__ import annotations
 import os
 
 import numpy as np
-from behavysis_core.constants import AnalysisCN, BehavCN, BehavColumns
 from behavysis_core.data_models.experiment_configs import ExperimentConfigs
-from behavysis_core.mixins.behav_df_mixin import BehavDfMixin
+from behavysis_core.df_mixins.behav_df_mixin import BehavCN, BehavColumns, BehavDfMixin
 from behavysis_core.mixins.df_io_mixin import DFIOMixin
 from behavysis_core.mixins.io_mixin import IOMixin
 
+from . import AnalysisCN
 from .analyse_mixin import AggAnalyse, AnalyseMixin
 
 
-class BehavAnalyse:
+class AnalyseBehav:
     """__summary__"""
 
     @staticmethod
-    def behav_analysis(
+    def analyse_behav(
         behavs_fp: str,
         analysis_dir: str,
         configs_fp: str,
@@ -46,7 +46,7 @@ class BehavAnalyse:
         """
         outcome = ""
         name = IOMixin.get_name(behavs_fp)
-        out_dir = os.path.join(analysis_dir, BehavAnalyse.behav_analysis.__name__)
+        out_dir = os.path.join(analysis_dir, AnalyseBehav.analyse_behav.__name__)
         # Calculating the deltas (changes in body position) between each frame for the subject
         configs = ExperimentConfigs.read_json(configs_fp)
         fps, _, _, _, bins_ls, cbins_ls = AnalyseMixin.get_configs(configs)

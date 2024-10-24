@@ -48,7 +48,7 @@ class AnalysisCN(Enum):
     MEASURES = "measures"
 
 
-class AggAnalysisCN(Enum):
+class AnalysisAggCN(Enum):
     """Enum for the columns in the aggregated analysis dataframe."""
 
     INDIVIDUALS = "individuals"

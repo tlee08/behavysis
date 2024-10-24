@@ -10,6 +10,7 @@ from typing import Any, Callable
 
 import numpy as np
 from behavysis_core.constants import (
+    ANALYSIS_COMBINED_DIR,
     ANALYSIS_DIR,
     EVALUATE_DIR,
     FILE_EXTS,
@@ -21,13 +22,14 @@ from behavysis_core.mixins.df_io_mixin import DFIOMixin
 from behavysis_core.mixins.diagnostics_mixin import DiagnosticsMixin
 
 from behavysis_pipeline.processes import (
-    BehavAnalyse,
+    AnalyseBehav,
     ClassifyBehaviours,
     Export,
     ExtractFeatures,
     RunDLC,
     UpdateConfigs,
 )
+from behavysis_pipeline.processes.analyse.analyse_combine import AnalyseCombine
 
 
 class Experiment:
@@ -105,6 +107,7 @@ class Experiment:
             ValueError: Folder name is not valid. Refer to FOLDERS constant for valid folder names.
         """
         # Getting folder enum from string
+        # TODO: just use enum constructor?
         folder = next((f for f in Folders if folder_str == f.value), None)
         # Assertion: The given folder name must be valid
         if not folder:
@@ -460,7 +463,7 @@ class Experiment:
         Can call any methods from `Analyse`.
         """
         return self._process_scaffold(
-            (BehavAnalyse.behav_analysis,),
+            (AnalyseBehav.analyse_behav,),
             behavs_fp=self.get_fp(Folders.SCORED_BEHAVS.value),
             analysis_dir=os.path.join(self.root_dir, ANALYSIS_DIR),
             configs_fp=self.get_fp(Folders.CONFIGS.value),
@@ -471,7 +474,12 @@ class Experiment:
         Combine the experiment's analysis in each fbf into a single df
         """
         # TODO: make new subfolder called combined_analysis and make ONLY(??) fbf analysis.
-        pass
+        return self._process_scaffold(
+            (AnalyseCombine.analyse_combine,),
+            analysis_dir=os.path.join(self.root_dir, ANALYSIS_DIR),
+            out_dir=os.path.join(self.root_dir, ANALYSIS_COMBINED_DIR),
+            configs_fp=self.get_fp(Folders.CONFIGS.value),
+        )
 
     #####################################################################
     #           EVALUATING DLC ANALYSIS AND BEHAV CLASSIFICATION
