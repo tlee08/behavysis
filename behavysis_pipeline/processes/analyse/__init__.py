@@ -19,18 +19,42 @@ str
 from __future__ import annotations
 
 import os
+from enum import Enum
 
 import numpy as np
 import pandas as pd
-from behavysis_core.constants import AnalysisCN, Coords, IndivColumns
 from behavysis_core.data_models.experiment_configs import ExperimentConfigs
-from behavysis_core.mixins.bouts_df_mixin import BoutsDfMixin
+from behavysis_core.df_mixins.bouts_df_mixin import BoutsDfMixin
+from behavysis_core.df_mixins.keypoints_df_mixin import (
+    Coords,
+    IndivColumns,
+    KeypointsMixin,
+)
 from behavysis_core.mixins.df_io_mixin import DFIOMixin
 from behavysis_core.mixins.io_mixin import IOMixin
-from behavysis_core.mixins.keypoints_df_mixin import KeypointsMixin
 from pydantic import BaseModel, ConfigDict
 
 from .analyse_mixin import AggAnalyse, AnalyseMixin
+
+####################################################################################################
+# ANALYSIS DATAFRAME CONSTANTS
+####################################################################################################
+
+
+class AnalysisCN(Enum):
+    """Enum for the columns in the analysis dataframe."""
+
+    INDIVIDUALS = "individuals"
+    MEASURES = "measures"
+
+
+class AggAnalysisCN(Enum):
+    """Enum for the columns in the aggregated analysis dataframe."""
+
+    INDIVIDUALS = "individuals"
+    MEASURES = "measures"
+    AGGS = "aggs"
+
 
 #####################################################################
 #               ANALYSIS API FUNCS

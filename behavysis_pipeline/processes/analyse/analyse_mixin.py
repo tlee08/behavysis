@@ -24,10 +24,12 @@ from typing import Callable
 import numpy as np
 import pandas as pd
 import seaborn as sns
-from behavysis_core.constants import AggAnalysisCN, AnalysisCN, AnalysisIN, Coords
+from behavysis_core.constants import FramesIN
 from behavysis_core.data_models.experiment_configs import ExperimentConfigs
-from behavysis_core.mixins.bouts_df_mixin import BoutsDfMixin
+from behavysis_core.df_mixins.bouts_df_mixin import BoutsDfMixin
 from behavysis_core.mixins.df_io_mixin import DFIOMixin
+
+from . import AggAnalysisCN, AnalysisCN, Coords
 
 #####################################################################
 #               ANALYSIS API FUNCS
@@ -92,7 +94,7 @@ class AnalyseMixin:
             _description_
         """
         return pd.DataFrame(
-            index=pd.Index(frame_vect, name=DFIOMixin.enum2tuple(AnalysisIN)[0]),
+            index=pd.Index(frame_vect, name=DFIOMixin.enum2tuple(FramesIN)[0]),
             columns=pd.MultiIndex.from_tuples(
                 (), names=DFIOMixin.enum2tuple(AnalysisCN)
             ),
@@ -112,7 +114,7 @@ class AnalyseMixin:
         # Checking for null values
         assert not df.isnull().values.any(), "The dataframe contains null values. Be sure to run interpolate_points first."
         # Checking that the index levels are correct
-        DFIOMixin.check_df_index_names(df, DFIOMixin.enum2tuple(AnalysisIN))
+        DFIOMixin.check_df_index_names(df, DFIOMixin.enum2tuple(FramesIN))
         # Checking that the column levels are correct
         DFIOMixin.check_df_column_names(df, DFIOMixin.enum2tuple(AnalysisCN))
 
