@@ -27,7 +27,7 @@ import seaborn as sns
 from behavysis_core.constants import FramesIN
 from behavysis_core.data_models.experiment_configs import ExperimentConfigs
 from behavysis_core.df_mixins.bouts_df_mixin import BoutsDfMixin
-from behavysis_core.mixins.df_io_mixin import DFIOMixin
+from behavysis_core.df_mixins.df_io_mixin import DFIOMixin
 
 from . import AnalysisAggCN, AnalysisCN, Coords
 

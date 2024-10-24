@@ -21,7 +21,7 @@ from behavysis_core.constants import (
     Folders,
 )
 from behavysis_core.data_models.experiment_configs import ConfigsAuto, ExperimentConfigs
-from behavysis_core.mixins.df_io_mixin import DFIOMixin
+from behavysis_core.df_mixins.df_io_mixin import DFIOMixin
 from behavysis_core.mixins.diagnostics_mixin import DiagnosticsMixin
 from behavysis_core.mixins.io_mixin import IOMixin
 from behavysis_core.mixins.multiproc_mixin import MultiprocMixin

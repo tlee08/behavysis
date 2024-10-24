@@ -25,12 +25,12 @@ import numpy as np
 import pandas as pd
 from behavysis_core.data_models.experiment_configs import ExperimentConfigs
 from behavysis_core.df_mixins.bouts_df_mixin import BoutsDfMixin
+from behavysis_core.df_mixins.df_io_mixin import DFIOMixin
 from behavysis_core.df_mixins.keypoints_df_mixin import (
     Coords,
     IndivColumns,
     KeypointsMixin,
 )
-from behavysis_core.mixins.df_io_mixin import DFIOMixin
 from behavysis_core.mixins.io_mixin import IOMixin
 from pydantic import BaseModel, ConfigDict
 

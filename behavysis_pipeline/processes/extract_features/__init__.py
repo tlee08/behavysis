@@ -5,10 +5,9 @@ _summary_
 import os
 
 import pandas as pd
-
 from behavysis_core.constants import FeaturesCN, FeaturesIN
 from behavysis_core.data_models.experiment_configs import ExperimentConfigs
-from behavysis_core.mixins.df_io_mixin import DFIOMixin
+from behavysis_core.df_mixins.df_io_mixin import DFIOMixin
 from behavysis_core.mixins.features_df_mixin import FeaturesDfMixin
 from behavysis_core.mixins.io_mixin import IOMixin
 from behavysis_core.mixins.keypoints_df_mixin import KeypointsMixin
