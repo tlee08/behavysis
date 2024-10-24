@@ -48,7 +48,7 @@ from behavysis_core.mixins.keypoints_df_mixin import KeypointsMixin
 from tqdm import trange
 
 from behavysis_pipeline.processes.evaluate.evaluate_vid_funcs import (
-    VidFuncOrganiser,
+    VidFuncRunner,
 )
 
 
@@ -190,6 +190,7 @@ class Evaluate:
         vid_fp: str,
         dlc_fp: str,
         behavs_fp: str,
+        # analysis_fp: str,
         out_dir: str,
         configs_fp: str,
         overwrite: bool,
@@ -250,6 +251,7 @@ class Evaluate:
             :, [2, 1, 0, 3]
         ]
 
+        # TODO: eventually ONLY need combined analysis df
         # Modifying behavs_df to optimise processing
         # Specifically:
         # - Making sure all relevant behaviour outcome columns exist by imputing
@@ -289,7 +291,7 @@ class Evaluate:
 
         # MAKING ANNOTATED VIDEO
         # Making VidFuncOrganiser object to annotate each frame with
-        vid_func_org = VidFuncOrganiser(
+        vid_func_runner = VidFuncRunner(
             func_names=funcs_names,
             w_i=in_width,
             h_i=in_height,
@@ -304,7 +306,10 @@ class Evaluate:
         )
         # Define the codec and create VideoWriter object
         out_cap = cv2.VideoWriter(
-            out_fp, cv2.VideoWriter_fourcc(*"mp4v"), fps, (out_width, out_height)
+            out_fp,
+            cv2.VideoWriter_fourcc(*"mp4v"),
+            fps,
+            (vid_func_runner.w_o, vid_func_runner.h_o),
         )
         # Annotating each frame using the created functions
         # TODO: NOTE: The funcs themselves will modify the frame size.
@@ -316,7 +321,7 @@ class Evaluate:
             if ret is False:
                 break
             # Annotating frame
-            arr_out = vid_func_org(frame, i)
+            arr_out = vid_func_runner(frame, i)
             # Writing annotated frame to the VideoWriter
             out_cap.write(arr_out)
         # Release video objects

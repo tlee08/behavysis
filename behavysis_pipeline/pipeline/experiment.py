@@ -9,7 +9,6 @@ import os
 from typing import Any, Callable
 
 import numpy as np
-
 from behavysis_core.constants import (
     ANALYSIS_DIR,
     EVALUATE_DIR,
@@ -20,6 +19,7 @@ from behavysis_core.constants import (
 )
 from behavysis_core.mixins.df_io_mixin import DFIOMixin
 from behavysis_core.mixins.diagnostics_mixin import DiagnosticsMixin
+
 from behavysis_pipeline.processes import (
     BehavAnalyse,
     ClassifyBehaviours,
@@ -444,7 +444,7 @@ class Experiment:
             configs_fp=self.get_fp(Folders.CONFIGS.value),
         )
 
-    def behav_analyse(self) -> dict:
+    def analyse_behave(self) -> dict:
         """
         An ML pipeline method to analyse the preprocessed DLC data.
         Possible funcs are given in analysis.py.
@@ -465,6 +465,13 @@ class Experiment:
             analysis_dir=os.path.join(self.root_dir, ANALYSIS_DIR),
             configs_fp=self.get_fp(Folders.CONFIGS.value),
         )
+
+    def analysis_combine(self) -> dict:
+        """
+        Combine the experiment's analysis in each fbf into a single df
+        """
+        # TODO: make new subfolder called combined_analysis and make ONLY(??) fbf analysis.
+        pass
 
     #####################################################################
     #           EVALUATING DLC ANALYSIS AND BEHAV CLASSIFICATION

@@ -540,7 +540,7 @@ class Project:
         method = Experiment.analyse
         self._process_scaffold(method, *args, **kwargs)
 
-    @functools.wraps(Experiment.behav_analyse)
+    @functools.wraps(Experiment.analyse_behave)
     def behav_analyse(self, *args, **kwargs) -> None:
         """
         Batch processing corresponding to
@@ -553,7 +553,7 @@ class Project:
         **kwargs : dict
             keyword args passed to process scaffold method.
         """
-        method = Experiment.behav_analyse
+        method = Experiment.analyse_behave
         self._process_scaffold(method, *args, **kwargs)
 
     #####################################################################
@@ -675,6 +675,7 @@ class Project:
         """
         Collates the auto fields of the configs of all experiments into a DataFrame.
         """
+        # TODO: include diagnostics_df recording
         # Initialising the process and logging description
         description = "Combining binned analysis"
         logging.info("%s...", description)
@@ -686,17 +687,26 @@ class Project:
             columns=["_".join(i) for i in auto_field_keys],
         )
         # Collating all the auto fields for each experiment
+        dd_ls = []
         for exp in self.get_experiments():
-            configs = ExperimentConfigs.read_json(exp.get_fp(Folders.CONFIGS.value))
-            for i in auto_field_keys:
-                val = configs.auto
-                for j in i:
-                    val = getattr(val, j)
-                df_configs.loc[exp.name, "_".join(i)] = val
+            try:
+                configs = ExperimentConfigs.read_json(exp.get_fp(Folders.CONFIGS.value))
+                for i in auto_field_keys:
+                    val = configs.auto
+                    for j in i:
+                        val = getattr(val, j)
+                    df_configs.loc[exp.name, "_".join(i)] = val
+                dd_ls.append({"experiment": exp.name, "outcome": "combined"})
+            except Exception:
+                dd_ls.append({"experiment": exp.name, "outcome": "ERROR: e"})
+        # Imputing na values with -1
+        df_configs = df_configs.fillna(-1)
         # Saving the collated auto fields DataFrame to diagnostics folder
         self.save_diagnostics("collated_configs_auto", df_configs)
 
-        # Making and saving histogram plots of all the auto fields
+        # Making and saving histogram plots of the numerical auto fields
+        # NOTE: NOT including string frequencies, only numerical
+        df_configs = df_configs.loc[:, df_configs.apply(pd.api.types.is_numeric_dtype)]
         g = sns.FacetGrid(
             data=df_configs.fillna(-1).melt(), col="variable", sharex=False, col_wrap=4
         )

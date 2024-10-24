@@ -52,10 +52,10 @@ class BehavAnalyse:
         fps, _, _, _, bins_ls, cbins_ls = AnalyseMixin.get_configs(configs)
         # Loading in dataframe
         behavs_df = BehavDfMixin.read_feather(behavs_fp)
-        # Setting all na and -1 values to 0
+        # Setting all na and -1 values to 0 (to make any undecided behav to non-behav)
         behavs_df = behavs_df.fillna(0).map(lambda x: np.maximum(0, x))
         # Getting the behaviour names and each user_behav for the behaviour
-        # Not incl. the `pred` or `prob` (`prob` shouldn't be here anyway) column
+        # Not incl. the `pred` or `prob` (`prob` shouldn't be here anyway) columns
         columns = np.isin(
             behavs_df.columns.get_level_values(BehavCN.OUTCOMES.value),
             [BehavColumns.PROB.value, BehavColumns.PRED.value],
@@ -77,4 +77,5 @@ class BehavAnalyse:
             bins_ls,
             cbins_ls,
         )
+        # Returning outcome
         return outcome

@@ -83,8 +83,9 @@ class Johansson(EvalVidFuncBase):
         self.h_i = h_i
 
     def __call__(self, frame: np.ndarray, idx: int) -> np.ndarray:
-        return np.zeros(
+        return np.full(
             shape=(self.h_i, self.w_i, 3),
+            fill_value=(0, 0, 0),
             dtype=np.uint8,
         )
 
@@ -234,7 +235,7 @@ class Behavs(EvalVidFuncBase):
                         colour,
                         2,
                     )
-        return frame
+        return behav_tile
 
 
 class Analysis(EvalVidFuncBase):
@@ -268,7 +269,7 @@ class Analysis(EvalVidFuncBase):
 # Then implement in evaluate
 # NOTE: maybe have funcs_vid, funcs_behav, and funcs_analysis lists separately
 # for the tiles.
-class VidFuncOrganiser:
+class VidFuncRunner:
     """
     Given a list of the EvalVidFuncBase funcs to run in the constructor,
     it can be called as a function to convert a video frame and df index
@@ -293,6 +294,8 @@ class VidFuncOrganiser:
 
     w_i: int
     h_i: int
+    w_o: int
+    h_o: int
 
     def __init__(self, func_names: list[str], w_i: int, h_i: int, **kwargs):
         """
@@ -330,42 +333,40 @@ class VidFuncOrganiser:
                     ),
                 )
 
-    @property
-    def w_o(self):
+        # Storing frame output dimensions
+        # width
         # vid panel
-        w_o = self.w_i
+        self.w_o = self.w_i
         # analysis panel
         if self.analysis:
-            w_o = w_o * 2
-        return w_o
-
-    @property
-    def h_o(self):
+            self.w_o = self.w_o * 2
+        # height
         # vid panel
-        h_o = self.h_i
+        self.h_o = self.h_i
         # behav panel
         if self.behavs:
-            h_o = h_o * 2
-        return h_o
+            self.h_o = self.h_o * 2
 
     def __call__(self, vid_frame: np.ndarray, idx: int):
         # Initialise output arr (image) with given dimensions
         arr_out = np.zeros(shape=(self.h_o, self.w_o, 3), dtype=np.uint8)
         # For overwriting vid_frame
         arr_video = np.copy(vid_frame)
+
         # video tile
         if self.johansson:
             arr_video = self.johansson(arr_video, idx)
         if self.keypoints:
             arr_video = self.keypoints(arr_video, idx)
-        arr_out[: self.w_i, : self.h_i] = arr_video
+
+        arr_out[: self.h_i, : self.w_i] = arr_video
         # behavs tile
         if self.behavs:
             arr_behav = self.behavs(arr_video, idx)
-            arr_out[: self.w_i, self.h_i : self.h_o] = arr_behav
+            arr_out[self.h_i : self.h_o, : self.w_i] = arr_behav
         # analysis tile
-        if self.behavs:
-            arr_behav = self.behavs(arr_video, idx)
-            arr_out[self.w_i : self.w_o, : self.h_o] = arr_behav
+        if self.analysis:
+            arr_analysis = self.analysis(arr_video, idx)
+            arr_out[: self.h_o, self.w_i : self.w_o] = arr_analysis
         # Returning output arr
         return arr_out
