@@ -37,7 +37,6 @@ from pydantic import BaseModel, ConfigDict
 from behavysis_pipeline.processes.analyse.analyse_mixin import (
     AggAnalyse,
     AnalyseMixin,
-    AnalysisAggCN,
     AnalysisCN,
 )
 

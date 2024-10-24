@@ -29,9 +29,7 @@ Given the `out_dir`, we save the files to `out_dir/<func_name>/<exp_name>.<ext>`
 import cv2
 import numpy as np
 import pandas as pd
-from behavysis_core.constants import (
-    BehavColumns,
-)
+from behavysis_core.df_mixins.behav_df_mixin import BehavColumns
 
 
 class EvalVidFuncBase:

@@ -51,6 +51,11 @@ class AnalysisAggCN(Enum):
     AGGS = "aggs"
 
 
+FBF = "fbf"
+SUMMARY = "summary"
+BINNED = "binned"
+CUSTOM = "custom"
+
 #####################################################################
 #               ANALYSIS API FUNCS
 #####################################################################
