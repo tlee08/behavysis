@@ -24,10 +24,9 @@ from typing import Callable
 import numpy as np
 import pandas as pd
 import seaborn as sns
-
 from behavysis_core.constants import AggAnalysisCN, AnalysisCN, AnalysisIN, Coords
 from behavysis_core.data_models.experiment_configs import ExperimentConfigs
-from behavysis_core.mixins.behav_df_mixin import BehavDfMixin
+from behavysis_core.mixins.bouts_df_mixin import BoutsDfMixin
 from behavysis_core.mixins.df_io_mixin import DFIOMixin
 
 #####################################################################
@@ -292,7 +291,7 @@ class AggAnalyse:
             # Getting column vector of individual-measure
             vect = analysis_df[col]
             # Getting duration of each behav bout
-            bouts = BehavDfMixin.vect_2_bouts(vect == 1)["dur"]
+            bouts = BoutsDfMixin.vect2bouts(vect == 1)["dur"]
             # Converting bouts duration from frames to seconds
             bouts = bouts / fps
             # Getting bout frequency (before it is overwritten if empty)

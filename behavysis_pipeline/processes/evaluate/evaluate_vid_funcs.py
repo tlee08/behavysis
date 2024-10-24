@@ -350,7 +350,7 @@ class VidFuncOrganiser:
 
     def __call__(self, vid_frame: np.ndarray, idx: int):
         # Initialise output arr (image) with given dimensions
-        arr_out = np.zeros((self.h_o, self.w_o, 3), dtype=np.uint8)
+        arr_out = np.zeros(shape=(self.h_o, self.w_o, 3), dtype=np.uint8)
         # For overwriting vid_frame
         arr_video = np.copy(vid_frame)
         # video tile

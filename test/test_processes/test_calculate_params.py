@@ -7,7 +7,7 @@ from behavysis_core.constants import Coords, KeypointsCN, KeypointsIN
 from behavysis_core.data_models.experiment_configs import ExperimentConfigs
 from behavysis_core.mixins.df_io_mixin import DFIOMixin
 
-from behavysis_pipeline.processes.calculate_params.calculate_params import (
+from behavysis_pipeline.processes.calculate_params import (
     CalculateParams,
     Model_check_exists,
     Model_stop_frame,
