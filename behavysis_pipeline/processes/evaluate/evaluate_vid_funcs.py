@@ -29,6 +29,9 @@ Given the `out_dir`, we save the files to `out_dir/<func_name>/<exp_name>.<ext>`
 import cv2
 import numpy as np
 import pandas as pd
+import pyqtgraph as pg
+
+from behavysis_pipeline.processes.analyse.analyse_combine import AnalysisCombineCN
 
 
 class EvalVidFuncBase:
@@ -87,6 +90,7 @@ class Johansson(EvalVidFuncBase):
         )
 
 
+# TODO wrangle dlc_df HERE (not in eval_vid) for encapsulation
 class Keypoints(EvalVidFuncBase):
     """
     Adding the keypoints (given in `row`) to the frame.
@@ -254,7 +258,13 @@ class Analysis(EvalVidFuncBase):
         self.behavs_ls = behavs_ls
 
     def init_graph(self):
-        pass
+        # Making multi-plot widget
+        plots_layout = pg.GraphicsLayoutWidget()
+        # Making each plot (from "analysis")
+        analysis_ls = self.analysis_df.columns.unique(AnalysisCombineCN.ANALYSIS.value)
+        plots_ls = []
+        for i, v in enumerate(analysis_ls):
+            plots_ls.append(plots_layout.addPlot(row=i, col=0))
 
     def __call__(self, frame: np.ndarray, idx: int) -> np.ndarray:
         # Initialising the behav frame panel
@@ -289,7 +299,6 @@ class VidFuncRunner:
 
     johansson: Johansson | None
     keypoints: Keypoints | None
-    behavs: Behavs | None
     analysis: Analysis | None
 
     w_i: int
@@ -310,7 +319,7 @@ class VidFuncRunner:
         self.funcs = []
         # NOTE: ORDER MATTERS so going through in predefined order
         # Concatenating Vid, Behav, and Analysis funcs together in order
-        func_check_ls = [Johansson, Keypoints, Behavs, Analysis]
+        func_check_ls = [Johansson, Keypoints, Analysis]
         for func in func_check_ls:
             setattr(self, func.name, None)
         # Creating EvalVidFuncBase instances and adding to funcs list
@@ -327,15 +336,15 @@ class VidFuncRunner:
         # width
         # vid panel
         self.w_o = self.w_i
-        # analysis panel
-        if self.analysis:
-            self.w_o = self.w_o * 2
-        # height
-        # vid panel
+        # # analysis panel
+        # if self.analysis:
+        #     self.w_o = self.w_o * 2
+        # # height
+        # # vid panel
         self.h_o = self.h_i
-        # behav panel
-        if self.behavs:
-            self.h_o = self.h_o * 2
+        # # behav panel
+        # if self.behavs:
+        #     self.h_o = self.h_o * 2
 
     def __call__(self, vid_frame: np.ndarray, idx: int):
         # Initialise output arr (image) with given dimensions
@@ -348,12 +357,7 @@ class VidFuncRunner:
             arr_video = self.johansson(arr_video, idx)
         if self.keypoints:
             arr_video = self.keypoints(arr_video, idx)
-
         arr_out[: self.h_i, : self.w_i] = arr_video
-        # behavs tile
-        if self.behavs:
-            arr_behav = self.behavs(arr_video, idx)
-            arr_out[self.h_i : self.h_o, : self.w_i] = arr_behav
         # analysis tile
         if self.analysis:
             arr_analysis = self.analysis(arr_video, idx)
