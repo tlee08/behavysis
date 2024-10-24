@@ -23,11 +23,14 @@ from typing import Literal
 
 import numpy as np
 import pandas as pd
-from behavysis_core.constants import Coords, IndivColumns
 from behavysis_core.data_models.experiment_configs import ExperimentConfigs
 from behavysis_core.df_mixins.df_io_mixin import DFIOMixin
+from behavysis_core.df_mixins.keypoints_df_mixin import (
+    Coords,
+    IndivColumns,
+    KeypointsMixin,
+)
 from behavysis_core.mixins.io_mixin import IOMixin
-from behavysis_core.mixins.keypoints_df_mixin import KeypointsMixin
 from pydantic import BaseModel
 
 

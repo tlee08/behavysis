@@ -32,19 +32,17 @@ import cv2
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
-from behavysis_core.constants import (
-    BehavCN,
-    BehavColumns,
-    BehavIN,
+from behavysis_core.constants import FramesIN
+from behavysis_core.data_models.experiment_configs import ExperimentConfigs
+from behavysis_core.df_mixins.behav_df_mixin import BehavCN, BehavColumns, BehavDfMixin
+from behavysis_core.df_mixins.keypoints_df_mixin import (
     Coords,
     IndivColumns,
     KeypointsCN,
+    KeypointsMixin,
 )
-from behavysis_core.data_models.experiment_configs import ExperimentConfigs
-from behavysis_core.mixins.behav_df_mixin import BehavDfMixin
 from behavysis_core.mixins.diagnostics_mixin import DiagnosticsMixin
 from behavysis_core.mixins.io_mixin import IOMixin
-from behavysis_core.mixins.keypoints_df_mixin import KeypointsMixin
 from tqdm import trange
 
 from behavysis_pipeline.processes.evaluate.evaluate_vid_funcs import (
@@ -98,7 +96,7 @@ class Evaluate:
             .reset_index()
         )
         # Adding the timestamp column
-        df["timestamp"] = df[BehavIN.FRAME.value] / fps
+        df["timestamp"] = df[FramesIN.FRAME.value] / fps
         # Making plot
         g = sns.FacetGrid(
             df,
@@ -159,7 +157,7 @@ class Evaluate:
             .rename(columns={0: "value"})
         )
         # Adding the timestamp column
-        df["timestamp"] = df[BehavIN.FRAME.value] / fps
+        df["timestamp"] = df[FramesIN.FRAME.value] / fps
         # Making plot
         g = sns.FacetGrid(
             df,

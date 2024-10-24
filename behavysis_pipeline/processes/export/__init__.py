@@ -2,8 +2,8 @@ import os
 
 from behavysis_classifier import BehavClassifier
 from behavysis_core.data_models.experiment_configs import ExperimentConfigs
+from behavysis_core.df_mixins.behav_df_mixin import BehavDfMixin
 from behavysis_core.df_mixins.df_io_mixin import DFIOMixin
-from behavysis_core.mixins.behav_df_mixin import BehavDfMixin
 from behavysis_core.mixins.io_mixin import IOMixin
 
 

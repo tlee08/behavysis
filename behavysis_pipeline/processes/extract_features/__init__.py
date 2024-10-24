@@ -5,12 +5,12 @@ _summary_
 import os
 
 import pandas as pd
-from behavysis_core.constants import FeaturesCN, FeaturesIN
+from behavysis_core.constants import FramesIN
 from behavysis_core.data_models.experiment_configs import ExperimentConfigs
 from behavysis_core.df_mixins.df_io_mixin import DFIOMixin
-from behavysis_core.mixins.features_df_mixin import FeaturesDfMixin
+from behavysis_core.df_mixins.features_df_mixin import FeaturesCN, FeaturesDfMixin
+from behavysis_core.df_mixins.keypoints_df_mixin import KeypointsMixin
 from behavysis_core.mixins.io_mixin import IOMixin
-from behavysis_core.mixins.keypoints_df_mixin import KeypointsMixin
 from behavysis_core.mixins.multiproc_mixin import MultiprocMixin
 from behavysis_core.mixins.subproc_mixin import SubprocMixin
 
@@ -222,7 +222,7 @@ def export_2_feather(in_fp: str, out_fp: str, index: pd.Index) -> str:
     # Setting index to same as dlc preprocessed df
     df.index = index
     # Setting index and column level names
-    df.index.names = DFIOMixin.enum2tuple(FeaturesIN)
+    df.index.names = DFIOMixin.enum2tuple(FramesIN)
     df.columns.names = DFIOMixin.enum2tuple(FeaturesCN)
     # Checking df
     FeaturesDfMixin.check_df(df)

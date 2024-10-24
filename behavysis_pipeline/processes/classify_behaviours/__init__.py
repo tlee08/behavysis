@@ -5,10 +5,11 @@ Classify Behaviours
 import numpy as np
 import pandas as pd
 from behavysis_classifier import BehavClassifier
-from behavysis_core.constants import BehavCN, BehavColumns, BehavIN
+from behavysis_core.constants import FramesIN
 from behavysis_core.data_models.experiment_configs import ExperimentConfigs
+from behavysis_core.df_mixins.behav_df_mixin import BehavCN, BehavColumns, BehavDfMixin
+from behavysis_core.df_mixins.bouts_df_mixin import BoutsDfMixin
 from behavysis_core.df_mixins.df_io_mixin import DFIOMixin
-from behavysis_core.mixins.bouts_df_mixin import BoutsDfMixin
 from behavysis_core.mixins.io_mixin import IOMixin
 
 # TODO: handle reading the model file whilst in multiprocessing
@@ -96,7 +97,7 @@ class ClassifyBehaviours:
         # Concatenating predictions to a single dataframe
         behavs_df = pd.concat(df_ls, axis=1)
         # Setting the index and column names
-        behavs_df.index.names = DFIOMixin.enum2tuple(BehavIN)
+        behavs_df.index.names = DFIOMixin.enum2tuple(FramesIN)
         behavs_df.columns.names = DFIOMixin.enum2tuple(BehavCN)
         # Checking df
         BehavDfMixin.check_df(behavs_df)
@@ -126,6 +127,7 @@ def merge_bouts(
     pd.DataFrame
         A scored_behavs dataframe, with the merged bouts.
     """
+    # TODO: check this func
     vect = vect.copy()
     # Getting start, stop, and duration of each non-behav bout
     nonbouts_df = BoutsDfMixin.vect2bouts(vect == 0)

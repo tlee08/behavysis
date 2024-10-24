@@ -34,7 +34,12 @@ from behavysis_core.df_mixins.keypoints_df_mixin import (
 from behavysis_core.mixins.io_mixin import IOMixin
 from pydantic import BaseModel, ConfigDict
 
-from behavysis_pipeline.processes.analyse.analyse_mixin import AggAnalyse, AnalyseMixin
+from behavysis_pipeline.processes.analyse.analyse_mixin import (
+    AggAnalyse,
+    AnalyseMixin,
+    AnalysisAggCN,
+    AnalysisCN,
+)
 
 #####################################################################
 #               ANALYSIS API FUNCS

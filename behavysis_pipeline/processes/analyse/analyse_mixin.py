@@ -29,6 +29,7 @@ from behavysis_core.constants import FramesIN
 from behavysis_core.data_models.experiment_configs import ExperimentConfigs
 from behavysis_core.df_mixins.bouts_df_mixin import BoutsDfMixin
 from behavysis_core.df_mixins.df_io_mixin import DFIOMixin
+from behavysis_core.df_mixins.keypoints_df_mixin import Coords
 
 ####################################################################################################
 # ANALYSIS DATAFRAME CONSTANTS
@@ -352,7 +353,7 @@ class AggAnalyse:
     def make_binned(
         analysis_df: pd.DataFrame,
         fps: float,
-        bins: list,
+        bins_: list,
         summary_func: Callable[[pd.DataFrame, float], pd.DataFrame],
     ) -> pd.DataFrame:
         """
@@ -362,6 +363,7 @@ class AggAnalyse:
         # For each column, displays the mean of each binned group.
         timestamps = analysis_df.index.get_level_values("frame") / fps
         # Ensuring all bins are included (start frame and end frame)
+        bins: np.ndarray = np.asarray(bins_)
         bins = np.append(0, bins) if np.min(bins) > 0 else bins
         t_max = np.max(timestamps)
         bins = np.append(bins, t_max) if np.max(bins) < t_max else bins
@@ -423,8 +425,8 @@ class AggAnalyse:
         out_dir: str,
         name: str,
         fps: float,
-        bins_ls: None | list,
-        cbins_ls: None | list,
+        bins_ls: list,
+        cbins_ls: list,
     ) -> str:
         """
         _summary_
@@ -446,8 +448,8 @@ class AggAnalyse:
         out_dir: str,
         name: str,
         fps: float,
-        bins_ls: None | list,
-        cbins_ls: None | list,
+        bins_ls: list,
+        cbins_ls: list,
     ) -> str:
         """
         _summary_
@@ -471,8 +473,8 @@ class AggAnalyse:
         fps: float,
         summary_func: Callable[[pd.DataFrame, float], pd.DataFrame],
         agg_column: str,
-        bins_ls: None | list,
-        cbins_ls: None | list,
+        bins_ls: list,
+        cbins_ls: list,
     ) -> str:
         """
         _summary_
