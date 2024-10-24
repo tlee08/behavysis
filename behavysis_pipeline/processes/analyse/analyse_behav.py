@@ -26,8 +26,11 @@ from behavysis_core.df_mixins.behav_df_mixin import BehavCN, BehavColumns, Behav
 from behavysis_core.df_mixins.df_io_mixin import DFIOMixin
 from behavysis_core.mixins.io_mixin import IOMixin
 
-from . import AnalysisCN
-from .analyse_mixin import AggAnalyse, AnalyseMixin
+from behavysis_pipeline.processes.analyse.analyse_mixin import (
+    AggAnalyse,
+    AnalyseMixin,
+    AnalysisCN,
+)
 
 
 class AnalyseBehav:

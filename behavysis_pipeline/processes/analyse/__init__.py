@@ -34,27 +34,7 @@ from behavysis_core.df_mixins.keypoints_df_mixin import (
 from behavysis_core.mixins.io_mixin import IOMixin
 from pydantic import BaseModel, ConfigDict
 
-from .analyse_mixin import AggAnalyse, AnalyseMixin
-
-####################################################################################################
-# ANALYSIS DATAFRAME CONSTANTS
-####################################################################################################
-
-
-class AnalysisCN(Enum):
-    """Enum for the columns in the analysis dataframe."""
-
-    INDIVIDUALS = "individuals"
-    MEASURES = "measures"
-
-
-class AnalysisAggCN(Enum):
-    """Enum for the columns in the aggregated analysis dataframe."""
-
-    INDIVIDUALS = "individuals"
-    MEASURES = "measures"
-    AGGS = "aggs"
-
+from behavysis_pipeline.processes.analyse.analyse_mixin import AggAnalyse, AnalyseMixin
 
 #####################################################################
 #               ANALYSIS API FUNCS

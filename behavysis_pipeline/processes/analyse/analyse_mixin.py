@@ -19,6 +19,7 @@ str
 from __future__ import annotations
 
 import os
+from enum import Enum
 from typing import Callable
 
 import numpy as np
@@ -29,7 +30,25 @@ from behavysis_core.data_models.experiment_configs import ExperimentConfigs
 from behavysis_core.df_mixins.bouts_df_mixin import BoutsDfMixin
 from behavysis_core.df_mixins.df_io_mixin import DFIOMixin
 
-from . import AnalysisAggCN, AnalysisCN, Coords
+####################################################################################################
+# ANALYSIS DATAFRAME CONSTANTS
+####################################################################################################
+
+
+class AnalysisCN(Enum):
+    """Enum for the columns in the analysis dataframe."""
+
+    INDIVIDUALS = "individuals"
+    MEASURES = "measures"
+
+
+class AnalysisAggCN(Enum):
+    """Enum for the columns in the aggregated analysis dataframe."""
+
+    INDIVIDUALS = "individuals"
+    MEASURES = "measures"
+    AGGS = "aggs"
+
 
 #####################################################################
 #               ANALYSIS API FUNCS
