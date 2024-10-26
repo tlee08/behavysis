@@ -34,9 +34,9 @@ from behavysis_core.df_mixins.keypoints_df_mixin import (
 from behavysis_core.mixins.io_mixin import IOMixin
 from pydantic import BaseModel, ConfigDict
 
-from behavysis_pipeline.processes.analyse.analyse_mixin import (
+from behavysis_pipeline.processes.analyse.analyse_df_mixin import (
     AggAnalyse,
-    AnalyseMixin,
+    AnalyseDfMixin,
     AnalysisCN,
 )
 
@@ -71,7 +71,7 @@ class Analyse:
         out_dir = os.path.join(analysis_dir, f_name)
         # Calculating the deltas (changes in body position) between each frame for the subject
         configs = ExperimentConfigs.read_json(configs_fp)
-        fps, _, _, px_per_mm, bins_ls, cbins_ls = AnalyseMixin.get_configs(configs)
+        fps, _, _, px_per_mm, bins_ls, cbins_ls = AnalyseDfMixin.get_configs(configs)
         configs_filt_ls = list(configs.user.analyse.in_roi)  # type: ignore
         # Loading in dataframe
         dlc_df = KeypointsMixin.clean_headings(KeypointsMixin.read_feather(dlc_fp))
@@ -113,7 +113,7 @@ class Analyse:
                 roi_c_df.loc[i, x] = roi_c_df.loc[i, x] + (thresh_px * np.cos(theta))
                 roi_c_df.loc[i, y] = roi_c_df.loc[i, y] + (thresh_px * np.sin(theta))
             # Making the res_df
-            res_df = AnalyseMixin.init_df(dlc_df.index)
+            res_df = AnalyseDfMixin.init_df(dlc_df.index)
             # For each individual, getting the in-roi status
             for indiv in indivs:
                 # Getting average body center (x, y) for each individual
@@ -126,7 +126,7 @@ class Analyse:
                 # Determining if the indiv body center is in the ROI
                 res_df[(indiv, "in_roi")] = (
                     res_df[indiv]
-                    .apply(lambda pt: AnalyseMixin.pt_in_roi(pt, roi_c_df), axis=1)
+                    .apply(lambda pt: AnalyseDfMixin.pt_in_roi(pt, roi_c_df), axis=1)
                     .astype(np.int8)
                 )
             # Inverting in_roi status if is_in is False
@@ -157,7 +157,7 @@ class Analyse:
             )
         # Making and saving scatterplot
         plot_fp = os.path.join(out_dir, "scatter_plot", f"{name}.png")
-        AnalyseMixin.make_location_scatterplot(scatter_df, roi_c_df, plot_fp, "roi")
+        AnalyseDfMixin.make_location_scatterplot(scatter_df, roi_c_df, plot_fp, "roi")
         # Summarising and binning analysis_df
         AggAnalyse.summary_binned_behavs(
             analysis_df,
@@ -191,7 +191,7 @@ class Analyse:
         out_dir = os.path.join(analysis_dir, f_name)
         # Calculating the deltas (changes in body position) between each frame for the subject
         configs = ExperimentConfigs.read_json(configs_fp)
-        fps, _, _, px_per_mm, bins_ls, cbins_ls = AnalyseMixin.get_configs(configs)
+        fps, _, _, px_per_mm, bins_ls, cbins_ls = AnalyseDfMixin.get_configs(configs)
         configs_filt = Model_speed(**configs.user.analyse.speed)  # type: ignore
         bpts = configs.get_ref(configs_filt.bodyparts)
         smoothing_sec = configs.get_ref(configs_filt.smoothing_sec)
@@ -206,7 +206,7 @@ class Analyse:
         indivs, _ = KeypointsMixin.get_headings(dlc_df)
 
         # Calculating speed of subject for each frame
-        analysis_df = AnalyseMixin.init_df(dlc_df.index)
+        analysis_df = AnalyseDfMixin.init_df(dlc_df.index)
         dlc_df.index = analysis_df.index
         idx = pd.IndexSlice
         for indiv in indivs:
@@ -263,7 +263,7 @@ class Analyse:
         out_dir = os.path.join(analysis_dir, f_name)
         # Calculating the deltas (changes in body position) between each frame for the subject
         configs = ExperimentConfigs.read_json(configs_fp)
-        fps, _, _, px_per_mm, bins_ls, cbins_ls = AnalyseMixin.get_configs(configs)
+        fps, _, _, px_per_mm, bins_ls, cbins_ls = AnalyseDfMixin.get_configs(configs)
         configs_filt = Model_social_distance(**configs.user.analyse.social_distance)  # type: ignore
         bpts = configs.get_ref(configs_filt.bodyparts)
         smoothing_sec = configs.get_ref(configs_filt.smoothing_sec)
@@ -278,7 +278,7 @@ class Analyse:
         indivs, _ = KeypointsMixin.get_headings(dlc_df)
 
         # Calculating speed of subject for each frame
-        analysis_df = AnalyseMixin.init_df(dlc_df.index)
+        analysis_df = AnalyseDfMixin.init_df(dlc_df.index)
         dlc_df.index = analysis_df.index
         idx = pd.IndexSlice
         # Assumes there are only two individuals
@@ -339,7 +339,7 @@ class Analyse:
         out_dir = os.path.join(analysis_dir, f_name)
         # Calculating the deltas (changes in body position) between each frame for the subject
         configs = ExperimentConfigs.read_json(configs_fp)
-        fps, _, _, px_per_mm, bins_ls, cbins_ls = AnalyseMixin.get_configs(configs)
+        fps, _, _, px_per_mm, bins_ls, cbins_ls = AnalyseDfMixin.get_configs(configs)
         configs_filt = Model_freezing(**configs.user.analyse.freezing)  # type: ignore
         bpts = configs.get_ref(configs_filt.bodyparts)
         thresh_mm = configs.get_ref(configs_filt.thresh_mm)
@@ -358,7 +358,7 @@ class Analyse:
         indivs, _ = KeypointsMixin.get_headings(dlc_df)
 
         # Calculating speed of subject for each frame
-        analysis_df = AnalyseMixin.init_df(dlc_df.index)
+        analysis_df = AnalyseDfMixin.init_df(dlc_df.index)
         dlc_df.index = analysis_df.index
         for indiv in indivs:
             temp_df = pd.DataFrame(index=analysis_df.index)

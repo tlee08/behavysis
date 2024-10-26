@@ -61,7 +61,7 @@ CUSTOM = "custom"
 #####################################################################
 
 
-class AnalyseMixin:
+class AnalyseDfMixin:
     """__summary__"""
 
     @staticmethod
@@ -151,7 +151,7 @@ class AnalyseMixin:
         # Reading
         df = DFIOMixin.read_feather(fp)
         # Checking
-        AnalyseMixin.check_df(df)
+        AnalyseDfMixin.check_df(df)
         # Returning
         return df
 

@@ -25,14 +25,14 @@ import pandas as pd
 from behavysis_core.df_mixins.df_io_mixin import DFIOMixin
 from behavysis_core.mixins.io_mixin import IOMixin
 
-from behavysis_pipeline.processes.analyse.analyse_mixin import AnalyseMixin
+from behavysis_pipeline.processes.analyse.analyse_df_mixin import AnalyseDfMixin
 
-####################################################################################################
+###################################################################################################
 # ANALYSIS DATAFRAME CONSTANTS
-####################################################################################################
+###################################################################################################
 
 
-class AnalysisCombineCN(Enum):
+class AnalyseCombineCN(Enum):
     """Enum for the columns in the analysis dataframe."""
 
     ANALYSIS = "analysis"
@@ -40,9 +40,9 @@ class AnalysisCombineCN(Enum):
     MEASURES = "measures"
 
 
-#####################################################################
+###################################################################################################
 #               ANALYSIS API FUNCS
-#####################################################################
+###################################################################################################
 
 
 class AnalyseCombine:
@@ -72,7 +72,7 @@ class AnalyseCombine:
             outcome += "WARNING: no analysis fbf files made. Run `exp.analyse` first"
             return outcome
         comb_df_ls = [
-            AnalyseMixin.read_feather(
+            AnalyseDfMixin.read_feather(
                 os.path.join(analysis_dir, i, "fbf", f"{name}.feather")
             )
             for i in analysis_ls
@@ -82,7 +82,7 @@ class AnalyseCombine:
             comb_df_ls,
             axis=1,
             keys=analysis_ls,
-            names=[AnalysisCombineCN.ANALYSIS.value],
+            names=[AnalyseCombineCN.ANALYSIS.value],
         )
         # Writing to file
         out_fp = os.path.join(out_dir, f"{name}.feather")

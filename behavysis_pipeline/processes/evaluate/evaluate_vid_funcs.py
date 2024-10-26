@@ -30,8 +30,10 @@ import cv2
 import numpy as np
 import pandas as pd
 import pyqtgraph as pg
+from pg.exporters import ImageExporter
+import matplotlib.pyplot as plt
 
-from behavysis_pipeline.processes.analyse.analyse_combine import AnalysisCombineCN
+from behavysis_pipeline.processes.analyse.analyse_combine import AnalyseCombineCN
 
 
 class EvalVidFuncBase:
@@ -251,25 +253,120 @@ class Analysis(EvalVidFuncBase):
 
     name = "analysis"
 
-    def __init__(self, w_i: int, h_i: int, analysis_df, behavs_ls, **kwargs):
+    qimage_format = pg.QtGui.QImage.Format.Format_RGB888
+
+    def __init__(
+        self, w_i: int, h_i: int, analysis_df: pd.DataFrame, cmap: str, **kwargs
+    ):
         self.w_i = w_i
-        self.h_i = h_i * 2
+        self.h_i = h_i
         self.analysis_df: pd.DataFrame = analysis_df
-        self.behavs_ls = behavs_ls
+        self.cmap = cmap
+        self.plot_arr = None
+        self.x_line_arr = None
 
     def init_graph(self):
         # Making multi-plot widget
         plots_layout = pg.GraphicsLayoutWidget()
+        # Getting list of different groups (`analysis`, `individuals` levels)
+        df_columns = self.analysis_df.columns
+        # For making separate plots in layout
+        analysis_ls = df_columns.unique(AnalyseCombineCN.ANALYSIS.value)
+        indivs_ls = df_columns.unique(AnalyseCombineCN.INDIVIDUALS.value)
         # Making each plot (from "analysis")
-        analysis_ls = self.analysis_df.columns.unique(AnalysisCombineCN.ANALYSIS.value)
-        plots_ls = []
-        for i, v in enumerate(analysis_ls):
-            plots_ls.append(plots_layout.addPlot(row=i, col=0))
+        self.plot_arr = np.zeros(shape=(len(analysis_ls), len(indivs_ls)), dtype=object)
+        self.x_line_arr = np.copy(self.plot_arr)
+        for i, analysis_i in enumerate(analysis_ls):
+            for j, indivs_j in enumerate(indivs_ls):
+                # Making plot
+                self.plot_arr[i, j] = plots_layout.addPlot(
+                    row=i,
+                    col=j,
+                    title=f"{analysis_i} - {indivs_j}",
+                    labels={"left": "value", "bottom": "second"},
+                )
+                # Plot middle (current time) line
+                self.x_line_arr[i, j] = pg.InfiniteLine(pos=0, angle=90)
+                self.x_line_arr[i, j].setZValue(10)
+                self.plot_arr[i, j].addItem(x_line)
+                # Setting data
+                # TODO implement for bouts as well
+                measures_ls = df_columns.unique(AnalyseCombineCN.MEASURES.value)
+                # Making the corresponding colours list for each bodypart instance
+                # (colours depend on indiv/bpt)
+                colours_idx, _ = pd.factorize(measures_ls)
+                colours_ls = (
+                    plt.cm.get_cmap(self.cmap)(colours_idx / colours_idx.max()) * 255
+                )[:, [2, 1, 0, 3]]
+                # make legend
+                legend = self.plot_arr[i, j].addLegend()
+                for k, measures_k in enumerate(measures_ls):
+                    colours_k = colours_ls[k]
+                    # make measure's line
+                    line_item = pg.PlotDataItem(
+                        x=self.analysis_df.index,
+                        y=self.analysis_df[(analysis_i, indivs_j, measures_k)],
+                        pen=pg.mkPen(color=colours_k),
+                        brush=pg.mkBrush(color=colours_k),
+                    )
+                    line_item.setFillLevel(0.5)
+                    self.plot_arr[i, j].addItem(line_item)
+                    # make measure's legend
+                    legend.addItem(item=line_item, title=measures_k)
 
     def __call__(self, frame: np.ndarray, idx: int) -> np.ndarray:
-        # Initialising the behav frame panel
-        # TODO: use with pyqtgraph??
-        return frame
+        # For each plot (rows (analysis), columns (indivs))
+        # NOTE: may not allow np arrays in np arrays
+        plot_imgs_arr = np.zeros(shape=self.plot_arr.shape, dtype=object)
+        for i in range(self.plot_arr.shape[0]):
+            for j in range(self.plot_arr.shape[1]):
+                self.update_plot(idx, i, j)
+                pself.plot2cv(i, j)
+
+    def update_plot(self, idx: int, i: int, j: int):
+        """
+        For a single plot
+        (as the plots_layout has rows (analysis) and columns (indivs)).
+        """
+        # TODO: implement custom seconds
+        padding = 100
+        self.x_line_arr[i, j].setPos(idx)
+        self.plot_arr[i, j].setXRange(i - padding, i + padding)
+
+    @classmethod
+    def qt2cv(cls, img_qt: pg.QtGui.QImage) -> np.ndarray:
+        """Convert from a QImage to an opencv image."""
+        # QImage to RGB888 format
+        img_qt = img_qt.convertToFormat(cls.qimage_format)
+        # Get shape of image
+        w, h = img_qt.width(), img_qt.height()
+        # Get bytes pointer to image data
+        ptr = img_qt.bits()
+        # Bytes to cv2 image
+        img_cv = np.array(ptr, dtype=np.uint8).reshape(h, w, 3)
+        # Return cv2 image
+        return img_cv
+
+    @classmethod
+    def plot2cv_(cls, plot):
+        # Making pyqtgraph image exporter to bytes
+        exporter = ImageExporter(plot.plotItem)
+        # exporter.parameters()["width"] = self.width()
+        # Exporting to QImage (bytes)
+        img_qt = exporter.export(toBytes=True)
+        # QImage to cv2 image (using mixin)
+        img_cv = cls.qt2cv(img_qt)
+        # cv2 BGR to RGB
+        img_cv = cv2.cvtColor(img_cv, cv2.COLOR_BGR2RGB)
+        # Resize to widget size
+        # w, h = self.width(), self.height()
+        # img_cv = cv2.resize(img_cv, (w, h), interpolation=cv2.INTER_AREA)
+        # Return cv2 image
+        return img_cv
+
+    @classmethod
+    def plot2cv(self, i: int, j: int):
+        return self.plot2cv_(self.plot_arr[i, j])
 
 
 # TODO have a VidFuncOrganiser class, which has list of vid func objects and can

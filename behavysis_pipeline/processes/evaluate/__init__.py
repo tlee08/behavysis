@@ -45,6 +45,8 @@ from behavysis_core.mixins.diagnostics_mixin import DiagnosticsMixin
 from behavysis_core.mixins.io_mixin import IOMixin
 from tqdm import trange
 
+from behavysis_pipeline.processes.analyse.analyse_combine import AnalyseCombineCN
+from behavysis_pipeline.processes.analyse.analyse_df_mixin import AnalyseDfMixin
 from behavysis_pipeline.processes.evaluate.evaluate_vid_funcs import (
     VidFuncRunner,
 )
@@ -256,18 +258,19 @@ class Evaluate:
         # - Changing the columns MultiIndex to a single-level index. For speedup
         # Getting behavs df
         try:
-            analysis_df = BehavDfMixin.read_feather(analysis_fp)
+            analysis_df = AnalyseDfMixin.read_feather(analysis_fp)
         except FileNotFoundError:
             outcome += (
                 "WARNING: behavs file not found or could not be loaded."
                 + "Disregarding behaviour."
                 + "If you have run the behaviour classifier, please check this file.\n"
             )
-            analysis_df = BehavDfMixin.init_df(dlc_df.index)
-        # Getting list of behaviours
+            analysis_df = AnalyseDfMixin.init_df(dlc_df.index)
+        # Getting list of different groups (`analysis`, `individuals` levels)
         # TODO
-        analysis_ls = analysis_df.columns.unique("behaviours")
+
         # Making sure all relevant behaviour outcome columns exist (imputing with 0 if not)
+
         for behav in analysis_ls:
             for i in BehavColumns:
                 i = i.value

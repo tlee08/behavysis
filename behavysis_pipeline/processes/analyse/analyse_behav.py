@@ -28,7 +28,7 @@ from behavysis_core.mixins.io_mixin import IOMixin
 
 from behavysis_pipeline.processes.analyse.analyse_mixin import (
     AggAnalyse,
-    AnalyseMixin,
+    AnalyseDfMixin,
     AnalysisCN,
 )
 
@@ -52,7 +52,7 @@ class AnalyseBehav:
         out_dir = os.path.join(analysis_dir, AnalyseBehav.analyse_behav.__name__)
         # Calculating the deltas (changes in body position) between each frame for the subject
         configs = ExperimentConfigs.read_json(configs_fp)
-        fps, _, _, _, bins_ls, cbins_ls = AnalyseMixin.get_configs(configs)
+        fps, _, _, _, bins_ls, cbins_ls = AnalyseDfMixin.get_configs(configs)
         # Loading in dataframe
         behavs_df = BehavDfMixin.read_feather(behavs_fp)
         # Setting all na and -1 values to 0 (to make any undecided behav to non-behav)
