@@ -21,7 +21,6 @@ from behavysis_core.constants import (
     Folders,
 )
 from behavysis_core.data_models.experiment_configs import ConfigsAuto, ExperimentConfigs
-from behavysis_core.df_mixins.df_io_mixin import DFIOMixin
 from behavysis_core.mixins.diagnostics_mixin import DiagnosticsMixin
 from behavysis_core.mixins.io_mixin import IOMixin
 from behavysis_core.mixins.multiproc_mixin import MultiprocMixin
@@ -759,7 +758,7 @@ class Project:
                         analysis_dir, i, f"binned_{bin_i}", f"{exp.name}.feather"
                     )
                     if os.path.isfile(in_fp):
-                        df_ls.append(DFIOMixin.read_feather(in_fp))
+                        df_ls.append(DFMixin.read_feather(in_fp))
                         names_ls.append(exp.name)
                 # Concatenating total_df with df across columns, with experiment name to column MultiIndex
                 if len(df_ls) > 0:
@@ -767,7 +766,7 @@ class Project:
                     out_fp = os.path.join(
                         analysis_dir, i, f"__ALL_binned_{bin_i}.feather"
                     )
-                    DFIOMixin.write_feather(df, out_fp)
+                    DFMixin.write_feather(df, out_fp)
 
     def _collate_analysis_summary(self) -> None:
         """
@@ -788,13 +787,13 @@ class Project:
                 in_fp = os.path.join(analysis_dir, i, "summary", f"{exp.name}.feather")
                 if os.path.isfile(in_fp):
                     # Reading exp summary df
-                    df_ls.append(DFIOMixin.read_feather(in_fp))
+                    df_ls.append(DFMixin.read_feather(in_fp))
                     names_ls.append(exp.name)
             out_fp = os.path.join(analysis_dir, i, "__ALL_summary.feather")
             # Concatenating total_df with df across columns, with experiment name to column MultiIndex
             if len(df_ls) > 0:
                 total_df = pd.concat(df_ls, keys=names_ls, names=["experiment"], axis=0)
-                DFIOMixin.write_feather(total_df, out_fp)
+                DFMixin.write_feather(total_df, out_fp)
 
     def in_roi_comb(self) -> None:
         # Cleaning analysis for ONLY multi-ROI

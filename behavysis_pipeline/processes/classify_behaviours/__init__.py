@@ -9,7 +9,7 @@ from behavysis_core.constants import FramesIN
 from behavysis_core.data_models.experiment_configs import ExperimentConfigs
 from behavysis_core.df_mixins.behav_df_mixin import BehavCN, BehavColumns, BehavDfMixin
 from behavysis_core.df_mixins.bouts_df_mixin import BoutsDfMixin
-from behavysis_core.df_mixins.df_io_mixin import DFIOMixin
+from behavysis_core.df_mixins.df_mixin import DFMixin
 from behavysis_core.mixins.io_mixin import IOMixin
 
 # TODO: handle reading the model file whilst in multiprocessing
@@ -61,7 +61,7 @@ class ClassifyBehaviours:
         configs = ExperimentConfigs.read_json(configs_fp)
         models_ls = configs.user.classify_behaviours
         # Getting features data
-        features_df = DFIOMixin.read_feather(features_fp)
+        features_df = DFMixin.read_feather(features_fp)
         # Initialising y_preds df
         # Getting predictions for each classifier model and saving
         # in a list of pd.DataFrames
@@ -97,12 +97,12 @@ class ClassifyBehaviours:
         # Concatenating predictions to a single dataframe
         behavs_df = pd.concat(df_ls, axis=1)
         # Setting the index and column names
-        behavs_df.index.names = DFIOMixin.enum2tuple(FramesIN)
-        behavs_df.columns.names = DFIOMixin.enum2tuple(BehavCN)
+        behavs_df.index.names = DFMixin.enum2tuple(FramesIN)
+        behavs_df.columns.names = DFMixin.enum2tuple(BehavCN)
         # Checking df
         BehavDfMixin.check_df(behavs_df)
         # Saving behav_preds df
-        DFIOMixin.write_feather(behavs_df, out_fp)
+        DFMixin.write_feather(behavs_df, out_fp)
         # Returning outcome
         return outcome
 

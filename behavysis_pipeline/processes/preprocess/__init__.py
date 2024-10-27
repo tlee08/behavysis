@@ -24,7 +24,7 @@ from typing import Literal
 import numpy as np
 import pandas as pd
 from behavysis_core.data_models.experiment_configs import ExperimentConfigs
-from behavysis_core.df_mixins.df_io_mixin import DFIOMixin
+from behavysis_core.df_mixins.df_mixin import DFMixin
 from behavysis_core.df_mixins.keypoints_df_mixin import (
     Coords,
     IndivColumns,
@@ -87,7 +87,7 @@ class Preprocess:
         df = df.loc[start_frame:stop_frame, :]
 
         # Writing file
-        DFIOMixin.write_feather(df, out_fp)
+        DFMixin.write_feather(df, out_fp)
 
         return outcome
 
@@ -128,7 +128,7 @@ class Preprocess:
                 "Width and height must be provided in the formatted video. Try running FormatVid.format_vid."
             )
         # Reading file
-        df = DFIOMixin.read_feather(in_fp)
+        df = DFMixin.read_feather(in_fp)
         # For each bodypart, filling in the given point
         for configs_filt in configs_filt_ls:
             # Getting config parameters
@@ -154,7 +154,7 @@ class Preprocess:
             else:
                 outcome += f"{bodypart} is detected in more than {pcutoff_all} of the video. No need for interpolation.\n"
         # Saving
-        DFIOMixin.write_feather(df, out_fp)
+        DFMixin.write_feather(df, out_fp)
         # Returning outcome
         return outcome
 
@@ -205,7 +205,7 @@ class Preprocess:
         # if df.isnull().values.any() then the entire column is nan (print warning)
         df = df.fillna(0)
         # Writing file
-        DFIOMixin.write_feather(df, out_fp)
+        DFMixin.write_feather(df, out_fp)
         return outcome
 
     @staticmethod
@@ -264,7 +264,7 @@ class Preprocess:
         # Updating df with the switched values
         df_switched = switch_identities(df, df_switch[metric], marked, unmarked)
         # Writing to file
-        DFIOMixin.write_feather(df_switched, out_fp)
+        DFMixin.write_feather(df_switched, out_fp)
         return outcome
 
 

@@ -28,15 +28,15 @@ import seaborn as sns
 from behavysis_core.constants import FramesIN
 from behavysis_core.data_models.experiment_configs import ExperimentConfigs
 from behavysis_core.df_mixins.bouts_df_mixin import BoutsDfMixin
-from behavysis_core.df_mixins.df_io_mixin import DFIOMixin
 from behavysis_core.df_mixins.keypoints_df_mixin import Coords
+from behavysis_core.mixins.io_mixin import IOMixin
 
 ####################################################################################################
 # ANALYSIS DATAFRAME CONSTANTS
 ####################################################################################################
 
 
-class AnalysisCN(Enum):
+class AnalyseCN(Enum):
     """Enum for the columns in the analysis dataframe."""
 
     INDIVIDUALS = "individuals"
@@ -65,6 +65,7 @@ class AnalyseDfMixin:
     """__summary__"""
 
     @staticmethod
+    @IOMixin.overwrite_check()
     def get_configs(
         configs: ExperimentConfigs,
     ) -> tuple[
@@ -119,10 +120,8 @@ class AnalyseDfMixin:
             _description_
         """
         return pd.DataFrame(
-            index=pd.Index(frame_vect, name=DFIOMixin.enum2tuple(FramesIN)[0]),
-            columns=pd.MultiIndex.from_tuples(
-                (), names=DFIOMixin.enum2tuple(AnalysisCN)
-            ),
+            index=pd.Index(frame_vect, name=DFMixin.enum2tuple(FramesIN)[0]),
+            columns=pd.MultiIndex.from_tuples((), names=DFMixin.enum2tuple(AnalyseCN)),
         )
 
     @staticmethod
@@ -139,9 +138,9 @@ class AnalyseDfMixin:
         # Checking for null values
         assert not df.isnull().values.any(), "The dataframe contains null values. Be sure to run interpolate_points first."
         # Checking that the index levels are correct
-        DFIOMixin.check_df_index_names(df, DFIOMixin.enum2tuple(FramesIN))
+        DFMixin.check_df_index_names(df, DFMixin.enum2tuple(FramesIN))
         # Checking that the column levels are correct
-        DFIOMixin.check_df_column_names(df, DFIOMixin.enum2tuple(AnalysisCN))
+        DFMixin.check_df_column_names(df, DFMixin.enum2tuple(AnalyseCN))
 
     @staticmethod
     def read_feather(fp: str) -> pd.DataFrame:
@@ -149,7 +148,7 @@ class AnalyseDfMixin:
         Reading feather file.
         """
         # Reading
-        df = DFIOMixin.read_feather(fp)
+        df = DFMixin.read_feather(fp)
         # Checking
         AnalyseDfMixin.check_df(df)
         # Returning
@@ -377,9 +376,9 @@ class AggAnalyse:
         grouped_df = analysis_df.groupby(bin_sec)
         binned_df = grouped_df.apply(
             lambda x: summary_func(x, fps)
-            .unstack(DFIOMixin.enum2tuple(AnalysisCN))
-            .reorder_levels(DFIOMixin.enum2tuple(AnalysisAggCN))
-            .sort_index(level=DFIOMixin.enum2tuple(AnalysisCN))
+            .unstack(DFMixin.enum2tuple(AnalyseCN))
+            .reorder_levels(DFMixin.enum2tuple(AnalysisAggCN))
+            .sort_index(level=DFMixin.enum2tuple(AnalyseCN))
         )
         binned_df.index.name = "bin_sec"
         # returning binned_df
@@ -396,7 +395,7 @@ class AggAnalyse:
         """
         # Making binned_df long
         binned_stacked_df = (
-            binned_df.stack(DFIOMixin.enum2tuple(AnalysisCN))[agg_column]
+            binned_df.stack(DFMixin.enum2tuple(AnalyseCN))[agg_column]
             .rename("value")
             .reset_index()
         )
@@ -491,7 +490,7 @@ class AggAnalyse:
         # Summarising analysis_df
         summary_fp = os.path.join(out_dir, "summary", f"{name}.feather")
         summary_df = summary_func(analysis_df, fps)
-        DFIOMixin.write_feather(summary_df, summary_fp)
+        DFMixin.write_feather(summary_df, summary_fp)
         # Getting timestamps index
         timestamps = analysis_df.index.get_level_values("frame") / fps
         # Binning analysis_df
@@ -504,7 +503,7 @@ class AggAnalyse:
             # Making binned df
             bins = np.arange(0, np.max(timestamps) + bin_sec, bin_sec)
             binned_df = AggAnalyse.make_binned(analysis_df, fps, bins, summary_func)
-            DFIOMixin.write_feather(binned_df, binned_fp)
+            DFMixin.write_feather(binned_df, binned_fp)
             # Making binned plots
             AggAnalyse.make_binned_plot(binned_df, binned_plot_fp, agg_column)
         # Custom binning analysis_df
@@ -514,7 +513,7 @@ class AggAnalyse:
             binned_plot_fp = os.path.join(out_dir, "binned_custom_plot", f"{name}.png")
             # Making binned df
             binned_df = AggAnalyse.make_binned(analysis_df, fps, cbins_ls, summary_func)
-            DFIOMixin.write_feather(binned_df, binned_fp)
+            DFMixin.write_feather(binned_df, binned_fp)
             # Making binned plots
             AggAnalyse.make_binned_plot(binned_df, binned_plot_fp, agg_column)
         # Returning outcome

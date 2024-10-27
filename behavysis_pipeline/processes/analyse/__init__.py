@@ -25,7 +25,7 @@ import numpy as np
 import pandas as pd
 from behavysis_core.data_models.experiment_configs import ExperimentConfigs
 from behavysis_core.df_mixins.bouts_df_mixin import BoutsDfMixin
-from behavysis_core.df_mixins.df_io_mixin import DFIOMixin
+from behavysis_core.df_mixins.df_mixin import DFMixin
 from behavysis_core.df_mixins.keypoints_df_mixin import (
     Coords,
     IndivColumns,
@@ -36,8 +36,8 @@ from pydantic import BaseModel, ConfigDict
 
 from behavysis_pipeline.processes.analyse.analyse_df_mixin import (
     AggAnalyse,
+    AnalyseCN,
     AnalyseDfMixin,
-    AnalysisCN,
 )
 
 #####################################################################
@@ -134,7 +134,7 @@ class Analyse:
                 res_df.loc[:, idx[:, "in_roi"]] = ~res_df.loc[:, idx[:, "in_roi"]]  # type: ignore
             # Changing column MultiIndex names
             res_df.columns = res_df.columns.set_levels(  # type: ignore
-                ["x", "y", f"in_roi_{roi_name}"], level=AnalysisCN.MEASURES.value
+                ["x", "y", f"in_roi_{roi_name}"], level=AnalyseCN.MEASURES.value
             )
             # Saving to analysis_df and roi_corners_df list
             analysis_df_ls.append(res_df.loc[:, idx[:, f"in_roi_{roi_name}"]])  # type: ignore
@@ -145,7 +145,7 @@ class Analyse:
         roi_c_df = roi_c_df.reset_index(level="group")
         # Saving analysis_df
         fbf_fp = os.path.join(out_dir, "fbf", f"{name}.feather")
-        DFIOMixin.write_feather(analysis_df, fbf_fp)
+        DFMixin.write_feather(analysis_df, fbf_fp)
         # Generating scatterplot
         # First getting scatter_in_roi columns
         # TODO: any way to include all different "x", "y" to use, rather
@@ -229,7 +229,7 @@ class Analyse:
         analysis_df = analysis_df.bfill()
         # Saving analysis_df
         fbf_fp = os.path.join(out_dir, "fbf", f"{name}.feather")
-        DFIOMixin.write_feather(analysis_df, fbf_fp)
+        DFMixin.write_feather(analysis_df, fbf_fp)
 
         # Summarising and binning analysis_df
         AggAnalyse.summary_binned_quantitative(
@@ -299,7 +299,7 @@ class Analyse:
         )
         # Saving analysis_df
         fbf_fp = os.path.join(out_dir, "fbf", f"{name}.feather")
-        DFIOMixin.write_feather(analysis_df, fbf_fp)
+        DFMixin.write_feather(analysis_df, fbf_fp)
 
         # Summarising and binning analysis_df
         AggAnalyse.summary_binned_quantitative(
@@ -393,7 +393,7 @@ class Analyse:
                     analysis_df.loc[row["start"] : row["stop"], (indiv, f_name)] = 0
         # Saving analysis_df
         fbf_fp = os.path.join(out_dir, "fbf", f"{name}.feather")
-        DFIOMixin.write_feather(analysis_df, fbf_fp)
+        DFMixin.write_feather(analysis_df, fbf_fp)
 
         # Summarising and binning analysis_df
         AggAnalyse.summary_binned_behavs(

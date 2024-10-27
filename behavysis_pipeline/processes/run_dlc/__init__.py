@@ -27,7 +27,7 @@ import re
 import pandas as pd
 from behavysis_core.constants import FramesIN
 from behavysis_core.data_models.experiment_configs import ExperimentConfigs
-from behavysis_core.df_mixins.df_io_mixin import DFIOMixin
+from behavysis_core.df_mixins.df_mixin import DFMixin
 from behavysis_core.df_mixins.keypoints_df_mixin import KeypointsCN, KeypointsMixin
 from behavysis_core.mixins.io_mixin import IOMixin
 from behavysis_core.mixins.subproc_mixin import SubprocMixin
@@ -201,14 +201,14 @@ def export_2_feather(name: str, in_dir: str, out_dir: str) -> str:
         # NOTE: may need DLC_HDF_KEY
         df = pd.DataFrame(pd.read_hdf(name_fp))
         # Setting the column and index level names
-        df.index.names = DFIOMixin.enum2tuple(FramesIN)
-        df.columns.names = DFIOMixin.enum2tuple(KeypointsCN)
+        df.index.names = DFMixin.enum2tuple(FramesIN)
+        df.columns.names = DFMixin.enum2tuple(KeypointsCN)
         # Imputing na values with 0
         df = df.fillna(0)
         # Checking df
         KeypointsMixin.check_df(df)
         # Writing the .feather file
-        DFIOMixin.write_feather(df, os.path.join(out_dir, f"{name}.feather"))
+        DFMixin.write_feather(df, os.path.join(out_dir, f"{name}.feather"))
         return "Outputted DLC file successfully."
     else:
         raise ValueError(f"Multiple .h5 files found for {name}.")

@@ -3,7 +3,7 @@ import os
 from behavysis_classifier import BehavClassifier
 from behavysis_core.data_models.experiment_configs import ExperimentConfigs
 from behavysis_core.df_mixins.behav_df_mixin import BehavDfMixin
-from behavysis_core.df_mixins.df_io_mixin import DFIOMixin
+from behavysis_core.df_mixins.df_mixin import DFMixin
 from behavysis_core.mixins.io_mixin import IOMixin
 
 
@@ -15,9 +15,9 @@ class Export:
     def feather_2_feather(src_fp: str, out_fp: str, overwrite: bool) -> str:
         """__summary__"""
         # Reading file
-        df = DFIOMixin.read_feather(src_fp)
+        df = DFMixin.read_feather(src_fp)
         # Writing file
-        DFIOMixin.write_feather(df, out_fp)
+        DFMixin.write_feather(df, out_fp)
         # Returning outcome
         return "feather to feather\n"
 
@@ -26,7 +26,7 @@ class Export:
     def feather_2_csv(src_fp: str, out_fp: str, overwrite: bool) -> str:
         """__summary__"""
         # Reading file
-        df = DFIOMixin.read_feather(src_fp)
+        df = DFMixin.read_feather(src_fp)
         # Writing file
         os.makedirs(os.path.dirname(out_fp), exist_ok=True)
         df.to_csv(out_fp)
@@ -55,7 +55,7 @@ class Export:
         # Making the output df (with all user_behav outcome columns)
         out_df = BehavDfMixin.include_outcome_behavs(in_df, behav_outcomes)
         # Writing file
-        DFIOMixin.write_feather(out_df, out_fp)
+        DFMixin.write_feather(out_df, out_fp)
         # Returning outcome
         return "predicted_behavs to scored_behavs\n"
 
@@ -71,6 +71,6 @@ class Export:
         # Importing the boris file to the Behav df format
         df = BehavDfMixin.import_boris_tsv(src_fp, behavs_ls, start_frame, stop_frame)
         # Writing file
-        DFIOMixin.write_feather(df, out_fp)
+        DFMixin.write_feather(df, out_fp)
         # Returning outcome
         return "boris tsv to behav\n"

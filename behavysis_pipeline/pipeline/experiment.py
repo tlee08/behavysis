@@ -17,7 +17,6 @@ from behavysis_core.constants import (
     TEMP_DIR,
     Folders,
 )
-from behavysis_core.df_mixins.df_io_mixin import DFIOMixin
 from behavysis_core.mixins.diagnostics_mixin import DiagnosticsMixin
 
 from behavysis_pipeline.processes.analyse.analyse_behav import AnalyseBehav
@@ -75,7 +74,7 @@ class Experiment:
                 + f'Please specify a file that exists in "{root_dir}", in one of the'
                 + " following folder WITH the correct file extension name:\n"
                 + "    - "
-                + "\n    - ".join(DFIOMixin.enum2tuple(Folders))
+                + "\n    - ".join(DFMixin.enum2tuple(Folders))
             )
         self.name = name
         self.root_dir = os.path.abspath(root_dir)
@@ -474,7 +473,7 @@ class Experiment:
         return self._process_scaffold(
             (AnalyseCombine.analyse_combine,),
             analysis_dir=os.path.join(self.root_dir, ANALYSIS_DIR),
-            out_dir=self.get_fp(Folders.ANALYSIS_COMBINED.value),
+            out_fp=self.get_fp(Folders.ANALYSIS_COMBINED.value),
             configs_fp=self.get_fp(Folders.CONFIGS.value),
         )
 

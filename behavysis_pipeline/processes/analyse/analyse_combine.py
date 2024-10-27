@@ -22,7 +22,6 @@ import os
 from enum import Enum
 
 import pandas as pd
-from behavysis_core.df_mixins.df_io_mixin import DFIOMixin
 from behavysis_core.mixins.io_mixin import IOMixin
 
 from behavysis_pipeline.processes.analyse.analyse_df_mixin import AnalyseDfMixin
@@ -51,7 +50,7 @@ class AnalyseCombine:
     @staticmethod
     def analyse_combine(
         analysis_dir: str,
-        out_dir: str,
+        out_fp: str,
         configs_fp: str,
         # bins: list,
         # summary_func: Callable[[pd.DataFrame], pd.DataFrame],
@@ -59,6 +58,8 @@ class AnalyseCombine:
         """
         Takes a behavs dataframe and generates a summary and binned version of the data.
         """
+        # TODO: maybe refactor to own folder
+        # (because it's another step of the pipeline)
         outcome = ""
         name = IOMixin.get_name(configs_fp)
         # For each analysis subdir, combining fbf files
@@ -71,6 +72,7 @@ class AnalyseCombine:
         if len(analysis_ls) == 0:
             outcome += "WARNING: no analysis fbf files made. Run `exp.analyse` first"
             return outcome
+        # Reading in each fbf analysis df
         comb_df_ls = [
             AnalyseDfMixin.read_feather(
                 os.path.join(analysis_dir, i, "fbf", f"{name}.feather")
@@ -85,7 +87,6 @@ class AnalyseCombine:
             names=[AnalyseCombineCN.ANALYSIS.value],
         )
         # Writing to file
-        out_fp = os.path.join(out_dir, f"{name}.feather")
-        DFIOMixin.write_feather(comb_df, out_fp)
+        DFMixin.write_feather(comb_df, out_fp)
         # Returning outcome
         return outcome

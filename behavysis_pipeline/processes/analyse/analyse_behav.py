@@ -23,13 +23,12 @@ import os
 import numpy as np
 from behavysis_core.data_models.experiment_configs import ExperimentConfigs
 from behavysis_core.df_mixins.behav_df_mixin import BehavCN, BehavColumns, BehavDfMixin
-from behavysis_core.df_mixins.df_io_mixin import DFIOMixin
 from behavysis_core.mixins.io_mixin import IOMixin
 
 from behavysis_pipeline.processes.analyse.analyse_df_mixin import (
     AggAnalyse,
+    AnalyseCN,
     AnalyseDfMixin,
-    AnalysisCN,
 )
 
 
@@ -67,10 +66,10 @@ class AnalyseBehav:
         behavs_df = behavs_df.loc[:, columns]
         # Writing the behavs_df to the fbf file
         fbf_fp = os.path.join(out_dir, "fbf", f"{name}.feather")
-        DFIOMixin.write_feather(behavs_df, fbf_fp)
+        DFMixin.write_feather(behavs_df, fbf_fp)
         # Updating the column level names of behavs_df
         # (summary_binned_behavs only works this way)
-        behavs_df.columns.names = DFIOMixin.enum2tuple(AnalysisCN)
+        behavs_df.columns.names = DFMixin.enum2tuple(AnalyseCN)
         # Making the summary and binned dataframes
         AggAnalyse.summary_binned_behavs(
             behavs_df,

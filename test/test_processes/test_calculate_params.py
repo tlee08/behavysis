@@ -5,7 +5,6 @@ import numpy as np
 import pandas as pd
 from behavysis_core.constants import Coords, KeypointsCN, KeypointsIN
 from behavysis_core.data_models.experiment_configs import ExperimentConfigs
-from behavysis_core.df_mixins.df_io_mixin import DFIOMixin
 
 from behavysis_pipeline.processes.calculate_params import (
     CalculateParams,
@@ -28,7 +27,7 @@ def make_dlc_df_for_dur(sections_params_ls, columns):
     dlc_df = pd.concat(
         (dlc_df_x, dlc_df_y, dlc_df_l),
         axis=1,
-        keys=DFIOMixin.enum2tuple(Coords),
+        keys=DFMixin.enum2tuple(Coords),
         names=[KeypointsCN.COORDS.value, KeypointsCN.BODYPARTS.value],
     )
     # Wrangling column names and order
@@ -38,14 +37,14 @@ def make_dlc_df_for_dur(sections_params_ls, columns):
     columns_df[KeypointsCN.INDIVIDUALS.value] = columns_df[
         KeypointsCN.BODYPARTS.value
     ].apply(lambda x: ("animal" if np.isin(x, cols_subsect) else "single"))
-    columns_df = columns_df[DFIOMixin.enum2tuple(KeypointsCN)]
+    columns_df = columns_df[DFMixin.enum2tuple(KeypointsCN)]
     dlc_df.columns = pd.MultiIndex.from_frame(columns_df)
     dlc_df = dlc_df.sort_index(
         level=[KeypointsCN.INDIVIDUALS.value, KeypointsCN.BODYPARTS.value], axis=1
     )
     # Setting index and column level names
-    dlc_df.index.names = DFIOMixin.enum2tuple(KeypointsIN)
-    dlc_df.columns.names = DFIOMixin.enum2tuple(KeypointsCN)
+    dlc_df.index.names = DFMixin.enum2tuple(KeypointsIN)
+    dlc_df.columns.names = DFMixin.enum2tuple(KeypointsCN)
     # Returning dlc_df
     return dlc_df
 
