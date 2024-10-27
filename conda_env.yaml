@@ -6,9 +6,9 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - python=3.12
+  - python
   - pip
   - ipykernel
   - ffmpeg
-  # - pip:
-  #     - behavysis_pipeline
+  - pip:
+      - behavysis_pipeline

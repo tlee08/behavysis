@@ -16,8 +16,9 @@ behavysis_core = "^0.1.3"
 behavysis_classifier = "^0.1.21"
 Jinja2 = "^3.1.4"
 pyqtgraph = "^0.13.7"
-dask = { extras = ["complete"], version = "^2024.5.0" }
-# graphviz = "^0.20.3"
+PySide6 = "^6.8.0.2"
+dask = { extras = ["complete"], version = "^2024.10.0" }
+graphviz = "^0.20.3"
 # prefect = "^2.19.8"
 streamlit = "^1.36.0"
 
