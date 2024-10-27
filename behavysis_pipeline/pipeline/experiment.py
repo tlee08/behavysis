@@ -19,8 +19,8 @@ from behavysis_core.constants import (
 )
 from behavysis_core.mixins.diagnostics_mixin import DiagnosticsMixin
 
-from behavysis_pipeline.processes.analyse.analyse_behav import AnalyseBehav
 from behavysis_pipeline.processes.analyse.analyse_combine import AnalyseCombine
+from behavysis_pipeline.processes.analyse_behav import AnalyseBehav
 from behavysis_pipeline.processes.classify_behaviours import ClassifyBehaviours
 from behavysis_pipeline.processes.export import Export
 from behavysis_pipeline.processes.extract_features import ExtractFeatures
