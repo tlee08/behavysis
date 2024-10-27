@@ -21,15 +21,16 @@ from __future__ import annotations
 import os
 
 import numpy as np
-from behavysis_core.df_classes.behav_df import BehavCN, BehavColumns, BehavDf
+from behavysis_core.df_classes.analyse_agg_df import AnalyseAggDf
+from behavysis_core.df_classes.analyse_df import AnalyseDf
+from behavysis_core.df_classes.behav_df import BehavColumns, BehavDf
+from behavysis_core.df_classes.df_mixin import DFMixin
 from behavysis_core.mixins.io_mixin import IOMixin
 from behavysis_core.pydantic_models.experiment_configs import ExperimentConfigs
 
-from behavysis_pipeline.processes.analyse.analyse_df_mixin import (
-    AggAnalyse,
-    AnalyseCN,
-    AnalyseDfMixin,
-)
+###################################################################################################
+#               ANALYSIS API FUNCS
+###################################################################################################
 
 
 class AnalyseBehav:
@@ -51,7 +52,7 @@ class AnalyseBehav:
         out_dir = os.path.join(analysis_dir, AnalyseBehav.analyse_behav.__name__)
         # Calculating the deltas (changes in body position) between each frame for the subject
         configs = ExperimentConfigs.read_json(configs_fp)
-        fps, _, _, _, bins_ls, cbins_ls = AnalyseDfMixin.get_configs(configs)
+        fps, _, _, _, bins_ls, cbins_ls = AnalyseDf.get_configs(configs)
         # Loading in dataframe
         behavs_df = BehavDf.read_feather(behavs_fp)
         # Setting all na and -1 values to 0 (to make any undecided behav to non-behav)
@@ -59,7 +60,7 @@ class AnalyseBehav:
         # Getting the behaviour names and each user_behav for the behaviour
         # Not incl. the `pred` or `prob` (`prob` shouldn't be here anyway) columns
         columns = np.isin(
-            behavs_df.columns.get_level_values(BehavCN.OUTCOMES.value),
+            behavs_df.columns.get_level_values(BehavDf.CN.OUTCOMES.value),
             [BehavColumns.PROB.value, BehavColumns.PRED.value],
             invert=True,
         )
@@ -69,9 +70,9 @@ class AnalyseBehav:
         DFMixin.write_feather(behavs_df, fbf_fp)
         # Updating the column level names of behavs_df
         # (summary_binned_behavs only works this way)
-        behavs_df.columns.names = DFMixin.enum2tuple(AnalyseCN)
+        behavs_df.columns.names = list(DFMixin.enum2tuple(AnalyseDf.CN))
         # Making the summary and binned dataframes
-        AggAnalyse.summary_binned_behavs(
+        AnalyseAggDf.summary_binned_behavs(
             behavs_df,
             out_dir,
             name,

@@ -59,11 +59,11 @@ class FormatVid:
         outcome += ProcessVidMixin.process_vid(
             in_fp=in_fp,
             out_fp=out_fp,
-            height_px=configs_filt.height_px,
-            width_px=configs_filt.width_px,
-            fps=configs_filt.fps,
-            start_sec=configs_filt.start_sec,
-            stop_sec=configs_filt.stop_sec,
+            height_px=configs.get_ref(configs_filt.height_px),
+            width_px=configs.get_ref(configs_filt.width_px),
+            fps=configs.get_ref(configs_filt.fps),
+            start_sec=configs.get_ref(configs_filt.start_sec),
+            stop_sec=configs.get_ref(configs_filt.stop_sec),
         )
 
         # Saving video metadata to configs dict

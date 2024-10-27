@@ -21,10 +21,10 @@ from __future__ import annotations
 import os
 
 import pandas as pd
+from behavysis_core.df_classes.analyse_combine_df import AnalyseCombineDf
+from behavysis_core.df_classes.analyse_df import AnalyseDf
 from behavysis_core.df_classes.df_mixin import DFMixin
 from behavysis_core.mixins.io_mixin import IOMixin
-
-from behavysis_pipeline.processes.analyse.analyse_df_mixin import AnalyseDfMixin
 
 ###################################################################################################
 #               ANALYSIS API FUNCS
@@ -61,7 +61,7 @@ class AnalyseCombine:
             return outcome
         # Reading in each fbf analysis df
         comb_df_ls = [
-            AnalyseDfMixin.read_feather(
+            AnalyseDf.read_feather(
                 os.path.join(analysis_dir, i, "fbf", f"{name}.feather")
             )
             for i in analysis_ls
@@ -71,7 +71,7 @@ class AnalyseCombine:
             comb_df_ls,
             axis=1,
             keys=analysis_ls,
-            names=[AnalyseCombineCN.ANALYSIS.value],
+            names=[AnalyseCombineDf.CN.ANALYSIS.value],
         )
         # Writing to file
         DFMixin.write_feather(comb_df, out_fp)

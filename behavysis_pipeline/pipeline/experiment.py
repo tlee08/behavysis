@@ -17,10 +17,11 @@ from behavysis_core.constants import (
     TEMP_DIR,
     Folders,
 )
+from behavysis_core.df_classes.df_mixin import DFMixin
 from behavysis_core.mixins.diagnostics_mixin import DiagnosticsMixin
 
-from behavysis_pipeline.processes.analyse.analyse_combine import AnalyseCombine
 from behavysis_pipeline.processes.analyse_behav import AnalyseBehav
+from behavysis_pipeline.processes.analyse_combine import AnalyseCombine
 from behavysis_pipeline.processes.classify_behaviours import ClassifyBehaviours
 from behavysis_pipeline.processes.export import Export
 from behavysis_pipeline.processes.extract_features import ExtractFeatures
@@ -102,11 +103,11 @@ class Experiment:
         ValueError
             ValueError: Folder name is not valid. Refer to FOLDERS constant for valid folder names.
         """
-        # Getting folder enum from string
-        # TODO: just use enum constructor?
-        folder = next((f for f in Folders if folder_str == f.value), None)
-        # Assertion: The given folder name must be valid
-        if not folder:
+        # Ensuring folder_str is in Folder enum
+        try:
+            folder = Folders(folder_str)
+        except ValueError:
+            # if folder_str not in Folders enum
             raise ValueError(
                 f'"{folder_str}" is not a valid experiment folder name.\n'
                 + "Please only specify one of the following folders:\n"

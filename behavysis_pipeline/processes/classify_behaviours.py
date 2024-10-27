@@ -7,7 +7,7 @@ import pandas as pd
 from behavysis_classifier import BehavClassifier
 from behavysis_core.constants import FramesIN
 from behavysis_core.df_classes.behav_df import BehavCN, BehavColumns, BehavDf
-from behavysis_core.df_classes.bouts_df_mixin import BoutsDfMixin
+from behavysis_core.df_classes.bouts_df import BoutsDf
 from behavysis_core.df_classes.df_mixin import DFMixin
 from behavysis_core.mixins.io_mixin import IOMixin
 from behavysis_core.pydantic_models.experiment_configs import ExperimentConfigs
@@ -97,8 +97,8 @@ class ClassifyBehaviours:
         # Concatenating predictions to a single dataframe
         behavs_df = pd.concat(df_ls, axis=1)
         # Setting the index and column names
-        behavs_df.index.names = DFMixin.enum2tuple(FramesIN)
-        behavs_df.columns.names = DFMixin.enum2tuple(BehavCN)
+        behavs_df.index.names = list(DFMixin.enum2tuple(FramesIN))
+        behavs_df.columns.names = list(DFMixin.enum2tuple(BehavCN))
         # Checking df
         BehavDf.check_df(behavs_df)
         # Saving behav_preds df
@@ -110,9 +110,10 @@ class ClassifyBehaviours:
 def merge_bouts(
     vect: pd.Series,
     min_window_frames: int,
-) -> pd.DataFrame:
+) -> pd.Series:
     """
-    If the time between two bouts is less than `min_window_frames`, then merging
+    For a given pd.Series, `vect`,
+    if the time between two bouts is less than `min_window_frames`, then merging
     the two bouts together by filling in the short `non-behav` period `is-behav`.
 
     Parameters
@@ -130,10 +131,10 @@ def merge_bouts(
     # TODO: check this func
     vect = vect.copy()
     # Getting start, stop, and duration of each non-behav bout
-    nonbouts_df = BoutsDfMixin.vect2bouts(vect == 0)
+    nonbouts_df = BoutsDf.vect2bouts(vect == 0)
     # For each non-behav bout, if less than min_window_frames, then call it a behav
     for _, row in nonbouts_df.iterrows():
         if row["dur"] < min_window_frames:
-            vect.loc[row["start"] : row["stop"]] = 1
+            vect.loc[row["start"] : row["stop"]] = 1  # type: ignore
     # Returning df
     return vect

@@ -238,7 +238,7 @@ class CalculateParams:
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
         configs_filt = Model_start_frame_from_csv(
-            **configs.user.calculate_params.start_frame_from_csv
+            **configs.user.calculate_params.start_frame_from_csv  # type: ignore
         )
         fps = configs.auto.formatted_vid.fps
         csv_fp = configs.get_ref(configs_filt.csv_fp)
@@ -294,7 +294,7 @@ class CalculateParams:
         outcome = ""
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
-        configs_filt = Model_px_per_mm(**configs.user.calculate_params.px_per_mm)
+        configs_filt = Model_px_per_mm(**configs.user.calculate_params.px_per_mm)  # type: ignore
         pt_a = configs.get_ref(configs_filt.pt_a)
         pt_b = configs.get_ref(configs_filt.pt_b)
         pcutoff = configs.get_ref(configs_filt.pcutoff)
@@ -343,7 +343,7 @@ def calc_likelihoods(
     # Calculating likelihood of subject (given bpts) existing.
     idx = pd.IndexSlice
     df_lhoods = pd.DataFrame(index=df.index)
-    df_bpts_lhoods = df.loc[:, idx[:, bpts, Coords.LIKELIHOOD.value]]
+    df_bpts_lhoods = df.loc[:, idx[:, bpts, Coords.LIKELIHOOD.value]]  # type: ignore
     df_lhoods["current"] = df_bpts_lhoods.apply(np.nanmedian, axis=1)
     # Calculating likelihood of subject existing over time window
     df_lhoods["rolling"] = (

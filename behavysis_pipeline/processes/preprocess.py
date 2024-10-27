@@ -300,7 +300,7 @@ def aggregate_df(
         for indiv in indivs:
             # Getting the coordinates of each individual (average of the given bodyparts list)
             idx_a = idx[l0, indiv, bpts, coord]
-            df_aggr[(indiv, coord)] = df.loc[:, idx_a].mean(axis=1)
+            df_aggr[(indiv, coord)] = df.loc[:, idx_a].mean(axis=1)  # type: ignore
     # Getting the distance between each mouse and the colour marking in each frame
     for indiv in indivs:
         df_aggr[(indiv, "dist")] = np.sqrt(

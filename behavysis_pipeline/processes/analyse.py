@@ -22,11 +22,11 @@ import os
 
 import numpy as np
 import pandas as pd
+from behavysis_core.df_classes.analyse_agg_df import AnalyseAggDf
 from behavysis_core.df_classes.analyse_df import (
-    AggAnalyse,
-    AnalyseCN,
     AnalyseDf,
 )
+from behavysis_core.df_classes.bouts_df import BoutsDf
 from behavysis_core.df_classes.df_mixin import DFMixin
 from behavysis_core.df_classes.keypoints_df import (
     Coords,
@@ -37,9 +37,9 @@ from behavysis_core.mixins.io_mixin import IOMixin
 from behavysis_core.pydantic_models.experiment_configs import ExperimentConfigs
 from pydantic import BaseModel, ConfigDict
 
-#####################################################################
+###################################################################################################
 #               ANALYSIS API FUNCS
-#####################################################################
+###################################################################################################
 
 
 class Analyse:
@@ -131,7 +131,7 @@ class Analyse:
                 res_df.loc[:, idx[:, "in_roi"]] = ~res_df.loc[:, idx[:, "in_roi"]]  # type: ignore
             # Changing column MultiIndex names
             res_df.columns = res_df.columns.set_levels(  # type: ignore
-                ["x", "y", f"in_roi_{roi_name}"], level=AnalyseCN.MEASURES.value
+                ["x", "y", f"in_roi_{roi_name}"], level=AnalyseDf.CN.MEASURES.value
             )
             # Saving to analysis_df and roi_corners_df list
             analysis_df_ls.append(res_df.loc[:, idx[:, f"in_roi_{roi_name}"]])  # type: ignore
@@ -156,7 +156,7 @@ class Analyse:
         plot_fp = os.path.join(out_dir, "scatter_plot", f"{name}.png")
         AnalyseDf.make_location_scatterplot(scatter_df, roi_c_df, plot_fp, "roi")
         # Summarising and binning analysis_df
-        AggAnalyse.summary_binned_behavs(
+        AnalyseAggDf.summary_binned_behavs(
             analysis_df,
             out_dir,
             name,
@@ -229,7 +229,7 @@ class Analyse:
         DFMixin.write_feather(analysis_df, fbf_fp)
 
         # Summarising and binning analysis_df
-        AggAnalyse.summary_binned_quantitative(
+        AnalyseAggDf.summary_binned_quantitative(
             analysis_df,
             out_dir,
             name,
@@ -299,7 +299,7 @@ class Analyse:
         DFMixin.write_feather(analysis_df, fbf_fp)
 
         # Summarising and binning analysis_df
-        AggAnalyse.summary_binned_quantitative(
+        AnalyseAggDf.summary_binned_quantitative(
             analysis_df,
             out_dir,
             name,
@@ -380,9 +380,7 @@ class Analyse:
             ).astype(np.int8)
 
             # Getting start, stop, and duration of each freezing behav bout
-            freezingbouts_df = BoutsDfMixin.vect2bouts(
-                analysis_df[(indiv, f_name)] == 1
-            )
+            freezingbouts_df = BoutsDf.vect2bouts(analysis_df[(indiv, f_name)] == 1)
             # For each freezing bout, if there is less than window_frames, tehn
             # it is not actually freezing
             for _, row in freezingbouts_df.iterrows():
@@ -393,7 +391,7 @@ class Analyse:
         DFMixin.write_feather(analysis_df, fbf_fp)
 
         # Summarising and binning analysis_df
-        AggAnalyse.summary_binned_behavs(
+        AnalyseAggDf.summary_binned_behavs(
             analysis_df,
             out_dir,
             name,
