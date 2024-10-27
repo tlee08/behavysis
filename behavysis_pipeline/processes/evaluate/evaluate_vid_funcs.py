@@ -288,7 +288,7 @@ class Analysis(EvalVidFuncBase):
                 # Plot middle (current time) line
                 self.x_line_arr[i, j] = pg.InfiniteLine(pos=0, angle=90)
                 self.x_line_arr[i, j].setZValue(10)
-                self.plot_arr[i, j].addItem(x_line)
+                self.plot_arr[i, j].addItem(self.x_line_arr[i, j])
                 # Setting data
                 # TODO implement for bouts as well
                 measures_ls = df_columns.unique(AnalyseCombineCN.MEASURES.value)
@@ -323,7 +323,15 @@ class Analysis(EvalVidFuncBase):
                 self.update_plot(idx, i, j)
                 plot_img_arr[i, j] = self.plot2cv(i, j)
         # Combining together
-        plot_img_arr = np.concatenate(np.concatenate(plot_img_arr, axis=0), axis=0)
+        plot_img = np.concatenate(np.concatenate(plot_img_arr, axis=0), axis=0)
+        # Resizing
+        plot_img = cv2.resize(
+            plot_img,
+            (self.w_i, self.w_i),
+            interpolation=cv2.INTER_AREA,
+        )
+        # Returning
+        return plot_img
 
     def update_plot(self, idx: int, i: int, j: int):
         """
@@ -435,9 +443,9 @@ class VidFuncRunner:
         # width
         # vid panel
         self.w_o = self.w_i
-        # # analysis panel
-        # if self.analysis:
-        #     self.w_o = self.w_o * 2
+        # analysis panel
+        if self.analysis:
+            self.w_o = self.w_o * 2
         # # height
         # # vid panel
         self.h_o = self.h_i

@@ -10,7 +10,6 @@ from typing import Any, Callable
 
 import numpy as np
 from behavysis_core.constants import (
-    ANALYSIS_COMBINED_DIR,
     ANALYSIS_DIR,
     EVALUATE_DIR,
     FILE_EXTS,
@@ -21,15 +20,13 @@ from behavysis_core.constants import (
 from behavysis_core.df_mixins.df_io_mixin import DFIOMixin
 from behavysis_core.mixins.diagnostics_mixin import DiagnosticsMixin
 
-from behavysis_pipeline.processes import (
-    AnalyseBehav,
-    ClassifyBehaviours,
-    Export,
-    ExtractFeatures,
-    RunDLC,
-    UpdateConfigs,
-)
+from behavysis_pipeline.processes.analyse.analyse_behav import AnalyseBehav
 from behavysis_pipeline.processes.analyse.analyse_combine import AnalyseCombine
+from behavysis_pipeline.processes.classify_behaviours import ClassifyBehaviours
+from behavysis_pipeline.processes.export import Export
+from behavysis_pipeline.processes.extract_features import ExtractFeatures
+from behavysis_pipeline.processes.run_dlc import RunDLC
+from behavysis_pipeline.processes.update_configs import UpdateConfigs
 
 
 class Experiment:
@@ -477,7 +474,7 @@ class Experiment:
         return self._process_scaffold(
             (AnalyseCombine.analyse_combine,),
             analysis_dir=os.path.join(self.root_dir, ANALYSIS_DIR),
-            out_dir=os.path.join(self.root_dir, ANALYSIS_COMBINED_DIR),
+            out_dir=self.get_fp(Folders.ANALYSIS_COMBINED.value),
             configs_fp=self.get_fp(Folders.CONFIGS.value),
         )
 
