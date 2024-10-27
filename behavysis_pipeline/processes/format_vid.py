@@ -18,9 +18,9 @@ str
     Description of the function's outcome.
 """
 
-from behavysis_core.data_models.experiment_configs import ExperimentConfigs
 from behavysis_core.mixins.io_mixin import IOMixin
 from behavysis_core.mixins.process_vid_mixin import ProcessVidMixin
+from behavysis_core.pydantic_models.experiment_configs import ExperimentConfigs
 
 
 class FormatVid:

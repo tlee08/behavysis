@@ -6,11 +6,11 @@ import numpy as np
 import pandas as pd
 from behavysis_classifier import BehavClassifier
 from behavysis_core.constants import FramesIN
-from behavysis_core.data_models.experiment_configs import ExperimentConfigs
-from behavysis_core.df_mixins.behav_df_mixin import BehavCN, BehavColumns, BehavDfMixin
-from behavysis_core.df_mixins.bouts_df_mixin import BoutsDfMixin
-from behavysis_core.df_mixins.df_mixin import DFMixin
+from behavysis_core.df_classes.behav_df import BehavCN, BehavColumns, BehavDf
+from behavysis_core.df_classes.bouts_df_mixin import BoutsDfMixin
+from behavysis_core.df_classes.df_mixin import DFMixin
 from behavysis_core.mixins.io_mixin import IOMixin
+from behavysis_core.pydantic_models.experiment_configs import ExperimentConfigs
 
 # TODO: handle reading the model file whilst in multiprocessing
 
@@ -100,7 +100,7 @@ class ClassifyBehaviours:
         behavs_df.index.names = DFMixin.enum2tuple(FramesIN)
         behavs_df.columns.names = DFMixin.enum2tuple(BehavCN)
         # Checking df
-        BehavDfMixin.check_df(behavs_df)
+        BehavDf.check_df(behavs_df)
         # Saving behav_preds df
         DFMixin.write_feather(behavs_df, out_fp)
         # Returning outcome

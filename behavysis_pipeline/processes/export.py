@@ -1,10 +1,10 @@
 import os
 
 from behavysis_classifier import BehavClassifier
-from behavysis_core.data_models.experiment_configs import ExperimentConfigs
-from behavysis_core.df_mixins.behav_df_mixin import BehavDfMixin
-from behavysis_core.df_mixins.df_mixin import DFMixin
+from behavysis_core.df_classes.behav_df import BehavDf
+from behavysis_core.df_classes.df_mixin import DFMixin
 from behavysis_core.mixins.io_mixin import IOMixin
+from behavysis_core.pydantic_models.experiment_configs import ExperimentConfigs
 
 
 class Export:
@@ -51,9 +51,9 @@ class Export:
             for model in models_ls
         }
         # Reading file
-        in_df = BehavDfMixin.read_feather(src_fp)
+        in_df = BehavDf.read_feather(src_fp)
         # Making the output df (with all user_behav outcome columns)
-        out_df = BehavDfMixin.include_outcome_behavs(in_df, behav_outcomes)
+        out_df = BehavDf.include_user_behavs(in_df, behav_outcomes)
         # Writing file
         DFMixin.write_feather(out_df, out_fp)
         # Returning outcome
@@ -69,7 +69,7 @@ class Export:
         start_frame = configs.get_ref(configs.auto.start_frame)
         stop_frame = configs.get_ref(configs.auto.stop_frame) + 1
         # Importing the boris file to the Behav df format
-        df = BehavDfMixin.import_boris_tsv(src_fp, behavs_ls, start_frame, stop_frame)
+        df = BehavDf.import_boris_tsv(src_fp, behavs_ls, start_frame, stop_frame)
         # Writing file
         DFMixin.write_feather(df, out_fp)
         # Returning outcome

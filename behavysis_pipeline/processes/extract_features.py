@@ -6,13 +6,13 @@ import os
 
 import pandas as pd
 from behavysis_core.constants import FramesIN
-from behavysis_core.data_models.experiment_configs import ExperimentConfigs
-from behavysis_core.df_mixins.df_mixin import DFMixin
-from behavysis_core.df_mixins.features_df_mixin import FeaturesCN, FeaturesDfMixin
-from behavysis_core.df_mixins.keypoints_df_mixin import KeypointsMixin
+from behavysis_core.df_classes.df_mixin import DFMixin
+from behavysis_core.df_classes.features_df import FeaturesCN, FeaturesDfMixin
+from behavysis_core.df_classes.keypoints_df import KeypointsDf
 from behavysis_core.mixins.io_mixin import IOMixin
 from behavysis_core.mixins.multiproc_mixin import MultiprocMixin
 from behavysis_core.mixins.subproc_mixin import SubprocMixin
+from behavysis_core.pydantic_models.experiment_configs import ExperimentConfigs
 
 # Order of bodyparts is from
 # - https://github.com/sgoldenlab/simba/blob/master/docs/Multi_animal_pose.md
@@ -74,7 +74,7 @@ class ExtractFeatures:
         os.makedirs(simba_in_dir, exist_ok=True)
         simba_in_fp = os.path.join(simba_in_dir, f"{name}.csv")
         # Selecting bodyparts for SimBA (8 bpts, 2 indivs)
-        df = KeypointsMixin.read_feather(dlc_fp)
+        df = KeypointsDf.read_feather(dlc_fp)
         df = select_cols(df, configs_fp)
         # Saving dlc frame to place in the SimBA features extraction df
         index = df.index
@@ -128,10 +128,10 @@ def select_cols(
     indivs = configs.get_ref(configs_filt.individuals)
     bpts = configs.get_ref(configs_filt.bodyparts)
     # Checking that the bodyparts are all valid
-    KeypointsMixin.check_bpts_exist(df, bpts)
+    KeypointsDf.check_bpts_exist(df, bpts)
     # Selecting given columns
     idx = pd.IndexSlice
-    df = df.loc[:, idx[:, indivs, bpts]]
+    df = df.loc[:, idx[:, indivs, bpts]]  # type: ignore
     # returning df
     return df
 
@@ -222,8 +222,8 @@ def export_2_feather(in_fp: str, out_fp: str, index: pd.Index) -> str:
     # Setting index to same as dlc preprocessed df
     df.index = index
     # Setting index and column level names
-    df.index.names = DFMixin.enum2tuple(FramesIN)
-    df.columns.names = DFMixin.enum2tuple(FeaturesCN)
+    df.index.names = list(DFMixin.enum2tuple(FramesIN))
+    df.columns.names = list(DFMixin.enum2tuple(FeaturesCN))
     # Checking df
     FeaturesDfMixin.check_df(df)
     # Saving SimBA extracted features df as feather

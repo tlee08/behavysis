@@ -20,10 +20,13 @@ from behavysis_core.constants import (
     TEMP_DIR,
     Folders,
 )
-from behavysis_core.data_models.experiment_configs import ConfigsAuto, ExperimentConfigs
 from behavysis_core.mixins.diagnostics_mixin import DiagnosticsMixin
 from behavysis_core.mixins.io_mixin import IOMixin
 from behavysis_core.mixins.multiproc_mixin import MultiprocMixin
+from behavysis_core.pydantic_models.experiment_configs import (
+    ConfigsAuto,
+    ExperimentConfigs,
+)
 from dask.distributed import LocalCluster
 from natsort import natsort_keygen, natsorted
 

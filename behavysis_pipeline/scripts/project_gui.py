@@ -4,8 +4,8 @@ import subprocess
 
 import pandas as pd
 import streamlit as st
-from behavysis_core.data_models.experiment_configs import ExperimentConfigs
 from behavysis_core.mixins.io_mixin import IOMixin
+from behavysis_core.pydantic_models.experiment_configs import ExperimentConfigs
 
 from behavysis_pipeline.pipeline.project import Project
 from behavysis_pipeline.processes.calculate_params import (

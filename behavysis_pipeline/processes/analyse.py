@@ -19,26 +19,23 @@ str
 from __future__ import annotations
 
 import os
-from enum import Enum
 
 import numpy as np
 import pandas as pd
-from behavysis_core.data_models.experiment_configs import ExperimentConfigs
-from behavysis_core.df_mixins.bouts_df_mixin import BoutsDfMixin
-from behavysis_core.df_mixins.df_mixin import DFMixin
-from behavysis_core.df_mixins.keypoints_df_mixin import (
-    Coords,
-    IndivColumns,
-    KeypointsMixin,
-)
-from behavysis_core.mixins.io_mixin import IOMixin
-from pydantic import BaseModel, ConfigDict
-
-from behavysis_pipeline.processes.analyse.analyse_df_mixin import (
+from behavysis_core.df_classes.analyse_df import (
     AggAnalyse,
     AnalyseCN,
-    AnalyseDfMixin,
+    AnalyseDf,
 )
+from behavysis_core.df_classes.df_mixin import DFMixin
+from behavysis_core.df_classes.keypoints_df import (
+    Coords,
+    IndivColumns,
+    KeypointsDf,
+)
+from behavysis_core.mixins.io_mixin import IOMixin
+from behavysis_core.pydantic_models.experiment_configs import ExperimentConfigs
+from pydantic import BaseModel, ConfigDict
 
 #####################################################################
 #               ANALYSIS API FUNCS
@@ -71,12 +68,12 @@ class Analyse:
         out_dir = os.path.join(analysis_dir, f_name)
         # Calculating the deltas (changes in body position) between each frame for the subject
         configs = ExperimentConfigs.read_json(configs_fp)
-        fps, _, _, px_per_mm, bins_ls, cbins_ls = AnalyseDfMixin.get_configs(configs)
+        fps, _, _, px_per_mm, bins_ls, cbins_ls = AnalyseDf.get_configs(configs)
         configs_filt_ls = list(configs.user.analyse.in_roi)  # type: ignore
         # Loading in dataframe
-        dlc_df = KeypointsMixin.clean_headings(KeypointsMixin.read_feather(dlc_fp))
+        dlc_df = KeypointsDf.clean_headings(KeypointsDf.read_feather(dlc_fp))
         # Getting indivs list
-        indivs, _ = KeypointsMixin.get_headings(dlc_df)
+        indivs, _ = KeypointsDf.get_headings(dlc_df)
         # Making analysis_df
         analysis_df_ls = []
         roi_c_df_ls = []
@@ -95,8 +92,8 @@ class Analyse:
             # Calculating more parameters
             thresh_px = thresh_mm / px_per_mm
             # Checking bodyparts and roi_corners exist
-            KeypointsMixin.check_bpts_exist(dlc_df, bpts)
-            KeypointsMixin.check_bpts_exist(dlc_df, roi_corners)
+            KeypointsDf.check_bpts_exist(dlc_df, bpts)
+            KeypointsDf.check_bpts_exist(dlc_df, roi_corners)
             # Getting average corner coordinates. Assumes arena does not move.
             roi_c_df = pd.DataFrame(
                 [dlc_df[(IndivColumns.SINGLE.value, pt)].mean() for pt in roi_corners]
@@ -113,7 +110,7 @@ class Analyse:
                 roi_c_df.loc[i, x] = roi_c_df.loc[i, x] + (thresh_px * np.cos(theta))
                 roi_c_df.loc[i, y] = roi_c_df.loc[i, y] + (thresh_px * np.sin(theta))
             # Making the res_df
-            res_df = AnalyseDfMixin.init_df(dlc_df.index)
+            res_df = AnalyseDf.init_df(dlc_df.index)
             # For each individual, getting the in-roi status
             for indiv in indivs:
                 # Getting average body center (x, y) for each individual
@@ -126,7 +123,7 @@ class Analyse:
                 # Determining if the indiv body center is in the ROI
                 res_df[(indiv, "in_roi")] = (
                     res_df[indiv]
-                    .apply(lambda pt: AnalyseDfMixin.pt_in_roi(pt, roi_c_df), axis=1)
+                    .apply(lambda pt: AnalyseDf.pt_in_roi(pt, roi_c_df), axis=1)
                     .astype(np.int8)
                 )
             # Inverting in_roi status if is_in is False
@@ -157,7 +154,7 @@ class Analyse:
             )
         # Making and saving scatterplot
         plot_fp = os.path.join(out_dir, "scatter_plot", f"{name}.png")
-        AnalyseDfMixin.make_location_scatterplot(scatter_df, roi_c_df, plot_fp, "roi")
+        AnalyseDf.make_location_scatterplot(scatter_df, roi_c_df, plot_fp, "roi")
         # Summarising and binning analysis_df
         AggAnalyse.summary_binned_behavs(
             analysis_df,
@@ -191,7 +188,7 @@ class Analyse:
         out_dir = os.path.join(analysis_dir, f_name)
         # Calculating the deltas (changes in body position) between each frame for the subject
         configs = ExperimentConfigs.read_json(configs_fp)
-        fps, _, _, px_per_mm, bins_ls, cbins_ls = AnalyseDfMixin.get_configs(configs)
+        fps, _, _, px_per_mm, bins_ls, cbins_ls = AnalyseDf.get_configs(configs)
         configs_filt = Model_speed(**configs.user.analyse.speed)  # type: ignore
         bpts = configs.get_ref(configs_filt.bodyparts)
         smoothing_sec = configs.get_ref(configs_filt.smoothing_sec)
@@ -199,14 +196,14 @@ class Analyse:
         smoothing_frames = int(smoothing_sec * fps)
 
         # Loading in dataframe
-        dlc_df = KeypointsMixin.clean_headings(KeypointsMixin.read_feather(dlc_fp))
+        dlc_df = KeypointsDf.clean_headings(KeypointsDf.read_feather(dlc_fp))
         # Checking body-centre bodypart exists
-        KeypointsMixin.check_bpts_exist(dlc_df, bpts)
+        KeypointsDf.check_bpts_exist(dlc_df, bpts)
         # Getting indivs and bpts list
-        indivs, _ = KeypointsMixin.get_headings(dlc_df)
+        indivs, _ = KeypointsDf.get_headings(dlc_df)
 
         # Calculating speed of subject for each frame
-        analysis_df = AnalyseDfMixin.init_df(dlc_df.index)
+        analysis_df = AnalyseDf.init_df(dlc_df.index)
         dlc_df.index = analysis_df.index
         idx = pd.IndexSlice
         for indiv in indivs:
@@ -263,7 +260,7 @@ class Analyse:
         out_dir = os.path.join(analysis_dir, f_name)
         # Calculating the deltas (changes in body position) between each frame for the subject
         configs = ExperimentConfigs.read_json(configs_fp)
-        fps, _, _, px_per_mm, bins_ls, cbins_ls = AnalyseDfMixin.get_configs(configs)
+        fps, _, _, px_per_mm, bins_ls, cbins_ls = AnalyseDf.get_configs(configs)
         configs_filt = Model_social_distance(**configs.user.analyse.social_distance)  # type: ignore
         bpts = configs.get_ref(configs_filt.bodyparts)
         smoothing_sec = configs.get_ref(configs_filt.smoothing_sec)
@@ -271,14 +268,14 @@ class Analyse:
         smoothing_frames = int(smoothing_sec * fps)
 
         # Loading in dataframe
-        dlc_df = KeypointsMixin.clean_headings(KeypointsMixin.read_feather(dlc_fp))
+        dlc_df = KeypointsDf.clean_headings(KeypointsDf.read_feather(dlc_fp))
         # Checking body-centre bodypart exists
-        KeypointsMixin.check_bpts_exist(dlc_df, bpts)
+        KeypointsDf.check_bpts_exist(dlc_df, bpts)
         # Getting indivs and bpts list
-        indivs, _ = KeypointsMixin.get_headings(dlc_df)
+        indivs, _ = KeypointsDf.get_headings(dlc_df)
 
         # Calculating speed of subject for each frame
-        analysis_df = AnalyseDfMixin.init_df(dlc_df.index)
+        analysis_df = AnalyseDf.init_df(dlc_df.index)
         dlc_df.index = analysis_df.index
         idx = pd.IndexSlice
         # Assumes there are only two individuals
@@ -339,7 +336,7 @@ class Analyse:
         out_dir = os.path.join(analysis_dir, f_name)
         # Calculating the deltas (changes in body position) between each frame for the subject
         configs = ExperimentConfigs.read_json(configs_fp)
-        fps, _, _, px_per_mm, bins_ls, cbins_ls = AnalyseDfMixin.get_configs(configs)
+        fps, _, _, px_per_mm, bins_ls, cbins_ls = AnalyseDf.get_configs(configs)
         configs_filt = Model_freezing(**configs.user.analyse.freezing)  # type: ignore
         bpts = configs.get_ref(configs_filt.bodyparts)
         thresh_mm = configs.get_ref(configs_filt.thresh_mm)
@@ -351,14 +348,14 @@ class Analyse:
         window_frames = int(np.round(fps * window_sec, 0))
 
         # Loading in dataframe
-        dlc_df = KeypointsMixin.clean_headings(KeypointsMixin.read_feather(dlc_fp))
+        dlc_df = KeypointsDf.clean_headings(KeypointsDf.read_feather(dlc_fp))
         # Checking body-centre bodypart exists
-        KeypointsMixin.check_bpts_exist(dlc_df, bpts)
+        KeypointsDf.check_bpts_exist(dlc_df, bpts)
         # Getting indivs and bpts list
-        indivs, _ = KeypointsMixin.get_headings(dlc_df)
+        indivs, _ = KeypointsDf.get_headings(dlc_df)
 
         # Calculating speed of subject for each frame
-        analysis_df = AnalyseDfMixin.init_df(dlc_df.index)
+        analysis_df = AnalyseDf.init_df(dlc_df.index)
         dlc_df.index = analysis_df.index
         for indiv in indivs:
             temp_df = pd.DataFrame(index=analysis_df.index)

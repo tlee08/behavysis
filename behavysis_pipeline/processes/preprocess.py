@@ -23,14 +23,14 @@ from typing import Literal
 
 import numpy as np
 import pandas as pd
-from behavysis_core.data_models.experiment_configs import ExperimentConfigs
-from behavysis_core.df_mixins.df_mixin import DFMixin
-from behavysis_core.df_mixins.keypoints_df_mixin import (
+from behavysis_core.df_classes.df_mixin import DFMixin
+from behavysis_core.df_classes.keypoints_df import (
     Coords,
     IndivColumns,
-    KeypointsMixin,
+    KeypointsDf,
 )
 from behavysis_core.mixins.io_mixin import IOMixin
+from behavysis_core.pydantic_models.experiment_configs import ExperimentConfigs
 from pydantic import BaseModel
 
 
@@ -81,7 +81,7 @@ class Preprocess:
         stop_frame = configs.auto.stop_frame
 
         # Reading file
-        df = KeypointsMixin.read_feather(in_fp)
+        df = KeypointsDf.read_feather(in_fp)
 
         # Trimming dataframe
         df = df.loc[start_frame:stop_frame, :]
@@ -182,7 +182,7 @@ class Preprocess:
         configs = ExperimentConfigs.read_json(configs_fp)
         configs_filt = Model_interpolate(**configs.user.preprocess.interpolate)  # type: ignore
         # Reading file
-        df = KeypointsMixin.read_feather(in_fp)
+        df = KeypointsDf.read_feather(in_fp)
         # Gettings the unique groups of (individual, bodypart) groups.
         unique_cols = df.columns.droplevel(["coords"]).unique()
         # Setting low-likelihood points to Nan to later interpolate
@@ -231,7 +231,7 @@ class Preprocess:
         """
         outcome = ""
         # Reading file
-        df = KeypointsMixin.read_feather(in_fp)
+        df = KeypointsDf.read_feather(in_fp)
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
         configs_filt = Model_refine_ids(**configs.user.preprocess.refine_ids)  # type: ignore
@@ -256,7 +256,7 @@ class Preprocess:
                     + " is not a column name in the DLC file."
                 )
         # Checking that bodyparts are all valid
-        KeypointsMixin.check_bpts_exist(df, bpts)
+        KeypointsDf.check_bpts_exist(df, bpts)
         # Calculating the distances between the bodycentres and the marking
         df_aggr = aggregate_df(df, marking, [marked, unmarked], bpts)
         # Getting "to_switch" decision series for each frame

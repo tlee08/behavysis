@@ -26,11 +26,11 @@ import re
 
 import pandas as pd
 from behavysis_core.constants import FramesIN
-from behavysis_core.data_models.experiment_configs import ExperimentConfigs
-from behavysis_core.df_mixins.df_mixin import DFMixin
-from behavysis_core.df_mixins.keypoints_df_mixin import KeypointsCN, KeypointsMixin
+from behavysis_core.df_classes.df_mixin import DFMixin
+from behavysis_core.df_classes.keypoints_df_mixin import KeypointsCN, KeypointsMixin
 from behavysis_core.mixins.io_mixin import IOMixin
 from behavysis_core.mixins.subproc_mixin import SubprocMixin
+from behavysis_core.pydantic_models.experiment_configs import ExperimentConfigs
 
 DLC_HDF_KEY = "data"
 

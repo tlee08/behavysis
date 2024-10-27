@@ -4,7 +4,7 @@ from io import BytesIO
 import numpy as np
 import pandas as pd
 from behavysis_core.constants import Coords, KeypointsCN, KeypointsIN
-from behavysis_core.data_models.experiment_configs import ExperimentConfigs
+from behavysis_core.pydantic_models.experiment_configs import ExperimentConfigs
 
 from behavysis_pipeline.processes.calculate_params import (
     CalculateParams,

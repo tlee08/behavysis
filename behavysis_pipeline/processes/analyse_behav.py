@@ -21,9 +21,9 @@ from __future__ import annotations
 import os
 
 import numpy as np
-from behavysis_core.data_models.experiment_configs import ExperimentConfigs
-from behavysis_core.df_mixins.behav_df_mixin import BehavCN, BehavColumns, BehavDfMixin
+from behavysis_core.df_classes.behav_df import BehavCN, BehavColumns, BehavDf
 from behavysis_core.mixins.io_mixin import IOMixin
+from behavysis_core.pydantic_models.experiment_configs import ExperimentConfigs
 
 from behavysis_pipeline.processes.analyse.analyse_df_mixin import (
     AggAnalyse,
@@ -53,7 +53,7 @@ class AnalyseBehav:
         configs = ExperimentConfigs.read_json(configs_fp)
         fps, _, _, _, bins_ls, cbins_ls = AnalyseDfMixin.get_configs(configs)
         # Loading in dataframe
-        behavs_df = BehavDfMixin.read_feather(behavs_fp)
+        behavs_df = BehavDf.read_feather(behavs_fp)
         # Setting all na and -1 values to 0 (to make any undecided behav to non-behav)
         behavs_df = behavs_df.fillna(0).map(lambda x: np.maximum(0, x))
         # Getting the behaviour names and each user_behav for the behaviour

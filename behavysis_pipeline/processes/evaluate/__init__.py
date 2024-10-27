@@ -33,20 +33,20 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 from behavysis_core.constants import FramesIN
-from behavysis_core.data_models.experiment_configs import ExperimentConfigs
-from behavysis_core.df_mixins.behav_df_mixin import BehavCN, BehavColumns, BehavDfMixin
-from behavysis_core.df_mixins.keypoints_df_mixin import (
+from behavysis_core.df_classes.analyse_combine_df import AnalyseCombineCN
+from behavysis_core.df_classes.analyse_df import AnalyseDf
+from behavysis_core.df_classes.behav_df import BehavCN, BehavColumns, BehavDf
+from behavysis_core.df_classes.keypoints_df import (
     Coords,
     IndivColumns,
     KeypointsCN,
-    KeypointsMixin,
+    KeypointsDf,
 )
 from behavysis_core.mixins.diagnostics_mixin import DiagnosticsMixin
 from behavysis_core.mixins.io_mixin import IOMixin
+from behavysis_core.pydantic_models.experiment_configs import ExperimentConfigs
 from tqdm import trange
 
-from behavysis_pipeline.processes.analyse.analyse_combine import AnalyseCombineCN
-from behavysis_pipeline.processes.analyse.analyse_df_mixin import AnalyseDfMixin
 from behavysis_pipeline.processes.evaluate.evaluate_vid_funcs import (
     VidFuncRunner,
 )
@@ -87,9 +87,9 @@ class Evaluate:
         fps = configs.auto.formatted_vid.fps
 
         # Read the file
-        df = KeypointsMixin.clean_headings(KeypointsMixin.read_feather(dlc_fp))
+        df = KeypointsDf.clean_headings(KeypointsDf.read_feather(dlc_fp))
         # Checking the bodyparts specified in the configs exist in the dataframe
-        KeypointsMixin.check_bpts_exist(df, bpts)
+        KeypointsDf.check_bpts_exist(df, bpts)
         # Making data-long ways
         idx = pd.IndexSlice
         df = (
@@ -151,7 +151,7 @@ class Evaluate:
         fps = float(configs.auto.formatted_vid.fps)
 
         # Read the file
-        df = BehavDfMixin.read_feather(behavs_fp)
+        df = BehavDf.read_feather(behavs_fp)
         # Making data-long ways
         df = (
             df.stack([BehavCN.BEHAVIOURS.value, BehavCN.OUTCOMES.value])
@@ -227,7 +227,7 @@ class Evaluate:
         # - Changing the columns MultiIndex to a single-level index. For speedup
         # - Making the corresponding colours list for each bodypart instance (colours depend on indiv/bpt)
         # Getting dlc df
-        dlc_df = KeypointsMixin.clean_headings(KeypointsMixin.read_feather(dlc_fp))
+        dlc_df = KeypointsDf.clean_headings(KeypointsDf.read_feather(dlc_fp))
         # Filtering out IndivColumns.PROCESS.value columns
         if IndivColumns.PROCESS.value in dlc_df.columns.unique("individuals"):
             dlc_df.drop(columns=IndivColumns.PROCESS.value, level="individuals")
@@ -258,14 +258,14 @@ class Evaluate:
         # - Changing the columns MultiIndex to a single-level index. For speedup
         # Getting behavs df
         try:
-            analysis_df = AnalyseDfMixin.read_feather(analysis_fp)
+            analysis_df = AnalyseDf.read_feather(analysis_fp)
         except FileNotFoundError:
             outcome += (
                 "WARNING: behavs file not found or could not be loaded."
                 + "Disregarding behaviour."
                 + "If you have run the behaviour classifier, please check this file.\n"
             )
-            analysis_df = AnalyseDfMixin.init_df(dlc_df.index)
+            analysis_df = AnalyseDf.init_df(dlc_df.index)
         # Getting list of different groups (`analysis`, `individuals` levels)
         # TODO
 

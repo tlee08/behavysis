@@ -19,16 +19,12 @@ str
 from __future__ import annotations
 
 import os
-from enum import Enum
 
 import pandas as pd
-from behavysis_core.df_mixins.df_mixin import DFMixin
+from behavysis_core.df_classes.df_mixin import DFMixin
 from behavysis_core.mixins.io_mixin import IOMixin
 
 from behavysis_pipeline.processes.analyse.analyse_df_mixin import AnalyseDfMixin
-from behavysis_pipeline.processes.analyse_combine.analyse_combine_df_mixin import (
-    AnalyseCombineDfMixin,
-)
 
 ###################################################################################################
 #               ANALYSIS API FUNCS
