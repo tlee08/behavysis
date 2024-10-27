@@ -5,8 +5,7 @@ Classify Behaviours
 import numpy as np
 import pandas as pd
 from behavysis_classifier import BehavClassifier
-from behavysis_core.constants import FramesIN
-from behavysis_core.df_classes.behav_df import BehavCN, BehavColumns, BehavDf
+from behavysis_core.df_classes.behav_df import BehavColumns, BehavDf
 from behavysis_core.df_classes.bouts_df import BoutsDf
 from behavysis_core.df_classes.df_mixin import DFMixin
 from behavysis_core.mixins.io_mixin import IOMixin
@@ -97,8 +96,8 @@ class ClassifyBehaviours:
         # Concatenating predictions to a single dataframe
         behavs_df = pd.concat(df_ls, axis=1)
         # Setting the index and column names
-        behavs_df.index.names = list(DFMixin.enum2tuple(FramesIN))
-        behavs_df.columns.names = list(DFMixin.enum2tuple(BehavCN))
+        behavs_df.index.names = list(DFMixin.enum2tuple(BehavDf.IN))
+        behavs_df.columns.names = list(DFMixin.enum2tuple(BehavDf.CN))
         # Checking df
         BehavDf.check_df(behavs_df)
         # Saving behav_preds df

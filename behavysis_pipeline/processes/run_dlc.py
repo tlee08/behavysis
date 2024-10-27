@@ -25,9 +25,8 @@ import os
 import re
 
 import pandas as pd
-from behavysis_core.constants import FramesIN
 from behavysis_core.df_classes.df_mixin import DFMixin
-from behavysis_core.df_classes.keypoints_df import KeypointsCN, KeypointsDf
+from behavysis_core.df_classes.keypoints_df import KeypointsDf
 from behavysis_core.mixins.io_mixin import IOMixin
 from behavysis_core.mixins.subproc_mixin import SubprocMixin
 from behavysis_core.pydantic_models.experiment_configs import ExperimentConfigs
@@ -201,8 +200,8 @@ def export_2_feather(name: str, in_dir: str, out_dir: str) -> str:
         # NOTE: may need DLC_HDF_KEY
         df = pd.DataFrame(pd.read_hdf(name_fp))
         # Setting the column and index level names
-        df.index.names = list(DFMixin.enum2tuple(FramesIN))
-        df.columns.names = list(DFMixin.enum2tuple(KeypointsCN))
+        df.index.names = list(DFMixin.enum2tuple(KeypointsDf.IN))
+        df.columns.names = list(DFMixin.enum2tuple(KeypointsDf.CN))
         # Imputing na values with 0
         df = df.fillna(0)
         # Checking df

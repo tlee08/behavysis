@@ -5,9 +5,8 @@ _summary_
 import os
 
 import pandas as pd
-from behavysis_core.constants import FramesIN
 from behavysis_core.df_classes.df_mixin import DFMixin
-from behavysis_core.df_classes.features_df import FeaturesCN, FeaturesDfMixin
+from behavysis_core.df_classes.features_df import FeaturesDf
 from behavysis_core.df_classes.keypoints_df import KeypointsDf
 from behavysis_core.mixins.io_mixin import IOMixin
 from behavysis_core.mixins.multiproc_mixin import MultiprocMixin
@@ -222,10 +221,10 @@ def export_2_feather(in_fp: str, out_fp: str, index: pd.Index) -> str:
     # Setting index to same as dlc preprocessed df
     df.index = index
     # Setting index and column level names
-    df.index.names = list(DFMixin.enum2tuple(FramesIN))
-    df.columns.names = list(DFMixin.enum2tuple(FeaturesCN))
+    df.index.names = list(DFMixin.enum2tuple(FeaturesDf.IN))
+    df.columns.names = list(DFMixin.enum2tuple(FeaturesDf.CN))
     # Checking df
-    FeaturesDfMixin.check_df(df)
+    FeaturesDf.check_df(df)
     # Saving SimBA extracted features df as feather
     DFMixin.write_feather(df, out_fp)
     # Returning outcome

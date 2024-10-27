@@ -32,14 +32,12 @@ import cv2
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
-from behavysis_core.constants import FramesIN
-from behavysis_core.df_classes.analyse_combine_df import AnalyseCombineCN
+from behavysis_core.df_classes.analyse_combine_df import AnalyseCombineDf
 from behavysis_core.df_classes.analyse_df import AnalyseDf
-from behavysis_core.df_classes.behav_df import BehavCN, BehavColumns, BehavDf
+from behavysis_core.df_classes.behav_df import BehavColumns, BehavDf
 from behavysis_core.df_classes.keypoints_df import (
     Coords,
     IndivColumns,
-    KeypointsCN,
     KeypointsDf,
 )
 from behavysis_core.mixins.diagnostics_mixin import DiagnosticsMixin
@@ -93,16 +91,16 @@ class Evaluate:
         # Making data-long ways
         idx = pd.IndexSlice
         df = (
-            df.loc[:, idx[:, bpts]]
-            .stack([KeypointsCN.INDIVIDUALS.value, KeypointsCN.BODYPARTS.value])
+            df.loc[:, idx[:, bpts]]  # type: ignore
+            .stack([KeypointsDf.CN.INDIVIDUALS.value, KeypointsDf.CN.BODYPARTS.value])
             .reset_index()
         )
         # Adding the timestamp column
-        df["timestamp"] = df[FramesIN.FRAME.value] / fps
+        df["timestamp"] = df[KeypointsDf.IN.FRAME.value] / fps
         # Making plot
         g = sns.FacetGrid(
             df,
-            row=KeypointsCN.INDIVIDUALS.value,
+            row=KeypointsDf.CN.INDIVIDUALS.value,
             height=5,
             aspect=10,
         )
@@ -110,7 +108,7 @@ class Evaluate:
             sns.lineplot,
             x="timestamp",
             y=Coords.LIKELIHOOD.value,
-            hue=KeypointsCN.BODYPARTS.value,
+            hue=KeypointsDf.CN.BODYPARTS.value,
             alpha=0.4,
         )
         g.add_legend()
@@ -154,16 +152,16 @@ class Evaluate:
         df = BehavDf.read_feather(behavs_fp)
         # Making data-long ways
         df = (
-            df.stack([BehavCN.BEHAVIOURS.value, BehavCN.OUTCOMES.value])
+            df.stack([BehavDf.CN.BEHAVIOURS.value, BehavDf.CN.OUTCOMES.value])
             .reset_index()
             .rename(columns={0: "value"})
         )
         # Adding the timestamp column
-        df["timestamp"] = df[FramesIN.FRAME.value] / fps
+        df["timestamp"] = df[BehavDf.IN.FRAME.value] / fps
         # Making plot
         g = sns.FacetGrid(
             df,
-            row=BehavCN.BEHAVIOURS.value,
+            row=BehavDf.CN.BEHAVIOURS.value,
             height=5,
             aspect=10,
         )
@@ -171,7 +169,7 @@ class Evaluate:
             sns.lineplot,
             x="timestamp",
             y="value",
-            hue=BehavCN.OUTCOMES.value,
+            hue=BehavDf.CN.OUTCOMES.value,
             alpha=0.4,
         )
         g.add_legend()
@@ -266,20 +264,6 @@ class Evaluate:
                 + "If you have run the behaviour classifier, please check this file.\n"
             )
             analysis_df = AnalyseDf.init_df(dlc_df.index)
-        # Getting list of different groups (`analysis`, `individuals` levels)
-        # TODO
-
-        # Making sure all relevant behaviour outcome columns exist (imputing with 0 if not)
-
-        for behav in analysis_ls:
-            for i in BehavColumns:
-                i = i.value
-                if (behav, i) not in analysis_df:
-                    analysis_df[(behav, i)] = 0
-        # Changing the columns MultiIndex to a single-level index. For speedup
-        analysis_df.columns = [
-            f"{behav}_{outcome}" for behav, outcome in analysis_df.columns
-        ]
 
         # OPENING INPUT VIDEO
         # Open the input video
@@ -308,7 +292,7 @@ class Evaluate:
         # Define the codec and create VideoWriter object
         out_cap = cv2.VideoWriter(
             out_fp,
-            cv2.VideoWriter_fourcc(*"mp4v"),
+            cv2.VideoWriter_fourcc(*"mp4v"),  # type: ignore
             fps,
             (vid_func_runner.w_o, vid_func_runner.h_o),
         )

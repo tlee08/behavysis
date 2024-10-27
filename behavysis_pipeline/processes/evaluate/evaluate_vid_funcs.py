@@ -1,29 +1,5 @@
 """
-Functions have the following format:
-
-Parameters
-----------
-vid_fp : str
-    the GPU's number so computation is done on this GPU.
-dlc_fp : str
-    _description_
-behavs_fp : str
-    _description_
-out_dir : str
-    _description_
-configs_fp : str
-    _description_
-overwrite : bool
-    Whether to overwrite the output file (if it exists).
-
-Returns
--------
-str
-    Description of the function's outcome.
-
-Notes
------
-Given the `out_dir`, we save the files to `out_dir/<func_name>/<exp_name>.<ext>`
+__summary__
 """
 
 import cv2
@@ -31,9 +7,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import pyqtgraph as pg
+from behavysis_core.df_classes.analyse_combine_df import AnalyseCombineDf
 from pyqtgraph.exporters import ImageExporter
-
-from behavysis_pipeline.processes.analyse.analyse_combine import AnalyseCombineCN
 
 
 class EvalVidFuncBase:
@@ -152,7 +127,7 @@ class Keypoints(EvalVidFuncBase):
             if row[f"{indiv}_{bpt}_likelihood"] >= self.pcutoff:
                 cv2.circle(
                     frame,
-                    (int(row[f"{indiv}_{bpt}_x"]), int(row[f"{indiv}_{bpt}_y"])),
+                    (int(row[f"{indiv}_{bpt}_x"]), int(row[f"{indiv}_{bpt}_y"])),  # type: ignore
                     radius=self.radius,
                     color=self.colours[i],
                     thickness=-1,
@@ -262,8 +237,7 @@ class Analysis(EvalVidFuncBase):
         self.h_i = h_i
         self.analysis_df: pd.DataFrame = analysis_df
         self.cmap = cmap
-        self.plot_arr = None
-        self.x_line_arr = None
+        self.init_graph()
 
     def init_graph(self):
         # Making multi-plot widget
@@ -271,8 +245,8 @@ class Analysis(EvalVidFuncBase):
         # Getting list of different groups (`analysis`, `individuals` levels)
         df_columns = self.analysis_df.columns
         # For making separate plots in layout
-        analysis_ls = df_columns.unique(AnalyseCombineCN.ANALYSIS.value)
-        indivs_ls = df_columns.unique(AnalyseCombineCN.INDIVIDUALS.value)
+        analysis_ls = df_columns.unique(AnalyseCombineDf.CN.ANALYSIS.value)
+        indivs_ls = df_columns.unique(AnalyseCombineDf.CN.INDIVIDUALS.value)
         # Making each plot (from "analysis")
         self.plot_arr = np.zeros(shape=(len(analysis_ls), len(indivs_ls)), dtype=object)
         self.x_line_arr = np.copy(self.plot_arr)
@@ -291,7 +265,7 @@ class Analysis(EvalVidFuncBase):
                 self.plot_arr[i, j].addItem(self.x_line_arr[i, j])
                 # Setting data
                 # TODO implement for bouts as well
-                measures_ls = df_columns.unique(AnalyseCombineCN.MEASURES.value)
+                measures_ls = df_columns.unique(AnalyseCombineDf.CN.MEASURES.value)
                 # Making the corresponding colours list for each bodypart instance
                 # (colours depend on indiv/bpt)
                 colours_idx, _ = pd.factorize(measures_ls)
@@ -365,7 +339,7 @@ class Analysis(EvalVidFuncBase):
         # Exporting to QImage (bytes)
         img_qt = exporter.export(toBytes=True)
         # QImage to cv2 image (using mixin)
-        img_cv = cls.qt2cv(img_qt)
+        img_cv = cls.qt2cv(img_qt)  # type: ignore
         # cv2 BGR to RGB
         img_cv = cv2.cvtColor(img_cv, cv2.COLOR_BGR2RGB)
         # Resize to widget size
@@ -374,7 +348,6 @@ class Analysis(EvalVidFuncBase):
         # Return cv2 image
         return img_cv
 
-    @classmethod
     def plot2cv(self, i: int, j: int):
         return self.plot2cv_(self.plot_arr[i, j])
 
@@ -427,8 +400,6 @@ class VidFuncRunner:
         # NOTE: ORDER MATTERS so going through in predefined order
         # Concatenating Vid, Behav, and Analysis funcs together in order
         func_check_ls = [Johansson, Keypoints, Analysis]
-        for func in func_check_ls:
-            setattr(self, func.name, None)
         # Creating EvalVidFuncBase instances and adding to funcs list
         for func in func_check_ls:
             if func.name in func_names:
@@ -437,6 +408,8 @@ class VidFuncRunner:
                     func.name,
                     func(w_i=w_i, h_i=h_i, **kwargs),
                 )
+            else:
+                setattr(self, func.name, None)
 
         # TODO: update w_o and h_o accoridng to analysis_df
         # Storing frame output dimensions

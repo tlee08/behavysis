@@ -10,13 +10,11 @@ interpretable plotted and tabulated data for different analysises. This pipeline
 """
 
 import logging
-import logging.config
 import warnings
 
 import matplotlib
 import matplotlib.pyplot as plt
 import seaborn as sns
-
 from behavysis_core.constants import PLOT_DPI, PLOT_STYLE
 
 #####################################################################
