@@ -259,6 +259,13 @@ class Analysis(EvalVidFuncBase):
                     title=f"{analysis_i} - {indivs_j}",
                     labels={"left": "value", "bottom": "second"},
                 )
+                # Setting width and height
+                self.plot_arr[i, j].setFixedHeight(
+                    int(np.round(self.h_i / len(analysis_ls)))
+                )
+                self.plot_arr[i, j].setFixedWidth(
+                    int(np.round(self.w_i / len(indivs_ls)))
+                )
                 # Plot middle (current time) line
                 self.x_line_arr[i, j] = pg.InfiniteLine(pos=0, angle=90)
                 self.x_line_arr[i, j].setZValue(10)
