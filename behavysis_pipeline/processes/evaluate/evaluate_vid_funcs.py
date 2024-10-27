@@ -27,11 +27,11 @@ Given the `out_dir`, we save the files to `out_dir/<func_name>/<exp_name>.<ext>`
 """
 
 import cv2
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import pyqtgraph as pg
 from pg.exporters import ImageExporter
-import matplotlib.pyplot as plt
 
 from behavysis_pipeline.processes.analyse.analyse_combine import AnalyseCombineCN
 
@@ -317,11 +317,13 @@ class Analysis(EvalVidFuncBase):
     def __call__(self, frame: np.ndarray, idx: int) -> np.ndarray:
         # For each plot (rows (analysis), columns (indivs))
         # NOTE: may not allow np arrays in np arrays
-        plot_imgs_arr = np.zeros(shape=self.plot_arr.shape, dtype=object)
+        plot_img_arr = np.zeros(shape=self.plot_arr.shape, dtype=object)
         for i in range(self.plot_arr.shape[0]):
             for j in range(self.plot_arr.shape[1]):
                 self.update_plot(idx, i, j)
-                pself.plot2cv(i, j)
+                plot_img_arr[i, j] = self.plot2cv(i, j)
+        # Combining together
+        plot_img_arr = np.concatenate(np.concatenate(plot_img_arr, axis=0), axis=0)
 
     def update_plot(self, idx: int, i: int, j: int):
         """
