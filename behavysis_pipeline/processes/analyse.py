@@ -61,6 +61,8 @@ class Analyse:
         - a feather file with the summary statistics (sum, mean, std, min, median, Q1, median,
         Q3, max) for DeltaMMperSec, and DeltaMMperSecSmoothed
         - Each row `is_frozen`, and bout number.
+
+        Points are `thresh_px` padded (away) from center.
         """
         outcome = ""
         name = IOMixin.get_name(dlc_fp)
@@ -98,10 +100,10 @@ class Analyse:
             roi_c_df = pd.DataFrame(
                 [dlc_df[(IndivColumns.SINGLE.value, pt)].mean() for pt in roi_corners]
             ).drop(columns=["likelihood"])
-            # Adjusting x-y to have a distance dilation/erosion from the points themselves
+            # Adjusting x-y to have `thresh_px` dilation/erosion from the points themselves
             roi_center = roi_c_df.mean()
             for i in roi_c_df.index:
-                # Calculating angle from point to centre
+                # Calculating angle from centre to point (going out from centre)
                 theta = np.arctan2(
                     roi_c_df.loc[i, y] - roi_center[y],
                     roi_c_df.loc[i, x] - roi_center[x],
@@ -131,7 +133,7 @@ class Analyse:
                 res_df.loc[:, idx[:, "in_roi"]] = ~res_df.loc[:, idx[:, "in_roi"]]  # type: ignore
             # Changing column MultiIndex names
             res_df.columns = res_df.columns.set_levels(  # type: ignore
-                ["x", "y", f"in_roi_{roi_name}"], level=AnalyseDf.CN.MEASURES.value
+                [x, y, f"in_roi_{roi_name}"], level=AnalyseDf.CN.MEASURES.value
             )
             # Saving to analysis_df and roi_corners_df list
             analysis_df_ls.append(res_df.loc[:, idx[:, f"in_roi_{roi_name}"]])  # type: ignore
@@ -213,6 +215,7 @@ class Analyse:
             smoothed_xy_df = dlc_df.rolling(
                 window=jitter_frames, min_periods=1, center=True
             ).agg(np.nanmean)
+            # Getting changes in x-y values between frames (deltas)
             delta_x = smoothed_xy_df.loc[:, idx[indiv, bpts, "x"]].mean(axis=1).diff()  # type: ignore
             delta_y = smoothed_xy_df.loc[:, idx[indiv, bpts, "y"]].mean(axis=1).diff()  # type: ignore
             delta = np.sqrt(np.power(delta_x, 2) + np.power(delta_y, 2))
