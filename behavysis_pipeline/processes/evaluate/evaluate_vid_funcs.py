@@ -8,7 +8,9 @@ import numpy as np
 import pandas as pd
 import pyqtgraph as pg
 from behavysis_core.df_classes.analyse_combine_df import AnalyseCombineDf
+from behavysis_core.df_classes.keypoints_df import IndivColumns, KeypointsDf
 from pyqtgraph.exporters import ImageExporter
+from PySide6 import QtGui
 
 
 class EvalVidFuncBase:
@@ -100,8 +102,8 @@ class Keypoints(EvalVidFuncBase):
         w_i: int,
         h_i: int,
         dlc_df,
-        indivs_bpts_ls,
-        colours,
+        colour_level,
+        cmap,
         pcutoff,
         radius,
         **kwargs,
@@ -109,10 +111,47 @@ class Keypoints(EvalVidFuncBase):
         self.w_i = w_i
         self.h_i = h_i
         self.dlc_df: pd.DataFrame = dlc_df
-        self.indivs_bpts_ls = indivs_bpts_ls
-        self.colours = colours
+        self.colour_level = colour_level
+        self.cmap = cmap
         self.pcutoff = pcutoff
         self.radius = radius
+
+    def init_df(self):
+        """
+        Modifying dlc_df and making list of how to select dlc_df components to optimise processing
+        Specifically:
+        - Filtering out "process" columns
+        - Rounding and converting to correct dtypes - "x" and "y" values are ints
+        - Changing the columns MultiIndex to a single-level index. For speedup
+        - Making the corresponding colours list for each bodypart instance (colours depend on indiv/bpt)
+        """
+        # Filtering out IndivColumns.PROCESS.value columns
+        if IndivColumns.PROCESS.value in self.dlc_df.columns.unique(
+            KeypointsDf.CN.INDIVIDUALS.value
+        ):
+            self.dlc_df.drop(
+                columns=IndivColumns.PROCESS.value,
+                level=KeypointsDf.CN.INDIVIDUALS.value,
+            )
+        # Getting (indivs, bpts) MultiIndex
+        # TODO: make explicitly selecting (indivs, bpts) levels
+        self.indivs_bpts_ls = self.dlc_df.columns.droplevel(
+            level=KeypointsDf.CN.COORDS.value
+        ).unique()
+        # Rounding and converting to correct dtypes - "x" and "y" values are ints
+        dlc_df = self.dlc_df.fillna(0)
+        columns = self.dlc_df.columns[
+            dlc_df.columns.get_level_values("coords").isin(["x", "y"])
+        ]
+        dlc_df[columns] = dlc_df[columns].round(0).astype(int)
+        # Changing the columns MultiIndex to a single-level index. For speedup
+        dlc_df.columns = [
+            f"{indiv}_{bpt}_{coord}" for indiv, bpt, coord in dlc_df.columns
+        ]
+        # Making the corresponding colours list for each bodypart instance
+        # (colours depend on indiv/bpt)
+        measures_ls = self.indivs_bpts_ls.get_level_values(self.colour_level)
+        self.colours = make_colours(measures_ls, self.cmap)
 
     def __call__(self, frame: np.ndarray, idx: int) -> np.ndarray:
         # Getting row
@@ -228,7 +267,7 @@ class Analysis(EvalVidFuncBase):
 
     name = "analysis"
 
-    qimage_format = pg.QtGui.QImage.Format.Format_RGB888
+    qimage_format = QtGui.QImage.Format.Format_RGB888
 
     def __init__(
         self, w_i: int, h_i: int, analysis_df: pd.DataFrame, cmap: str, **kwargs
@@ -240,79 +279,91 @@ class Analysis(EvalVidFuncBase):
         self.init_graph()
 
     def init_graph(self):
+        """
+        Modifying analysis_df to optimise processing
+        Specifically:
+        - Making sure all relevant behaviour outcome columns exist by imputing
+        - Changing the columns MultiIndex to a single-level index. For speedup
+        Getting behavs df
+        """
         # Making multi-plot widget
-        plots_layout = pg.GraphicsLayoutWidget()
+        self.plots_layout = pg.GraphicsLayoutWidget()
         # Getting list of different groups (`analysis`, `individuals` levels)
         df_columns = self.analysis_df.columns
         # For making separate plots in layout
         analysis_ls = df_columns.unique(AnalyseCombineDf.CN.ANALYSIS.value)
         indivs_ls = df_columns.unique(AnalyseCombineDf.CN.INDIVIDUALS.value)
+        # Calculating each plot's width and height
+        self.h_p = int(np.round(self.h_i / len(analysis_ls)))
+        self.w_p = int(np.round(self.w_i / len(indivs_ls)))
         # Making each plot (from "analysis")
         self.plot_arr = np.zeros(shape=(len(analysis_ls), len(indivs_ls)), dtype=object)
         self.x_line_arr = np.copy(self.plot_arr)
         for i, analysis_i in enumerate(analysis_ls):
             for j, indivs_j in enumerate(indivs_ls):
+                # Getting measures_ls, based on current analysis_i and indivs_j
+                measures_ls = self.analysis_df[(analysis_i, indivs_j)].columns.unique(
+                    AnalyseCombineDf.CN.MEASURES.value
+                )
                 # Making plot
-                self.plot_arr[i, j] = plots_layout.addPlot(
+                self.plot_arr[i, j] = self.plots_layout.addPlot(
                     row=i,
                     col=j,
                     title=f"{analysis_i} - {indivs_j}",
                     labels={"left": "value", "bottom": "second"},
                 )
                 # Setting width and height
-                self.plot_arr[i, j].setFixedHeight(
-                    int(np.round(self.h_i / len(analysis_ls)))
-                )
-                self.plot_arr[i, j].setFixedWidth(
-                    int(np.round(self.w_i / len(indivs_ls)))
-                )
+                self.plot_arr[i, j].setFixedHeight(self.h_p)
+                self.plot_arr[i, j].setFixedWidth(self.w_p)
                 # Plot middle (current time) line
                 self.x_line_arr[i, j] = pg.InfiniteLine(pos=0, angle=90)
                 self.x_line_arr[i, j].setZValue(10)
                 self.plot_arr[i, j].addItem(self.x_line_arr[i, j])
                 # Setting data
-                # TODO implement for bouts as well
-                measures_ls = df_columns.unique(AnalyseCombineDf.CN.MEASURES.value)
-                # Making the corresponding colours list for each bodypart instance
-                # (colours depend on indiv/bpt)
-                colours_idx, _ = pd.factorize(measures_ls)
-                colours_ls = (
-                    plt.cm.get_cmap(self.cmap)(colours_idx / colours_idx.max()) * 255
-                )[:, [2, 1, 0, 3]]
+                # TODO implement for bouts as well, NOT just line graph
+                # Making the corresponding colours list for each measures instance
+                colours_ls = make_colours(measures_ls, self.cmap)
                 # make legend
                 legend = self.plot_arr[i, j].addLegend()
                 for k, measures_k in enumerate(measures_ls):
                     colours_k = colours_ls[k]
                     # make measure's line
                     line_item = pg.PlotDataItem(
-                        x=self.analysis_df.index,
-                        y=self.analysis_df[(analysis_i, indivs_j, measures_k)],
+                        x=self.analysis_df.index.values,
+                        y=self.analysis_df[(analysis_i, indivs_j, measures_k)].values,
                         pen=pg.mkPen(color=colours_k),
                         brush=pg.mkBrush(color=colours_k),
                     )
                     line_item.setFillLevel(0.5)
                     self.plot_arr[i, j].addItem(line_item)
                     # make measure's legend
-                    legend.addItem(item=line_item, title=measures_k)
+                    legend.addItem(item=line_item, name=measures_k)
 
     def __call__(self, frame: np.ndarray, idx: int) -> np.ndarray:
         # For each plot (rows (analysis), columns (indivs))
         # NOTE: may not allow np arrays in np arrays
-        plot_img_arr = np.zeros(shape=self.plot_arr.shape, dtype=object)
+        plot_frame = np.full(
+            shape=(self.h_i, self.w_i, 3),
+            fill_value=(0, 0, 0),
+            dtype=np.uint8,
+        )
+
+        # plot_frame = self.grl2cv_(self.plots_layout)
         for i in range(self.plot_arr.shape[0]):
             for j in range(self.plot_arr.shape[1]):
                 self.update_plot(idx, i, j)
-                plot_img_arr[i, j] = self.plot2cv(i, j)
-        # Combining together
-        plot_img = np.concatenate(np.concatenate(plot_img_arr, axis=0), axis=0)
-        # Resizing
-        plot_img = cv2.resize(
-            plot_img,
-            (self.w_i, self.w_i),
-            interpolation=cv2.INTER_AREA,
-        )
+                plot_frame[
+                    self.h_p * i : self.h_p * (i + 1),
+                    self.w_p * j : self.w_p * (j + 1),
+                ] = self.plot2cv_(self.plot_arr[i, j])
+        # # Resizing
+        # plot_frame = cv2.resize(
+        #     plot_frame,
+        #     (self.w_i, self.w_i),
+        #     interpolation=cv2.INTER_AREA,
+        # )
         # Returning
-        return plot_img
+        return plot_frame
 
     def update_plot(self, idx: int, i: int, j: int):
         """
@@ -320,28 +371,38 @@ class Analysis(EvalVidFuncBase):
         (as the plots_layout has rows (analysis) and columns (indivs)).
         """
         # TODO: implement custom seconds
-        padding = 100
+        padding = 15
         self.x_line_arr[i, j].setPos(idx)
-        self.plot_arr[i, j].setXRange(i - padding, i + padding)
+        self.plot_arr[i, j].setXRange(idx - padding, idx + padding)
 
     @classmethod
-    def qt2cv(cls, img_qt: pg.QtGui.QImage) -> np.ndarray:
+    def qt2cv(cls, img_qt: QtGui.QImage) -> np.ndarray:
         """Convert from a QImage to an opencv image."""
+        # NOTE: TODO: Implement remove padding in behavysis_viewer too
         # QImage to RGB888 format
         img_qt = img_qt.convertToFormat(cls.qimage_format)
         # Get shape of image
-        w, h = img_qt.width(), img_qt.height()
+        w = img_qt.width()
+        h = img_qt.height()
+        bpl = img_qt.bytesPerLine()
         # Get bytes pointer to image data
         ptr = img_qt.bits()
-        # Bytes to cv2 image
-        img_cv = np.array(ptr, dtype=np.uint8).reshape(h, w, 3)
+        # Bytes to numpy 1d arr
+        img_cv = np.array(ptr, dtype=np.uint8)
+        # Reshaping to height-bytesPerLine format
+        img_cv = img_cv.reshape(h, bpl)
+        # Remove the padding bytes
+        img_cv = img_cv[:, : w * 3]
+        # Reshaping to cv2 format
+        img_cv = img_cv.reshape(h, w, 3)
         # Return cv2 image
         return img_cv
 
     @classmethod
-    def plot2cv_(cls, plot):
+    def grl2cv_(cls, grl):
         # Making pyqtgraph image exporter to bytes
-        exporter = ImageExporter(plot.plotItem)
+        # TODO: was original. check this still works
+        exporter = ImageExporter(grl.scene())
         # exporter.parameters()["width"] = self.width()
         # Exporting to QImage (bytes)
         img_qt = exporter.export(toBytes=True)
@@ -355,8 +416,24 @@ class Analysis(EvalVidFuncBase):
         # Return cv2 image
         return img_cv
 
-    def plot2cv(self, i: int, j: int):
-        return self.plot2cv_(self.plot_arr[i, j])
+    @classmethod
+    def plot2cv_(cls, plot):
+        # Making pyqtgraph image exporter to bytes
+        # TODO: was original. check this still works
+        # exporter = ImageExporter(plot.plotItem)
+        exporter = ImageExporter(plot)
+        # exporter.parameters()["width"] = self.width()
+        # Exporting to QImage (bytes)
+        img_qt = exporter.export(toBytes=True)
+        # QImage to cv2 image (using mixin)
+        img_cv = cls.qt2cv(img_qt)  # type: ignore
+        # cv2 BGR to RGB
+        img_cv = cv2.cvtColor(img_cv, cv2.COLOR_BGR2RGB)
+        # Resize to widget size
+        # w, h = self.width(), self.height()
+        # img_cv = cv2.resize(img_cv, (w, h), interpolation=cv2.INTER_AREA)
+        # Return cv2 image
+        return img_cv
 
 
 # TODO have a VidFuncOrganiser class, which has list of vid func objects and can
@@ -448,6 +525,17 @@ class VidFuncRunner:
         # analysis tile
         if self.analysis:
             arr_analysis = self.analysis(arr_video, idx)
-            arr_out[: self.h_o, self.w_i : self.w_o] = arr_analysis
+            arr_out[
+                : self.analysis.h_i,
+                self.w_i : self.w_i + self.analysis.w_i,
+            ] = arr_analysis
         # Returning output arr
         return arr_out
+
+
+def make_colours(vals, cmap):
+    colours_idx, _ = pd.factorize(vals)
+    colours_ls = (plt.cm.get_cmap(cmap)(colours_idx / colours_idx.max()) * 255)[
+        :, [2, 1, 0, 3]
+    ]
+    return colours_ls

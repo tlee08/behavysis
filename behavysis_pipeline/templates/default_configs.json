@@ -51,7 +51,7 @@
         "bodyparts": ["Nose", "BodyCentre", "TailBase1"]
       },
       "eval_vid": {
-        "funcs": ["keypoints", "behavs"],
+        "funcs": ["keypoints", "analysis"],
         "pcutoff": 0.5,
         "colour_level": "individuals",
         "radius": 4,

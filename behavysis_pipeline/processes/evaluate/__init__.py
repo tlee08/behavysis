@@ -32,7 +32,7 @@ import cv2
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
-from behavysis_core.df_classes.analyse_df import AnalyseDf
+from behavysis_core.df_classes.analyse_combine_df import AnalyseCombineDf
 from behavysis_core.df_classes.behav_df import BehavDf
 from behavysis_core.df_classes.keypoints_df import Coords, IndivColumns, KeypointsDf
 from behavysis_core.mixins.diagnostics_mixin import DiagnosticsMixin
@@ -213,52 +213,18 @@ class Evaluate:
         radius = configs.get_ref(configs_filt.radius)
         cmap = configs.get_ref(configs_filt.cmap)
 
-        # Modifying dlc_df and making list of how to select dlc_df components to optimise processing
-        # Specifically:
-        # - Filtering out "process" columns
-        # - Rounding and converting to correct dtypes - "x" and "y" values are ints
-        # - Changing the columns MultiIndex to a single-level index. For speedup
-        # - Making the corresponding colours list for each bodypart instance (colours depend on indiv/bpt)
         # Getting dlc df
         dlc_df = KeypointsDf.clean_headings(KeypointsDf.read_feather(dlc_fp))
-        # Filtering out IndivColumns.PROCESS.value columns
-        if IndivColumns.PROCESS.value in dlc_df.columns.unique("individuals"):
-            dlc_df.drop(columns=IndivColumns.PROCESS.value, level="individuals")
-        # Getting (indivs, bpts) MultiIndex
-        # TODO: make explicitly selecting (indivs, bpts) levels
-        indivs_bpts_ls = dlc_df.columns.droplevel("coords").unique()
-        # Rounding and converting to correct dtypes - "x" and "y" values are ints
-        dlc_df = dlc_df.fillna(0)
-        columns = dlc_df.columns[
-            dlc_df.columns.get_level_values("coords").isin(["x", "y"])
-        ]
-        dlc_df[columns] = dlc_df[columns].round(0).astype(int)
-        # Changing the columns MultiIndex to a single-level index. For speedup
-        dlc_df.columns = [
-            f"{indiv}_{bpt}_{coord}" for indiv, bpt, coord in dlc_df.columns
-        ]
-        # Making the corresponding colours list for each bodypart instance
-        # (colours depend on indiv/bpt)
-        colours_i, _ = pd.factorize(indivs_bpts_ls.get_level_values(colour_level))
-        colours = (plt.cm.get_cmap(cmap)(colours_i / colours_i.max()) * 255)[
-            :, [2, 1, 0, 3]
-        ]
 
-        # TODO: eventually ONLY need combined analysis df
-        # Modifying analysis_df to optimise processing
-        # Specifically:
-        # - Making sure all relevant behaviour outcome columns exist by imputing
-        # - Changing the columns MultiIndex to a single-level index. For speedup
-        # Getting behavs df
         try:
-            analysis_df = AnalyseDf.read_feather(analysis_fp)
+            analysis_df = AnalyseCombineDf.read_feather(analysis_fp)
         except FileNotFoundError:
             outcome += (
                 "WARNING: behavs file not found or could not be loaded."
                 + "Disregarding behaviour."
                 + "If you have run the behaviour classifier, please check this file.\n"
             )
-            analysis_df = AnalyseDf.init_df(dlc_df.index)
+            analysis_df = AnalyseCombineDf.init_df(dlc_df.index)
 
         # OPENING INPUT VIDEO
         # Open the input video
@@ -279,10 +245,10 @@ class Evaluate:
             # kwargs for EvalVidFuncBase
             dlc_df=dlc_df,
             analysis_df=analysis_df,
-            indivs_bpts_ls=indivs_bpts_ls,
-            colours=colours,
+            colour_level=colour_level,
             pcutoff=pcutoff,
             radius=radius,
+            cmap=cmap,
         )
         # Define the codec and create VideoWriter object
         out_cap = cv2.VideoWriter(
