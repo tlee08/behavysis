@@ -152,7 +152,7 @@ class Preprocess:
                 df[(scorer, "single", bodypart, Coords.LIKELIHOOD.value)] = pcutoff
                 outcome += f"{bodypart} is detected in less than {pcutoff_all} of the video. Setting x and y coordinates to ({x}, {y}).\n"
             else:
-                outcome += f"{bodypart} is detected in more than {pcutoff_all} of the video. No need for interpolation.\n"
+                outcome += f"{bodypart} is detected in more than {pcutoff_all} of the video. No need for stationary interpolation.\n"
         # Saving
         DFMixin.write_feather(df, out_fp)
         # Returning outcome
