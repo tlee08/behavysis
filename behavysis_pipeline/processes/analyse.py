@@ -207,7 +207,7 @@ class Analyse:
         dlc_df.index = analysis_df.index
         idx = pd.IndexSlice
         for indiv in indivs:
-            # Making a rolling window of 3(??) frames for average body-centre
+            # Making a rolling window of 3 frames for average body-centre
             # Otherwise jitter contributes to movement
             jitter_frames = 3
             smoothed_xy_df = dlc_df.rolling(
@@ -216,13 +216,14 @@ class Analyse:
             delta_x = smoothed_xy_df.loc[:, idx[indiv, bpts, "x"]].mean(axis=1).diff()  # type: ignore
             delta_y = smoothed_xy_df.loc[:, idx[indiv, bpts, "y"]].mean(axis=1).diff()  # type: ignore
             delta = np.sqrt(np.power(delta_x, 2) + np.power(delta_y, 2))
+            # Storing speed (raw and smoothed)
             analysis_df[(indiv, "SpeedMMperSec")] = (delta / px_per_mm) * fps
             analysis_df[(indiv, "SpeedMMperSecSmoothed")] = (
                 analysis_df[(indiv, "SpeedMMperSec")]
                 .rolling(window=smoothing_frames, min_periods=1, center=True)
                 .agg(np.nanmean)
             )
-        # Backfilling the analysis_df (because of diff and rolling window)
+        # Backfilling the analysis_df so no nan's
         analysis_df = analysis_df.bfill()
         # Saving analysis_df
         fbf_fp = os.path.join(out_dir, "fbf", f"{name}.feather")
@@ -291,7 +292,7 @@ class Analyse:
         analysis_df[(f"{indiv_a}_{indiv_b}", "DistMM")] = dist / px_per_mm
         analysis_df[(f"{indiv_a}_{indiv_b}", "DistMMSmoothed")] = (
             analysis_df[(f"{indiv_a}_{indiv_b}", "DistMM")]
-            .rolling(window=smoothing_frames, min_periods=1)
+            .rolling(window=smoothing_frames, min_periods=1, center=True)
             .agg(np.nanmean)
         )
         # Saving analysis_df
@@ -371,7 +372,7 @@ class Analyse:
                 # Smoothing
                 temp_df[f"{bpt}_dist"] = (
                     temp_df[f"{bpt}_dist"]
-                    .rolling(window=smoothing_frames, min_periods=1)
+                    .rolling(window=smoothing_frames, min_periods=1, center=True)
                     .agg(np.nanmean)
                 )
             # If ALL bodypoints do not leave `thresh_px`
