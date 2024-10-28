@@ -29,12 +29,11 @@ Given the `out_dir`, we save the files to `out_dir/<func_name>/<exp_name>.<ext>`
 import os
 
 import cv2
-import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 from behavysis_core.df_classes.analyse_combine_df import AnalyseCombineDf
 from behavysis_core.df_classes.behav_df import BehavDf
-from behavysis_core.df_classes.keypoints_df import Coords, IndivColumns, KeypointsDf
+from behavysis_core.df_classes.keypoints_df import Coords, KeypointsDf
 from behavysis_core.mixins.diagnostics_mixin import DiagnosticsMixin
 from behavysis_core.mixins.io_mixin import IOMixin
 from behavysis_core.pydantic_models.experiment_configs import ExperimentConfigs
@@ -212,6 +211,7 @@ class Evaluate:
         colour_level = configs.get_ref(configs_filt.colour_level)
         radius = configs.get_ref(configs_filt.radius)
         cmap = configs.get_ref(configs_filt.cmap)
+        padding = configs.get_ref(configs_filt.padding)
 
         # Getting dlc df
         dlc_df = KeypointsDf.clean_headings(KeypointsDf.read_feather(dlc_fp))
@@ -249,6 +249,7 @@ class Evaluate:
             pcutoff=pcutoff,
             radius=radius,
             cmap=cmap,
+            padding=padding,
         )
         # Define the codec and create VideoWriter object
         out_cap = cv2.VideoWriter(

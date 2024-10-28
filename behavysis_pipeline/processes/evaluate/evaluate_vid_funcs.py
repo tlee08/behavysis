@@ -272,12 +272,20 @@ class Analysis(EvalVidFuncBase):
     qimage_format = QtGui.QImage.Format.Format_RGB888
 
     def __init__(
-        self, w_i: int, h_i: int, analysis_df: pd.DataFrame, cmap: str, **kwargs
+        self,
+        w_i: int,
+        h_i: int,
+        analysis_df: pd.DataFrame,
+        cmap: str,
+        padding: int,
+        **kwargs,
     ):
+        # TODO make aspect ratio weighted w_i. Maybe have custom configs value
         self.w_i = w_i
         self.h_i = h_i
         self.analysis_df: pd.DataFrame = analysis_df
         self.cmap = cmap
+        self.padding = padding
         self.init_graph()
 
     def init_graph(self):
@@ -291,8 +299,8 @@ class Analysis(EvalVidFuncBase):
         # Making multi-plot widget
         self.plots_layout = pg.GraphicsLayoutWidget()
         # Getting list of different groups (`analysis`, `individuals` levels)
-        df_columns = self.analysis_df.columns
         # For making separate plots in layout
+        df_columns = self.analysis_df.columns
         analysis_ls = df_columns.unique(AnalyseCombineDf.CN.ANALYSIS.value)
         indivs_ls = df_columns.unique(AnalyseCombineDf.CN.INDIVIDUALS.value)
         # Calculating each plot's width and height
@@ -308,7 +316,7 @@ class Analysis(EvalVidFuncBase):
                     AnalyseCombineDf.CN.MEASURES.value
                 )
                 # Making plot
-                self.plot_arr[i, j] = self.plots_layout.addPlot(
+                self.plot_arr[i, j] = self.plots_layout.addPlot(  # type: ignore
                     row=i,
                     col=j,
                     title=f"{analysis_i} - {indivs_j}",
@@ -333,23 +341,21 @@ class Analysis(EvalVidFuncBase):
                     line_item = pg.PlotDataItem(
                         x=self.analysis_df.index.values,
                         y=self.analysis_df[(analysis_i, indivs_j, measures_k)].values,
-                        pen=pg.mkPen(color=colours_k),
-                        brush=pg.mkBrush(color=colours_k),
+                        pen=pg.mkPen(color=colours_k, width=5),
+                        # brush=pg.mkBrush(color=colours_k),
                     )
-                    line_item.setFillLevel(0.5)
+                    # line_item.setFillLevel(0)
                     self.plot_arr[i, j].addItem(line_item)
                     # make measure's legend
                     legend.addItem(item=line_item, name=measures_k)
 
     def __call__(self, frame: np.ndarray, idx: int) -> np.ndarray:
         # For each plot (rows (analysis), columns (indivs))
-        # NOTE: may not allow np arrays in np arrays
         plot_frame = np.full(
             shape=(self.h_i, self.w_i, 3),
             fill_value=(0, 0, 0),
             dtype=np.uint8,
         )
-
         # plot_frame = self.grl2cv_(self.plots_layout)
         for i in range(self.plot_arr.shape[0]):
             for j in range(self.plot_arr.shape[1]):
@@ -358,12 +364,6 @@ class Analysis(EvalVidFuncBase):
                     self.h_p * i : self.h_p * (i + 1),
                     self.w_p * j : self.w_p * (j + 1),
                 ] = self.plot2cv_(self.plot_arr[i, j])
-        # # Resizing
-        # plot_frame = cv2.resize(
-        #     plot_frame,
-        #     (self.w_i, self.w_i),
-        #     interpolation=cv2.INTER_AREA,
-        # )
         # Returning
         return plot_frame
 
@@ -372,10 +372,8 @@ class Analysis(EvalVidFuncBase):
         For a single plot
         (as the plots_layout has rows (analysis) and columns (indivs)).
         """
-        # TODO: implement custom seconds
-        padding = 15
         self.x_line_arr[i, j].setPos(idx)
-        self.plot_arr[i, j].setXRange(idx - padding, idx + padding)
+        self.plot_arr[i, j].setXRange(idx - self.padding, idx + self.padding)
 
     @classmethod
     def qt2cv(cls, img_qt: QtGui.QImage) -> np.ndarray:

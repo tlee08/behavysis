@@ -55,7 +55,8 @@
         "pcutoff": 0.5,
         "colour_level": "individuals",
         "radius": 4,
-        "cmap": "rainbow"
+        "cmap": "rainbow",
+        "padding": 30
       }
     },
     "extract_features": {

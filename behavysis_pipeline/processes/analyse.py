@@ -211,7 +211,7 @@ class Analyse:
             # Otherwise jitter contributes to movement
             jitter_frames = 3
             smoothed_xy_df = dlc_df.rolling(
-                window=jitter_frames, center=True, min_periods=1
+                window=jitter_frames, min_periods=1, center=True
             ).agg(np.nanmean)
             delta_x = smoothed_xy_df.loc[:, idx[indiv, bpts, "x"]].mean(axis=1).diff()  # type: ignore
             delta_y = smoothed_xy_df.loc[:, idx[indiv, bpts, "y"]].mean(axis=1).diff()  # type: ignore
@@ -219,7 +219,7 @@ class Analyse:
             analysis_df[(indiv, "SpeedMMperSec")] = (delta / px_per_mm) * fps
             analysis_df[(indiv, "SpeedMMperSecSmoothed")] = (
                 analysis_df[(indiv, "SpeedMMperSec")]
-                .rolling(window=smoothing_frames, min_periods=1)
+                .rolling(window=smoothing_frames, min_periods=1, center=True)
                 .agg(np.nanmean)
             )
         # Backfilling the analysis_df (because of diff and rolling window)
