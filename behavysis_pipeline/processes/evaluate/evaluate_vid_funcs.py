@@ -116,6 +116,8 @@ class Keypoints(EvalVidFuncBase):
         self.pcutoff = pcutoff
         self.radius = radius
 
+        self.init_df()
+
     def init_df(self):
         """
         Modifying dlc_df and making list of how to select dlc_df components to optimise processing
@@ -139,14 +141,14 @@ class Keypoints(EvalVidFuncBase):
             level=KeypointsDf.CN.COORDS.value
         ).unique()
         # Rounding and converting to correct dtypes - "x" and "y" values are ints
-        dlc_df = self.dlc_df.fillna(0)
+        self.dlc_df = self.dlc_df.fillna(0)
         columns = self.dlc_df.columns[
-            dlc_df.columns.get_level_values("coords").isin(["x", "y"])
+            self.dlc_df.columns.get_level_values("coords").isin(["x", "y"])
         ]
-        dlc_df[columns] = dlc_df[columns].round(0).astype(int)
+        self.dlc_df[columns] = self.dlc_df[columns].round(0).astype(int)
         # Changing the columns MultiIndex to a single-level index. For speedup
-        dlc_df.columns = [
-            f"{indiv}_{bpt}_{coord}" for indiv, bpt, coord in dlc_df.columns
+        self.dlc_df.columns = [
+            f"{indiv}_{bpt}_{coord}" for indiv, bpt, coord in self.dlc_df.columns
         ]
         # Making the corresponding colours list for each bodypart instance
         # (colours depend on indiv/bpt)
