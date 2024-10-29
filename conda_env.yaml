@@ -10,5 +10,6 @@ dependencies:
   - pip
   - ipykernel
   - ffmpeg
+  - pytables
   - pip:
       - behavysis_pipeline
