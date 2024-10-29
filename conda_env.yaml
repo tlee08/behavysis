@@ -10,6 +10,6 @@ dependencies:
   - pip
   - ipykernel
   - ffmpeg
-  - pytables
+  - hdf5
   - pip:
       - behavysis_pipeline
