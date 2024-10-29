@@ -125,7 +125,7 @@ class Analyse:
                 # Determining if the indiv body center is in the ROI
                 res_df[(indiv, "in_roi")] = (
                     res_df[indiv]
-                    .apply(lambda pt: AnalyseDf.pt_in_roi(pt, roi_c_df), axis=1)
+                    .apply(lambda pt: pt_in_roi(pt, roi_c_df), axis=1)
                     .astype(np.int8)
                 )
             # Inverting in_roi status if is_in is False
@@ -404,6 +404,31 @@ class Analyse:
             cbins_ls,
         )
         return outcome
+
+
+def pt_in_roi(pt: pd.Series, roi_df: pd.DataFrame) -> bool:
+    """__summary__"""
+    # Counting crossings over edge in region when point is translated to the right
+    crossings = 0
+    # To loop back to the first point at the end
+    first_roi_pt = pd.DataFrame(roi_df.iloc[0]).T
+    roi_df = pd.concat((roi_df, first_roi_pt), axis=0, ignore_index=True)
+    # Making x and y aliases
+    x = Coords.X.value
+    y = Coords.Y.value
+    # For each edge
+    for i in range(roi_df.shape[0] - 1):
+        # Getting corner points of edge
+        c1 = roi_df.iloc[i]
+        c2 = roi_df.iloc[i + 1]
+        # Getting whether point-y is between corners-y
+        y_between = (c1[y] > pt[y]) != (c2[y] > pt[y])
+        # Getting whether point-x is to the left (less than) the intersection of corners-x
+        x_left_of = pt[x] < (c2[x] - c1[x]) * (pt[y] - c1[y]) / (c2[y] - c1[y]) + c1[x]
+        if y_between and x_left_of:
+            crossings += 1
+    # Odd number of crossings means point is in region
+    return crossings % 2 == 1
 
 
 class Model_speed(BaseModel):

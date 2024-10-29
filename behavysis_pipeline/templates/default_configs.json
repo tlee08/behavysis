@@ -81,7 +81,7 @@
       "roi": [
         {
           "roi_name": "thigmo",
-          "is_in": true,
+          "is_in": false,
           "thresh_mm": -5,
           "roi_corners": "--corners",
           "bodyparts": "--bodyparts_front"
