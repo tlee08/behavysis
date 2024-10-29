@@ -1,10 +1,11 @@
 import os
 
-from behavysis_classifier import BehavClassifier
 from behavysis_core.df_classes.behav_df import BehavDf
 from behavysis_core.df_classes.df_mixin import DFMixin
 from behavysis_core.mixins.io_mixin import IOMixin
 from behavysis_core.pydantic_models.experiment_configs import ExperimentConfigs
+
+from behavysis_pipeline.behav_classifier import BehavClassifier
 
 
 class Export:

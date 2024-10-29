@@ -68,7 +68,6 @@ proj.format_vid(
 
 Running the DLC pose estimation algorithm on the formatted mp4 files.
 
-
 !!! Note
 
     Make sure to change the `user.run_dlc.model_fp`
@@ -162,7 +161,7 @@ Exports to such a format, where
 a) `behavysis_viewer` can load it and perform semi-automated analysis, and
 b) after semi-automated verification, can be used to make a new/improve
 a current behaviour classifier
-(with [behavysis_classifier.behav_classifier.BehavClassifier][])
+(with [behavysis_pipeline.behav_classifier.behav_classifier.BehavClassifier][])
 
 ```python
 proj.export_behaviours(overwrite)

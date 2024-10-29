@@ -1,11 +1,12 @@
 import numpy as np
 import torch
-from behavysis_classifier.clf_models.base_torch_model import (
+from torch.utils.data import TensorDataset
+
+from behavysis_pipeline.behav_classifier.clf_models.base_torch_model import (
     BaseTorchModel,
     MemoizedTimeSeriesDataset,
     TimeSeriesDataset,
 )
-from torch.utils.data import TensorDataset
 
 
 def make_x_y_dfs(nrows, ncols):

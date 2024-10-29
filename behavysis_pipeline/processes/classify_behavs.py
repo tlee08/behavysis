@@ -4,12 +4,13 @@ Classify Behaviours
 
 import numpy as np
 import pandas as pd
-from behavysis_classifier import BehavClassifier
 from behavysis_core.df_classes.behav_df import BehavColumns, BehavDf
 from behavysis_core.df_classes.bouts_df import BoutsDf
 from behavysis_core.df_classes.df_mixin import DFMixin
 from behavysis_core.mixins.io_mixin import IOMixin
 from behavysis_core.pydantic_models.experiment_configs import ExperimentConfigs
+
+from behavysis_pipeline.behav_classifier import BehavClassifier
 
 # TODO: handle reading the model file whilst in multiprocessing
 
