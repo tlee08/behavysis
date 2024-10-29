@@ -14,12 +14,12 @@ from behavysis_core.pydantic_models.experiment_configs import ExperimentConfigs
 # TODO: handle reading the model file whilst in multiprocessing
 
 
-class ClassifyBehaviours:
+class ClassifyBehavs:
     """__summary__"""
 
     @staticmethod
     @IOMixin.overwrite_check()
-    def classify_behaviours(
+    def classify_behavs(
         features_fp: str,
         out_fp: str,
         configs_fp: str,

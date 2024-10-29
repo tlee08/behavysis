@@ -20,9 +20,9 @@ from behavysis_core.constants import (
 from behavysis_core.df_classes.df_mixin import DFMixin
 from behavysis_core.mixins.diagnostics_mixin import DiagnosticsMixin
 
-from behavysis_pipeline.processes.analyse_behav import AnalyseBehav
+from behavysis_pipeline.processes.analyse_behavs import AnalyseBehavs
 from behavysis_pipeline.processes.analyse_combine import AnalyseCombine
-from behavysis_pipeline.processes.classify_behaviours import ClassifyBehaviours
+from behavysis_pipeline.processes.classify_behavs import ClassifyBehavs
 from behavysis_pipeline.processes.export import Export
 from behavysis_pipeline.processes.extract_features import ExtractFeatures
 from behavysis_pipeline.processes.run_dlc import RunDLC
@@ -320,7 +320,7 @@ class Experiment:
         """
         # Exporting 3_dlc df to 4_preprocessed folder
         dd = self._process_scaffold(
-            (Export.feather_2_feather,),
+            (Export.feather2feather,),
             src_fp=self.get_fp(Folders.DLC.value),
             out_fp=self.get_fp(Folders.PREPROCESSED.value),
             overwrite=overwrite,
@@ -367,7 +367,7 @@ class Experiment:
             overwrite=overwrite,
         )
 
-    def classify_behaviours(self, overwrite: bool) -> dict:
+    def classify_behavs(self, overwrite: bool) -> dict:
         """
         Given model config files in the BehavClassifier format, generates beahviour predidctions
         on the given extracted features dataframe.
@@ -383,14 +383,14 @@ class Experiment:
             Diagnostics dictionary, with description of each function's outcome.
         """
         return self._process_scaffold(
-            (ClassifyBehaviours.classify_behaviours,),
+            (ClassifyBehavs.classify_behavs,),
             features_fp=self.get_fp(Folders.FEATURES_EXTRACTED.value),
             out_fp=self.get_fp(Folders.PREDICTED_BEHAVS.value),
             configs_fp=self.get_fp(Folders.CONFIGS.value),
             overwrite=overwrite,
         )
 
-    def export_behaviours(self, overwrite: bool) -> dict:
+    def export_behavs(self, overwrite: bool) -> dict:
         """
         _summary_
 
@@ -406,7 +406,7 @@ class Experiment:
         """
         # Exporting 6_predicted_behavs df to 7_scored_behavs folder
         return self._process_scaffold(
-            (Export.predbehav_2_scoredbehav,),
+            (Export.predbehavs2scoredbehavs,),
             src_fp=self.get_fp(Folders.PREDICTED_BEHAVS.value),
             out_fp=self.get_fp(Folders.SCORED_BEHAVS.value),
             configs_fp=self.get_fp(Folders.CONFIGS.value),
@@ -444,7 +444,7 @@ class Experiment:
             configs_fp=self.get_fp(Folders.CONFIGS.value),
         )
 
-    def analyse_behave(self) -> dict:
+    def analyse_behavs(self) -> dict:
         """
         An ML pipeline method to analyse the preprocessed DLC data.
         Possible funcs are given in analysis.py.
@@ -460,13 +460,13 @@ class Experiment:
         Can call any methods from `Analyse`.
         """
         return self._process_scaffold(
-            (AnalyseBehav.analyse_behav,),
+            (AnalyseBehavs.analyse_behavs,),
             behavs_fp=self.get_fp(Folders.SCORED_BEHAVS.value),
             analysis_dir=os.path.join(self.root_dir, ANALYSIS_DIR),
             configs_fp=self.get_fp(Folders.CONFIGS.value),
         )
 
-    def analysis_combine(self) -> dict:
+    def analyse_combine(self) -> dict:
         """
         Combine the experiment's analysis in each fbf into a single df
         """
@@ -499,7 +499,7 @@ class Experiment:
             _description_
         """
         return self._process_scaffold(
-            (Export.feather_2_csv,),
+            (Export.feather2csv,),
             in_fp=self.get_fp(in_dir),
             out_fp=os.path.join(out_dir, f"{self.name}.csv"),
             overwrite=overwrite,

@@ -33,11 +33,11 @@ from behavysis_core.pydantic_models.experiment_configs import ExperimentConfigs
 ###################################################################################################
 
 
-class AnalyseBehav:
+class AnalyseBehavs:
     """__summary__"""
 
     @staticmethod
-    def analyse_behav(
+    def analyse_behavs(
         behavs_fp: str,
         analysis_dir: str,
         configs_fp: str,
@@ -49,7 +49,7 @@ class AnalyseBehav:
         """
         outcome = ""
         name = IOMixin.get_name(behavs_fp)
-        out_dir = os.path.join(analysis_dir, AnalyseBehav.analyse_behav.__name__)
+        out_dir = os.path.join(analysis_dir, AnalyseBehavs.analyse_behavs.__name__)
         # Calculating the deltas (changes in body position) between each frame for the subject
         configs = ExperimentConfigs.read_json(configs_fp)
         fps, _, _, _, bins_ls, cbins_ls = AnalyseDf.get_configs(configs)

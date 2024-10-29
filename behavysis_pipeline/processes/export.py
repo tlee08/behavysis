@@ -12,7 +12,7 @@ class Export:
 
     @staticmethod
     @IOMixin.overwrite_check()
-    def feather_2_feather(src_fp: str, out_fp: str, overwrite: bool) -> str:
+    def feather2feather(src_fp: str, out_fp: str, overwrite: bool) -> str:
         """__summary__"""
         # Reading file
         df = DFMixin.read_feather(src_fp)
@@ -23,7 +23,7 @@ class Export:
 
     @staticmethod
     @IOMixin.overwrite_check()
-    def feather_2_csv(src_fp: str, out_fp: str, overwrite: bool) -> str:
+    def feather2csv(src_fp: str, out_fp: str, overwrite: bool) -> str:
         """__summary__"""
         # Reading file
         df = DFMixin.read_feather(src_fp)
@@ -35,7 +35,7 @@ class Export:
 
     @staticmethod
     @IOMixin.overwrite_check()
-    def predbehav_2_scoredbehav(
+    def predbehavs2scoredbehavs(
         src_fp: str, out_fp: str, configs_fp: str, overwrite: bool
     ) -> str:
         """ """
@@ -61,7 +61,7 @@ class Export:
 
     @staticmethod
     @IOMixin.overwrite_check()
-    def boris_2_behav(
+    def boris2behav(
         src_fp: str, out_fp: str, configs_fp: str, behavs_ls: list[str], overwrite: bool
     ) -> str:
         # Reading the configs file
