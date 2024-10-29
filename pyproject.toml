@@ -11,7 +11,7 @@ documentation = "https://tlee08.github.io/behavysis_pipeline"
 packages = [{ include = "behavysis_pipeline" }]
 
 [tool.poetry.dependencies]
-python = "^3.12"
+python = "==3.12"
 behavysis_core = "^0.1.24"
 # behavysis_classifier = "^0.1.24"
 Jinja2 = "^3.1.4"
@@ -24,8 +24,8 @@ streamlit = "^1.36.0"
 # Classifier
 scikit-learn = "^1.4.2"
 imbalanced-learn = "^0.12.2"
-torch = "^2.2.2"
-# torch = {version = "^2.2.1", source = "torch"}
+torch = "^2.5.1"
+# torch = {version = "^2.5.1", source = "torch"}
 
 [tool.poetry.group.dev.dependencies]
 behavysis_core = { path = "../behavysis_core", develop = true }
