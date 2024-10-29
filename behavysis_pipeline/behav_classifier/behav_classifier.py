@@ -18,6 +18,10 @@ import seaborn as sns
 from behavysis_core.constants import Folders
 from behavysis_core.df_classes.behav_df import BehavColumns, BehavDf
 from behavysis_core.df_classes.df_mixin import DFMixin
+from behavysis_core.pydantic_models.behav_classifier_configs import (
+    BehavClassifierConfigs,
+)
+from matplotlib.figure import Figure
 from sklearn.metrics import (
     classification_report,
     confusion_matrix,
@@ -29,9 +33,9 @@ from sklearn.preprocessing import MinMaxScaler
 from behavysis_pipeline.behav_classifier.clf_models.base_torch_model import (
     BaseTorchModel,
 )
-from behavysis_pipeline.behav_classifier.clf_models.clf_templates import CLF_TEMPLATES
-from behavysis_pipeline.behav_classifier.pydantic_models.behav_classifier_configs import (
-    BehavClassifierConfigs,
+from behavysis_pipeline.behav_classifier.clf_models.clf_templates import (
+    CLF_TEMPLATES,
+    DNN1,
 )
 
 if TYPE_CHECKING:
@@ -66,7 +70,7 @@ class BehavClassifier:
     def __init__(self, model_dir: str) -> None:
         # Storing model directory path
         self.model_dir = os.path.abspath(model_dir)
-        self.clf = None
+        self.clf = DNN1()
         # Trying to read configs file. Making a new one if it doesn't exist
         try:
             self.configs
@@ -284,9 +288,9 @@ class BehavClassifier:
         # Loading in pipeline
         preproc_pipe = joblib.load(preproc_fp)
         # Uses trained fit for preprocessing new data
-        x = preproc_pipe.transform(x)
+        x_preproc = preproc_pipe.transform(x)
         # Returning df
-        return x
+        return x_preproc
 
     @staticmethod
     def wrangle_columns_y(y: pd.DataFrame) -> pd.DataFrame:
@@ -319,7 +323,7 @@ class BehavClassifier:
         return y
 
     @staticmethod
-    def preproc_y(y: np.ndarray) -> np.ndarray:
+    def preproc_y(y: np.ndarray | pd.DataFrame) -> np.ndarray:
         """
         The preprocessing steps are:
         - Imputing NaN values with 0
@@ -380,7 +384,8 @@ class BehavClassifier:
         x = self.preproc_x(x, self.preproc_fp)
         # Preprocessing y df
         y = self.wrangle_columns_y(y)[self.configs.behaviour_name].values
-        y = self.preproc_y(y)
+        # TODO: why is this linting error?
+        y = self.preproc_y(y)  # type: ignore
         # Returning x, y, and index to use
         return x, y
 
@@ -441,7 +446,7 @@ class BehavClassifier:
     # PIPELINE FOR CLASSIFIER TRAINING AND INFERENCE
     #################################################
 
-    def pipeline_build(self, clf_init_f: Callable) -> None:
+    def pipeline_build(self, clf_cls: Callable) -> None:
         """
         Makes a classifier and saves it to the model's root directory.
 
@@ -450,7 +455,7 @@ class BehavClassifier:
         # Preparing data
         x, y, ind_train, ind_test = self.prepare_data_training_pipeline()
         # Initialising the model
-        self.clf = clf_init_f()
+        self.clf = clf_cls()
         # Training the model
         history = self.clf.fit(
             x=x,
@@ -466,7 +471,7 @@ class BehavClassifier:
         self.clf_eval(x, y, ind_test)
         # Updating the model configs
         configs = self.configs
-        configs.clf_structure = clf_init_f.__name__
+        configs.clf_structure = clf_cls.__name__
         self.configs = configs
         # Saving the model to disk
         self.clf_save()
@@ -569,7 +574,7 @@ class BehavClassifier:
         y: np.ndarray,
         index: None | np.ndarray = None,
         name: None | str = "",
-    ) -> tuple[pd.DataFrame, dict, plt.Figure, plt.Figure, plt.Figure]:
+    ) -> tuple[pd.DataFrame, dict, Figure, Figure, Figure]:
         """
         Evaluates the classifier performance on the given x and y data.
         Saves the `metrics_fig` and `pcutoffs_fig` to the model's root directory.
@@ -633,10 +638,10 @@ class BehavClassifier:
         # x_train += np.random.normal(0, noise, x_train.shape)
         # x_test += np.random.normal(0, noise, x_test.shape)
         # Getting eval for each classifier in ClfTemplates
-        for clf_init_f in CLF_TEMPLATES:
-            clf_name = clf_init_f.__name__
+        for clf_cls in CLF_TEMPLATES:
+            clf_name = clf_cls.__name__
             # Making classifier
-            self.clf = clf_init_f()
+            self.clf = clf_cls()
             # Training
             history = self.clf.fit(
                 x=x,
@@ -668,10 +673,10 @@ class BehavClassifier:
             y_pred,
             target_names=GENERIC_BEHAV_LABELS,
             output_dict=True,
-        )
+        )  # type: ignore
 
     @staticmethod
-    def eval_conf_matr(y_true: pd.Series, y_pred: pd.Series) -> plt.Figure:
+    def eval_conf_matr(y_true: pd.Series, y_pred: pd.Series) -> Figure:
         """
         __summary__
         """
@@ -692,7 +697,7 @@ class BehavClassifier:
         return fig
 
     @staticmethod
-    def eval_metrics_pcutoffs(y_true: pd.Series, y_prob: pd.Series) -> plt.Figure:
+    def eval_metrics_pcutoffs(y_true: pd.Series, y_prob: pd.Series) -> Figure:
         """
         __summary__
         """
@@ -711,10 +716,10 @@ class BehavClassifier:
                 target_names=GENERIC_BEHAV_LABELS,
                 output_dict=True,
             )
-            precisions[i] = report[GENERIC_BEHAV_LABELS[1]]["precision"]
-            recalls[i] = report[GENERIC_BEHAV_LABELS[1]]["recall"]
-            f1[i] = report[GENERIC_BEHAV_LABELS[1]]["f1-score"]
-            accuracies[i] = report["accuracy"]
+            precisions[i] = report[GENERIC_BEHAV_LABELS[1]]["precision"]  # type: ignore
+            recalls[i] = report[GENERIC_BEHAV_LABELS[1]]["recall"]  # type: ignore
+            f1[i] = report[GENERIC_BEHAV_LABELS[1]]["f1-score"]  # type: ignore
+            accuracies[i] = report["accuracy"]  # type: ignore
         # Making figure
         fig, ax = plt.subplots(figsize=(10, 7))
         sns.lineplot(x=pcutoffs, y=precisions, label="precision", ax=ax)
@@ -724,7 +729,7 @@ class BehavClassifier:
         return fig
 
     @staticmethod
-    def eval_logc(y_true: pd.Series, y_prob: pd.Series) -> plt.Figure:
+    def eval_logc(y_true: pd.Series, y_prob: pd.Series) -> Figure:
         """
         __summary__
         """

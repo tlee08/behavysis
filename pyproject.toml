@@ -22,8 +22,8 @@ streamlit = "^1.36.0"
 # Classifier
 scikit-learn = "^1.4.2"
 imbalanced-learn = "^0.12.2"
-torch = "^2.2.2"
-# torch = {version = "^2.2.2", source = "torch"}
+torch = "~2.2"
+# torch = {version = "~2.2", source = "torch"}
 
 [tool.poetry.group.dev.dependencies]
 behavysis_core = { path = "../behavysis_core", develop = true }
