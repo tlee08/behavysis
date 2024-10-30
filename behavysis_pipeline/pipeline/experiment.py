@@ -10,7 +10,7 @@ from typing import Any, Callable
 
 import numpy as np
 from behavysis_core.constants import (
-    ANALYSIS_DIR,
+    ANALYSE_DIR,
     EVALUATE_DIR,
     FILE_EXTS,
     STR_DIV,
@@ -440,7 +440,7 @@ class Experiment:
         return self._process_scaffold(
             funcs,
             dlc_fp=self.get_fp(Folders.PREPROCESSED.value),
-            analysis_dir=os.path.join(self.root_dir, ANALYSIS_DIR),
+            ANALYSE_DIR=os.path.join(self.root_dir, ANALYSE_DIR),
             configs_fp=self.get_fp(Folders.CONFIGS.value),
         )
 
@@ -462,7 +462,7 @@ class Experiment:
         return self._process_scaffold(
             (AnalyseBehavs.analyse_behavs,),
             behavs_fp=self.get_fp(Folders.SCORED_BEHAVS.value),
-            analysis_dir=os.path.join(self.root_dir, ANALYSIS_DIR),
+            ANALYSE_DIR=os.path.join(self.root_dir, ANALYSE_DIR),
             configs_fp=self.get_fp(Folders.CONFIGS.value),
         )
 
@@ -473,7 +473,7 @@ class Experiment:
         # TODO: make new subfolder called combined_analysis and make ONLY(??) fbf analysis.
         return self._process_scaffold(
             (AnalyseCombine.analyse_combine,),
-            analysis_dir=os.path.join(self.root_dir, ANALYSIS_DIR),
+            ANALYSE_DIR=os.path.join(self.root_dir, ANALYSE_DIR),
             out_fp=self.get_fp(Folders.ANALYSIS_COMBINED.value),
             configs_fp=self.get_fp(Folders.CONFIGS.value),
         )

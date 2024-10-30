@@ -5,7 +5,7 @@ Parameters
 ----------
 dlc_fp : str
     The DLC dataframe filepath of the experiment to analyse.
-analysis_dir : str
+ANALYSE_DIR : str
     The analysis directory path.
 configs_fp : str
     the experiment's JSON configs file.
@@ -36,7 +36,7 @@ class AnalyseCombine:
 
     @staticmethod
     def analyse_combine(
-        analysis_dir: str,
+        ANALYSE_DIR: str,
         out_fp: str,
         configs_fp: str,
         # bins: list,
@@ -52,8 +52,8 @@ class AnalyseCombine:
         # For each analysis subdir, combining fbf files
         analysis_ls = [
             i
-            for i in os.listdir(analysis_dir)
-            if os.path.isdir(os.path.join(analysis_dir, i))
+            for i in os.listdir(ANALYSE_DIR)
+            if os.path.isdir(os.path.join(ANALYSE_DIR, i))
         ]
         # If no analysis files, then return warning and don't make df
         if len(analysis_ls) == 0:
@@ -62,7 +62,7 @@ class AnalyseCombine:
         # Reading in each fbf analysis df
         comb_df_ls = [
             AnalyseDf.read_feather(
-                os.path.join(analysis_dir, i, "fbf", f"{name}.feather")
+                os.path.join(ANALYSE_DIR, i, "fbf", f"{name}.feather")
             )
             for i in analysis_ls
         ]
