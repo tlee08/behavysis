@@ -177,7 +177,7 @@ class Project:
         self.nprocs = 4
 
     #####################################################################
-    #               GETTER METHODS
+    # GETTER METHODS
     #####################################################################
 
     def get_experiment(self, name: str) -> Experiment:
@@ -312,31 +312,13 @@ class Project:
                 .sort_index(key=natsort_keygen())
             )
             # Updating the diagnostics file at each step
-            self.save_diagnostics(method.__name__, df)
+            self._save_diagnostics(method.__name__, df)
             # Finishing
             logging.info("Finished %s!\n%s\n%s\n", method.__name__, STR_DIV, STR_DIV)
 
     #####################################################################
     #               BATCH PROCESSING METHODS
     #####################################################################
-
-    @functools.wraps(Experiment.update_configs)
-    def update_configs(self, *args, **kwargs) -> None:
-        """
-        Batch processing corresponding to
-        [behavysis_pipeline.pipeline.experiment.Experiment.update_configs][]
-        """
-        method = Experiment.update_configs
-        self._process_scaffold(method, *args, **kwargs)
-
-    @functools.wraps(Experiment.format_vid)
-    def format_vid(self, *args, **kwargs) -> None:
-        """
-        Batch processing corresponding to
-        [behavysis_pipeline.pipeline.experiment.Experiment.format_vid][]
-        """
-        method = Experiment.format_vid
-        self._process_scaffold(method, *args, **kwargs)
 
     @functools.wraps(Experiment.run_dlc)
     def run_dlc(self, gputouse: int | None = None, overwrite: bool = False) -> None:
@@ -384,111 +366,25 @@ class Project:
                 ],
             )
 
-    @functools.wraps(Experiment.calculate_params)
-    def calculate_params(self, *args, **kwargs) -> None:
-        """
-        Batch processing corresponding to
-        [behavysis_pipeline.pipeline.experiment.Experiment.calculate_params][]
-        """
-        method = Experiment.calculate_params
-        self._process_scaffold(method, *args, **kwargs)
-
-    @functools.wraps(Experiment.preprocess)
-    def preprocess(self, *args, **kwargs) -> None:
-        """
-        Batch processing corresponding to
-        [behavysis_pipeline.pipeline.experiment.Experiment.preprocess][]
-        """
-        method = Experiment.preprocess
-        self._process_scaffold(method, *args, **kwargs)
-
-    @functools.wraps(Experiment.extract_features)
-    def extract_features(self, *args, **kwargs) -> None:
-        """
-        Batch processing corresponding to
-        [behavysis_pipeline.pipeline.experiment.Experiment.extract_features][]
-        """
-        method = Experiment.extract_features
-        self._process_scaffold(method, *args, **kwargs)
-
-    @functools.wraps(Experiment.classify_behavs)
-    def classify_behaviours(self, *args, **kwargs) -> None:
-        """
-        Batch processing corresponding to
-        [behavysis_pipeline.pipeline.experiment.Experiment.classify_behaviours][]
-        """
-        # TODO: handle reading the model file whilst in multiprocessing.
-        # Current fix is single processing.
-        # nprocs = self.nprocs
-        # self.nprocs = 1
-        method = Experiment.classify_behavs
-        self._process_scaffold(method, *args, **kwargs)
-        # self.nprocs = nprocs
-
-    @functools.wraps(Experiment.export_behavs)
-    def export_behaviours(self, *args, **kwargs) -> None:
-        """
-        Batch processing corresponding to
-        [behavysis_pipeline.pipeline.experiment.Experiment.export_behaviours][]
-        """
-        # TODO: handle reading the model file whilst in multiprocessing.
-        # Current fix is single processing.
-        # nprocs = self.nprocs
-        # self.nprocs = 1
-        method = Experiment.export_behavs
-        self._process_scaffold(method, *args, **kwargs)
-        # self.nprocs = nprocs
-
-    @functools.wraps(Experiment.export_feather)
-    def export_feather(self, *args, **kwargs) -> None:
-        """
-        Batch processing corresponding to
-        [behavysis_pipeline.pipeline.experiment.Experiment.export_feather][]
-        """
-        method = Experiment.export_feather
-        self._process_scaffold(method, *args, **kwargs)
-
-    @functools.wraps(Experiment.evaluate)
-    def evaluate(self, *args, **kwargs) -> None:
-        """
-        Batch processing corresponding to
-        [behavysis_pipeline.pipeline.experiment.Experiment.evaluate][]
-        """
-        method = Experiment.evaluate
-        self._process_scaffold(method, *args, **kwargs)
-
-    @functools.wraps(Experiment.analyse)
-    def analyse(self, *args, **kwargs) -> None:
-        """
-        Batch processing corresponding to
-        [behavysis_pipeline.pipeline.experiment.Experiment.analyse][]
-        """
-        method = Experiment.analyse
-        self._process_scaffold(method, *args, **kwargs)
-
-    @functools.wraps(Experiment.analyse_behavs)
-    def analyse_behavs(self, *args, **kwargs) -> None:
-        """
-        Batch processing corresponding to
-        [behavysis_pipeline.pipeline.experiment.Experiment.analyse_behav][]
-        """
-        method = Experiment.analyse_behavs
-        self._process_scaffold(method, *args, **kwargs)
-
-    @functools.wraps(Experiment.analyse_combine)
-    def analyse_combine(self, *args, **kwargs) -> None:
-        """
-        Batch processing corresponding to
-        [behavysis_pipeline.pipeline.experiment.Experiment.analyse_combine][]
-        """
-        method = Experiment.analyse_combine
-        self._process_scaffold(method, *args, **kwargs)
+    # @functools.wraps(Experiment.classify_behaviours)
+    # def classify_behaviours(self, *args, **kwargs) -> None:
+    #     """
+    #     Batch processing corresponding to
+    #     [behavysis_pipeline.pipeline.experiment.Experiment.classify_behaviours][]
+    #     """
+    #     # TODO: handle reading the model file whilst in multiprocessing.
+    #     # Current fix is single processing.
+    #     # nprocs = self.nprocs
+    #     # self.nprocs = 1
+    #     method = Experiment.classify_behaviours
+    #     self._process_scaffold(method, *args, **kwargs)
+    #     # self.nprocs = nprocs
 
     #####################################################################
-    #               DIAGNOSTICS DICT METHODS
+    # DIAGNOSTICS LOAD/SAVE METHODS
     #####################################################################
 
-    def load_diagnostics(self, name: str) -> pd.DataFrame:
+    def _load_diagnostics(self, name: str) -> pd.DataFrame:
         """
         Reads the data from the diagnostics file with the given name.
 
@@ -507,7 +403,7 @@ class Project:
         # Reading from file
         return DiagnosticsMixin.load_diagnostics(fp)
 
-    def save_diagnostics(self, name: str, df: pd.DataFrame) -> None:
+    def _save_diagnostics(self, name: str, df: pd.DataFrame) -> None:
         """
         Writes the given data to a diagnostics file with the given name.
 
@@ -630,7 +526,7 @@ class Project:
         # Imputing na values with -1
         df_configs = df_configs.fillna(-1)
         # Saving the collated auto fields DataFrame to diagnostics folder
-        self.save_diagnostics("collated_configs_auto", df_configs)
+        self._save_diagnostics("collated_configs_auto", df_configs)
 
         # Making and saving histogram plots of the numerical auto fields
         # NOTE: NOT including string frequencies, only numerical
@@ -653,7 +549,7 @@ class Project:
 
     def analyse_collate(self) -> None:
         """
-        Combines an analysis of all the experiments together to generate combined h5 files for:
+        Combines an analysis of all the experiments together to generate combined files for:
         - Each binned data. The index is (bin) and columns are (expName, indiv, measure).
         - The summary data. The index is (expName, indiv, measure) and columns are
         (statistics -e.g., mean).
@@ -725,3 +621,37 @@ class Project:
             if len(df_ls) > 0:
                 total_df = pd.concat(df_ls, keys=names_ls, names=["experiment"], axis=0)
                 DFMixin.write_feather(total_df, out_fp)
+
+
+###################################################################################################
+# DYNAMICALLY MAKING PROJECT PIPELINE METHODS (FROM EXPERIMENT METHODS) FOR PROJECT CLASS
+###################################################################################################
+
+
+def create_wrapped_method(func: Callable):
+    @functools.wraps(func)
+    def wrapper(self: Project, *args, **kwargs):
+        self._process_scaffold(func, *args, **kwargs)
+
+    return wrapper
+
+
+# Dynamically add methods to Project class
+for func in [
+    Experiment.update_configs,
+    Experiment.format_vid,
+    Experiment.run_dlc,
+    Experiment.calculate_parameters,
+    Experiment.preprocess,
+    Experiment.extract_features,
+    Experiment.classify_behaviours,
+    Experiment.export_behaviours,
+    Experiment.export_feather,
+    Experiment.analyse,
+    Experiment.analyse_behavs,
+    Experiment.analyse_combine,
+    Experiment.evaluate,
+]:
+    func_name = func.__name__
+    if func_name not in dir(Project):
+        setattr(Project, func_name, create_wrapped_method(func))

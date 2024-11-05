@@ -269,7 +269,7 @@ class Experiment:
             overwrite=overwrite,
         )
 
-    def calculate_params(self, funcs: tuple[Callable, ...]) -> dict:
+    def calculate_parameters(self, funcs: tuple[Callable, ...]) -> dict:
         """
         A pipeline to calculate the parameters of the raw DLC file, which will
         assist in preprocessing the DLC data.
@@ -367,7 +367,7 @@ class Experiment:
             overwrite=overwrite,
         )
 
-    def classify_behavs(self, overwrite: bool) -> dict:
+    def classify_behaviours(self, overwrite: bool) -> dict:
         """
         Given model config files in the BehavClassifier format, generates beahviour predidctions
         on the given extracted features dataframe.
@@ -390,7 +390,7 @@ class Experiment:
             overwrite=overwrite,
         )
 
-    def export_behavs(self, overwrite: bool) -> dict:
+    def export_behaviours(self, overwrite: bool) -> dict:
         """
         _summary_
 
