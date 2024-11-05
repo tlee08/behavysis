@@ -3,7 +3,7 @@ Functions have the following format:
 
 Parameters
 ----------
-in_fp : str
+dlc_fp : str
     The input video filepath.
 out_fp : str
     The output video filepath.
@@ -40,7 +40,7 @@ class Preprocess:
     @staticmethod
     @IOMixin.overwrite_check()
     def start_stop_trim(
-        in_fp: str, out_fp: str, configs_fp: str, overwrite: bool
+        dlc_fp: str, out_fp: str, configs_fp: str, overwrite: bool
     ) -> str:
         """
         Filters the rows of a DLC formatted dataframe to include only rows within the start
@@ -48,7 +48,7 @@ class Preprocess:
 
         Parameters
         ----------
-        in_fp : str
+        dlc_fp : str
             The file path of the input DLC formatted dataframe.
         out_fp : str
             The file path of the output trimmed dataframe.
@@ -81,7 +81,7 @@ class Preprocess:
         stop_frame = configs.auto.stop_frame
 
         # Reading file
-        df = KeypointsDf.read_feather(in_fp)
+        df = KeypointsDf.read_feather(dlc_fp)
 
         # Trimming dataframe
         df = df.loc[start_frame:stop_frame, :]
@@ -94,7 +94,7 @@ class Preprocess:
     @staticmethod
     @IOMixin.overwrite_check()
     def interpolate_stationary(
-        in_fp: str, out_fp: str, configs_fp: str, overwrite: bool
+        dlc_fp: str, out_fp: str, configs_fp: str, overwrite: bool
     ) -> str:
         """
         If the point detection (above a certain threshold) is below a certain proportion, then the x and y coordinates are set to the given values (usually corners).
@@ -128,7 +128,7 @@ class Preprocess:
                 "Width and height must be provided in the formatted video. Try running FormatVid.format_vid."
             )
         # Reading file
-        df = DFMixin.read_feather(in_fp)
+        df = DFMixin.read_feather(dlc_fp)
         # For each bodypart, filling in the given point
         for configs_filt in configs_filt_ls:
             # Getting config parameters
@@ -160,7 +160,7 @@ class Preprocess:
 
     @staticmethod
     @IOMixin.overwrite_check()
-    def interpolate(in_fp: str, out_fp: str, configs_fp: str, overwrite: bool) -> str:
+    def interpolate(dlc_fp: str, out_fp: str, configs_fp: str, overwrite: bool) -> str:
         """
         "Smooths" out noticeable jitter of points, where the likelihood (and accuracy) of
         a point's coordinates are low (e.g., when the subject's head goes out of view). It
@@ -182,7 +182,7 @@ class Preprocess:
         configs = ExperimentConfigs.read_json(configs_fp)
         configs_filt = Model_interpolate(**configs.user.preprocess.interpolate)  # type: ignore
         # Reading file
-        df = KeypointsDf.read_feather(in_fp)
+        df = KeypointsDf.read_feather(dlc_fp)
         # Gettings the unique groups of (individual, bodypart) groups.
         unique_cols = df.columns.droplevel(["coords"]).unique()
         # Setting low-likelihood points to Nan to later interpolate
@@ -210,7 +210,7 @@ class Preprocess:
 
     @staticmethod
     @IOMixin.overwrite_check()
-    def refine_ids(in_fp: str, out_fp: str, configs_fp: str, overwrite: bool) -> str:
+    def refine_ids(dlc_fp: str, out_fp: str, configs_fp: str, overwrite: bool) -> str:
         """
         Ensures that the identity is correctly tracked for maDLC.
         Assumes interpolatePoints and calcBodyCentre has already been run.
@@ -231,7 +231,7 @@ class Preprocess:
         """
         outcome = ""
         # Reading file
-        df = KeypointsDf.read_feather(in_fp)
+        df = KeypointsDf.read_feather(dlc_fp)
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
         configs_filt = Model_refine_ids(**configs.user.preprocess.refine_ids)  # type: ignore

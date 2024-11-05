@@ -5,7 +5,7 @@ from behavysis_core.df_classes.df_mixin import DFMixin
 from behavysis_core.mixins.io_mixin import IOMixin
 from behavysis_core.pydantic_models.experiment_configs import ExperimentConfigs
 
-from behavysis_pipeline.behav_classifier import BehavClassifier
+from behavysis_pipeline.behav_classifier.behav_classifier import BehavClassifier
 
 
 class Export:
@@ -13,7 +13,11 @@ class Export:
 
     @staticmethod
     @IOMixin.overwrite_check()
-    def feather2feather(src_fp: str, out_fp: str, overwrite: bool) -> str:
+    def feather2feather(
+        src_fp: str,
+        out_fp: str,
+        overwrite: bool,
+    ) -> str:
         """__summary__"""
         # Reading file
         df = DFMixin.read_feather(src_fp)
@@ -24,7 +28,11 @@ class Export:
 
     @staticmethod
     @IOMixin.overwrite_check()
-    def feather2csv(src_fp: str, out_fp: str, overwrite: bool) -> str:
+    def feather2csv(
+        src_fp: str,
+        out_fp: str,
+        overwrite: bool,
+    ) -> str:
         """__summary__"""
         # Reading file
         df = DFMixin.read_feather(src_fp)
@@ -37,7 +45,10 @@ class Export:
     @staticmethod
     @IOMixin.overwrite_check()
     def predbehavs2scoredbehavs(
-        src_fp: str, out_fp: str, configs_fp: str, overwrite: bool
+        src_fp: str,
+        out_fp: str,
+        configs_fp: str,
+        overwrite: bool,
     ) -> str:
         """ """
         # TODO: use this in 6_pred_behavs
@@ -63,7 +74,11 @@ class Export:
     @staticmethod
     @IOMixin.overwrite_check()
     def boris2behav(
-        src_fp: str, out_fp: str, configs_fp: str, behavs_ls: list[str], overwrite: bool
+        src_fp: str,
+        out_fp: str,
+        configs_fp: str,
+        behavs_ls: list[str],
+        overwrite: bool,
     ) -> str:
         # Reading the configs file
         configs = ExperimentConfigs.read_json(configs_fp)

@@ -1,6 +1,6 @@
 import deeplabcut
 
-for video in {{ in_fp_ls }}:
+for video in {{ vid_fp_ls }}:
     try:
         deeplabcut.analyze_videos(
             config=r"{{ model_fp}}",

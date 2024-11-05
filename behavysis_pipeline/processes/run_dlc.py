@@ -3,7 +3,7 @@ Functions have the following format:
 
 Parameters
 ----------
-in_fp : str
+vid_fp : str
     The formatted video filepath.
 out_fp : str
     The dlc output filepath.
@@ -28,6 +28,7 @@ import pandas as pd
 from behavysis_core.df_classes.df_mixin import DFMixin
 from behavysis_core.df_classes.keypoints_df import KeypointsDf
 from behavysis_core.mixins.io_mixin import IOMixin
+from behavysis_core.mixins.misc_mixin import MiscMixin
 from behavysis_core.mixins.subproc_mixin import SubprocMixin
 from behavysis_core.pydantic_models.experiment_configs import ExperimentConfigs
 
@@ -40,7 +41,7 @@ class RunDLC:
     @staticmethod
     @IOMixin.overwrite_check()
     def ma_dlc_analyse_single(
-        in_fp: str,
+        vid_fp: str,
         out_fp: str,
         configs_fp: str,
         temp_dir: str,
@@ -68,17 +69,17 @@ class RunDLC:
             )
 
         # Running the DLC subprocess (in a separate conda env)
-        run_dlc_subproc(model_fp, [in_fp], dlc_out_dir, temp_dir, gputouse)
+        run_dlc_subproc(model_fp, [vid_fp], dlc_out_dir, temp_dir, gputouse)
 
         # Exporting the h5 to feather the out_dir
-        export_2_feather(in_fp, dlc_out_dir, out_dir)
+        export_2_feather(vid_fp, dlc_out_dir, out_dir)
         # IOMixin.silent_rm(dlc_out_dir)
 
         return outcome
 
     @staticmethod
     def ma_dlc_analyse_batch(
-        in_fp_ls: list[str],
+        vid_fp_ls: list[str],
         out_dir: str,
         configs_dir: str,
         temp_dir: str,
@@ -97,22 +98,22 @@ class RunDLC:
 
         # If overwrite is False, filtering for only experiments that need processing
         if not overwrite:
-            # Getting only the in_fp_ls elements that do not exist in out_dir
-            in_fp_ls = [
+            # Getting only the vid_fp_ls elements that do not exist in out_dir
+            vid_fp_ls = [
                 i
-                for i in in_fp_ls
+                for i in vid_fp_ls
                 if not os.path.exists(
                     os.path.join(out_dir, f"{IOMixin.get_name(i)}.feather")
                 )
             ]
 
         # If there are no videos to process, return
-        if len(in_fp_ls) == 0:
+        if len(vid_fp_ls) == 0:
             return outcome
 
         # Getting the DLC model config path
         # Getting the names of the files that need processing
-        dlc_fp_ls = [IOMixin.get_name(i) for i in in_fp_ls]
+        dlc_fp_ls = [IOMixin.get_name(i) for i in vid_fp_ls]
         # Getting their corresponding configs_fp
         dlc_fp_ls = [os.path.join(configs_dir, f"{i}.json") for i in dlc_fp_ls]
         # Reading their configs
@@ -132,11 +133,11 @@ class RunDLC:
         )
 
         # Running the DLC subprocess (in a separate conda env)
-        run_dlc_subproc(model_fp, in_fp_ls, dlc_out_dir, temp_dir, gputouse)
+        run_dlc_subproc(model_fp, vid_fp_ls, dlc_out_dir, temp_dir, gputouse)
 
         # Exporting the h5 to feather the out_dir
-        for in_fp in in_fp_ls:
-            outcome += export_2_feather(in_fp, dlc_out_dir, out_dir)
+        for vid_fp in vid_fp_ls:
+            outcome += export_2_feather(vid_fp, dlc_out_dir, out_dir)
         IOMixin.silent_rm(dlc_out_dir)
         # Returning outcome
         return outcome
@@ -144,7 +145,7 @@ class RunDLC:
 
 def run_dlc_subproc(
     model_fp: str,
-    in_fp_ls: list[str],
+    vid_fp_ls: list[str],
     dlc_out_dir: str,
     temp_dir: str,
     gputouse: int | None,
@@ -163,7 +164,7 @@ def run_dlc_subproc(
         "behavysis_pipeline",
         "templates",
         script_fp,
-        in_fp_ls=in_fp_ls,
+        vid_fp_ls=vid_fp_ls,
         model_fp=model_fp,
         dlc_out_dir=dlc_out_dir,
         gputouse=gputouse,
@@ -200,8 +201,8 @@ def export_2_feather(name: str, in_dir: str, out_dir: str) -> str:
         # NOTE: may need DLC_HDF_KEY
         df = pd.DataFrame(pd.read_hdf(name_fp))
         # Setting the column and index level names
-        df.index.names = list(DFMixin.enum2tuple(KeypointsDf.IN))
-        df.columns.names = list(DFMixin.enum2tuple(KeypointsDf.CN))
+        df.index.names = list(MiscMixin.enum2tuple(KeypointsDf.IN))
+        df.columns.names = list(MiscMixin.enum2tuple(KeypointsDf.CN))
         # Imputing na values with 0
         df = df.fillna(0)
         # Checking df

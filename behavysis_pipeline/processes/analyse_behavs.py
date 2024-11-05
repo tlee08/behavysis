@@ -26,6 +26,7 @@ from behavysis_core.df_classes.analyse_df import AnalyseDf
 from behavysis_core.df_classes.behav_df import BehavColumns, BehavDf
 from behavysis_core.df_classes.df_mixin import DFMixin
 from behavysis_core.mixins.io_mixin import IOMixin
+from behavysis_core.mixins.misc_mixin import MiscMixin
 from behavysis_core.pydantic_models.experiment_configs import ExperimentConfigs
 
 ###################################################################################################
@@ -37,9 +38,9 @@ class AnalyseBehavs:
     """__summary__"""
 
     @staticmethod
-    def analyse_behavs(
+    def analyse_behaviours(
         behavs_fp: str,
-        ANALYSE_DIR: str,
+        out_dir: str,
         configs_fp: str,
         # bins: list,
         # summary_func: Callable[[pd.DataFrame], pd.DataFrame],
@@ -49,7 +50,7 @@ class AnalyseBehavs:
         """
         outcome = ""
         name = IOMixin.get_name(behavs_fp)
-        out_dir = os.path.join(ANALYSE_DIR, AnalyseBehavs.analyse_behavs.__name__)
+        out_dir = os.path.join(out_dir, AnalyseBehavs.analyse_behaviours.__name__)
         # Calculating the deltas (changes in body position) between each frame for the subject
         configs = ExperimentConfigs.read_json(configs_fp)
         fps, _, _, _, bins_ls, cbins_ls = AnalyseDf.get_configs(configs)
@@ -70,7 +71,7 @@ class AnalyseBehavs:
         DFMixin.write_feather(behavs_df, fbf_fp)
         # Updating the column level names of behavs_df
         # (summary_binned_behavs only works this way)
-        behavs_df.columns.names = list(DFMixin.enum2tuple(AnalyseDf.CN))
+        behavs_df.columns.names = list(MiscMixin.enum2tuple(AnalyseDf.CN))
         # Making the summary and binned dataframes
         AnalyseAggDf.summary_binned_behavs(
             behavs_df,

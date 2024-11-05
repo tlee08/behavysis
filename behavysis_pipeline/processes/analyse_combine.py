@@ -35,12 +35,14 @@ class AnalyseCombine:
     """__summary__"""
 
     @staticmethod
+    @IOMixin.overwrite_check()
     def analyse_combine(
-        ANALYSE_DIR: str,
+        analyse_dir: str,
         out_fp: str,
         configs_fp: str,
         # bins: list,
         # summary_func: Callable[[pd.DataFrame], pd.DataFrame],
+        overwrite: bool,
     ) -> str:
         """
         Takes a behavs dataframe and generates a summary and binned version of the data.
@@ -52,8 +54,8 @@ class AnalyseCombine:
         # For each analysis subdir, combining fbf files
         analysis_ls = [
             i
-            for i in os.listdir(ANALYSE_DIR)
-            if os.path.isdir(os.path.join(ANALYSE_DIR, i))
+            for i in os.listdir(analyse_dir)
+            if os.path.isdir(os.path.join(analyse_dir, i))
         ]
         # If no analysis files, then return warning and don't make df
         if len(analysis_ls) == 0:
@@ -62,7 +64,7 @@ class AnalyseCombine:
         # Reading in each fbf analysis df
         comb_df_ls = [
             AnalyseDf.read_feather(
-                os.path.join(ANALYSE_DIR, i, "fbf", f"{name}.feather")
+                os.path.join(analyse_dir, i, "fbf", f"{name}.feather")
             )
             for i in analysis_ls
         ]

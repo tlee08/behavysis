@@ -39,7 +39,7 @@ from behavysis_core.mixins.io_mixin import IOMixin
 from behavysis_core.pydantic_models.experiment_configs import ExperimentConfigs
 from tqdm import trange
 
-from behavysis_pipeline.processes.evaluate.evaluate_vid_funcs import (
+from behavysis_pipeline.processes.evaluate_vid import (
     VidFuncRunner,
 )
 

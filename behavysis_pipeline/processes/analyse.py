@@ -5,7 +5,7 @@ Parameters
 ----------
 dlc_fp : str
     The DLC dataframe filepath of the experiment to analyse.
-ANALYSE_DIR : str
+out_dir : str
     The analysis directory path.
 configs_fp : str
     the experiment's JSON configs file.
@@ -48,7 +48,7 @@ class Analyse:
     @staticmethod
     def in_roi(
         dlc_fp: str,
-        ANALYSE_DIR: str,
+        out_dir: str,
         configs_fp: str,
     ) -> str:
         """
@@ -67,7 +67,7 @@ class Analyse:
         outcome = ""
         name = IOMixin.get_name(dlc_fp)
         f_name = Analyse.in_roi.__name__
-        out_dir = os.path.join(ANALYSE_DIR, f_name)
+        out_dir = os.path.join(out_dir, f_name)
         # Calculating the deltas (changes in body position) between each frame for the subject
         configs = ExperimentConfigs.read_json(configs_fp)
         fps, _, _, px_per_mm, bins_ls, cbins_ls = AnalyseDf.get_configs(configs)
@@ -172,7 +172,7 @@ class Analyse:
     @staticmethod
     def speed(
         dlc_fp: str,
-        ANALYSE_DIR: str,
+        out_dir: str,
         configs_fp: str,
     ) -> str:
         """
@@ -187,7 +187,7 @@ class Analyse:
         outcome = ""
         name = IOMixin.get_name(dlc_fp)
         f_name = Analyse.speed.__name__
-        out_dir = os.path.join(ANALYSE_DIR, f_name)
+        out_dir = os.path.join(out_dir, f_name)
         # Calculating the deltas (changes in body position) between each frame for the subject
         configs = ExperimentConfigs.read_json(configs_fp)
         fps, _, _, px_per_mm, bins_ls, cbins_ls = AnalyseDf.get_configs(configs)
@@ -246,7 +246,7 @@ class Analyse:
     @staticmethod
     def social_distance(
         dlc_fp: str,
-        ANALYSE_DIR: str,
+        out_dir: str,
         configs_fp: str,
     ) -> str:
         """
@@ -261,7 +261,7 @@ class Analyse:
         outcome = ""
         name = IOMixin.get_name(dlc_fp)
         f_name = Analyse.social_distance.__name__
-        out_dir = os.path.join(ANALYSE_DIR, f_name)
+        out_dir = os.path.join(out_dir, f_name)
         # Calculating the deltas (changes in body position) between each frame for the subject
         configs = ExperimentConfigs.read_json(configs_fp)
         fps, _, _, px_per_mm, bins_ls, cbins_ls = AnalyseDf.get_configs(configs)
@@ -316,7 +316,7 @@ class Analyse:
     @staticmethod
     def freezing(
         dlc_fp: str,
-        ANALYSE_DIR: str,
+        out_dir: str,
         configs_fp: str,
     ) -> str:
         """
@@ -337,7 +337,7 @@ class Analyse:
         outcome = ""
         name = IOMixin.get_name(dlc_fp)
         f_name = Analyse.freezing.__name__
-        out_dir = os.path.join(ANALYSE_DIR, f_name)
+        out_dir = os.path.join(out_dir, f_name)
         # Calculating the deltas (changes in body position) between each frame for the subject
         configs = ExperimentConfigs.read_json(configs_fp)
         fps, _, _, px_per_mm, bins_ls, cbins_ls = AnalyseDf.get_configs(configs)

@@ -6,23 +6,24 @@ from __future__ import annotations
 
 import logging
 import os
+from enum import Enum
 from typing import Any, Callable
 
 import numpy as np
 from behavysis_core.constants import (
-    ANALYSE_DIR,
-    EVALUATE_DIR,
-    FILE_EXTS,
+    ANALYSIS_DIR,
     STR_DIV,
     TEMP_DIR,
+    FileExts,
     Folders,
 )
-from behavysis_core.df_classes.df_mixin import DFMixin
 from behavysis_core.mixins.diagnostics_mixin import DiagnosticsMixin
+from behavysis_core.mixins.misc_mixin import MiscMixin
 
 from behavysis_pipeline.processes.analyse_behavs import AnalyseBehavs
 from behavysis_pipeline.processes.analyse_combine import AnalyseCombine
 from behavysis_pipeline.processes.classify_behavs import ClassifyBehavs
+from behavysis_pipeline.processes.evaluate_vid import EvaluateVid
 from behavysis_pipeline.processes.export import Export
 from behavysis_pipeline.processes.extract_features import ExtractFeatures
 from behavysis_pipeline.processes.run_dlc import RunDLC
@@ -65,17 +66,14 @@ class Experiment:
                 + "Please specify a folder that exists."
             )
         # Assertion: name must correspond to at least one file in root_dir
-        file_exists_ls = [
-            os.path.isfile(os.path.join(root_dir, f.value, f"{name}{FILE_EXTS[f]}"))
-            for f in Folders
-        ]
+        file_exists_ls = [os.path.isfile(self.get_fp(f)) for f in Folders]
         if not np.any(file_exists_ls):
             raise ValueError(
                 f'No files named "{name}" exist in "{root_dir}".\n'
                 + f'Please specify a file that exists in "{root_dir}", in one of the'
                 + " following folder WITH the correct file extension name:\n"
                 + "    - "
-                + "\n    - ".join(DFMixin.enum2tuple(Folders))
+                + "\n    - ".join(MiscMixin.enum2tuple(Folders))
             )
         self.name = name
         self.root_dir = os.path.abspath(root_dir)
@@ -84,7 +82,7 @@ class Experiment:
     #               GET/CHECK FILEPATH METHODS
     #####################################################################
 
-    def get_fp(self, folder_str: str) -> str:
+    def get_fp(self, _folder: Enum | str) -> str:
         """
         Returns the experiment's file path from the given folder.
 
@@ -103,23 +101,25 @@ class Experiment:
         ValueError
             ValueError: Folder name is not valid. Refer to FOLDERS constant for valid folder names.
         """
-        # Ensuring folder_str is in Folder enum
-        try:
-            folder = Folders(folder_str)
-        except ValueError:
-            # if folder_str not in Folders enum
-            raise ValueError(
-                f'"{folder_str}" is not a valid experiment folder name.\n'
-                + "Please only specify one of the following folders:\n"
-                + "    - "
-                + "\n    - ".join([f.value for f in Folders])
-            )
+        # If folder is str, converting to Enum
+        if isinstance(_folder, str):
+            try:
+                folder = Folders(_folder)
+            except ValueError:
+                # if folder_str not in Folders enum
+                raise ValueError(
+                    f'"{_folder}" is not a valid experiment folder name.\n'
+                    + "Please only specify one of the following folders:\n"
+                    + "    - "
+                    + "\n    - ".join([f.value for f in Folders])
+                )
+        else:
+            # Otherwise, using given Enum
+            folder = _folder
+        # Getting file extension from enum
+        file_ext: FileExts = getattr(FileExts, folder.name)
         # Getting experiment filepath for given folder
-        fp = os.path.join(
-            self.root_dir, folder.value, f"{self.name}{FILE_EXTS[folder]}"
-        )
-        # Making a folder if it does not exist
-        os.makedirs(os.path.split(fp)[0], exist_ok=True)
+        fp = os.path.join(self.root_dir, folder.value, f"{self.name}{file_ext.value}")
         # Returning filepath
         return fp
 
@@ -195,7 +195,7 @@ class Experiment:
         """
         return self._process_scaffold(
             (UpdateConfigs.update_configs,),
-            configs_fp=self.get_fp(Folders.CONFIGS.value),
+            configs_fp=self.get_fp(Folders.CONFIGS),
             default_configs_fp=default_configs_fp,
             overwrite=overwrite,
         )
@@ -228,9 +228,9 @@ class Experiment:
         """
         return self._process_scaffold(
             funcs,
-            in_fp=self.get_fp(Folders.RAW_VID.value),
-            out_fp=self.get_fp(Folders.FORMATTED_VID.value),
-            configs_fp=self.get_fp(Folders.CONFIGS.value),
+            in_fp=self.get_fp(Folders.RAW_VID),
+            out_fp=self.get_fp(Folders.FORMATTED_VID),
+            configs_fp=self.get_fp(Folders.CONFIGS),
             overwrite=overwrite,
         )
 
@@ -261,9 +261,9 @@ class Experiment:
         """
         return self._process_scaffold(
             (RunDLC.ma_dlc_analyse_single,),
-            in_fp=self.get_fp(Folders.FORMATTED_VID.value),
-            out_fp=self.get_fp(Folders.DLC.value),
-            configs_fp=self.get_fp(Folders.CONFIGS.value),
+            vid_fp=self.get_fp(Folders.FORMATTED_VID),
+            out_fp=self.get_fp(Folders.DLC),
+            configs_fp=self.get_fp(Folders.CONFIGS),
             temp_dir=os.path.join(self.root_dir, TEMP_DIR),
             gputouse=gputouse,
             overwrite=overwrite,
@@ -290,8 +290,8 @@ class Experiment:
         """
         return self._process_scaffold(
             funcs,
-            dlc_fp=self.get_fp(Folders.DLC.value),
-            configs_fp=self.get_fp(Folders.CONFIGS.value),
+            dlc_fp=self.get_fp(Folders.DLC),
+            configs_fp=self.get_fp(Folders.CONFIGS),
         )
 
     def preprocess(self, funcs: tuple[Callable, ...], overwrite: bool) -> dict:
@@ -321,8 +321,8 @@ class Experiment:
         # Exporting 3_dlc df to 4_preprocessed folder
         dd = self._process_scaffold(
             (Export.feather2feather,),
-            src_fp=self.get_fp(Folders.DLC.value),
-            out_fp=self.get_fp(Folders.PREPROCESSED.value),
+            src_fp=self.get_fp(Folders.DLC),
+            out_fp=self.get_fp(Folders.PREPROCESSED),
             overwrite=overwrite,
         )
         # If there is an error, OR warning (indicates not to ovewrite), then return early
@@ -332,9 +332,9 @@ class Experiment:
         # Feeding through preprocessing functions
         return self._process_scaffold(
             funcs,
-            in_fp=self.get_fp(Folders.PREPROCESSED.value),
-            out_fp=self.get_fp(Folders.PREPROCESSED.value),
-            configs_fp=self.get_fp(Folders.CONFIGS.value),
+            dlc_fp=self.get_fp(Folders.PREPROCESSED),
+            out_fp=self.get_fp(Folders.PREPROCESSED),
+            configs_fp=self.get_fp(Folders.CONFIGS),
             overwrite=True,
         )
 
@@ -360,9 +360,9 @@ class Experiment:
         """
         return self._process_scaffold(
             (ExtractFeatures.extract_features,),
-            dlc_fp=self.get_fp(Folders.PREPROCESSED.value),
-            out_fp=self.get_fp(Folders.FEATURES_EXTRACTED.value),
-            configs_fp=self.get_fp(Folders.CONFIGS.value),
+            dlc_fp=self.get_fp(Folders.PREPROCESSED),
+            out_fp=self.get_fp(Folders.FEATURES_EXTRACTED),
+            configs_fp=self.get_fp(Folders.CONFIGS),
             temp_dir=os.path.join(self.root_dir, TEMP_DIR),
             overwrite=overwrite,
         )
@@ -384,9 +384,9 @@ class Experiment:
         """
         return self._process_scaffold(
             (ClassifyBehavs.classify_behavs,),
-            features_fp=self.get_fp(Folders.FEATURES_EXTRACTED.value),
-            out_fp=self.get_fp(Folders.PREDICTED_BEHAVS.value),
-            configs_fp=self.get_fp(Folders.CONFIGS.value),
+            features_fp=self.get_fp(Folders.FEATURES_EXTRACTED),
+            out_fp=self.get_fp(Folders.PREDICTED_BEHAVS),
+            configs_fp=self.get_fp(Folders.CONFIGS),
             overwrite=overwrite,
         )
 
@@ -407,9 +407,9 @@ class Experiment:
         # Exporting 6_predicted_behavs df to 7_scored_behavs folder
         return self._process_scaffold(
             (Export.predbehavs2scoredbehavs,),
-            src_fp=self.get_fp(Folders.PREDICTED_BEHAVS.value),
-            out_fp=self.get_fp(Folders.SCORED_BEHAVS.value),
-            configs_fp=self.get_fp(Folders.CONFIGS.value),
+            src_fp=self.get_fp(Folders.PREDICTED_BEHAVS),
+            out_fp=self.get_fp(Folders.SCORED_BEHAVS),
+            configs_fp=self.get_fp(Folders.CONFIGS),
             overwrite=overwrite,
         )
 
@@ -439,12 +439,12 @@ class Experiment:
         """
         return self._process_scaffold(
             funcs,
-            dlc_fp=self.get_fp(Folders.PREPROCESSED.value),
-            ANALYSE_DIR=os.path.join(self.root_dir, ANALYSE_DIR),
-            configs_fp=self.get_fp(Folders.CONFIGS.value),
+            dlc_fp=self.get_fp(Folders.PREPROCESSED),
+            out_dir=os.path.join(self.root_dir, ANALYSIS_DIR),
+            configs_fp=self.get_fp(Folders.CONFIGS),
         )
 
-    def analyse_behavs(self) -> dict:
+    def analyse_behaviours(self) -> dict:
         """
         An ML pipeline method to analyse the preprocessed DLC data.
         Possible funcs are given in analysis.py.
@@ -460,27 +460,54 @@ class Experiment:
         Can call any methods from `Analyse`.
         """
         return self._process_scaffold(
-            (AnalyseBehavs.analyse_behavs,),
-            behavs_fp=self.get_fp(Folders.SCORED_BEHAVS.value),
-            ANALYSE_DIR=os.path.join(self.root_dir, ANALYSE_DIR),
-            configs_fp=self.get_fp(Folders.CONFIGS.value),
+            (AnalyseBehavs.analyse_behaviours,),
+            behavs_fp=self.get_fp(Folders.SCORED_BEHAVS),
+            out_dir=os.path.join(self.root_dir, ANALYSIS_DIR),
+            configs_fp=self.get_fp(Folders.CONFIGS),
         )
 
-    def analyse_combine(self) -> dict:
+    def analyse_combine(self, overwrite: bool) -> dict:
         """
         Combine the experiment's analysis in each fbf into a single df
         """
         # TODO: make new subfolder called combined_analysis and make ONLY(??) fbf analysis.
         return self._process_scaffold(
             (AnalyseCombine.analyse_combine,),
-            ANALYSE_DIR=os.path.join(self.root_dir, ANALYSE_DIR),
-            out_fp=self.get_fp(Folders.ANALYSIS_COMBINED.value),
-            configs_fp=self.get_fp(Folders.CONFIGS.value),
+            analyse_dir=os.path.join(self.root_dir, ANALYSIS_DIR),
+            out_fp=self.get_fp(Folders.ANALYSE_COMBINED),
+            configs_fp=self.get_fp(Folders.CONFIGS),
+            overwrite=overwrite,
         )
 
     #####################################################################
     #           EVALUATING DLC ANALYSIS AND BEHAV CLASSIFICATION
     #####################################################################
+
+    def evaluate_vid(self, funcs, overwrite: bool) -> dict:
+        """
+        Evaluating preprocessed DLC data and scored_behavs data.
+
+        Parameters
+        ----------
+        funcs : _type_
+            _description_
+        overwrite : bool
+            Whether to overwrite the output file (if it exists).
+
+        Returns
+        -------
+        dict
+            Diagnostics dictionary, with description of each function's outcome.
+        """
+        return self._process_scaffold(
+            (EvaluateVid.evaluate_vid,),
+            vid_fp=self.get_fp(Folders.FORMATTED_VID),
+            dlc_fp=self.get_fp(Folders.PREPROCESSED),
+            analyse_combined_fp=self.get_fp(Folders.ANALYSE_COMBINED),
+            out_fp=self.get_fp(Folders.EVALUATE),
+            configs_fp=self.get_fp(Folders.CONFIGS),
+            overwrite=overwrite,
+        )
 
     def export_feather(self, in_dir: str, out_dir: str, overwrite: bool) -> dict:
         """
@@ -502,31 +529,5 @@ class Experiment:
             (Export.feather2csv,),
             in_fp=self.get_fp(in_dir),
             out_fp=os.path.join(out_dir, f"{self.name}.csv"),
-            overwrite=overwrite,
-        )
-
-    def evaluate(self, funcs, overwrite: bool) -> dict:
-        """
-        Evaluating preprocessed DLC data and scored_behavs data.
-
-        Parameters
-        ----------
-        funcs : _type_
-            _description_
-        overwrite : bool
-            Whether to overwrite the output file (if it exists).
-
-        Returns
-        -------
-        dict
-            Diagnostics dictionary, with description of each function's outcome.
-        """
-        return self._process_scaffold(
-            funcs,
-            vid_fp=self.get_fp(Folders.FORMATTED_VID.value),
-            dlc_fp=self.get_fp(Folders.PREPROCESSED.value),
-            behavs_fp=self.get_fp(Folders.SCORED_BEHAVS.value),
-            out_dir=os.path.join(self.root_dir, EVALUATE_DIR),
-            configs_fp=self.get_fp(Folders.CONFIGS.value),
             overwrite=overwrite,
         )

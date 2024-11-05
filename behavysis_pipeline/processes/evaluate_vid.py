@@ -2,6 +2,9 @@
 __summary__
 """
 
+import os
+from abc import ABC, abstractmethod
+
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
@@ -9,50 +12,148 @@ import pandas as pd
 import pyqtgraph as pg
 from behavysis_core.df_classes.analyse_combine_df import AnalyseCombineDf
 from behavysis_core.df_classes.keypoints_df import IndivColumns, KeypointsDf
+from behavysis_core.mixins.diagnostics_mixin import DiagnosticsMixin
+from behavysis_core.mixins.io_mixin import IOMixin
+from behavysis_core.pydantic_models.experiment_configs import ExperimentConfigs
 from pyqtgraph.exporters import ImageExporter
 from PySide6 import QtGui
+from tqdm import trange
+
+###################################################################################################
+# EVALUATE VID FUNC, WHICH FACES OUT
+###################################################################################################
 
 
-class EvalVidFuncBase:
+class EvaluateVid:
+    """__summary__"""
+
+    @staticmethod
+    @IOMixin.overwrite_check()
+    def evaluate_vid(
+        vid_fp: str,
+        dlc_fp: str,
+        analyse_combined_fp: str,
+        out_fp: str,
+        configs_fp: str,
+        overwrite: bool,
+    ) -> str:
+        """
+        Run the DLC model on the formatted video to generate a DLC annotated video and DLC file for
+        all experiments. The DLC model's config.yaml filepath must be specified in the `config_path`
+        parameter in the `user` section of the config file.
+
+        # TODO: implement analysis in eval vid.
+        """
+        outcome = ""
+        # If overwrite is False, checking if we should skip processing
+        if not overwrite and os.path.exists(out_fp):
+            return DiagnosticsMixin.warning_msg()
+
+        # Getting necessary config parameters
+        configs = ExperimentConfigs.read_json(configs_fp)
+        configs_filt = configs.user.evaluate_vid
+        funcs_names = configs.get_ref(configs_filt.funcs)
+        pcutoff = configs.get_ref(configs_filt.pcutoff)
+        colour_level = configs.get_ref(configs_filt.colour_level)
+        radius = configs.get_ref(configs_filt.radius)
+        cmap = configs.get_ref(configs_filt.cmap)
+        padding = configs.get_ref(configs_filt.padding)
+
+        # Getting dlc df
+        dlc_df = KeypointsDf.clean_headings(KeypointsDf.read_feather(dlc_fp))
+        # Getting analysis combined df
+        try:
+            analysis_df = AnalyseCombineDf.read_feather(analyse_combined_fp)
+        except FileNotFoundError:
+            outcome += (
+                "WARNING: analysis combined file not found or could not be loaded."
+                + "Disregarding analysis."
+            )
+            analysis_df = AnalyseCombineDf.init_df(dlc_df.index)
+
+        # TODO: maybe use configs instead
+        # OPENING INPUT VIDEO
+        # Open the input video
+        in_cap = cv2.VideoCapture(vid_fp)
+        # Storing output vid dimensions
+        # as they can change depending on funcs_names
+        in_width = int(in_cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        in_height = int(in_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        fps = in_cap.get(cv2.CAP_PROP_FPS)
+        total_frames = int(in_cap.get(cv2.CAP_PROP_FRAME_COUNT))
+
+        # MAKING ANNOTATED VIDEO
+        # Making VidFuncOrganiser object to annotate each frame with
+        vid_func_runner = VidFuncRunner(
+            func_names=funcs_names,
+            w_i=in_width,
+            h_i=in_height,
+            # kwargs for EvalVidFuncBase
+            dlc_df=dlc_df,
+            analysis_df=analysis_df,
+            colour_level=colour_level,
+            pcutoff=pcutoff,
+            radius=radius,
+            cmap=cmap,
+            padding=padding,
+        )
+        # Define the codec and create VideoWriter object
+        out_cap = cv2.VideoWriter(
+            out_fp,
+            cv2.VideoWriter_fourcc(*"mp4v"),  # type: ignore
+            fps,
+            (vid_func_runner.w_o, vid_func_runner.h_o),
+        )
+        # Annotating each frame using the created functions
+        # TODO: NOTE: The funcs themselves will modify the frame size.
+        # Not self-contained or modular but this is a workaround for now.
+        # Annotating frames
+        for i in trange(total_frames):
+            # Reading next vid frame
+            ret, frame = in_cap.read()
+            if ret is False:
+                break
+            # Annotating frame
+            arr_out = vid_func_runner(frame, i)
+            # Writing annotated frame to the VideoWriter
+            out_cap.write(arr_out)
+        # Release video objects
+        in_cap.release()
+        out_cap.release()
+        # Returning outcome string
+        return outcome
+
+
+###################################################################################################
+# INDIVIDUAL VID FUNCS
+###################################################################################################
+
+
+class EvalVidFuncBase(ABC):
     """
     Calling the function returns the frame image (i.e. np.ndarray)
     with the function applied.
     """
 
-    name = "evaluate_vid_func"
-
+    name: str
     w: int
     h: int
 
+    @abstractmethod
     def __init__(self, **kwargs):
-        """
-        Prepare function
-        """
-        self.w = 0
-        self.h = 0
+        """Prepare function"""
+        pass
 
+    @abstractmethod
     def __call__(self, frame: np.ndarray, idx: int) -> np.ndarray:
-        """
-        Run function
-        """
-        # TODO: make an abstract func?
-        return np.array(0)
+        """Run function"""
+        pass
 
 
 class Johansson(EvalVidFuncBase):
     """
     Making black frame, in the style of Johansson.
     This means we see only the keypoints (i.e., what SimBA will see)
-
-    Parameters
-    ----------
-    frame : np.ndarray
-        cv2 frame array.
-
-    Returns
-    -------
-    np.ndarray
-        cv2 frame array.
     """
 
     name = "johansson"
@@ -73,26 +174,6 @@ class Johansson(EvalVidFuncBase):
 class Keypoints(EvalVidFuncBase):
     """
     Adding the keypoints (given in `row`) to the frame.
-
-    Parameters
-    ----------
-    frame : np.ndarray
-        cv2 frame array.
-    row : pd.Series
-        row in DLC dataframe.
-    indivs_bpts_ls : Sequence[tuple[str, str]]
-        list of `(indiv, bpt)` tuples to include.
-    colours : Sequence[tuple[float, float, float, float]]
-        list of colour tuples, which correspond to each `indivs_bpts_ls` element.
-    pcutoff : float
-        _description_
-    radius : int
-        _description_
-
-    Returns
-    -------
-    np.ndarray
-        cv2 frame array.
     """
 
     name = "keypoints"
@@ -153,7 +234,7 @@ class Keypoints(EvalVidFuncBase):
         # Making the corresponding colours list for each bodypart instance
         # (colours depend on indiv/bpt)
         measures_ls = self.indivs_bpts_ls.get_level_values(self.colour_level)
-        self.colours = make_colours(measures_ls, self.cmap)
+        self.colours = _make_colours(measures_ls, self.cmap)
 
     def __call__(self, frame: np.ndarray, idx: int) -> np.ndarray:
         # Getting row
@@ -332,7 +413,7 @@ class Analysis(EvalVidFuncBase):
                 # Setting data
                 # TODO implement for bouts as well, NOT just line graph
                 # Making the corresponding colours list for each measures instance
-                colours_ls = make_colours(measures_ls, self.cmap)
+                colours_ls = _make_colours(measures_ls, self.cmap)
                 # make legend
                 legend = self.plot_arr[i, j].addLegend()
                 for k, measures_k in enumerate(measures_ls):
@@ -436,13 +517,6 @@ class Analysis(EvalVidFuncBase):
         return img_cv
 
 
-# TODO have a VidFuncOrganiser class, which has list of vid func objects and can
-# a) call them in order
-# b) organise where they are in the frame (x, y)
-# c) had vid metadata (height, width)
-# Then implement in evaluate
-# NOTE: maybe have funcs_vid, funcs_behav, and funcs_analysis lists separately
-# for the tiles.
 class VidFuncRunner:
     """
     Given a list of the EvalVidFuncBase funcs to run in the constructor,
@@ -533,7 +607,7 @@ class VidFuncRunner:
         return arr_out
 
 
-def make_colours(vals, cmap):
+def _make_colours(vals, cmap):
     colours_idx, _ = pd.factorize(vals)
     colours_ls = (plt.cm.get_cmap(cmap)(colours_idx / colours_idx.max()) * 255)[
         :, [2, 1, 0, 3]

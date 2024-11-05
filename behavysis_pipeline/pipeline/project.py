@@ -14,7 +14,7 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 from behavysis_core.constants import (
-    ANALYSE_DIR,
+    ANALYSIS_DIR,
     DIAGNOSTICS_DIR,
     STR_DIV,
     TEMP_DIR,
@@ -567,7 +567,7 @@ class Project:
         logging.info("%s...", description)
         # AGGREGATING BINNED DATA
         # NOTE: need a more robust way of getting the list of bin sizes
-        proj_analyse_dir = os.path.join(self.root_dir, ANALYSE_DIR)
+        proj_analyse_dir = os.path.join(self.root_dir, ANALYSIS_DIR)
         configs = ExperimentConfigs.read_json(
             self.get_experiments()[0].get_fp(Folders.CONFIGS.value)
         )
@@ -603,7 +603,7 @@ class Project:
         description = "Combining summary analysis"
         logging.info("%s...", description)
         # AGGREGATING SUMMARY DATA
-        proj_analyse_dir = os.path.join(self.root_dir, ANALYSE_DIR)
+        proj_analyse_dir = os.path.join(self.root_dir, ANALYSIS_DIR)
         # Searching through all the analysis subdir
         for i in os.listdir(proj_analyse_dir):
             df_ls = []
@@ -648,9 +648,9 @@ for func in [
     Experiment.export_behaviours,
     Experiment.export_feather,
     Experiment.analyse,
-    Experiment.analyse_behavs,
+    Experiment.analyse_behaviours,
     Experiment.analyse_combine,
-    Experiment.evaluate,
+    Experiment.evaluate_vid,
 ]:
     func_name = func.__name__
     if func_name not in dir(Project):

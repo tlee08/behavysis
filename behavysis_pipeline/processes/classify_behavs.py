@@ -8,6 +8,7 @@ from behavysis_core.df_classes.behav_df import BehavColumns, BehavDf
 from behavysis_core.df_classes.bouts_df import BoutsDf
 from behavysis_core.df_classes.df_mixin import DFMixin
 from behavysis_core.mixins.io_mixin import IOMixin
+from behavysis_core.mixins.misc_mixin import MiscMixin
 from behavysis_core.pydantic_models.experiment_configs import ExperimentConfigs
 
 from behavysis_pipeline.behav_classifier.behav_classifier import BehavClassifier
@@ -97,8 +98,8 @@ class ClassifyBehavs:
         # Concatenating predictions to a single dataframe
         behavs_df = pd.concat(df_ls, axis=1)
         # Setting the index and column names
-        behavs_df.index.names = list(DFMixin.enum2tuple(BehavDf.IN))
-        behavs_df.columns.names = list(DFMixin.enum2tuple(BehavDf.CN))
+        behavs_df.index.names = list(MiscMixin.enum2tuple(BehavDf.IN))
+        behavs_df.columns.names = list(MiscMixin.enum2tuple(BehavDf.CN))
         # Checking df
         BehavDf.check_df(behavs_df)
         # Saving behav_preds df
