@@ -84,7 +84,7 @@ class BaseTorchModel(nn.Module):
 
     def _train_epoch(
         self,
-        ld: DataLoader,
+        ld: DataLoader | tqdm[DataLoader],
         criterion: nn.Module,
         optimizer: optim.Optimizer,
         verbose: bool = False,
@@ -151,7 +151,9 @@ class BaseTorchModel(nn.Module):
         # Returning the probabilities vector
         return probs
 
-    def _inference(self, ld: DataLoader, verbose: bool = False) -> torch.Tensor:
+    def _inference(
+        self, ld: DataLoader | tqdm[DataLoader], verbose: bool = False
+    ) -> torch.Tensor:
         # Switch the model to evaluation mode
         self.eval()
         # List to store the predictions
@@ -218,7 +220,7 @@ class TimeSeriesDataset(Dataset):
         x: np.ndarray,
         y: None | np.ndarray = None,
         index: None | np.ndarray = None,
-        window_frames: None | int = 5,
+        window_frames: int = 5,
     ):
         # Checking that the indexes are equal
         if y is not None:
