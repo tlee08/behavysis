@@ -327,7 +327,7 @@ class Experiment:
             overwrite=overwrite,
         )
         # If there is an error, OR warning (indicates not to ovewrite), then return early
-        res = dd["feather_2_feather"]
+        res = dd[Export.feather2feather.__name__]
         if res.startswith("ERROR") or res.startswith("WARNING"):
             return dd
         # Feeding through preprocessing functions
