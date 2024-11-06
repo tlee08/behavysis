@@ -65,6 +65,9 @@ class Experiment:
                 f'Cannot find the project folder named "{root_dir}".\n'
                 + "Please specify a folder that exists."
             )
+        # Setting up instance variables
+        self.name = name
+        self.root_dir = os.path.abspath(root_dir)
         # Assertion: name must correspond to at least one file in root_dir
         file_exists_ls = [os.path.isfile(self.get_fp(f)) for f in Folders]
         if not np.any(file_exists_ls):
@@ -75,8 +78,6 @@ class Experiment:
                 + "    - "
                 + "\n    - ".join(MiscMixin.enum2tuple(Folders))
             )
-        self.name = name
-        self.root_dir = os.path.abspath(root_dir)
 
     #####################################################################
     #               GET/CHECK FILEPATH METHODS
