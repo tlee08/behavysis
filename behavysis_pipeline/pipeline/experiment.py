@@ -484,7 +484,7 @@ class Experiment:
     #           EVALUATING DLC ANALYSIS AND BEHAV CLASSIFICATION
     #####################################################################
 
-    def evaluate_vid(self, funcs, overwrite: bool) -> dict:
+    def evaluate_vid(self, overwrite: bool) -> dict:
         """
         Evaluating preprocessed DLC data and scored_behavs data.
 
@@ -505,7 +505,7 @@ class Experiment:
             vid_fp=self.get_fp(Folders.FORMATTED_VID),
             dlc_fp=self.get_fp(Folders.PREPROCESSED),
             analyse_combined_fp=self.get_fp(Folders.ANALYSE_COMBINED),
-            out_fp=self.get_fp(Folders.EVALUATE),
+            out_fp=self.get_fp(Folders.EVALUATE_VID),
             configs_fp=self.get_fp(Folders.CONFIGS),
             overwrite=overwrite,
         )
