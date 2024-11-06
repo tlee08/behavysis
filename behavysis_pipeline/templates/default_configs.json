@@ -46,18 +46,13 @@
         "bodyparts": "--bodyparts-centre"
       }
     },
-    "evaluate": {
-      "keypoints_plot": {
-        "bodyparts": ["Nose", "BodyCentre", "TailBase1"]
-      },
-      "eval_vid": {
-        "funcs": ["keypoints", "analysis"],
-        "pcutoff": 0.5,
-        "colour_level": "individuals",
-        "radius": 4,
-        "cmap": "rainbow",
-        "padding": 30
-      }
+    "evaluate_vid": {
+      "funcs": ["keypoints", "analysis"],
+      "pcutoff": 0.5,
+      "colour_level": "individuals",
+      "radius": 4,
+      "cmap": "rainbow",
+      "padding": 30
     },
     "extract_features": {
       "individuals": ["mouse1marked", "mouse2unmarked"],
