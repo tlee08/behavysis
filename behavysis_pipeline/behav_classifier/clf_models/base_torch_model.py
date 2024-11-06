@@ -84,7 +84,7 @@ class BaseTorchModel(nn.Module):
 
     def _train_epoch(
         self,
-        ld: DataLoader | tqdm[DataLoader],
+        ld: DataLoader,
         criterion: nn.Module,
         optimizer: optim.Optimizer,
         verbose: bool = False,
@@ -151,9 +151,7 @@ class BaseTorchModel(nn.Module):
         # Returning the probabilities vector
         return probs
 
-    def _inference(
-        self, ld: DataLoader | tqdm[DataLoader], verbose: bool = False
-    ) -> torch.Tensor:
+    def _inference(self, ld: DataLoader, verbose: bool = False) -> torch.Tensor:
         # Switch the model to evaluation mode
         self.eval()
         # List to store the predictions
