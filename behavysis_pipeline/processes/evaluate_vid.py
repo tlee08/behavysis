@@ -96,6 +96,7 @@ class EvaluateVid:
             padding=padding,
         )
         # Define the codec and create VideoWriter object
+        os.makedirs(os.path.dirname(out_fp), exist_ok=True)
         out_cap = cv2.VideoWriter(
             out_fp,
             cv2.VideoWriter_fourcc(*"mp4v"),  # type: ignore
