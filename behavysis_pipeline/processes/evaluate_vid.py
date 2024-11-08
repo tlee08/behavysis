@@ -41,8 +41,6 @@ class EvaluateVid:
         Run the DLC model on the formatted video to generate a DLC annotated video and DLC file for
         all experiments. The DLC model's config.yaml filepath must be specified in the `config_path`
         parameter in the `user` section of the config file.
-
-        # TODO: implement analysis in eval vid.
         """
         outcome = ""
         # If overwrite is False, checking if we should skip processing
