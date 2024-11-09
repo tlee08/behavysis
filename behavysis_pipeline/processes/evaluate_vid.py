@@ -3,7 +3,6 @@ __summary__
 """
 
 import os
-import shutil
 from abc import ABC, abstractmethod
 
 import cv2
@@ -101,16 +100,14 @@ class EvaluateVid:
         # Define the codec and create VideoWriter object
         # NOTE: to TEMP_DIR
         cpid = MultiprocMixin.get_cpid()
-        out_fp_temp = os.path.join(
-            TEMP_DIR, f"evaluate_vid_{cpid}", os.path.basename(out_fp)
-        )
-        os.makedirs(os.path.dirname(out_fp_temp), exist_ok=True)
+        temp_dir = os.path.join(TEMP_DIR, f"evaluate_vid_{cpid}")
+        os.makedirs(temp_dir, exist_ok=True)
+        temp_fp = os.path.join(temp_dir, os.path.basename(out_fp))
         out_cap = cv2.VideoWriter(
-            out_fp_temp,
+            temp_fp,
             cv2.VideoWriter_fourcc(*"mp4v"),  # type: ignore
             fps,
-            # (vid_func_runner.w_o, vid_func_runner.h_o),
-            (w_i, h_i),
+            (vid_func_runner.w_o, vid_func_runner.h_o),
         )
         # Annotating each frame using the created functions
         # TODO: NOTE: The funcs themselves will modify the frame size.
@@ -122,18 +119,19 @@ class EvaluateVid:
             if ret is False:
                 break
             # Annotating frame
-            # arr_out = vid_func_runner(frame, i)
-            arr_out = frame
+            # arr_out = frame
+            arr_out = vid_func_runner(frame, i)
             # Writing annotated frame to the VideoWriter
             out_cap.write(arr_out)
         # Release video objects
         in_cap.release()
         out_cap.release()
-        # Exporting from temp to actual out fp
-        os.makedirs(os.path.dirname(out_fp), exist_ok=True)
-        shutil.copyfile(out_fp_temp, out_fp)
-        # Remove temp subdir
-        IOMixin.silent_rm(os.path.dirname(out_fp))
+        # TODO: uncomment
+        # # Exporting from temp to actual out fp
+        # os.makedirs(os.path.dirname(out_fp), exist_ok=True)
+        # shutil.copyfile(temp_fp, out_fp)
+        # # Remove temp subdir
+        # IOMixin.silent_rm(temp_dir)
         # Returning outcome string
         return outcome
 
