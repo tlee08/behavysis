@@ -78,8 +78,8 @@ class EvaluateVid:
         in_cap = cv2.VideoCapture(vid_fp)
         # Storing output vid dimensions
         # as they can change depending on funcs_names
-        in_width = int(in_cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        in_height = int(in_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        w_i = int(in_cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        h_i = int(in_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         fps = in_cap.get(cv2.CAP_PROP_FPS)
         total_frames = int(in_cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
@@ -87,8 +87,8 @@ class EvaluateVid:
         # Making VidFuncOrganiser object to annotate each frame with
         vid_func_runner = VidFuncRunner(
             func_names=funcs_names,
-            w_i=in_width,
-            h_i=in_height,
+            w_i=w_i,
+            h_i=h_i,
             # kwargs for EvalVidFuncBase
             dlc_df=dlc_df,
             analysis_df=analysis_df,
@@ -101,13 +101,16 @@ class EvaluateVid:
         # Define the codec and create VideoWriter object
         # NOTE: to TEMP_DIR
         cpid = MultiprocMixin.get_cpid()
-        out_fp_temp = os.path.join(TEMP_DIR, f"evaluate_vid_{cpid}")
+        out_fp_temp = os.path.join(
+            TEMP_DIR, f"evaluate_vid_{cpid}", os.path.basename(out_fp)
+        )
         os.makedirs(os.path.dirname(out_fp_temp), exist_ok=True)
         out_cap = cv2.VideoWriter(
             out_fp_temp,
             cv2.VideoWriter_fourcc(*"mp4v"),  # type: ignore
             fps,
-            (vid_func_runner.w_o, vid_func_runner.h_o),
+            # (vid_func_runner.w_o, vid_func_runner.h_o),
+            (w_i, h_i),
         )
         # Annotating each frame using the created functions
         # TODO: NOTE: The funcs themselves will modify the frame size.
@@ -119,7 +122,8 @@ class EvaluateVid:
             if ret is False:
                 break
             # Annotating frame
-            arr_out = vid_func_runner(frame, i)
+            # arr_out = vid_func_runner(frame, i)
+            arr_out = frame
             # Writing annotated frame to the VideoWriter
             out_cap.write(arr_out)
         # Release video objects
