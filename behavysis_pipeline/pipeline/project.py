@@ -358,7 +358,7 @@ class Project:
                         [exp.get_fp(Folders.FORMATTED_VID.value) for exp in exp_batch],
                         os.path.join(self.root_dir, Folders.DLC.value),
                         os.path.join(self.root_dir, Folders.CONFIGS.value),
-                        os.path.join(self.root_dir, TEMP_DIR),
+                        TEMP_DIR,
                         gputouse,
                         overwrite,
                     )

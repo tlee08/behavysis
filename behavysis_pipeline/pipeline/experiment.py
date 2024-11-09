@@ -265,7 +265,7 @@ class Experiment:
             vid_fp=self.get_fp(Folders.FORMATTED_VID),
             out_fp=self.get_fp(Folders.DLC),
             configs_fp=self.get_fp(Folders.CONFIGS),
-            temp_dir=os.path.join(self.root_dir, TEMP_DIR),
+            temp_dir=TEMP_DIR,
             gputouse=gputouse,
             overwrite=overwrite,
         )
@@ -364,7 +364,7 @@ class Experiment:
             dlc_fp=self.get_fp(Folders.PREPROCESSED),
             out_fp=self.get_fp(Folders.FEATURES_EXTRACTED),
             configs_fp=self.get_fp(Folders.CONFIGS),
-            temp_dir=os.path.join(self.root_dir, TEMP_DIR),
+            temp_dir=TEMP_DIR,
             overwrite=overwrite,
         )
 
