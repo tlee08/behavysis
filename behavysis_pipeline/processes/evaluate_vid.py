@@ -100,11 +100,11 @@ class EvaluateVid:
         # Define the codec and create VideoWriter object
         # NOTE: to TEMP_DIR
         cpid = MultiprocMixin.get_cpid()
-        temp_dir = os.path.join(TEMP_DIR, f"evaluate_vid_{cpid}")
-        os.makedirs(temp_dir, exist_ok=True)
-        temp_fp = os.path.join(temp_dir, os.path.basename(out_fp))
+        out_temp_dir = os.path.join(TEMP_DIR, f"evaluate_vid_{cpid}")
+        os.makedirs(out_temp_dir, exist_ok=True)
+        out_temp_fp = os.path.join(out_temp_dir, os.path.basename(out_fp))
         out_cap = cv2.VideoWriter(
-            temp_fp,
+            out_temp_fp,
             cv2.VideoWriter_fourcc(*"mp4v"),  # type: ignore
             fps,
             (vid_func_runner.w_o, vid_func_runner.h_o),
