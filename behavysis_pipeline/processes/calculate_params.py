@@ -243,6 +243,10 @@ class CalculateParams:
         fps = configs.auto.formatted_vid.fps
         csv_fp = configs.get_ref(configs_filt.csv_fp)
         name = configs.get_ref(configs_filt.name)
+        # Assert fps should not be negative (-1 is a special value for None)
+        assert (
+            fps > 0
+        ), "fps should not be negative. Run FormatVid.get_vid_metadata() beforehand."
         # Using the name of the video as the name of the experiment if not specified
         if name is None:
             name = IOMixin.get_name(dlc_fp)
