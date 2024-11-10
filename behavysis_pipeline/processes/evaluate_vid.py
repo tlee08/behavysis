@@ -605,16 +605,15 @@ class VidFuncRunner:
         if self.johansson:
             arr_video = self.johansson(arr_video, idx)
         if self.keypoints:
-            print("Hi")
             arr_video = self.keypoints(arr_video, idx)
         arr_out[: self.h_i, : self.w_i] = arr_video
         # analysis tile
-        # if self.analysis:
-        #     arr_analysis = self.analysis(arr_video, idx)
-        #     arr_out[
-        #         : self.analysis.h_i,
-        #         self.w_i : self.w_i + self.analysis.w_i,
-        #     ] = arr_analysis
+        if self.analysis:
+            arr_analysis = self.analysis(arr_video, idx)
+            arr_out[
+                : self.analysis.h_i,
+                self.w_i : self.w_i + self.analysis.w_i,
+            ] = arr_analysis
         # Returning output arr
         return arr_out
 
