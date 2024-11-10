@@ -10,12 +10,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import pyqtgraph as pg
-from behavysis_core.constants import TEMP_DIR
 from behavysis_core.df_classes.analyse_combine_df import AnalyseCombineDf
 from behavysis_core.df_classes.keypoints_df import IndivColumns, KeypointsDf
 from behavysis_core.mixins.diagnostics_mixin import DiagnosticsMixin
 from behavysis_core.mixins.io_mixin import IOMixin
-from behavysis_core.mixins.multiproc_mixin import MultiprocMixin
 from behavysis_core.pydantic_models.experiment_configs import ExperimentConfigs
 from pyqtgraph.exporters import ImageExporter
 from PySide6 import QtGui
@@ -98,13 +96,13 @@ class EvaluateVid:
             padding=padding,
         )
         # Define the codec and create VideoWriter object
-        # NOTE: to TEMP_DIR
-        cpid = MultiprocMixin.get_cpid()
-        out_temp_dir = os.path.join(TEMP_DIR, f"evaluate_vid_{cpid}")
-        os.makedirs(out_temp_dir, exist_ok=True)
-        out_temp_fp = os.path.join(out_temp_dir, os.path.basename(out_fp))
+        # TODO: uncomment if we need temp fp
+        # cpid = MultiprocMixin.get_cpid()
+        # out_temp_dir = os.path.join(TEMP_DIR, f"evaluate_vid_{cpid}")
+        # os.makedirs(out_temp_dir, exist_ok=True)
+        # out_temp_fp = os.path.join(out_temp_dir, os.path.basename(out_fp))
         out_cap = cv2.VideoWriter(
-            out_temp_fp,
+            out_fp,  # out_temp_fp
             cv2.VideoWriter_fourcc(*"mp4v"),  # type: ignore
             fps,
             (vid_func_runner.w_o, vid_func_runner.h_o),
@@ -126,7 +124,7 @@ class EvaluateVid:
         # Release video objects
         in_cap.release()
         out_cap.release()
-        # TODO: uncomment
+        # TODO: uncomment if we need temp fp
         # # Exporting from temp to actual out fp
         # os.makedirs(os.path.dirname(out_fp), exist_ok=True)
         # shutil.copyfile(temp_fp, out_fp)
