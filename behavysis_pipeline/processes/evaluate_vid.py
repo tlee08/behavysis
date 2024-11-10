@@ -601,11 +601,11 @@ class VidFuncRunner:
         arr_out = np.zeros(shape=(self.h_o, self.w_o, 3), dtype=np.uint8)
         # For overwriting vid_frame
         arr_video = np.copy(vid_frame)
-
         # video tile
         if self.johansson:
             arr_video = self.johansson(arr_video, idx)
         if self.keypoints:
+            print("Hi")
             arr_video = self.keypoints(arr_video, idx)
         arr_out[: self.h_i, : self.w_i] = arr_video
         # analysis tile
