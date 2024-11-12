@@ -371,7 +371,8 @@ class Analysis(EvalVidFuncBase):
         padding: int,
         **kwargs,
     ):
-        # TODO make aspect ratio weighted w_i. Maybe have custom configs value
+        # TODO make aspect-ratio-weighted value for w_i.
+        # Maybe have custom configs value `w_h_ratio`
         self.w_i = w_i
         self.h_i = h_i
         self.analysis_df: pd.DataFrame = analysis_df
