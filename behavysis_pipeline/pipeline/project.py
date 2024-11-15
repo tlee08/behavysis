@@ -574,13 +574,16 @@ class Project:
         bin_sizes_sec = configs.get_ref(configs.user.analyse.bins_sec)
         bin_sizes_sec = np.append(bin_sizes_sec, "custom")
         # Searching through all the analysis subdir
-        for i in os.listdir(proj_analyse_dir):
+        for analyse_subdir in os.listdir(proj_analyse_dir):
             for bin_i in bin_sizes_sec:
                 df_ls = []
                 names_ls = []
                 for exp in self.get_experiments():
                     in_fp = os.path.join(
-                        proj_analyse_dir, i, f"binned_{bin_i}", f"{exp.name}.feather"
+                        proj_analyse_dir,
+                        analyse_subdir,
+                        f"binned_{bin_i}",
+                        f"{exp.name}.feather",
                     )
                     if os.path.isfile(in_fp):
                         df_ls.append(DFMixin.read_feather(in_fp))
@@ -589,7 +592,9 @@ class Project:
                 if len(df_ls) > 0:
                     df = pd.concat(df_ls, keys=names_ls, names=["experiment"], axis=1)
                     out_fp = os.path.join(
-                        proj_analyse_dir, i, f"__ALL_binned_{bin_i}.feather"
+                        proj_analyse_dir,
+                        analyse_subdir,
+                        f"__ALL_binned_{bin_i}.feather",
                     )
                     DFMixin.write_feather(df, out_fp)
 
@@ -605,18 +610,20 @@ class Project:
         # AGGREGATING SUMMARY DATA
         proj_analyse_dir = os.path.join(self.root_dir, ANALYSIS_DIR)
         # Searching through all the analysis subdir
-        for i in os.listdir(proj_analyse_dir):
+        for analyse_subdir in os.listdir(proj_analyse_dir):
             df_ls = []
             names_ls = []
             for exp in self.get_experiments():
                 in_fp = os.path.join(
-                    proj_analyse_dir, i, "summary", f"{exp.name}.feather"
+                    proj_analyse_dir, analyse_subdir, "summary", f"{exp.name}.feather"
                 )
                 if os.path.isfile(in_fp):
                     # Reading exp summary df
                     df_ls.append(DFMixin.read_feather(in_fp))
                     names_ls.append(exp.name)
-            out_fp = os.path.join(proj_analyse_dir, i, "__ALL_summary.feather")
+            out_fp = os.path.join(
+                proj_analyse_dir, analyse_subdir, "__ALL_summary.feather"
+            )
             # Concatenating total_df with df across columns, with experiment name to column MultiIndex
             if len(df_ls) > 0:
                 total_df = pd.concat(df_ls, keys=names_ls, names=["experiment"], axis=0)

@@ -115,7 +115,7 @@ def merge_bouts(
     """
     For a given pd.Series, `vect`,
     if the time between two bouts is less than `min_window_frames`, then merging
-    the two bouts together by filling in the short `non-behav` period `is-behav`.
+    the two bouts together by filling in the short `non-behav` period with `is-behav`.
 
     Parameters
     ----------
