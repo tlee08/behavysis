@@ -169,8 +169,8 @@ class Project:
         if not os.path.isdir(root_dir):
             raise ValueError(
                 f'Error: The folder, "{root_dir}" does not exist.\n'
-                + "Please specify a folder that exists. Ensure you have the correct"
-                + "forward-slashes or back-slashes for the path name."
+                "Please specify a folder that exists. Ensure you have the correct"
+                "forward-slashes or back-slashes for the path name."
             )
         self.root_dir = os.path.abspath(root_dir)
         self.experiments = {}

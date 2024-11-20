@@ -221,8 +221,8 @@ class Evaluate:
         except FileNotFoundError:
             outcome += (
                 "WARNING: behavs file not found or could not be loaded."
-                + "Disregarding behaviour."
-                + "If you have run the behaviour classifier, please check this file.\n"
+                "Disregarding behaviour."
+                "If you have run the behaviour classifier, please check this file.\n"
             )
             analysis_df = AnalyseCombineDf.init_df(dlc_df.index)
 

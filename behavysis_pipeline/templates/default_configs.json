@@ -60,14 +60,14 @@
     },
     "classify_behaviours": [
       {
-        "model_fp": "/run/user/1000/gvfs/smb-share:server=shared.sydney.edu.au,share=research-data/PRJ-BowenLab/TimLee/huddling_scoring/proj/behav_models/potential huddling.json",
-        "pcutoff": null,
+        "model_fp": "/run/user/1000/gvfs/smb-share:server=shared.sydney.edu.au,share=research-data/PRJ-BowenLab/TimLee/resources/behav_models/behav_aggression/behav_models/aggression/configs.json",
+        "pcutoff": -1,
         "min_window_frames": "--min_window_frames",
         "user_behavs": "--user_behavs"
       },
       {
-        "model_fp": "/run/user/1000/gvfs/smb-share:server=shared.sydney.edu.au,share=research-data/PRJ-BowenLab/TimLee/huddling_scoring/proj/behav_models/huddling.json",
-        "pcutoff": null,
+        "model_fp": "/run/user/1000/gvfs/smb-share:server=shared.sydney.edu.au,share=research-data/PRJ-BowenLab/TimLee/resources/behav_models/behav_fight/behav_models/fight/configs.json",
+        "pcutoff": -1,
         "min_window_frames": "--min_window_frames",
         "user_behavs": "--user_behavs"
       }

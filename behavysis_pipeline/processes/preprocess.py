@@ -253,7 +253,7 @@ class Preprocess:
             if column not in df.columns.unique(level):
                 raise ValueError(
                     f'The marking value in the config file, "{column}",'
-                    + " is not a column name in the DLC file."
+                    " is not a column name in the DLC file."
                 )
         # Checking that bodyparts are all valid
         KeypointsDf.check_bpts_exist(df, bpts)

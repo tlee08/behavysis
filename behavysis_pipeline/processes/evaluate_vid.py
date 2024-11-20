@@ -65,7 +65,7 @@ class EvaluateVid:
         except FileNotFoundError:
             outcome += (
                 "WARNING: analysis combined file not found or could not be loaded."
-                + "Disregarding analysis."
+                "Disregarding analysis."
             )
             analysis_df = AnalyseCombineDf.init_df(dlc_df.index)
 

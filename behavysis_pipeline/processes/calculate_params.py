@@ -104,7 +104,7 @@ class CalculateParams:
             # If subject never exists (i.e. no True values in exist column), then raise warning
             outcome += (
                 "WARNING: The subject was not detected in any frames - using the first frame."
-                + "Please check the video.\n"
+                "Please check the video.\n"
             )
         else:
             start_frame = df_lhoods[df_lhoods["exists"]].index[0]
@@ -156,8 +156,8 @@ class CalculateParams:
         elif stop_frame > total_frames:
             outcome += (
                 "WARNING: The user specified dur_sec in the configs file is greater "
-                + "than the actual length of the video. Please check to see if this video is "
-                + "too short or if the dur_sec value is incorrect.\n"
+                "than the actual length of the video. Please check to see if this video is "
+                "too short or if the dur_sec value is incorrect.\n"
             )
         # Writing to config
         configs = ExperimentConfigs.read_json(configs_fp)
@@ -198,7 +198,7 @@ class CalculateParams:
             # If subject never exists (i.e. no True values in exist column), then raise warning
             outcome += (
                 "WARNING: The subject was not detected in any frames - using the first frame."
-                + "Please check the video.\n"
+                "Please check the video.\n"
             )
         else:
             start_frame = df_lhoods[df_lhoods["exists"]].index[0]

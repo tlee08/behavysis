@@ -63,7 +63,7 @@ class Experiment:
         if not os.path.isdir(root_dir):
             raise ValueError(
                 f'Cannot find the project folder named "{root_dir}".\n'
-                + "Please specify a folder that exists."
+                "Please specify a folder that exists."
             )
         # Setting up instance variables
         self.name = name
@@ -73,10 +73,10 @@ class Experiment:
         if not np.any(file_exists_ls):
             raise ValueError(
                 f'No files named "{name}" exist in "{root_dir}".\n'
-                + f'Please specify a file that exists in "{root_dir}", in one of the'
-                + " following folder WITH the correct file extension name:\n"
-                + "    - "
-                + "\n    - ".join(MiscMixin.enum2tuple(Folders))
+                f'Please specify a file that exists in "{root_dir}", in one of the'
+                " following folder WITH the correct file extension name:\n"
+                "    - "
+                "\n    - ".join(MiscMixin.enum2tuple(Folders))
             )
 
     #####################################################################
@@ -110,9 +110,9 @@ class Experiment:
                 # if folder_str not in Folders enum
                 raise ValueError(
                     f'"{_folder}" is not a valid experiment folder name.\n'
-                    + "Please only specify one of the following folders:\n"
-                    + "    - "
-                    + "\n    - ".join([f.value for f in Folders])
+                    "Please only specify one of the following folders:\n"
+                    "    - "
+                    "\n    - ".join([f.value for f in Folders])
                 )
         else:
             # Otherwise, using given Enum

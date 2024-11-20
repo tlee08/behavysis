@@ -196,7 +196,7 @@ def page_calculate_params():
     # Page description
     st.write(
         "Calculate the project's inherent parameters "
-        + "from the video and DLC keypoints data"
+        "from the video and DLC keypoints data"
     )
     # List of checkboxes for each method
     st.subheader("Select Methods to Run")
@@ -225,7 +225,7 @@ def page_preprocess():
     # Page description
     st.write(
         "Calculate the project's inherent parameters "
-        + "from the video and DLC keypoints data"
+        "from the video and DLC keypoints data"
     )
     # List of checkboxes for each method
     st.subheader("Select Methods to Run")

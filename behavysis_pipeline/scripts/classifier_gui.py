@@ -4,14 +4,14 @@ import subprocess
 
 import pandas as pd
 import streamlit as st
+from behavysis_core.mixins.io_mixin import IOMixin
+from behavysis_core.pydantic_models.experiment_configs import ExperimentConfigs
+
 from behavysis_pipeline.pipeline.project import Project
 from behavysis_pipeline.processes.calculate_params import CalculateParams
 from behavysis_pipeline.processes.extract_features import run_simba_subproc
 from behavysis_pipeline.processes.preprocess import Preprocess
 from behavysis_pipeline.processes.run_dlc import run_dlc_subproc
-
-from behavysis_core.mixins.io_mixin import IOMixin
-from behavysis_core.pydantic_models.experiment_configs import ExperimentConfigs
 
 #####################################################################
 # Pipeline Functions (callbacks)
@@ -194,7 +194,7 @@ def page_calculate_params():
     # Page description
     st.write(
         "Calculate the project's inherent parameters "
-        + "from the video and DLC keypoints data"
+        "from the video and DLC keypoints data"
     )
     # List of checkboxes for each method
     st.subheader("Select Methods to Run")
@@ -223,7 +223,7 @@ def page_preprocess():
     # Page description
     st.write(
         "Calculate the project's inherent parameters "
-        + "from the video and DLC keypoints data"
+        "from the video and DLC keypoints data"
     )
     # List of checkboxes for each method
     st.subheader("Select Methods to Run")
