@@ -34,7 +34,7 @@ from behavysis_core.pydantic_models.experiment_configs import ExperimentConfigs
 ###################################################################################################
 
 
-class AnalyseBehavs:
+class AnalyseBehaviours:
     """__summary__"""
 
     @staticmethod
@@ -50,12 +50,12 @@ class AnalyseBehavs:
         """
         outcome = ""
         name = IOMixin.get_name(behavs_fp)
-        out_dir = os.path.join(out_dir, AnalyseBehavs.analyse_behaviours.__name__)
+        out_dir = os.path.join(out_dir, AnalyseBehaviours.analyse_behaviours.__name__)
         # Calculating the deltas (changes in body position) between each frame for the subject
         configs = ExperimentConfigs.read_json(configs_fp)
         fps, _, _, _, bins_ls, cbins_ls = AnalyseDf.get_configs(configs)
         # Loading in dataframe
-        behavs_df = BehavDf.read_feather(behavs_fp)
+        behavs_df = BehavDf.read(behavs_fp)
         # Setting all na and -1 values to 0 (to make any undecided behav to non-behav)
         behavs_df = behavs_df.fillna(0).map(lambda x: np.maximum(0, x))
         # Getting the behaviour names and each user_behav for the behaviour

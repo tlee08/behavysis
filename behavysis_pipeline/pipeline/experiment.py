@@ -20,7 +20,7 @@ from behavysis_core.constants import (
 from behavysis_core.mixins.diagnostics_mixin import DiagnosticsMixin
 from behavysis_core.mixins.misc_mixin import MiscMixin
 
-from behavysis_pipeline.processes.analyse_behavs import AnalyseBehavs
+from behavysis_pipeline.processes.analyse_behaviours import AnalyseBehaviours
 from behavysis_pipeline.processes.analyse_combine import AnalyseCombine
 from behavysis_pipeline.processes.classify_behavs import ClassifyBehavs
 from behavysis_pipeline.processes.evaluate_vid import EvaluateVid
@@ -461,7 +461,7 @@ class Experiment:
         Can call any methods from `Analyse`.
         """
         return self._process_scaffold(
-            (AnalyseBehavs.analyse_behaviours,),
+            (AnalyseBehaviours.analyse_behaviours,),
             behavs_fp=self.get_fp(Folders.SCORED_BEHAVS),
             out_dir=os.path.join(self.root_dir, ANALYSIS_DIR),
             configs_fp=self.get_fp(Folders.CONFIGS),

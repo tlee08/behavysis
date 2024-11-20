@@ -75,9 +75,9 @@ if __name__ == "__main__":
     proj.classify_behaviours(overwrite)
     proj.export_behaviours(overwrite)
 
-    proj.behav_analyse()
+    proj.analyse_behaviours()
 
-    proj.collate_analysis()
+    proj.analyse_combine()
 
     proj.evaluate(
         (
