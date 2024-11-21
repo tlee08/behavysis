@@ -239,7 +239,7 @@ class Experiment:
     #                        DLC METHODS
     #####################################################################
 
-    def run_dlc(self, gputouse: int, overwrite: bool) -> dict:
+    def run_dlc(self, gputouse: int | None, overwrite: bool) -> dict:
         """
         Run the DLC model on the formatted video to generate a DLC annotated video
         and DLC h5 file for all experiments.

@@ -2,7 +2,7 @@
 
 import os
 
-from behavysis_pipeline import Project
+from behavysis_pipeline.pipeline import Project
 from behavysis_pipeline.processes import (
     Analyse,
     CalculateParams,
