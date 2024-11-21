@@ -566,7 +566,7 @@ class BehavClassifier:
             ```
         """
         # Getting probabilities
-        index = np.arange(x.shape[0]) if index is None else index
+        index = index or np.arange(x.shape[0])
         y_probs = self.clf.predict(
             x=x,
             index=index,
