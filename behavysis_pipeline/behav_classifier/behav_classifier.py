@@ -458,6 +458,8 @@ class BehavClassifier:
 
         Callable is a method from `ClfTemplates`.
         """
+        # Getting model name
+        clf_name = clf_cls.__name__
         # Preparing data
         x, y, ind_train, ind_test = self.prepare_data_training_pipeline()
         # Initialising the model
@@ -472,13 +474,23 @@ class BehavClassifier:
             val_split=self.configs.val_split,
         )
         # Saving history
-        self.clf_eval_save_history(history)
-        # Evaluating the model
-        self.clf_eval(x, y, ind_test)
+        self.clf_eval_save_history(history, clf_name)
+        # Evaluating on train and test data
+        self.clf_eval_save_performance(x, y, ind_train, f"{clf_name}_train")
+        self.clf_eval_save_performance(x, y, ind_test, f"{clf_name}_test")
         # Updating the model configs
         configs = self.configs
         configs.clf_structure = clf_cls.__name__
         self.configs = configs
+
+    def pipeline_build_save(self, clf_cls: Callable) -> None:
+        """
+        Makes a classifier and saves it to the model's root directory.
+
+        Callable is a method from `ClfTemplates`.
+        """
+        # Building pipeline
+        self.pipeline_build(clf_cls)
         # Saving the model to disk
         self.clf_save()
 
@@ -574,7 +586,7 @@ class BehavClassifier:
         sns.lineplot(data=history, ax=ax)
         fig.savefig(os.path.join(self.eval_dir, f"{name}_history.png"))
 
-    def clf_eval(
+    def clf_eval_save_performance(
         self,
         x: np.ndarray,
         y: np.ndarray,
@@ -637,31 +649,9 @@ class BehavClassifier:
         """
         # Saving existing clf
         clf = self.clf
-        # Preparing data
-        x, y, ind_train, ind_test = self.prepare_data_training_pipeline()
-        # # Adding noise (TODO: use with augmentation)
-        # noise = 0.05
-        # x_train += np.random.normal(0, noise, x_train.shape)
-        # x_test += np.random.normal(0, noise, x_test.shape)
-        # Getting eval for each classifier in ClfTemplates
         for clf_cls in CLF_TEMPLATES:
-            clf_name = clf_cls.__name__
-            # Making classifier
-            self.clf = clf_cls()
-            # Training
-            history = self.clf.fit(
-                x=x,
-                y=y,
-                index=ind_train,
-                batch_size=self.configs.batch_size,
-                epochs=self.configs.epochs,
-                val_split=self.configs.val_split,
-            )
-            # Saving history
-            self.clf_eval_save_history(history, name=clf_name)
-            # Evaluating on train and test data
-            self.clf_eval(x, y, index=ind_train, name=f"{clf_name}_train")
-            self.clf_eval(x, y, index=ind_test, name=f"{clf_name}_test")
+            # Building pipeline, which runs and saves evaluation
+            self.pipeline_build(clf_cls)
         # Restoring clf
         self.clf = clf
 
