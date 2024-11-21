@@ -32,5 +32,6 @@ dependencies:
   - cudnn=8.1.0
   - pip:
       - "tensorflow<2.11"
+      # - "tensorflow[and-cuda]"
       # - "git+https://github.com/DeepLabCut/DeepLabCut.git@pytorch_dlc#egg=deeplabcut[gui,modelzoo,wandb]"
       - "deeplabcut[gui,tf]==2.3.9"
