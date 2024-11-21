@@ -158,7 +158,7 @@ class Analyse:
         # TODO: FIX names
         scatter_df = analysis_i_df.loc[:, idx[:, ["x", "y"]]]  # type: ignore
         for i in indivs:
-            scatter_df[(i, "roi")] = analysis_df.loc[:, (i, roi_names_ls)].apply(
+            scatter_df[(i, "roi")] = analysis_df.loc[:, idx[i, roi_names_ls]].apply(
                 lambda x: " - ".join(np.array(roi_names_ls)[x.values]), axis=1
             )
         # Making and saving scatterplot
