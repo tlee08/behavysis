@@ -14,19 +14,19 @@
       "start_frame": {
         "window_sec": 1,
         "pcutoff": 0.9,
-        "bodyparts": "--bodyparts-simba"
+        "bodyparts": "--bodyparts_simba"
       },
       "exp_dur": {
         "window_sec": 1,
         "pcutoff": 0.9,
-        "bodyparts": "--bodyparts-simba"
+        "bodyparts": "--bodyparts_simba"
       },
       "stop_frame": {
         "dur_sec": 6000
       },
       "px_per_mm": {
-        "pt_a": "--tl",
-        "pt_b": "--tr",
+        "pt_a": "TopLeft",
+        "pt_b": "TopRight",
         "dist_mm": 400
       }
     },
@@ -35,7 +35,7 @@
         "pcutoff": 0.5
       },
       "bodycentre": {
-        "bodyparts": "--bodyparts-centre"
+        "bodyparts": "--bodyparts_centre"
       },
       "refine_ids": {
         "marked": "mouse1marked",
@@ -43,7 +43,7 @@
         "marking": "AnimalColourMark",
         "window_sec": 0.5,
         "metric": "rolling",
-        "bodyparts": "--bodyparts-centre"
+        "bodyparts": "--bodyparts_centre"
       }
     },
     "evaluate_vid": {
@@ -56,7 +56,7 @@
     },
     "extract_features": {
       "individuals": ["mouse1marked", "mouse2unmarked"],
-      "bodyparts": "--bodyparts-simba"
+      "bodyparts": "--bodyparts_simba"
     },
     "classify_behaviours": [
       {
@@ -85,36 +85,36 @@
           "is_in": false,
           "thresh_mm": -5,
           "roi_corners": "--corners",
-          "bodyparts": "--bodyparts-front"
+          "bodyparts": "--bodyparts_front"
         },
         {
           "roi_name": "centre_crossing",
           "is_in": true,
           "thresh_mm": -20,
           "roi_corners": "--corners",
-          "bodyparts": "--bodyparts-front"
+          "bodyparts": "--bodyparts_front"
         }
       ],
       "speed": {
         "smoothing_sec": 1,
-        "bodyparts": "--bodyparts-centre"
+        "bodyparts": "--bodyparts_centre"
       },
       "social_distance": {
         "smoothing_sec": 1,
-        "bodyparts": "--bodyparts-centre"
+        "bodyparts": "--bodyparts_centre"
       },
       "freezing": {
         "window_sec": 2,
         "thresh_mm": 5,
         "smoothing_sec": 0.2,
-        "bodyparts": "--bodyparts-simba"
+        "bodyparts": "--bodyparts_simba"
       },
       "bins_sec": [30, 60, 120, 300],
       "custom_bins_sec": [60, 120, 300, 600]
     }
   },
   "ref": {
-    "bodyparts-centre": [
+    "bodyparts_centre": [
       "LeftFlankMid",
       "BodyCentre",
       "RightFlankMid",
@@ -122,7 +122,7 @@
       "RightFlankRear",
       "TailBase1"
     ],
-    "bodyparts-simba": [
+    "bodyparts_simba": [
       "LeftEar",
       "RightEar",
       "Nose",
@@ -132,12 +132,7 @@
       "TailBase1",
       "TailTip4"
     ],
-    "bodyparts-front": [
-      "LeftEar",
-      "RightEar",
-      "Nose",
-      "BodyCentre"
-    ],
+    "bodyparts_front": ["LeftEar", "RightEar", "Nose", "BodyCentre"],
     "corners": ["TopLeft", "TopRight", "BottomRight", "BottomLeft"],
     "min_window_frames": 2,
     "user_behavs": []
