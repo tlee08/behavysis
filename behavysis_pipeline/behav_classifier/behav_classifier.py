@@ -127,9 +127,9 @@ class BehavClassifier:
         # Getting model directory
         model_dir = os.path.join(root_dir, behaviour_name)
         # Checking if model directory already exists
-        assert not os.path.exists(
-            model_dir
-        ), f"Model already exists: {model_dir}\n use `load` method instead."
+        if os.path.exists(model_dir):
+            print(f"Model already exists: {model_dir}\n using `load` method instead.")
+            return cls.load(model_dir)
         # Making new BehavClassifier instance
         inst = cls(model_dir)
         # Updating configs with project data
