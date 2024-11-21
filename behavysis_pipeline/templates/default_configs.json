@@ -73,7 +73,7 @@
       }
     ],
     "analyse": {
-      "roi": [
+      "in_roi": [
         {
           "roi_name": "thigmo",
           "is_in": false,
