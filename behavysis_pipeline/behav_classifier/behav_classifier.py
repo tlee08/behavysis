@@ -70,7 +70,6 @@ class BehavClassifier:
     def __init__(self, model_dir: str) -> None:
         # Storing model directory path
         self.model_dir = os.path.abspath(model_dir)
-        self.clf = DNN1()
         # Trying to read configs file. Making a new one if it doesn't exist
         try:
             self.configs
@@ -78,6 +77,11 @@ class BehavClassifier:
         except FileNotFoundError:
             self.configs = BehavClassifierConfigs()
             logging.info("Making new model configs")
+        # Trying to read clf file. Making basic DDN1 if not exists
+        try:
+            self.clf_load()
+        except FileNotFoundError:
+            self.clf = DNN1()
 
     #################################################
     # CREATE MODEL METHODS

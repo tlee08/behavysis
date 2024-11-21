@@ -9,8 +9,8 @@ from tqdm import tqdm
 
 
 class BaseTorchModel(nn.Module):
-    criterion: nn.Module
-    optimizer: optim.Optimizer
+    criterion: nn.Module | None
+    optimizer: optim.Optimizer | None
     nfeatures: int
     window_frames: int
     _device: torch.device
@@ -21,8 +21,10 @@ class BaseTorchModel(nn.Module):
         self.nfeatures = nfeatures
         self.window_frames = window_frames
         # Initialising the criterion and optimizer attributes
-        self.criterion = nn.Module()
-        self.optimizer = optim.Adam(self.parameters())
+        # self.criterion = nn.Module()
+        # self.optimizer = optim.Adam(self.parameters())
+        self.criterion = None
+        self.optimizer = None
         # Setting the device (GPU or CPU)
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
