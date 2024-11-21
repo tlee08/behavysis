@@ -61,8 +61,8 @@ class DNN1(BaseTorchModel):
         # Define the loss function and optimizer
         self.criterion: nn.Module = nn.BCELoss()
         self.optimizer: optim.Optimizer = optim.Adam(self.parameters())
-        # Setting the device (GPU or CPU) (needs to be done to update optimizer)
-        self.device = self.device
+        # Setting the device (GPU or CPU)
+        self.device_to_gpu()
 
     def forward(self, x):
         out = x
@@ -98,7 +98,7 @@ class DNN2(BaseTorchModel):
         self.criterion: nn.Module = nn.BCELoss()
         self.optimizer: optim.Optimizer = optim.Adam(self.parameters())
         # Setting the device (GPU or CPU)
-        self.device = self.device
+        self.device_to_gpu()
 
     def forward(self, x):
         out = x
@@ -137,7 +137,7 @@ class DNN3(BaseTorchModel):
         self.criterion: nn.Module = nn.BCELoss()
         self.optimizer: optim.Optimizer = optim.Adam(self.parameters())
         # Setting the device (GPU or CPU)
-        self.device = self.device
+        self.device_to_gpu()
 
     def forward(self, x):
         out = x
@@ -182,7 +182,7 @@ class CNN1(BaseTorchModel):
         self.criterion: nn.Module = nn.BCELoss()
         self.optimizer: optim.Optimizer = optim.Adam(self.parameters())
         # Setting the device (GPU or CPU)
-        self.device = self.device
+        self.device_to_gpu()
 
     def forward(self, x):
         out = x
@@ -230,7 +230,7 @@ class CNN2(BaseTorchModel):
         self.criterion: nn.Module = nn.BCELoss()
         self.optimizer: optim.Optimizer = optim.Adam(self.parameters())
         # Setting the device (GPU or CPU)
-        self.device = self.device
+        self.device_to_gpu()
 
     def forward(self, x):
         out = x

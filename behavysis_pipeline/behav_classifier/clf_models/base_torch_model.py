@@ -21,12 +21,8 @@ class BaseTorchModel(nn.Module):
         self.nfeatures = nfeatures
         self.window_frames = window_frames
         # Initialising the criterion and optimizer attributes
-        # self.criterion = nn.Module()
-        # self.optimizer = optim.Adam(self.parameters())
         self.criterion = None
         self.optimizer = None
-        # Setting the device (GPU or CPU)
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     @property
     def device(self):
@@ -44,6 +40,9 @@ class BaseTorchModel(nn.Module):
         # TODO: allow different optimisers
         if self.optimizer:
             self.optimizer = optim.Adam(self.parameters())
+
+    def device_to_gpu(self):
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     def fit(
         self,
