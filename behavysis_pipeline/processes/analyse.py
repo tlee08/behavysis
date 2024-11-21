@@ -135,11 +135,9 @@ class Analyse:
                 )
             # Inverting in_roi status if is_in is False
             if not is_in:
-                analysis_i_df.loc[:, idx[:, roi_name]] = (
-                    ~analysis_i_df.loc[  # type: ignore
-                        :, idx[:, roi_name]
-                    ]
-                )  # type: ignore
+                analysis_i_df.loc[:, idx[:, roi_name]] = (  # type: ignore
+                    ~analysis_i_df.loc[:, idx[:, roi_name]]  # type: ignore
+                )
             # Casting all values to int8
             analysis_i_df = analysis_i_df.astype(np.uint8)
             # Saving to analysis_df and roi_corners_df list
