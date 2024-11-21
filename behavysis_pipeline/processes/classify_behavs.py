@@ -71,7 +71,11 @@ class ClassifyBehavs:
         for i, model_config in enumerate(models_ls):
             # Getting model (clf, pcutoff, min_window_frames)
             model_fp = configs.get_ref(model_config.model_fp)
-            behav_model = BehavClassifier.load(model_fp)
+            try:
+                behav_model = BehavClassifier.load(model_fp)
+            except FileNotFoundError:
+                outcome += "WARNING: Model file not found. Skipping model.\n"
+                continue
             behav_name = behav_model.configs.behaviour_name
             pcutoff = cls._check_init_pcutoff(
                 configs.get_ref(model_config.pcutoff), behav_model.configs.pcutoff
