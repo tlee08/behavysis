@@ -61,7 +61,7 @@ class DNN1(BaseTorchModel):
         # Define the loss function and optimizer
         self.criterion: nn.Module = nn.BCELoss()
         self.optimizer: optim.Optimizer = optim.Adam(self.parameters())
-        # Setting the device (GPU or CPU)
+        # Setting the device (GPU or CPU) (needs to be done to update optimizer)
         self.device = self.device
 
     def forward(self, x):
