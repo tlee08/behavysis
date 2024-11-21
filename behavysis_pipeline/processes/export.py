@@ -79,8 +79,8 @@ class Export:
                 (behav_name_i, BehavColumns.PRED.value)
             ].values * np.array(-1)
             # Adding user_behav columns
-            for k in user_behavs_i:
-                out_df[(behav_name_i, k)] = 0
+            for user_behavs_i_j in user_behavs_i:
+                out_df[(behav_name_i, user_behavs_i_j)] = 0
         # Ordering by "behaviours" level
         out_df = out_df.sort_index(axis=1, level=BehavDf.CN.BEHAVIOURS.value)
         # Writing file
