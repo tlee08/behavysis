@@ -141,8 +141,9 @@ class Analyse:
                 analysis_i_df.loc[:, idx[:, roi_name]] = (  # type: ignore
                     ~analysis_i_df.loc[:, idx[:, roi_name]]  # type: ignore
                 )
-            # Casting all values to int8
-            analysis_i_df = analysis_i_df.astype(np.uint8)
+            analysis_i_df.loc[:, idx[:, roi_name]] = analysis_i_df.loc[  # type: ignore
+                :, idx[:, roi_name]
+            ].astype(np.int8)  # type: ignore
             # Saving scatter_df to list
             scatter_df_ls.append(analysis_i_df)
             # Saving analysis_df to list
