@@ -161,6 +161,7 @@ class Analyse:
             scatter_df[(i, "roi")] = analysis_df.loc[:, idx[i, roi_names_ls]].apply(  # type: ignore
                 lambda x: " - ".join(np.array(roi_names_ls)[x.values]), axis=1
             )
+        print(scatter_df)
         # Making and saving scatterplot
         plot_fp = os.path.join(out_dir, "scatter_plot", f"{name}.png")
         AnalyseDf.make_location_scatterplot(scatter_df, corners_df, plot_fp, "roi")
