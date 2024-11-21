@@ -1,6 +1,7 @@
 import os
 
-from behavysis_core.df_classes.behav_df import BehavDf
+import numpy as np
+from behavysis_core.df_classes.behav_df import BehavColumns, BehavDf
 from behavysis_core.df_classes.df_mixin import DFMixin
 from behavysis_core.mixins.io_mixin import IOMixin
 from behavysis_core.pydantic_models.experiment_configs import ExperimentConfigs
@@ -52,19 +53,16 @@ class Export:
     ) -> str:
         """ """
         outcome = ""
-        # TODO: use this in 6_pred_behavs
         # Reading the configs file
         configs = ExperimentConfigs.read_json(configs_fp)
         models_ls = configs.user.classify_behaviours
+        # Reading file
+        in_df = BehavDf.read_feather(src_fp)
+        # Making out_df
+        out_df = BehavDf.init_df(in_df.index)
         # Getting the behav_outcomes dict from the configs file
-        behav_outcomes = {
-            BehavClassifier.load(
-                model.model_fp
-            ).configs.behaviour_name: configs.get_ref(model.user_behavs)
-            for model in models_ls
-        }
-        behav_outcomes = {}
         for model in models_ls:
+            # Loading behav_model
             try:
                 behav_model_i = BehavClassifier.load(model.model_fp)
             except FileNotFoundError:
@@ -72,11 +70,19 @@ class Export:
                 continue
             behav_name_i = behav_model_i.configs.behaviour_name
             user_behavs_i = configs.get_ref(model.user_behavs)
-            behav_outcomes[behav_name_i] = user_behavs_i
-        # Reading file
-        in_df = BehavDf.read_feather(src_fp)
-        # Making the output df (with all user_behav outcome columns)
-        out_df = BehavDf.include_user_behavs(in_df, behav_outcomes)
+            # Adding pred column
+            out_df[(behav_name_i, BehavColumns.PRED.value)] = in_df[
+                (behav_name_i, BehavColumns.PRED.value)
+            ].values
+            # Adding actual column
+            out_df[(behav_name_i, BehavColumns.ACTUAL.value)] = in_df[
+                (behav_name_i, BehavColumns.PRED.value)
+            ].values * np.array(-1)
+            # Adding user_behav columns
+            for k in user_behavs_i:
+                out_df[(behav_name_i, k)] = 0
+        # Ordering by "behaviours" level
+        out_df = out_df.sort_index(axis=1, level=BehavDf.CN.BEHAVIOURS.value)
         # Writing file
         DFMixin.write_feather(out_df, out_fp)
         # Returning outcome

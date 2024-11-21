@@ -2,7 +2,6 @@
 Classify Behaviours
 """
 
-import numpy as np
 import pandas as pd
 from behavysis_core.df_classes.behav_df import BehavColumns, BehavDf
 from behavysis_core.df_classes.bouts_df import BoutsDf
@@ -87,14 +86,10 @@ class ClassifyBehavs:
             # Getting prob and pred column names
             prob_col = (behav_name, BehavColumns.PROB.value)
             pred_col = (behav_name, BehavColumns.PRED.value)
-            actual_col = (behav_name, BehavColumns.ACTUAL.value)
             # Using pcutoff to get binary predictions
             df_i[pred_col] = (df_i[prob_col] > pcutoff).astype(int)
             # Filling in small non-behav bouts
             df_i[pred_col] = cls._merge_bouts(df_i[pred_col], min_window_frames)
-            # NOTE: do we need "actual" and "user-defined"?
-            # Including "actual" column and setting behav frames to -1
-            df_i[actual_col] = df_i[pred_col].values * np.array(-1)
             # Including user-defined sub-behav columns
             for user_behav in user_behavs:
                 df_i[(behav_name, user_behav)] = 0
