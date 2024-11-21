@@ -130,10 +130,8 @@ class Analyse:
                     dlc_df.loc[:, idx[indiv, bpts, y]].mean(axis=1).values  # type: ignore
                 )
                 # Determining if the indiv body center is in the ROI
-                res_df[(indiv, roi_name)] = (
-                    res_df[indiv]
-                    .apply(lambda pt: pt_in_roi(pt, roi_corners_df), axis=1)
-                    .astype(np.int8)
+                res_df[(indiv, roi_name)] = res_df[indiv].apply(
+                    lambda pt: pt_in_roi(pt, roi_corners_df), axis=1
                 )
             # Inverting in_roi status if is_in is False
             if not is_in:
