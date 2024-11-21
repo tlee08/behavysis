@@ -67,7 +67,7 @@ class ClassifyBehavs:
         # Initialising y_preds df
         # Getting predictions for each classifier model and saving
         # in a list of pd.DataFrames
-        df_ls = np.zeros(len(models_ls), dtype="object")
+        df_ls = []
         for i, model_config in enumerate(models_ls):
             # Getting model (clf, pcutoff, min_window_frames)
             model_fp = configs.get_ref(model_config.model_fp)
@@ -98,7 +98,7 @@ class ClassifyBehavs:
             for user_behav in model_config.user_behavs:
                 df_i[(behav_name, user_behav)] = 0
             # Adding model predictions df to list
-            df_ls[i] = df_i
+            df_ls.append(df_i)
             # Logging outcome
             outcome += (
                 f"Completed {behav_model.configs.behaviour_name} classification.\n"
