@@ -65,7 +65,7 @@ class BehavClassifier:
     """
 
     model_dir: str
-    clf: BaseTorchModel
+    _clf: BaseTorchModel
 
     def __init__(self, model_dir: str) -> None:
         # Storing model directory path
@@ -82,6 +82,69 @@ class BehavClassifier:
             self.clf_load()
         except FileNotFoundError:
             self.clf = DNN1()
+
+    #################################################
+    #            GETTER AND SETTERS
+    #################################################
+
+    @property
+    def configs_fp(self) -> str:
+        """Returns the model's root directory"""
+        return os.path.join(self.model_dir, "configs.json")
+
+    @property
+    def configs(self) -> BehavClassifierConfigs:
+        """Returns the config model from the expected config file."""
+        return BehavClassifierConfigs.read_json(self.configs_fp)
+
+    @configs.setter
+    def configs(self, configs: BehavClassifierConfigs) -> None:
+        """Sets the configs to the given configs."""
+        configs.write_json(self.configs_fp)
+
+    @property
+    def clf_fp(self) -> str:
+        """Returns the model's filepath"""
+        return os.path.join(self.model_dir, "model.sav")
+
+    @property
+    def preproc_fp(self) -> str:
+        """Returns the model's preprocessor filepath"""
+        return os.path.join(self.model_dir, "preproc.sav")
+
+    @property
+    def eval_dir(self) -> str:
+        """Returns the model's evaluation directory"""
+        return os.path.join(self.model_dir, "eval")
+
+    @property
+    def x_dir(self) -> str:
+        """
+        Returns the model's x directory.
+        It gets the x directory from the parent directory of the model directory.
+        """
+        return os.path.join(os.path.dirname(self.model_dir), "x")
+
+    @property
+    def y_dir(self) -> str:
+        """
+        Returns the model's x directory.
+        It gets the x directory from the parent directory of the model directory.
+        """
+        return os.path.join(os.path.dirname(self.model_dir), "y")
+
+    @property
+    def clf(self) -> BaseTorchModel:
+        return self._clf
+
+    @clf.setter
+    def clf(self, clf: BaseTorchModel) -> None:
+        # Setting the clf
+        self._clf = clf
+        # Updating clf_structure name in model configs
+        configs = self.configs
+        configs.clf_structure = type(clf).__name__
+        self.configs = configs
 
     #################################################
     # CREATE MODEL METHODS
@@ -152,56 +215,6 @@ class BehavClassifier:
         # will throw Error if not
         BehavClassifierConfigs.read_json(os.path.join(model_dir, "configs.json"))
         return cls(model_dir)
-
-    #################################################
-    #            GETTER AND SETTERS
-    #################################################
-
-    @property
-    def configs_fp(self) -> str:
-        """Returns the model's root directory"""
-        return os.path.join(self.model_dir, "configs.json")
-
-    @property
-    def configs(self) -> BehavClassifierConfigs:
-        """Returns the config model from the expected config file."""
-        return BehavClassifierConfigs.read_json(self.configs_fp)
-
-    @configs.setter
-    def configs(self, configs: BehavClassifierConfigs) -> None:
-        """Sets the configs to the given configs."""
-        configs.write_json(self.configs_fp)
-
-    @property
-    def clf_fp(self) -> str:
-        """Returns the model's filepath"""
-        return os.path.join(self.model_dir, "model.sav")
-
-    @property
-    def preproc_fp(self) -> str:
-        """Returns the model's preprocessor filepath"""
-        return os.path.join(self.model_dir, "preproc.sav")
-
-    @property
-    def eval_dir(self) -> str:
-        """Returns the model's evaluation directory"""
-        return os.path.join(self.model_dir, "eval")
-
-    @property
-    def x_dir(self) -> str:
-        """
-        Returns the model's x directory.
-        It gets the x directory from the parent directory of the model directory.
-        """
-        return os.path.join(os.path.dirname(self.model_dir), "x")
-
-    @property
-    def y_dir(self) -> str:
-        """
-        Returns the model's x directory.
-        It gets the x directory from the parent directory of the model directory.
-        """
-        return os.path.join(os.path.dirname(self.model_dir), "y")
 
     #################################################
     #            IMPORTING DATA TO MODEL
@@ -458,12 +471,12 @@ class BehavClassifier:
 
         Callable is a method from `ClfTemplates`.
         """
-        # Getting model name
-        clf_name = clf_cls.__name__
         # Preparing data
         x, y, ind_train, ind_test = self.prepare_data_training_pipeline()
         # Initialising the model
         self.clf = clf_cls()
+        # Getting model name
+        clf_name = self.configs.clf_structure
         # Training the model
         history = self.clf.fit(
             x=x,
@@ -478,10 +491,6 @@ class BehavClassifier:
         # Evaluating on train and test data
         self.clf_eval_save_performance(x, y, ind_train, f"{clf_name}_train")
         self.clf_eval_save_performance(x, y, ind_test, f"{clf_name}_test")
-        # Updating the model configs
-        configs = self.configs
-        configs.clf_structure = clf_cls.__name__
-        self.configs = configs
 
     def pipeline_build_save(self, clf_cls: Callable) -> None:
         """
