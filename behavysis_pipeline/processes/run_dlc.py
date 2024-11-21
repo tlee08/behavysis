@@ -25,6 +25,7 @@ import os
 import re
 
 import pandas as pd
+from behavysis_core.constants import TEMP_DIR
 from behavysis_core.df_classes.df_mixin import DFMixin
 from behavysis_core.df_classes.keypoints_df import KeypointsDf
 from behavysis_core.mixins.io_mixin import IOMixin
@@ -44,7 +45,6 @@ class RunDLC:
         vid_fp: str,
         out_fp: str,
         configs_fp: str,
-        temp_dir: str,
         gputouse: int | None,
         overwrite: bool,
     ) -> str:
@@ -56,7 +56,7 @@ class RunDLC:
         configs = ExperimentConfigs.read_json(configs_fp)
         model_fp = configs.get_ref(configs.user.run_dlc.model_fp)
         # Derive more parameters
-        dlc_out_dir = os.path.join(temp_dir, f"dlc_{gputouse}")
+        dlc_out_dir = os.path.join(TEMP_DIR, f"dlc_{gputouse}")
         out_dir = os.path.dirname(out_fp)
         # Making output directories
         os.makedirs(dlc_out_dir, exist_ok=True)
@@ -69,7 +69,7 @@ class RunDLC:
             )
 
         # Running the DLC subprocess (in a separate conda env)
-        run_dlc_subproc(model_fp, [vid_fp], dlc_out_dir, temp_dir, gputouse)
+        run_dlc_subproc(model_fp, [vid_fp], dlc_out_dir, TEMP_DIR, gputouse)
 
         # Exporting the h5 to feather the out_dir
         export_2_feather(vid_fp, dlc_out_dir, out_dir)
@@ -82,7 +82,6 @@ class RunDLC:
         vid_fp_ls: list[str],
         out_dir: str,
         configs_dir: str,
-        temp_dir: str,
         gputouse: int | None,
         overwrite: bool,
     ) -> str:
@@ -93,7 +92,7 @@ class RunDLC:
 
         # Specifying the GPU to use and making the output directory
         # Making output directories
-        dlc_out_dir = os.path.join(temp_dir, f"dlc_{gputouse}")
+        dlc_out_dir = os.path.join(TEMP_DIR, f"dlc_{gputouse}")
         os.makedirs(dlc_out_dir, exist_ok=True)
 
         # If overwrite is False, filtering for only experiments that need processing
@@ -133,7 +132,7 @@ class RunDLC:
         )
 
         # Running the DLC subprocess (in a separate conda env)
-        run_dlc_subproc(model_fp, vid_fp_ls, dlc_out_dir, temp_dir, gputouse)
+        run_dlc_subproc(model_fp, vid_fp_ls, dlc_out_dir, TEMP_DIR, gputouse)
 
         # Exporting the h5 to feather the out_dir
         for vid_fp in vid_fp_ls:

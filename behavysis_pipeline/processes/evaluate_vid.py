@@ -96,13 +96,8 @@ class EvaluateVid:
             padding=padding,
         )
         # Define the codec and create VideoWriter object
-        # TODO: uncomment if we need temp fp
-        # cpid = MultiprocMixin.get_cpid()
-        # out_temp_dir = os.path.join(TEMP_DIR, f"evaluate_vid_{cpid}")
-        # os.makedirs(out_temp_dir, exist_ok=True)
-        # out_temp_fp = os.path.join(out_temp_dir, os.path.basename(out_fp))
         out_cap = cv2.VideoWriter(
-            out_fp,  # out_temp_fp
+            out_fp,
             cv2.VideoWriter_fourcc(*"mp4v"),  # type: ignore
             fps,
             (vid_func_runner.w_o, vid_func_runner.h_o),
@@ -124,12 +119,6 @@ class EvaluateVid:
         # Release video objects
         in_cap.release()
         out_cap.release()
-        # TODO: uncomment if we need temp fp
-        # # Exporting from temp to actual out fp
-        # os.makedirs(os.path.dirname(out_fp), exist_ok=True)
-        # shutil.copyfile(temp_fp, out_fp)
-        # # Remove temp subdir
-        # IOMixin.silent_rm(temp_dir)
         # Returning outcome string
         return outcome
 

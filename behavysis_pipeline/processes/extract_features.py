@@ -5,6 +5,7 @@ _summary_
 import os
 
 import pandas as pd
+from behavysis_core.constants import TEMP_DIR
 from behavysis_core.df_classes.df_mixin import DFMixin
 from behavysis_core.df_classes.features_df import FeaturesDf
 from behavysis_core.df_classes.keypoints_df import KeypointsDf
@@ -35,7 +36,6 @@ class ExtractFeatures:
         dlc_fp: str,
         out_fp: str,
         configs_fp: str,
-        temp_dir: str,
         overwrite: bool,
     ) -> str:
         """
@@ -50,8 +50,6 @@ class ExtractFeatures:
             Filepath to save extracted_features dataframe.
         configs_fp : str
             Configs JSON filepath.
-        temp_dir : str
-            Temporary directory path. Used during intermediate SimBA processes.
         overwrite : bool
             Whether to overwrite the out_fp file (if it exists).
 
@@ -65,8 +63,8 @@ class ExtractFeatures:
         name = IOMixin.get_name(dlc_fp)
         cpid = MultiprocMixin.get_cpid()
         configs_dir = os.path.split(configs_fp)[0]
-        simba_in_dir = os.path.join(temp_dir, f"input_{cpid}")
-        simba_dir = os.path.join(temp_dir, f"simba_proj_{cpid}")
+        simba_in_dir = os.path.join(TEMP_DIR, f"input_{cpid}")
+        simba_dir = os.path.join(TEMP_DIR, f"simba_proj_{cpid}")
         features_from_dir = os.path.join(
             simba_dir, "project_folder", "csv", "features_extracted"
         )
@@ -86,7 +84,7 @@ class ExtractFeatures:
         IOMixin.silent_rm(simba_dir)
         # Running SimBA env and script to run SimBA feature extraction
         outcome += run_simba_subproc(
-            simba_dir, simba_in_dir, configs_dir, temp_dir, cpid
+            simba_dir, simba_in_dir, configs_dir, TEMP_DIR, cpid
         )
         # Exporting SimBA feature extraction csv to feather
         simba_out_fp = os.path.join(features_from_dir, f"{name}.csv")

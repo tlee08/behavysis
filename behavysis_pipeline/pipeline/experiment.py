@@ -13,7 +13,6 @@ import numpy as np
 from behavysis_core.constants import (
     ANALYSIS_DIR,
     STR_DIV,
-    TEMP_DIR,
     FileExts,
     Folders,
 )
@@ -265,7 +264,6 @@ class Experiment:
             vid_fp=self.get_fp(Folders.FORMATTED_VID),
             out_fp=self.get_fp(Folders.DLC),
             configs_fp=self.get_fp(Folders.CONFIGS),
-            temp_dir=TEMP_DIR,
             gputouse=gputouse,
             overwrite=overwrite,
         )
@@ -364,7 +362,6 @@ class Experiment:
             dlc_fp=self.get_fp(Folders.PREPROCESSED),
             out_fp=self.get_fp(Folders.FEATURES_EXTRACTED),
             configs_fp=self.get_fp(Folders.CONFIGS),
-            temp_dir=TEMP_DIR,
             overwrite=overwrite,
         )
 

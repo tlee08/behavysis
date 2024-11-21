@@ -17,7 +17,6 @@ from behavysis_core.constants import (
     ANALYSIS_DIR,
     DIAGNOSTICS_DIR,
     STR_DIV,
-    TEMP_DIR,
     Folders,
 )
 from behavysis_core.df_classes.df_mixin import DFMixin
@@ -358,7 +357,6 @@ class Project:
                         [exp.get_fp(Folders.FORMATTED_VID.value) for exp in exp_batch],
                         os.path.join(self.root_dir, Folders.DLC.value),
                         os.path.join(self.root_dir, Folders.CONFIGS.value),
-                        TEMP_DIR,
                         gputouse,
                         overwrite,
                     )
