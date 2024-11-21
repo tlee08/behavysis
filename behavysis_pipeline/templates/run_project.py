@@ -18,8 +18,6 @@ if __name__ == "__main__":
 
     proj.nprocs = 5
 
-    proj = proj.get_experiments()[1]
-
     default_configs_fp = os.path.join(proj_dir, "default_configs.json")
     proj.update_configs(
         default_configs_fp,
