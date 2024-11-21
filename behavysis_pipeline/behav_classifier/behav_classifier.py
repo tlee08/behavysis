@@ -65,7 +65,7 @@ class BehavClassifier:
     """
 
     model_dir: str
-    _clf: BaseTorchModel
+    clf: BaseTorchModel
 
     def __init__(self, model_dir: str) -> None:
         # Storing model directory path
@@ -132,19 +132,6 @@ class BehavClassifier:
         It gets the x directory from the parent directory of the model directory.
         """
         return os.path.join(os.path.dirname(self.model_dir), "y")
-
-    @property
-    def clf(self) -> BaseTorchModel:
-        return self._clf
-
-    @clf.setter
-    def clf(self, clf: BaseTorchModel) -> None:
-        # Setting the clf
-        self._clf = clf
-        # Updating clf_structure name in model configs
-        configs = self.configs
-        configs.clf_structure = type(clf).__name__
-        self.configs = configs
 
     #################################################
     # CREATE MODEL METHODS
@@ -502,6 +489,10 @@ class BehavClassifier:
         self.pipeline_build(clf_cls)
         # Saving the model to disk
         self.clf_save()
+        # Updating clf_structure name in model configs
+        configs = self.configs
+        configs.clf_structure = type(self.clf).__name__
+        self.configs = configs
 
     def pipeline_run(self, x: pd.DataFrame) -> pd.DataFrame:
         """
