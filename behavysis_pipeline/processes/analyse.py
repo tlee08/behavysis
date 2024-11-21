@@ -141,13 +141,12 @@ class Analyse:
                 analysis_i_df.loc[:, idx[:, roi_name]] = (  # type: ignore
                     ~analysis_i_df.loc[:, idx[:, roi_name]]  # type: ignore
                 )
-            analysis_i_df.loc[:, idx[:, roi_name]] = analysis_i_df.loc[  # type: ignore
-                :, idx[:, roi_name]
-            ].astype(np.int8)  # type: ignore
             # Saving scatter_df to list
             scatter_df_ls.append(analysis_i_df)
             # Saving analysis_df to list
-            analysis_df_ls.append(analysis_i_df.loc[:, idx[:, roi_name]])  # type: ignore
+            analysis_df_ls.append(
+                analysis_i_df.loc[:, idx[:, roi_name]].astype(np.int8)  # type: ignore
+            )
         # Concatenating all analysis_df_ls and roi_corners_df_ls
         analysis_df = pd.concat(analysis_df_ls, axis=1)
         corners_df = pd.concat(
@@ -160,18 +159,13 @@ class Analyse:
         # First getting scatter_in_roi columns
         # TODO: any way to include all different "x", "y" to use, rather
         # than the last res_df?
-        # TODO: FIX names
         scatter_df = analysis_i_df.loc[:, idx[:, ["x", "y"]]]  # type: ignore
         for i in indivs:
-            scatter_df[(i, "roi")] = analysis_df.loc[
-                :, idx[i, "thigmo"]
-            ]  # TODO: remove
+            scatter_df[(i, "roi")] = analysis_df[(i, "thigmo")]
             # scatter_df[(i, "roi")] = analysis_df.loc[:, idx[i, roi_names_ls]].apply(  # type: ignore
             #     lambda x: " - ".join(np.array(roi_names_ls)[x.values.astype(bool)]),
             #     axis=1,
             # )
-        print(scatter_df)
-        print(corners_df)
         # Making and saving scatterplot
         plot_fp = os.path.join(out_dir, "scatter_plot", f"{name}.png")
         AnalyseDf.make_location_scatterplot(scatter_df, corners_df, plot_fp, "roi")
