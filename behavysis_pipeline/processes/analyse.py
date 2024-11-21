@@ -78,6 +78,7 @@ class Analyse:
         indivs, _ = KeypointsDf.get_headings(dlc_df)
         # Making analysis_df
         analysis_df_ls = []
+        scatter_df_ls = []
         corners_df_ls = []
         roi_names_ls = []
         # For each roi, calculate the in-roi status of the subject
@@ -118,7 +119,7 @@ class Analyse:
                 corners_i_df.loc[i, y] = corners_i_df.loc[i, y] + (
                     thresh_px * np.sin(theta)
                 )
-            # Saving to corners_df to list
+            # Saving corners_df to list
             corners_df_ls.append(corners_i_df)
             # Making the res_df
             analysis_i_df = AnalyseDf.init_df(dlc_df.index)
@@ -142,7 +143,9 @@ class Analyse:
                 )
             # Casting all values to int8
             analysis_i_df = analysis_i_df.astype(np.uint8)
-            # Saving to analysis_df to list
+            # Saving scatter_df to list
+            scatter_df_ls.append(analysis_i_df)
+            # Saving analysis_df to list
             analysis_df_ls.append(analysis_i_df.loc[:, idx[:, roi_name]])  # type: ignore
         # Concatenating all analysis_df_ls and roi_corners_df_ls
         analysis_df = pd.concat(analysis_df_ls, axis=1)
@@ -159,10 +162,13 @@ class Analyse:
         # TODO: FIX names
         scatter_df = analysis_i_df.loc[:, idx[:, ["x", "y"]]]  # type: ignore
         for i in indivs:
-            scatter_df[(i, "roi")] = analysis_df.loc[:, idx[i, roi_names_ls]].apply(  # type: ignore
-                lambda x: " - ".join(np.array(roi_names_ls)[x.values.astype(bool)]),
-                axis=1,
-            )
+            scatter_df[(i, "roi")] = analysis_df.loc[
+                :, idx[i, "thigmo"]
+            ]  # TODO: remove
+            # scatter_df[(i, "roi")] = analysis_df.loc[:, idx[i, roi_names_ls]].apply(  # type: ignore
+            #     lambda x: " - ".join(np.array(roi_names_ls)[x.values.astype(bool)]),
+            #     axis=1,
+            # )
         print(scatter_df)
         print(corners_df)
         # Making and saving scatterplot
