@@ -81,6 +81,7 @@ class ClassifyBehavs:
                 configs.get_ref(model_config.pcutoff), behav_model.configs.pcutoff
             )
             min_window_frames = configs.get_ref(model_config.min_window_frames)
+            user_behavs = configs.get_ref(model_config.user_behavs)
             # Running the clf pipeline
             df_i = behav_model.pipeline_run(features_df)
             # Getting prob and pred column names
@@ -95,7 +96,7 @@ class ClassifyBehavs:
             # Including "actual" column and setting behav frames to -1
             df_i[actual_col] = df_i[pred_col].values * np.array(-1)
             # Including user-defined sub-behav columns
-            for user_behav in model_config.user_behavs:
+            for user_behav in user_behavs:
                 df_i[(behav_name, user_behav)] = 0
             # Adding model predictions df to list
             df_ls.append(df_i)
