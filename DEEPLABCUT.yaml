@@ -20,7 +20,7 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - python=3.9
+  - python=3.10
   - pip
   - ipython
   - jupyter
@@ -28,8 +28,8 @@ dependencies:
   - notebook<7.0.0
   - ffmpeg
   - pytables==3.8.0
-  - cudatoolkit
-  - cudnn
+  # - cudatoolkit
+  # - cudnn
   - pip:
       # - "git+https://github.com/DeepLabCut/DeepLabCut.git@pytorch_dlc#egg=deeplabcut[gui,modelzoo,wandb]"
       - "deeplabcut[gui,tf]==2.3.9"
