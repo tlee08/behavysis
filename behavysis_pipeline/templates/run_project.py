@@ -2,14 +2,11 @@
 
 import os
 
-from behavysis_pipeline.pipeline import Project
-from behavysis_pipeline.processes import (
-    Analyse,
-    CalculateParams,
-    Evaluate,
-    FormatVid,
-    Preprocess,
-)
+from behavysis_pipeline.pipeline.project import Project
+from behavysis_pipeline.processes.analyse import Analyse
+from behavysis_pipeline.processes.calculate_params import CalculateParams
+from behavysis_pipeline.processes.format_vid import FormatVid
+from behavysis_pipeline.processes.preprocess import Preprocess
 
 if __name__ == "__main__":
     overwrite = True
@@ -40,7 +37,7 @@ if __name__ == "__main__":
         overwrite=overwrite,
     )
 
-    proj.calculate_params(
+    proj.calculate_parameters(
         (
             CalculateParams.start_frame,
             CalculateParams.stop_frame,
@@ -49,7 +46,7 @@ if __name__ == "__main__":
         )
     )
 
-    proj.collate_configs_auto()
+    # proj.collate_configs_auto()
 
     proj.preprocess(
         (
@@ -62,8 +59,6 @@ if __name__ == "__main__":
 
     proj.analyse(
         (
-            Analyse.thigmotaxis,
-            Analyse.center_crossing,
             Analyse.in_roi,
             Analyse.speed,
             Analyse.social_distance,
@@ -77,13 +72,9 @@ if __name__ == "__main__":
 
     proj.analyse_behaviours()
 
-    proj.analyse_combine()
+    proj.analyse_combine(overwrite)
 
-    proj.evaluate(
-        (
-            Evaluate.eval_vid,
-            Evaluate.keypoints_plot,
-        ),
+    proj.evaluate_vid(
         overwrite=overwrite,
     )
 
