@@ -118,6 +118,8 @@ class Analyse:
                 corners_i_df.loc[i, y] = corners_i_df.loc[i, y] + (
                     thresh_px * np.sin(theta)
                 )
+            # Saving to corners_df to list
+            corners_df_ls.append(corners_i_df)
             # Making the res_df
             analysis_i_df = AnalyseDf.init_df(dlc_df.index)
             # For each individual, getting the in-roi status
@@ -140,9 +142,8 @@ class Analyse:
                 )
             # Casting all values to int8
             analysis_i_df = analysis_i_df.astype(np.uint8)
-            # Saving to analysis_df and roi_corners_df list
+            # Saving to analysis_df to list
             analysis_df_ls.append(analysis_i_df.loc[:, idx[:, roi_name]])  # type: ignore
-            corners_df_ls.append(corners_i_df)
         # Concatenating all analysis_df_ls and roi_corners_df_ls
         analysis_df = pd.concat(analysis_df_ls, axis=1)
         corners_df = pd.concat(
