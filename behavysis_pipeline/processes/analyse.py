@@ -100,22 +100,22 @@ class Analyse:
             KeypointsDf.check_bpts_exist(dlc_df, bpts)
             KeypointsDf.check_bpts_exist(dlc_df, roi_corners)
             # Getting average corner coordinates. Assumes arena does not move.
-            roi_corners_df = pd.DataFrame(
+            corners_df = pd.DataFrame(
                 [dlc_df[(IndivColumns.SINGLE.value, pt)].mean() for pt in roi_corners]
             ).drop(columns=["likelihood"])
             # Adjusting x-y to have `thresh_px` dilation/erosion from the points themselves
-            roi_center = roi_corners_df.mean()
-            for i in roi_corners_df.index:
+            roi_center = corners_df.mean()
+            for i in corners_df.index:
                 # Calculating angle from centre to point (going out from centre)
                 theta = np.arctan2(
-                    -(roi_corners_df.loc[i, y] - roi_center[y]),
-                    roi_corners_df.loc[i, x] - roi_center[x],
+                    -(corners_df.loc[i, y] - roi_center[y]),
+                    corners_df.loc[i, x] - roi_center[x],
                 )
                 # Getting x, y distances so point is `thresh_px` padded (away) from center
-                roi_corners_df.loc[i, x] = roi_corners_df.loc[i, x] + (
+                corners_df.loc[i, x] = corners_df.loc[i, x] + (
                     thresh_px * np.cos(theta)
                 )
-                roi_corners_df.loc[i, y] = roi_corners_df.loc[i, y] + (
+                corners_df.loc[i, y] = corners_df.loc[i, y] + (
                     thresh_px * np.sin(theta)
                 )
             # Making the res_df
@@ -131,7 +131,7 @@ class Analyse:
                 )
                 # Determining if the indiv body center is in the ROI
                 res_df[(indiv, roi_name)] = res_df[indiv].apply(
-                    lambda pt: pt_in_roi(pt, roi_corners_df), axis=1
+                    lambda pt: pt_in_roi(pt, corners_df), axis=1
                 )
             # Inverting in_roi status if is_in is False
             if not is_in:
@@ -140,13 +140,13 @@ class Analyse:
             res_df = res_df.astype(np.uint8)
             # Saving to analysis_df and roi_corners_df list
             analysis_df_ls.append(res_df.loc[:, idx[:, roi_name]])  # type: ignore
-            roi_corners_df_ls.append(roi_corners_df)
+            roi_corners_df_ls.append(corners_df)
         # Concatenating all analysis_df_ls and roi_corners_df_ls
         analysis_df = pd.concat(analysis_df_ls, axis=1)
-        roi_corners_df = pd.concat(
+        corners_df = pd.concat(
             roi_corners_df_ls, keys=range(len(roi_corners_df_ls)), names=["group"]
         )
-        roi_corners_df = roi_corners_df.reset_index(level="group")
+        corners_df = corners_df.reset_index(level="group")
         # Saving analysis_df
         fbf_fp = os.path.join(out_dir, "fbf", f"{name}.feather")
         DFMixin.write_feather(analysis_df, fbf_fp)
@@ -162,7 +162,7 @@ class Analyse:
             )
         # Making and saving scatterplot
         plot_fp = os.path.join(out_dir, "scatter_plot", f"{name}.png")
-        AnalyseDf.make_location_scatterplot(scatter_df, roi_corners_df, plot_fp, "roi")
+        AnalyseDf.make_location_scatterplot(scatter_df, corners_df, plot_fp, "roi")
         # Summarising and binning analysis_df
         AnalyseAggDf.summary_binned_behavs(
             analysis_df,
@@ -412,21 +412,21 @@ class Analyse:
         return outcome
 
 
-def pt_in_roi(pt: pd.Series, roi_df: pd.DataFrame) -> bool:
+def pt_in_roi(pt: pd.Series, corners_df: pd.DataFrame) -> bool:
     """__summary__"""
     # Counting crossings over edge in region when point is translated to the right
     crossings = 0
     # To loop back to the first point at the end
-    first_roi_pt = pd.DataFrame(roi_df.iloc[0]).T
-    roi_df = pd.concat((roi_df, first_roi_pt), axis=0, ignore_index=True)
+    first_corner = pd.DataFrame(corners_df.iloc[0]).T
+    corners_df = pd.concat((corners_df, first_corner), axis=0, ignore_index=True)
     # Making x and y aliases
     x = Coords.X.value
     y = Coords.Y.value
     # For each edge
-    for i in range(roi_df.shape[0] - 1):
+    for i in range(corners_df.shape[0] - 1):
         # Getting corner points of edge
-        c1 = roi_df.iloc[i]
-        c2 = roi_df.iloc[i + 1]
+        c1 = corners_df.iloc[i]
+        c2 = corners_df.iloc[i + 1]
         # Getting whether point-y is between corners-y
         y_between = (c1[y] > pt[y]) != (c2[y] > pt[y])
         # Getting whether point-x is to the left (less than) the intersection of corners-x
