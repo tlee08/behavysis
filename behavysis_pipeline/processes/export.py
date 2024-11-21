@@ -51,6 +51,7 @@ class Export:
         overwrite: bool,
     ) -> str:
         """ """
+        outcome = ""
         # TODO: use this in 6_pred_behavs
         # Reading the configs file
         configs = ExperimentConfigs.read_json(configs_fp)
@@ -62,6 +63,16 @@ class Export:
             ).configs.behaviour_name: configs.get_ref(model.user_behavs)
             for model in models_ls
         }
+        behav_outcomes = {}
+        for model in models_ls:
+            try:
+                behav_model_i = BehavClassifier.load(model.model_fp)
+            except FileNotFoundError:
+                outcome += "WARNING: Model file not found. Skipping model.\n"
+                continue
+            behav_name_i = behav_model_i.configs.behaviour_name
+            user_behavs_i = configs.get_ref(model.user_behavs)
+            behav_outcomes[behav_name_i] = user_behavs_i
         # Reading file
         in_df = BehavDf.read_feather(src_fp)
         # Making the output df (with all user_behav outcome columns)
@@ -69,7 +80,8 @@ class Export:
         # Writing file
         DFMixin.write_feather(out_df, out_fp)
         # Returning outcome
-        return "predicted_behavs to scored_behavs\n"
+        outcome += "predicted_behavs to scored_behavs.\n"
+        return outcome
 
     @staticmethod
     @IOMixin.overwrite_check()
