@@ -78,7 +78,8 @@ class Analyse:
         indivs, _ = KeypointsDf.get_headings(dlc_df)
         # Making analysis_df
         analysis_df_ls = []
-        roi_c_df_ls = []
+        roi_corners_df_ls = []
+        roi_names_ls = []
         # For each roi, calculate the in-roi status of the subject
         x = Coords.X.value
         y = Coords.Y.value
@@ -91,26 +92,32 @@ class Analyse:
             bpts = configs.get_ref(configs_filt.bodyparts)
             thresh_mm = configs.get_ref(configs_filt.thresh_mm)
             roi_corners = configs.get_ref(configs_filt.roi_corners)
+            # Saving roi_name
+            roi_names_ls.append(roi_name)
             # Calculating more parameters
             thresh_px = thresh_mm / px_per_mm
             # Checking bodyparts and roi_corners exist
             KeypointsDf.check_bpts_exist(dlc_df, bpts)
             KeypointsDf.check_bpts_exist(dlc_df, roi_corners)
             # Getting average corner coordinates. Assumes arena does not move.
-            roi_c_df = pd.DataFrame(
+            roi_corners_df = pd.DataFrame(
                 [dlc_df[(IndivColumns.SINGLE.value, pt)].mean() for pt in roi_corners]
             ).drop(columns=["likelihood"])
             # Adjusting x-y to have `thresh_px` dilation/erosion from the points themselves
-            roi_center = roi_c_df.mean()
-            for i in roi_c_df.index:
+            roi_center = roi_corners_df.mean()
+            for i in roi_corners_df.index:
                 # Calculating angle from centre to point (going out from centre)
                 theta = np.arctan2(
-                    roi_c_df.loc[i, y] - roi_center[y],
-                    roi_c_df.loc[i, x] - roi_center[x],
+                    -(roi_corners_df.loc[i, y] - roi_center[y]),
+                    roi_corners_df.loc[i, x] - roi_center[x],
                 )
                 # Getting x, y distances so point is `thresh_px` padded (away) from center
-                roi_c_df.loc[i, x] = roi_c_df.loc[i, x] + (thresh_px * np.cos(theta))
-                roi_c_df.loc[i, y] = roi_c_df.loc[i, y] + (thresh_px * np.sin(theta))
+                roi_corners_df.loc[i, x] = roi_corners_df.loc[i, x] + (
+                    thresh_px * np.cos(theta)
+                )
+                roi_corners_df.loc[i, y] = roi_corners_df.loc[i, y] + (
+                    thresh_px * np.sin(theta)
+                )
             # Making the res_df
             res_df = AnalyseDf.init_df(dlc_df.index)
             # For each individual, getting the in-roi status
@@ -123,25 +130,25 @@ class Analyse:
                     dlc_df.loc[:, idx[indiv, bpts, y]].mean(axis=1).values  # type: ignore
                 )
                 # Determining if the indiv body center is in the ROI
-                res_df[(indiv, "in_roi")] = (
+                res_df[(indiv, roi_name)] = (
                     res_df[indiv]
-                    .apply(lambda pt: pt_in_roi(pt, roi_c_df), axis=1)
+                    .apply(lambda pt: pt_in_roi(pt, roi_corners_df), axis=1)
                     .astype(np.int8)
                 )
             # Inverting in_roi status if is_in is False
             if not is_in:
-                res_df.loc[:, idx[:, "in_roi"]] = ~res_df.loc[:, idx[:, "in_roi"]]  # type: ignore
-            # Changing column MultiIndex names
-            res_df.columns = res_df.columns.set_levels(  # type: ignore
-                [x, y, f"in_roi_{roi_name}"], level=AnalyseDf.CN.MEASURES.value
-            )
+                res_df.loc[:, idx[:, roi_name]] = res_df.loc[:, idx[:, roi_name]] == 0  # type: ignore
+            # Casting all values to int8
+            res_df = res_df.astype(np.uint8)
             # Saving to analysis_df and roi_corners_df list
-            analysis_df_ls.append(res_df.loc[:, idx[:, f"in_roi_{roi_name}"]])  # type: ignore
-            roi_c_df_ls.append(roi_c_df)
+            analysis_df_ls.append(res_df.loc[:, idx[:, roi_name]])  # type: ignore
+            roi_corners_df_ls.append(roi_corners_df)
         # Concatenating all analysis_df_ls and roi_corners_df_ls
         analysis_df = pd.concat(analysis_df_ls, axis=1)
-        roi_c_df = pd.concat(roi_c_df_ls, keys=range(len(roi_c_df_ls)), names=["group"])
-        roi_c_df = roi_c_df.reset_index(level="group")
+        roi_corners_df = pd.concat(
+            roi_corners_df_ls, keys=range(len(roi_corners_df_ls)), names=["group"]
+        )
+        roi_corners_df = roi_corners_df.reset_index(level="group")
         # Saving analysis_df
         fbf_fp = os.path.join(out_dir, "fbf", f"{name}.feather")
         DFMixin.write_feather(analysis_df, fbf_fp)
@@ -149,14 +156,15 @@ class Analyse:
         # First getting scatter_in_roi columns
         # TODO: any way to include all different "x", "y" to use, rather
         # than the last res_df?
+        # TODO: FIX names
         scatter_df = res_df.loc[:, idx[:, ["x", "y"]]]  # type: ignore
         for i in indivs:
-            scatter_df[(i, "roi")] = analysis_df[i].apply(
-                lambda x: "-".join(x.index[x == 1]), axis=1
+            scatter_df[(i, "roi")] = analysis_df[(i, roi_names_ls)].apply(
+                lambda x: " - ".join(x.index[x == 1]), axis=1
             )
         # Making and saving scatterplot
         plot_fp = os.path.join(out_dir, "scatter_plot", f"{name}.png")
-        AnalyseDf.make_location_scatterplot(scatter_df, roi_c_df, plot_fp, "roi")
+        AnalyseDf.make_location_scatterplot(scatter_df, roi_corners_df, plot_fp, "roi")
         # Summarising and binning analysis_df
         AnalyseAggDf.summary_binned_behavs(
             analysis_df,
