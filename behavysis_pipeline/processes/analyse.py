@@ -108,7 +108,7 @@ class Analyse:
             for i in corners_i_df.index:
                 # Calculating angle from centre to point (going out from centre)
                 theta = np.arctan2(
-                    -(corners_i_df.loc[i, y] - roi_center[y]),
+                    corners_i_df.loc[i, y] - roi_center[y],
                     corners_i_df.loc[i, x] - roi_center[x],
                 )
                 # Getting x, y distances so point is `thresh_px` padded (away) from center
