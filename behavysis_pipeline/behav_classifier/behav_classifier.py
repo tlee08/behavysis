@@ -110,7 +110,7 @@ class BehavClassifier:
         behavs_ls = y_df.columns.to_list()
         model_dir = os.path.join(proj.root_dir, BEHAV_MODELS_SUBDIR)
         models_ls = [cls.create_new_model(model_dir, behav) for behav in behavs_ls]
-        # Importing data from project to "beham_models" folder (only need one model for this)
+        # Importing data from project to "behav_models" folder (only need one model for this)
         if len(models_ls) > 0:
             models_ls[0].import_data(
                 os.path.join(proj.root_dir, Folders.FEATURES_EXTRACTED.value),

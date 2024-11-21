@@ -250,10 +250,10 @@ class CNN2(BaseTorchModel):
 
 
 CLF_TEMPLATES = [
-    RF1,
+    # RF1,
     DNN1,
-    DNN2,
-    DNN3,
+    # DNN2,
+    # DNN3,
     CNN1,
-    CNN2,
+    # CNN2,
 ]
