@@ -2,10 +2,10 @@ import os
 
 import pandas as pd
 
-from behavysis_pipeline.behav_classifier import BehavClassifier
+from behavysis_pipeline.behav_classifier.behav_classifier import BehavClassifier
 from behavysis_pipeline.behav_classifier.clf_models.clf_templates import DNN1
-from behavysis_pipeline.pipeline import Project
-from behavysis_pipeline.processes import Export
+from behavysis_pipeline.pipeline.project import Project
+from behavysis_pipeline.processes.export import Export
 
 if __name__ == "__main__":
     root_dir = "."
@@ -21,7 +21,7 @@ if __name__ == "__main__":
     for i in os.listdir(boris_dir):
         name = os.path.splitext(i)[0]
         print(name)
-        outcome = Export.boris_2_behav(
+        outcome = Export.boris2behav(
             src_fp=os.path.join(boris_dir, f"{name}.tsv"),
             out_fp=os.path.join(behav_dir, f"{name}.feather"),
             configs_fp=os.path.join(config_dir, f"{name}.json"),
@@ -61,4 +61,4 @@ if __name__ == "__main__":
     # Getting data
     x = pd.read_feather("path/to/features_extracted.feather")
     # Running inference
-    res = model.clf_predict(x)
+    res = model.pipeline_run(x)
