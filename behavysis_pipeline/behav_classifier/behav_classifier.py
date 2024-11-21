@@ -321,8 +321,10 @@ class BehavClassifier:
         # Converting MultiIndex columns to single columns by
         # setting the column names from `(behav, outcome)` to `{behav}__{outcome}`
         y.columns = [
-            f"{i[0]}" if i[1] == BehavColumns.ACTUAL.value else f"{i[0]}__{i[1]}"
-            for i in y.columns
+            f"{behav_name}"
+            if outcome_name == BehavColumns.ACTUAL.value
+            else f"{behav_name}__{outcome_name}"
+            for behav_name, outcome_name in y.columns
         ]
         return y
 
