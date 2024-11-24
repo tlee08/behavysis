@@ -68,6 +68,8 @@ class EvaluateVid:
                 "Disregarding analysis."
             )
             analysis_df = AnalyseCombineDf.init_df(dlc_df.index)
+        print(analyse_df)
+        print("=====================================")
 
         # TODO: maybe use configs instead
         # OPENING INPUT VIDEO
