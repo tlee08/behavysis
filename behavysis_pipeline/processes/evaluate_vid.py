@@ -459,6 +459,10 @@ class Analysis(EvalVidFuncBase):
                 self.update_plot(idx, i, j)
                 # Making plot frame (as cv2 image)
                 plot_frame_ij = self.plot2cv_(self.plot_arr[i][j])
+                print("ABCD")
+                print(plot_frame_ij)
+                print(h_p_0, w_p_0)
+                print("XYZ")
                 # Superimposing plot_frame_ij on plot_frame
                 plot_frame[
                     h_p_0 : h_p_0 + plot_frame_ij.shape[0],
