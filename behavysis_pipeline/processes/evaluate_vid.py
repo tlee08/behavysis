@@ -68,8 +68,6 @@ class EvaluateVid:
                 "Disregarding analysis."
             )
             analysis_df = AnalyseCombineDf.init_df(dlc_df.index)
-        print(analysis_df)
-        print("=====================================")
 
         # TODO: maybe use configs instead
         # OPENING INPUT VIDEO
@@ -381,21 +379,26 @@ class Analysis(EvalVidFuncBase):
         """
         # Making multi-plot widget
         self.plots_layout = pg.GraphicsLayoutWidget()
-        # Getting list of different groups (`analysis`, `individuals` levels)
-        # For making separate plots in layout
+        # For making separate plots in layout for (`analysis` (row), `individuals` (col))
         df_columns = self.analysis_df.columns
+        # Getting the uniques analysis group names
         analysis_ls = df_columns.unique(AnalyseCombineDf.CN.ANALYSIS.value)
-        indivs_ls = df_columns.unique(AnalyseCombineDf.CN.INDIVIDUALS.value)
-        print(self.analysis_df)
-        print(df_columns)
-        # Calculating each plot's width and height
+        # Calculating each plot's height
         self.h_p = int(np.round(self.h_i / len(analysis_ls)))
+        # Getting the uniques individual names in the analysis group
+        indivs_ls = df_columns.unique(AnalyseCombineDf.CN.INDIVIDUALS.value)
+        # Calculating the width of each plot in the current row
         self.w_p = int(np.round(self.w_i / len(indivs_ls)))
         # Making each plot (from "analysis")
         self.plot_arr = np.zeros(shape=(len(analysis_ls), len(indivs_ls)), dtype=object)
         self.x_line_arr = np.copy(self.plot_arr)
         for i, analysis_i in enumerate(analysis_ls):
             for j, indivs_j in enumerate(indivs_ls):
+                # If current analysis_i and indivs_j combo doesn't exist, skip
+                # This can happen when the indiv_j is a custom value (e.g. from `social_distance`)
+                # TODO: completely restructure so there aren't redundant plots. Make each row separate.
+                if (analysis_i, indivs_j) not in df_columns:
+                    continue
                 # Getting measures_ls, based on current analysis_i and indivs_j
                 measures_ls = self.analysis_df[(analysis_i, indivs_j)].columns.unique(
                     AnalyseCombineDf.CN.MEASURES.value
