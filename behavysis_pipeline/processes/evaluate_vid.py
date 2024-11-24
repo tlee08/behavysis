@@ -384,6 +384,7 @@ class Analysis(EvalVidFuncBase):
         df_columns = self.analysis_df.columns
         analysis_ls = df_columns.unique(AnalyseCombineDf.CN.ANALYSIS.value)
         indivs_ls = df_columns.unique(AnalyseCombineDf.CN.INDIVIDUALS.value)
+        print(self.analysis_df)
         print(df_columns)
         # Calculating each plot's width and height
         self.h_p = int(np.round(self.h_i / len(analysis_ls)))
