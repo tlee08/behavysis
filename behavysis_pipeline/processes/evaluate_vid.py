@@ -379,50 +379,50 @@ class Analysis(EvalVidFuncBase):
         """
         # Making multi-plot widget
         self.plots_layout = pg.GraphicsLayoutWidget()
-        # For making separate plots in layout for (`analysis` (row), `individuals` (col))
-        df_columns = self.analysis_df.columns
         # Getting the uniques analysis group names
-        analysis_ls = df_columns.unique(AnalyseCombineDf.CN.ANALYSIS.value)
-        # Calculating each plot's height
+        # And calculating each plot's height
+        analysis_ls = self.analysis_df.columns.unique(
+            AnalyseCombineDf.CN.ANALYSIS.value
+        )
         self.h_p = int(np.round(self.h_i / len(analysis_ls)))
-        # Getting the uniques individual names in the analysis group
-        indivs_ls = df_columns.unique(AnalyseCombineDf.CN.INDIVIDUALS.value)
-        # Calculating the width of each plot in the current row
-        self.w_p = int(np.round(self.w_i / len(indivs_ls)))
-        # Making each plot (from "analysis")
-        self.plot_arr = np.zeros(shape=(len(analysis_ls), len(indivs_ls)), dtype=object)
-        self.x_line_arr = np.copy(self.plot_arr)
+        # Making list of lists to store each plot (for "analysis")
+        self.plot_arr = []
+        self.x_line_arr = []
         for i, analysis_i in enumerate(analysis_ls):
+            # Getting the uniques individual names in the analysis group
+            # And calculating the width of each plot in the current row
+            indivs_ls = self.analysis_df[(analysis_i,)].columns.unique(
+                AnalyseCombineDf.CN.INDIVIDUALS.value
+            )
+            self.w_p = int(np.round(self.w_i / len(indivs_ls)))
+            # Making list to store each plot (for "individuals")
+            plot_arr_i = []
+            x_line_arr_i = []
             for j, indivs_j in enumerate(indivs_ls):
-                # If current analysis_i and indivs_j combo doesn't exist, skip
-                # This can happen when the indiv_j is a custom value (e.g. from `social_distance`)
-                # TODO: completely restructure so there aren't redundant plots. Make each row separate.
-                if (analysis_i, indivs_j) not in df_columns:
-                    continue
                 # Getting measures_ls, based on current analysis_i and indivs_j
                 measures_ls = self.analysis_df[(analysis_i, indivs_j)].columns.unique(
                     AnalyseCombineDf.CN.MEASURES.value
                 )
                 # Making plot
-                self.plot_arr[i, j] = self.plots_layout.addPlot(  # type: ignore
+                plot_arr_ij = self.plots_layout.addPlot(  # type: ignore
                     row=i,
                     col=j,
                     title=f"{analysis_i} - {indivs_j}",
                     labels={"left": "value", "bottom": "second"},
                 )
                 # Setting width and height
-                self.plot_arr[i, j].setFixedHeight(self.h_p)
-                self.plot_arr[i, j].setFixedWidth(self.w_p)
+                plot_arr_ij.setFixedHeight(self.h_p)
+                plot_arr_ij.setFixedWidth(self.w_p)
                 # Plot middle (current time) line
-                self.x_line_arr[i, j] = pg.InfiniteLine(pos=0, angle=90)
-                self.x_line_arr[i, j].setZValue(10)
-                self.plot_arr[i, j].addItem(self.x_line_arr[i, j])
+                x_line_arr_ij = pg.InfiniteLine(pos=0, angle=90)
+                x_line_arr_ij.setZValue(10)
+                plot_arr_ij.addItem(x_line_arr_ij)
                 # Setting data
                 # TODO implement for bouts as well, NOT just line graph
                 # Making the corresponding colours list for each measures instance
                 colours_ls = _make_colours(measures_ls, self.cmap)
                 # make legend
-                legend = self.plot_arr[i, j].addLegend()
+                legend = plot_arr_ij.addLegend()
                 for k, measures_k in enumerate(measures_ls):
                     colours_k = colours_ls[k]
                     # make measure's line
@@ -433,9 +433,15 @@ class Analysis(EvalVidFuncBase):
                         # brush=pg.mkBrush(color=colours_k),
                     )
                     # line_item.setFillLevel(0)
-                    self.plot_arr[i, j].addItem(line_item)
+                    plot_arr_ij.addItem(line_item)
                     # make measure's legend
                     legend.addItem(item=line_item, name=measures_k)
+                # Adding to plot_arr_i and x_line_arr_i row list
+                plot_arr_i.append(plot_arr_ij)
+                x_line_arr_i.append(x_line_arr_ij)
+            # Adding to plot_arr and x_line_arr list-of-lists
+            self.plot_arr.append(plot_arr_i)
+            self.x_line_arr.append(x_line_arr_i)
 
     def __call__(self, frame: np.ndarray, idx: int) -> np.ndarray:
         # For each plot (rows (analysis), columns (indivs))
@@ -445,13 +451,13 @@ class Analysis(EvalVidFuncBase):
             dtype=np.uint8,
         )
         # plot_frame = self.grl2cv_(self.plots_layout)
-        for i in range(self.plot_arr.shape[0]):
-            for j in range(self.plot_arr.shape[1]):
+        for i in range(len(self.plot_arr)):
+            for j in range(len(self.plot_arr[i])):
                 self.update_plot(idx, i, j)
                 plot_frame[
                     self.h_p * i : self.h_p * (i + 1),
                     self.w_p * j : self.w_p * (j + 1),
-                ] = self.plot2cv_(self.plot_arr[i, j])
+                ] = self.plot2cv_(self.plot_arr[i][j])
         # Returning
         return plot_frame
 
@@ -460,8 +466,8 @@ class Analysis(EvalVidFuncBase):
         For a single plot
         (as the plots_layout has rows (analysis) and columns (indivs)).
         """
-        self.x_line_arr[i, j].setPos(idx)
-        self.plot_arr[i, j].setXRange(idx - self.padding, idx + self.padding)
+        self.x_line_arr[i][j].setPos(idx)
+        self.plot_arr[i][j].setXRange(idx - self.padding, idx + self.padding)
 
     @classmethod
     def qt2cv(cls, img_qt: QtGui.QImage) -> np.ndarray:
