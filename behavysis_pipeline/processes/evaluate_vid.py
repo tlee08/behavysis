@@ -451,9 +451,11 @@ class Analysis(EvalVidFuncBase):
             dtype=np.uint8,
         )
         # plot_frame = self.grl2cv_(self.plots_layout)
+        # Initialising columns start
         h_p_0 = 0
-        w_p_0 = 0
         for i in range(len(self.plot_arr)):
+            # Initialising rows start
+            w_p_0 = 0
             for j in range(len(self.plot_arr[i])):
                 # Updating plot
                 self.update_plot(idx, i, j)
@@ -472,9 +474,10 @@ class Analysis(EvalVidFuncBase):
                     h_p_0 : h_p_0 + plot_frame_ij.shape[0],
                     w_p_0 : w_p_0 + plot_frame_ij.shape[1],
                 ] = plot_frame_ij
-                # Updating h_p_0 and w_p_0
-                h_p_0 += plot_frame_ij.shape[0]
+                # Updating columns start
                 w_p_0 += plot_frame_ij.shape[1]
+            # Updating rows start
+            h_p_0 += plot_frame_ij.shape[0]
         # Returning
         return plot_frame
 
