@@ -384,7 +384,7 @@ class Analysis(EvalVidFuncBase):
         analysis_ls = self.analysis_df.columns.unique(
             AnalyseCombineDf.CN.ANALYSIS.value
         )
-        self.h_p = int(np.round(self.h_i / len(analysis_ls)))
+        h_p = int(np.round(self.h_i / len(analysis_ls)))
         # Making list of lists to store each plot (for "analysis")
         self.plot_arr = []
         self.x_line_arr = []
@@ -394,7 +394,7 @@ class Analysis(EvalVidFuncBase):
             indivs_ls = self.analysis_df[(analysis_i,)].columns.unique(
                 AnalyseCombineDf.CN.INDIVIDUALS.value
             )
-            self.w_p = int(np.round(self.w_i / len(indivs_ls)))
+            w_p = int(np.round(self.w_i / len(indivs_ls)))
             # Making list to store each plot (for "individuals")
             plot_arr_i = []
             x_line_arr_i = []
@@ -411,8 +411,8 @@ class Analysis(EvalVidFuncBase):
                     labels={"left": "value", "bottom": "second"},
                 )
                 # Setting width and height
-                plot_arr_ij.setFixedHeight(self.h_p)
-                plot_arr_ij.setFixedWidth(self.w_p)
+                plot_arr_ij.setFixedHeight(h_p)
+                plot_arr_ij.setFixedWidth(w_p)
                 # Plot middle (current time) line
                 x_line_arr_ij = pg.InfiniteLine(pos=0, angle=90)
                 x_line_arr_ij.setZValue(10)
@@ -451,13 +451,22 @@ class Analysis(EvalVidFuncBase):
             dtype=np.uint8,
         )
         # plot_frame = self.grl2cv_(self.plots_layout)
+        h_p_0 = 0
+        w_p_0 = 0
         for i in range(len(self.plot_arr)):
             for j in range(len(self.plot_arr[i])):
+                # Updating plot
                 self.update_plot(idx, i, j)
+                # Making plot frame (as cv2 image)
+                plot_frame_ij = self.plot2cv_(self.plot_arr[i][j])
+                # Superimposing plot_frame_ij on plot_frame
                 plot_frame[
-                    self.h_p * i : self.h_p * (i + 1),
-                    self.w_p * j : self.w_p * (j + 1),
-                ] = self.plot2cv_(self.plot_arr[i][j])
+                    h_p_0 : h_p_0 + plot_frame_ij.shape[0],
+                    w_p_0 : w_p_0 + plot_frame_ij.shape[1],
+                ] = plot_frame_ij
+                # Updating h_p_0 and w_p_0
+                h_p_0 += plot_frame_ij.shape[0]
+                w_p_0 += plot_frame_ij.shape[1]
         # Returning
         return plot_frame
 
