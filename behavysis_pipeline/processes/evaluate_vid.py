@@ -505,6 +505,7 @@ class Analysis(EvalVidFuncBase):
         # Reshaping to height-bytesPerLine format
         img_cv = img_cv.reshape(h, bpl)
         # Remove the padding bytes
+        # NOTE: adjust the static number for bytes per pixel
         img_cv = img_cv[:, : w * 3]
         # Reshaping to cv2 format
         img_cv = img_cv.reshape(h, w, 3)
