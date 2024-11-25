@@ -20,7 +20,7 @@ from behavysis_core.pydantic_models.experiment_configs import ExperimentConfigs
 # - https://github.com/sgoldenlab/simba/blob/master/docs/Tutorial_DLC.md
 # - https://github.com/sgoldenlab/simba/blob/master/simba/pose_configurations/bp_names/bp_names.csv
 # - https://github.com/sgoldenlab/simba/blob/master/simba/pose_configurations/configuration_names/pose_config_names.csv
-# And can also double check by looking at the order in "project_folder\csv\input_csv" files.
+# 2 animals; 16 body-parts
 
 #####################################################################
 #               FEATURE EXTRACTION FOR SIMBA

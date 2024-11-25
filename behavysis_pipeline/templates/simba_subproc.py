@@ -46,6 +46,7 @@ class FeatureExtractor:
         Pose number is from:
             - https://github.com/sgoldenlab/simba/blob/master/simba/pose_configurations/configuration_names/pose_config_names.csv
             - https://github.com/sgoldenlab/simba/blob/master/simba/pose_configurations/bp_names/bp_names.csv
+        2 animals; 16 body-parts
         """
         ProjectConfigCreator(
             project_path=os.path.split(proj_dir)[0],
