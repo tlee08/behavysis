@@ -120,7 +120,7 @@ class Preprocess:
         # Getting necessary config parameters list
         configs = ExperimentConfigs.read_json(configs_fp)
         configs_filt_ls = list(configs.user.preprocess.interpolate_stationary)  # type: ignore
-        scorer = configs.auto.scorer_name
+        # scorer = configs.auto.scorer_name
         width_px = configs.auto.formatted_vid.width_px
         height_px = configs.auto.formatted_vid.height_px
         if width_px is None or height_px is None:
@@ -129,6 +129,8 @@ class Preprocess:
             )
         # Reading file
         df = DFMixin.read_feather(dlc_fp)
+        # Getting the scorer name
+        scorer = df.columns.unique(KeypointsDf.CN.SCORER.value)[0]
         # For each bodypart, filling in the given point
         for configs_filt in configs_filt_ls:
             # Getting config parameters
