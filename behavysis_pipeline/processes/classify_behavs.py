@@ -104,10 +104,8 @@ class ClassifyBehavs:
         # Setting the index and column names
         behavs_df.index.names = list(MiscMixin.enum2tuple(BehavDf.IN))
         behavs_df.columns.names = list(MiscMixin.enum2tuple(BehavDf.CN))
-        # Checking df
-        BehavDf.check_df(behavs_df)
         # Saving behav_preds df
-        DFMixin.write_feather(behavs_df, out_fp)
+        BehavDf.write_feather(behavs_df, out_fp)
         # Returning outcome
         return outcome
 

@@ -84,7 +84,7 @@ class Export:
         # Ordering by "behaviours" level
         out_df = out_df.sort_index(axis=1, level=BehavDf.CN.BEHAVIOURS.value)
         # Writing file
-        DFMixin.write_feather(out_df, out_fp)
+        BehavDf.write_feather(out_df, out_fp)
         # Returning outcome
         outcome += "predicted_behavs to scored_behavs.\n"
         return outcome
@@ -105,6 +105,6 @@ class Export:
         # Importing the boris file to the Behav df format
         df = BehavDf.import_boris_tsv(src_fp, behavs_ls, start_frame, stop_frame)
         # Writing file
-        DFMixin.write_feather(df, out_fp)
+        BehavDf.write_feather(df, out_fp)
         # Returning outcome
         return "boris tsv to behav\n"

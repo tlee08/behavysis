@@ -79,16 +79,13 @@ class Preprocess:
         configs = ExperimentConfigs.read_json(configs_fp)
         start_frame = configs.auto.start_frame
         stop_frame = configs.auto.stop_frame
-
         # Reading file
         df = KeypointsDf.read_feather(dlc_fp)
-
         # Trimming dataframe
         df = df.loc[start_frame:stop_frame, :]
-
         # Writing file
-        DFMixin.write_feather(df, out_fp)
-
+        KeypointsDf.write_feather(df, out_fp)
+        # Returning outcome
         return outcome
 
     @staticmethod
@@ -156,7 +153,7 @@ class Preprocess:
             else:
                 outcome += f"{bodypart} is detected in more than {pcutoff_all} of the video. No need for stationary interpolation.\n"
         # Saving
-        DFMixin.write_feather(df, out_fp)
+        KeypointsDf.write_feather(df, out_fp)
         # Returning outcome
         return outcome
 
@@ -207,7 +204,7 @@ class Preprocess:
         # if df.isnull().values.any() then the entire column is nan (print warning)
         df = df.fillna(0)
         # Writing file
-        DFMixin.write_feather(df, out_fp)
+        KeypointsDf.write_feather(df, out_fp)
         return outcome
 
     @staticmethod
@@ -266,7 +263,7 @@ class Preprocess:
         # Updating df with the switched values
         df_switched = switch_identities(df, df_switch[metric], marked, unmarked)
         # Writing to file
-        DFMixin.write_feather(df_switched, out_fp)
+        KeypointsDf.write_feather(df_switched, out_fp)
         return outcome
 
 

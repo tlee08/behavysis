@@ -23,7 +23,6 @@ import os
 import pandas as pd
 from behavysis_core.df_classes.analyse_combine_df import AnalyseCombineDf
 from behavysis_core.df_classes.analyse_df import AnalyseDf
-from behavysis_core.df_classes.df_mixin import DFMixin
 from behavysis_core.mixins.io_mixin import IOMixin
 
 ###################################################################################################
@@ -76,6 +75,6 @@ class AnalyseCombine:
             names=[AnalyseCombineDf.CN.ANALYSIS.value],
         )
         # Writing to file
-        DFMixin.write_feather(comb_df, out_fp)
+        AnalyseCombineDf.write_feather(comb_df, out_fp)
         # Returning outcome
         return outcome

@@ -27,7 +27,6 @@ from behavysis_core.df_classes.analyse_df import (
     AnalyseDf,
 )
 from behavysis_core.df_classes.bouts_df import BoutsDf
-from behavysis_core.df_classes.df_mixin import DFMixin
 from behavysis_core.df_classes.keypoints_df import (
     Coords,
     IndivColumns,
@@ -154,7 +153,7 @@ class Analyse:
         ).reset_index(level="roi")
         # Saving analysis_df
         fbf_fp = os.path.join(out_dir, "fbf", f"{name}.feather")
-        DFMixin.write_feather(analysis_df, fbf_fp)
+        AnalyseDf.write_feather(analysis_df, fbf_fp)
         # Generating scatterplot
         # First getting scatter_in_roi columns
         # TODO: any way to include all different "x", "y" to use, rather
@@ -242,7 +241,7 @@ class Analyse:
         analysis_df = analysis_df.bfill()
         # Saving analysis_df
         fbf_fp = os.path.join(out_dir, "fbf", f"{name}.feather")
-        DFMixin.write_feather(analysis_df, fbf_fp)
+        AnalyseDf.write_feather(analysis_df, fbf_fp)
 
         # Summarising and binning analysis_df
         AnalyseAggDf.summary_binned_quantitative(
@@ -312,7 +311,7 @@ class Analyse:
         )
         # Saving analysis_df
         fbf_fp = os.path.join(out_dir, "fbf", f"{name}.feather")
-        DFMixin.write_feather(analysis_df, fbf_fp)
+        AnalyseDf.write_feather(analysis_df, fbf_fp)
 
         # Summarising and binning analysis_df
         AnalyseAggDf.summary_binned_quantitative(
@@ -404,7 +403,7 @@ class Analyse:
                     analysis_df.loc[row["start"] : row["stop"], (indiv, f_name)] = 0
         # Saving analysis_df
         fbf_fp = os.path.join(out_dir, "fbf", f"{name}.feather")
-        DFMixin.write_feather(analysis_df, fbf_fp)
+        AnalyseDf.write_feather(analysis_df, fbf_fp)
 
         # Summarising and binning analysis_df
         AnalyseAggDf.summary_binned_behavs(

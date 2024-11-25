@@ -24,7 +24,6 @@ import numpy as np
 from behavysis_core.df_classes.analyse_agg_df import AnalyseAggDf
 from behavysis_core.df_classes.analyse_df import AnalyseDf
 from behavysis_core.df_classes.behav_df import BehavColumns, BehavDf
-from behavysis_core.df_classes.df_mixin import DFMixin
 from behavysis_core.mixins.io_mixin import IOMixin
 from behavysis_core.mixins.misc_mixin import MiscMixin
 from behavysis_core.pydantic_models.experiment_configs import ExperimentConfigs
@@ -66,12 +65,12 @@ class AnalyseBehaviours:
             invert=True,
         )
         behavs_df = behavs_df.loc[:, columns]
-        # Writing the behavs_df to the fbf file
-        fbf_fp = os.path.join(out_dir, "fbf", f"{name}.feather")
-        DFMixin.write_feather(behavs_df, fbf_fp)
         # Updating the column level names of behavs_df
         # (summary_binned_behavs only works this way)
         behavs_df.columns.names = list(MiscMixin.enum2tuple(AnalyseDf.CN))
+        # Writing the behavs_df to the fbf file
+        fbf_fp = os.path.join(out_dir, "fbf", f"{name}.feather")
+        AnalyseDf.write_feather(behavs_df, fbf_fp)
         # Making the summary and binned dataframes
         AnalyseAggDf.summary_binned_behavs(
             behavs_df,

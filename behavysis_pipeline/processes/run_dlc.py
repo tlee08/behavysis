@@ -26,7 +26,6 @@ import re
 
 import pandas as pd
 from behavysis_core.constants import TEMP_DIR
-from behavysis_core.df_classes.df_mixin import DFMixin
 from behavysis_core.df_classes.keypoints_df import KeypointsDf
 from behavysis_core.mixins.io_mixin import IOMixin
 from behavysis_core.mixins.misc_mixin import MiscMixin
@@ -204,10 +203,8 @@ def export_2_feather(name: str, in_dir: str, out_dir: str) -> str:
         df.columns.names = list(MiscMixin.enum2tuple(KeypointsDf.CN))
         # Imputing na values with 0
         df = df.fillna(0)
-        # Checking df
-        KeypointsDf.check_df(df)
         # Writing the .feather file
-        DFMixin.write_feather(df, os.path.join(out_dir, f"{name}.feather"))
+        KeypointsDf.write_feather(df, os.path.join(out_dir, f"{name}.feather"))
         return "Outputted DLC file successfully."
     else:
         raise ValueError(f"Multiple .h5 files found for {name}.")

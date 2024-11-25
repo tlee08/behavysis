@@ -19,6 +19,7 @@ from behavysis_core.constants import (
     STR_DIV,
     Folders,
 )
+from behavysis_core.df_classes.analyse_agg_df import AnalyseAggDf
 from behavysis_core.df_classes.df_mixin import DFMixin
 from behavysis_core.mixins.diagnostics_mixin import DiagnosticsMixin
 from behavysis_core.mixins.io_mixin import IOMixin
@@ -584,7 +585,7 @@ class Project:
                         f"{exp.name}.feather",
                     )
                     if os.path.isfile(in_fp):
-                        df_ls.append(DFMixin.read_feather(in_fp))
+                        df_ls.append(AnalyseAggDf.read_feather(in_fp))
                         names_ls.append(exp.name)
                 # Concatenating total_df with df across columns, with experiment name to column MultiIndex
                 if len(df_ls) > 0:
