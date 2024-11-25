@@ -65,8 +65,7 @@ class AnalyseBehaviours:
             invert=True,
         )
         behavs_df = behavs_df.loc[:, columns]
-        # Updating the column level names of behavs_df
-        # (summary_binned_behavs only works this way)
+        # Updating the column level names of behavs_df to match AnalyseDf structure
         behavs_df.columns.names = list(MiscMixin.enum2tuple(AnalyseDf.CN))
         # Writing the behavs_df to the fbf file
         fbf_fp = os.path.join(out_dir, "fbf", f"{name}.feather")
