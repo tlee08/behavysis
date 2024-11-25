@@ -21,7 +21,7 @@ from __future__ import annotations
 import os
 
 import pandas as pd
-from behavysis_core.df_classes.analyse_combine_df import AnalyseCombineDf
+from behavysis_core.df_classes.analyse_combined_df import AnalyseCombinedDf
 from behavysis_core.df_classes.analyse_df import AnalyseDf
 from behavysis_core.mixins.io_mixin import IOMixin
 
@@ -72,9 +72,9 @@ class AnalyseCombine:
             comb_df_ls,
             axis=1,
             keys=analysis_subdir_ls,
-            names=[AnalyseCombineDf.CN.ANALYSIS.value],
+            names=[AnalyseCombinedDf.CN.ANALYSIS.value],
         )
         # Writing to file
-        AnalyseCombineDf.write_feather(comb_df, out_fp)
+        AnalyseCombinedDf.write_feather(comb_df, out_fp)
         # Returning outcome
         return outcome

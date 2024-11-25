@@ -22,7 +22,7 @@ import os
 
 import numpy as np
 import pandas as pd
-from behavysis_core.df_classes.analyse_agg_df import AnalyseAggDf
+from behavysis_core.df_classes.analyse_binned_df import AnalyseBinnedDf
 from behavysis_core.df_classes.analyse_df import (
     AnalyseDf,
 )
@@ -169,7 +169,7 @@ class Analyse:
         plot_fp = os.path.join(out_dir, "scatter_plot", f"{name}.png")
         AnalyseDf.make_location_scatterplot(scatter_df, corners_df, plot_fp, "roi")
         # Summarising and binning analysis_df
-        AnalyseAggDf.summary_binned_behavs(
+        AnalyseBinnedDf.summary_binned_behavs(
             analysis_df,
             out_dir,
             name,
@@ -244,7 +244,7 @@ class Analyse:
         AnalyseDf.write_feather(analysis_df, fbf_fp)
 
         # Summarising and binning analysis_df
-        AnalyseAggDf.summary_binned_quantitative(
+        AnalyseBinnedDf.summary_binned_quantitative(
             analysis_df,
             out_dir,
             name,
@@ -314,7 +314,7 @@ class Analyse:
         AnalyseDf.write_feather(analysis_df, fbf_fp)
 
         # Summarising and binning analysis_df
-        AnalyseAggDf.summary_binned_quantitative(
+        AnalyseBinnedDf.summary_binned_quantitative(
             analysis_df,
             out_dir,
             name,
@@ -406,7 +406,7 @@ class Analyse:
         AnalyseDf.write_feather(analysis_df, fbf_fp)
 
         # Summarising and binning analysis_df
-        AnalyseAggDf.summary_binned_behavs(
+        AnalyseBinnedDf.summary_binned_behavs(
             analysis_df,
             out_dir,
             name,

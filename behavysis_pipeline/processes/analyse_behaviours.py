@@ -21,7 +21,7 @@ from __future__ import annotations
 import os
 
 import numpy as np
-from behavysis_core.df_classes.analyse_agg_df import AnalyseAggDf
+from behavysis_core.df_classes.analyse_binned_df import AnalyseBinnedDf
 from behavysis_core.df_classes.analyse_df import AnalyseDf
 from behavysis_core.df_classes.behav_df import BehavColumns, BehavDf
 from behavysis_core.mixins.io_mixin import IOMixin
@@ -71,7 +71,7 @@ class AnalyseBehaviours:
         fbf_fp = os.path.join(out_dir, "fbf", f"{name}.feather")
         AnalyseDf.write_feather(behavs_df, fbf_fp)
         # Making the summary and binned dataframes
-        AnalyseAggDf.summary_binned_behavs(
+        AnalyseBinnedDf.summary_binned_behavs(
             behavs_df,
             out_dir,
             name,
