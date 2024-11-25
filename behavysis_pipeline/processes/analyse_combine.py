@@ -52,27 +52,27 @@ class AnalyseCombine:
         outcome = ""
         name = IOMixin.get_name(configs_fp)
         # For each analysis subdir, combining fbf files
-        analysis_ls = [
+        analysis_subdir_ls = [
             i
             for i in os.listdir(analyse_dir)
             if os.path.isdir(os.path.join(analyse_dir, i))
         ]
         # If no analysis files, then return warning and don't make df
-        if len(analysis_ls) == 0:
+        if len(analysis_subdir_ls) == 0:
             outcome += "WARNING: no analysis fbf files made. Run `exp.analyse` first"
             return outcome
         # Reading in each fbf analysis df
         comb_df_ls = [
             AnalyseDf.read_feather(
-                os.path.join(analyse_dir, i, "fbf", f"{name}.feather")
+                os.path.join(analyse_dir, analysis_subdir, "fbf", f"{name}.feather")
             )
-            for i in analysis_ls
+            for analysis_subdir in analysis_subdir_ls
         ]
         # Making combined df from list of dfs
         comb_df = pd.concat(
             comb_df_ls,
             axis=1,
-            keys=analysis_ls,
+            keys=analysis_subdir_ls,
             names=[AnalyseCombineDf.CN.ANALYSIS.value],
         )
         # Writing to file
