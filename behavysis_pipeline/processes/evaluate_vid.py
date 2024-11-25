@@ -94,6 +94,7 @@ class EvaluateVid:
             radius=radius,
             cmap=cmap,
             padding=padding,
+            fps=fps,
         )
         # Define the codec and create VideoWriter object
         out_cap = cv2.VideoWriter(
@@ -358,6 +359,7 @@ class Analysis(EvalVidFuncBase):
         analysis_df: pd.DataFrame,
         cmap: str,
         padding: int,
+        fps: float,
         **kwargs,
     ):
         # TODO make aspect-ratio-weighted value for w_i.
@@ -367,6 +369,7 @@ class Analysis(EvalVidFuncBase):
         self.analysis_df: pd.DataFrame = analysis_df
         self.cmap = cmap
         self.padding = padding
+        self.fps = fps
         self.init_graph()
 
     def init_graph(self):
@@ -413,7 +416,7 @@ class Analysis(EvalVidFuncBase):
                 # Setting width and height
                 plot_arr_ij.setFixedHeight(h_p)
                 plot_arr_ij.setFixedWidth(w_p)
-                # Plot middle (current time) line
+                # Plot "Current Time" vertical line
                 x_line_arr_ij = pg.InfiniteLine(pos=0, angle=90)
                 x_line_arr_ij.setZValue(10)
                 plot_arr_ij.addItem(x_line_arr_ij)
@@ -421,20 +424,21 @@ class Analysis(EvalVidFuncBase):
                 # TODO implement for bouts as well, NOT just line graph
                 # Making the corresponding colours list for each measures instance
                 colours_ls = _make_colours(measures_ls, self.cmap)
-                # make legend
+                # Making overal plot's legend
                 legend = plot_arr_ij.addLegend()
                 for k, measures_k in enumerate(measures_ls):
                     colours_k = colours_ls[k]
-                    # make measure's line
+                    # Making measure's line
+                    # NOTE using seconds (frames / fps). "update_plot" method also converts to seconds
                     line_item = pg.PlotDataItem(
-                        x=self.analysis_df.index.values,
+                        x=self.analysis_df.index.values / self.fps,
                         y=self.analysis_df[(analysis_i, indivs_j, measures_k)].values,
                         pen=pg.mkPen(color=colours_k, width=5),
                         # brush=pg.mkBrush(color=colours_k),
                     )
                     # line_item.setFillLevel(0)
                     plot_arr_ij.addItem(line_item)
-                    # make measure's legend
+                    # Make measure's legend
                     legend.addItem(item=line_item, name=measures_k)
                 # Adding to plot_arr_i and x_line_arr_i row list
                 plot_arr_i.append(plot_arr_ij)
@@ -477,9 +481,12 @@ class Analysis(EvalVidFuncBase):
         """
         For a single plot
         (as the plots_layout has rows (analysis) and columns (indivs)).
+
+        NOTE: idx is
         """
-        self.x_line_arr[i][j].setPos(idx)
-        self.plot_arr[i][j].setXRange(idx - self.padding, idx + self.padding)
+        secs = idx / self.fps
+        self.x_line_arr[i][j].setPos(secs)
+        self.plot_arr[i][j].setXRange(secs - self.padding, secs + self.padding)
 
     @classmethod
     def qt2cv(cls, img_qt: QtGui.QImage) -> np.ndarray:
