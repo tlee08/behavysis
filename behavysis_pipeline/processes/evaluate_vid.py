@@ -391,6 +391,7 @@ class Analysis(EvalVidFuncBase):
         # Making list of lists to store each plot (for "analysis")
         self.plot_arr = []
         self.x_line_arr = []
+        self.plot_exporter_arr = []
         for i, analysis_i in enumerate(analysis_ls):
             # Getting the uniques individual names in the analysis group
             # And calculating the width of each plot in the current row
@@ -401,6 +402,7 @@ class Analysis(EvalVidFuncBase):
             # Making list to store each plot (for "individuals")
             plot_arr_i = []
             x_line_arr_i = []
+            plot_exporter_arr_i = []
             for j, indivs_j in enumerate(indivs_ls):
                 # Getting measures_ls, based on current analysis_i and indivs_j
                 measures_ls = self.analysis_df[(analysis_i, indivs_j)].columns.unique(
@@ -432,8 +434,7 @@ class Analysis(EvalVidFuncBase):
                     # Making measure's line
                     # NOTE using seconds (frames / fps). "update_plot" method also converts to seconds
                     line_item = pg.PlotDataItem(
-                        x=self.analysis_df.index.values,
-                        # x=self.analysis_df.index.values / self.fps,
+                        x=self.analysis_df.index.values / self.fps,
                         y=self.analysis_df[(analysis_i, indivs_j, measures_k)].values,
                         pen=pg.mkPen(color=colours_k, width=10),
                         # brush=pg.mkBrush(color=colours_k),
@@ -446,9 +447,11 @@ class Analysis(EvalVidFuncBase):
                 # Adding to plot_arr_i and x_line_arr_i row list
                 plot_arr_i.append(plot_arr_ij)
                 x_line_arr_i.append(x_line_arr_ij)
+                plot_exporter_arr_i.append(ImageExporter(plot_arr_ij))
             # Adding to plot_arr and x_line_arr list-of-lists
             self.plot_arr.append(plot_arr_i)
             self.x_line_arr.append(x_line_arr_i)
+            self.plot_exporter_arr.append(plot_exporter_arr_i)
 
     def __call__(self, frame: np.ndarray, idx: int) -> np.ndarray:
         # For each plot (rows (analysis), columns (indivs))
@@ -467,7 +470,8 @@ class Analysis(EvalVidFuncBase):
                 # Updating plot
                 self.update_plot(idx, i, j)
                 # Making plot frame (as cv2 image)
-                plot_frame_ij = self.plot2cv_(self.plot_arr[i][j])
+                # plot_frame_ij = self.plot2cv_(self.plot_arr[i][j])
+                plot_frame_ij = self.plot2cv_self(i, j)
                 # Superimposing plot_frame_ij on plot_frame
                 plot_frame[
                     h_p_0 : h_p_0 + plot_frame_ij.shape[0],
@@ -487,8 +491,7 @@ class Analysis(EvalVidFuncBase):
 
         NOTE: idx is
         """
-        secs = idx
-        # secs = idx / self.fps
+        secs = idx / self.fps
         self.x_line_arr[i][j].setPos(secs)
         self.plot_arr[i][j].setXRange(secs - self.padding, secs + self.padding)
 
@@ -545,6 +548,24 @@ class Analysis(EvalVidFuncBase):
         img_qt = exporter.export(toBytes=True)
         # QImage to cv2 image (using mixin)
         img_cv = cls.qt2cv(img_qt)  # type: ignore
+        # cv2 BGR to RGB
+        img_cv = cv2.cvtColor(img_cv, cv2.COLOR_BGR2RGB)
+        # Resize to widget size
+        # w, h = self.width(), self.height()
+        # img_cv = cv2.resize(img_cv, (w, h), interpolation=cv2.INTER_AREA)
+        # Return cv2 image
+        return img_cv
+
+    def plot2cv_self(self, i, j):
+        # Making pyqtgraph image exporter to bytes
+        # TODO: was original. check this still works
+        # exporter = ImageExporter(plot.plotItem)
+        # exporter = ImageExporter(plot)
+        # exporter.parameters()["width"] = self.width()
+        # Exporting to QImage (bytes)
+        img_qt = self.plot_exporter_arr[i][j].export(toBytes=True)
+        # QImage to cv2 image (using mixin)
+        img_cv = self.qt2cv(img_qt)  # type: ignore
         # cv2 BGR to RGB
         img_cv = cv2.cvtColor(img_cv, cv2.COLOR_BGR2RGB)
         # Resize to widget size
