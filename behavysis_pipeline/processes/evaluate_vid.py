@@ -430,7 +430,9 @@ class Analysis(EvalVidFuncBase):
                 legend = plot_arr_ij.addLegend()
                 for k, measures_k in enumerate(measures_ls):
                     colours_k = colours_ls[k]
-                    colours_k = (100, 150, 0)
+                    print(self.cmap)
+                    print(colours_k)
+                    # colours_k = (100, 150, 0)
                     # Making measure's line
                     # NOTE using seconds (frames / fps). "update_plot" method also converts to seconds
                     line_item = pg.PlotDataItem(
@@ -472,8 +474,8 @@ class Analysis(EvalVidFuncBase):
                 # Updating plot
                 self.update_plot(idx, i, j)
                 # Making plot frame (as cv2 image)
-                # plot_frame_ij = self.plot2cv_(self.plot_arr[i][j])
-                plot_frame_ij = self.plot2cv_self(i, j)
+                plot_frame_ij = self.plot2cv_(self.plot_arr[i][j])
+                # plot_frame_ij = self.plot2cv_self(i, j)
                 # Superimposing plot_frame_ij on plot_frame
                 plot_frame[
                     h_p_0 : h_p_0 + plot_frame_ij.shape[0],
