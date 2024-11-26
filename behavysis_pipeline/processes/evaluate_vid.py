@@ -428,7 +428,7 @@ class Analysis(EvalVidFuncBase):
                 legend = plot_arr_ij.addLegend()
                 for k, measures_k in enumerate(measures_ls):
                     # Making measure's line
-                    # NOTE using seconds (frames / fps). "update_plot" method also converts to seconds
+                    # Using seconds (frames / fps). "update_plot" method also converts to seconds
                     line_item = pg.PlotDataItem(
                         x=self.analysis_df.index.values / self.fps,
                         y=self.analysis_df[(analysis_i, indivs_j, measures_k)].values,
@@ -436,13 +436,14 @@ class Analysis(EvalVidFuncBase):
                         # brush=pg.mkBrush(color=colours_ls[k]),
                     )
                     # line_item.setFillLevel(0)
+                    # Adding measure line to plot
                     plot_arr_ij.addItem(line_item)
-                    # Make measure's legend
+                    # Adding measure line to legend
                     legend.addItem(item=line_item, name=measures_k)
-                # Adding to plot_arr_i and x_line_arr_i row list
+                # Adding to row lists
                 plot_arr_i.append(plot_arr_ij)
                 x_line_arr_i.append(x_line_arr_ij)
-            # Adding to plot_arr and x_line_arr list-of-lists
+            # Adding to list-of-lists
             self.plot_arr.append(plot_arr_i)
             self.x_line_arr.append(x_line_arr_i)
 
@@ -453,7 +454,6 @@ class Analysis(EvalVidFuncBase):
             fill_value=(0, 0, 0),
             dtype=np.uint8,
         )
-        # plot_frame = self.grl2cv_(self.plots_layout)
         # Initialising columns start
         h_p_0 = 0
         for i in range(len(self.plot_arr)):
@@ -464,7 +464,6 @@ class Analysis(EvalVidFuncBase):
                 self.update_plot(idx, i, j)
                 # Making plot frame (as cv2 image)
                 plot_frame_ij = self.plot2cv_(self.plot_arr[i][j])
-                # plot_frame_ij = self.plot2cv_self(i, j)
                 # Superimposing plot_frame_ij on plot_frame
                 plot_frame[
                     h_p_0 : h_p_0 + plot_frame_ij.shape[0],
@@ -484,6 +483,7 @@ class Analysis(EvalVidFuncBase):
 
         NOTE: idx is
         """
+        # Converting index from frames to seconds
         secs = idx / self.fps
         self.x_line_arr[i][j].setPos(secs)
         self.plot_arr[i][j].setXRange(secs - self.padding, secs + self.padding)
