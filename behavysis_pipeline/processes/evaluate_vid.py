@@ -406,7 +406,6 @@ class Analysis(EvalVidFuncBase):
     @classmethod
     def qt2cv(cls, img_qt: QtGui.QImage) -> np.ndarray:
         """Convert from a QImage to an opencv image."""
-        # NOTE: TODO: Implement remove padding in behavysis_viewer too
         # QImage to RGB888 format
         img_qt = img_qt.convertToFormat(cls.qimage_format)
         # Get shape of image
