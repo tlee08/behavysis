@@ -431,9 +431,10 @@ class Analysis(EvalVidFuncBase):
                     # Making measure's line
                     # NOTE using seconds (frames / fps). "update_plot" method also converts to seconds
                     line_item = pg.PlotDataItem(
-                        x=self.analysis_df.index.values / self.fps,
+                        x=self.analysis_df.index.values,
+                        # x=self.analysis_df.index.values / self.fps,
                         y=self.analysis_df[(analysis_i, indivs_j, measures_k)].values,
-                        pen=pg.mkPen(color=colours_k, width=5),
+                        pen=pg.mkPen(color=colours_k, width=10),
                         # brush=pg.mkBrush(color=colours_k),
                     )
                     # line_item.setFillLevel(0)
@@ -484,7 +485,8 @@ class Analysis(EvalVidFuncBase):
 
         NOTE: idx is
         """
-        secs = idx / self.fps
+        secs = idx
+        # secs = idx / self.fps
         self.x_line_arr[i][j].setPos(secs)
         self.plot_arr[i][j].setXRange(secs - self.padding, secs + self.padding)
 
