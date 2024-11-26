@@ -46,7 +46,6 @@ class EvaluateVid:
         # If overwrite is False, checking if we should skip processing
         if not overwrite and os.path.exists(out_fp):
             return DiagnosticsMixin.warning_msg()
-
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
         configs_filt = configs.user.evaluate_vid
@@ -56,6 +55,17 @@ class EvaluateVid:
         radius = configs.get_ref(configs_filt.radius)
         cmap = configs.get_ref(configs_filt.cmap)
         padding = configs.get_ref(configs_filt.padding)
+        width_input = configs.auto.formatted_vid.width_px
+        height_input = configs.auto.formatted_vid.height_px
+        fps = configs.auto.formatted_vid.fps
+        total_frames = configs.auto.formatted_vid.total_frames
+
+        # Asserting input video metadata is valid
+        assert_msg = "Input %s must be greater than 0. Run `exp.format_vid`."
+        assert width_input > 0, assert_msg % "video width"
+        assert height_input > 0, assert_msg % "video height"
+        assert fps > 0, assert_msg % "video fps"
+        assert total_frames > 0, assert_msg % "video total frames"
 
         # Getting dlc df
         dlc_df = KeypointsDf.clean_headings(KeypointsDf.read_feather(dlc_fp))
@@ -69,23 +79,12 @@ class EvaluateVid:
             )
             analysis_df = AnalyseCombinedDf.init_df(dlc_df.index)
 
-        # TODO: maybe use configs instead
-        # OPENING INPUT VIDEO
-        # Open the input video
-        in_cap = cv2.VideoCapture(vid_fp)
-        # Storing output vid dimensions
-        # as they can change depending on funcs_names
-        w_i = int(in_cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        h_i = int(in_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        fps = in_cap.get(cv2.CAP_PROP_FPS)
-        total_frames = int(in_cap.get(cv2.CAP_PROP_FRAME_COUNT))
-
         # MAKING ANNOTATED VIDEO
         # Making VidFuncOrganiser object to annotate each frame with
         vid_func_runner = VidFuncRunner(
             func_names=funcs_names,
-            w_i=w_i,
-            h_i=h_i,
+            width_input=width_input,
+            height_input=height_input,
             # kwargs for EvalVidFuncBase
             dlc_df=dlc_df,
             analysis_df=analysis_df,
@@ -96,25 +95,23 @@ class EvaluateVid:
             padding=padding,
             fps=fps,
         )
+        # Opening the input video
+        in_cap = cv2.VideoCapture(vid_fp)
         # Define the codec and create VideoWriter object
         out_cap = cv2.VideoWriter(
             out_fp,
             cv2.VideoWriter_fourcc(*"mp4v"),  # type: ignore
             fps,
-            (vid_func_runner.w_o, vid_func_runner.h_o),
+            (vid_func_runner.width_out, vid_func_runner.height_out),
         )
         # Annotating each frame using the created functions
-        # TODO: NOTE: The funcs themselves will modify the frame size.
-        # Not self-contained or modular but this is a workaround for now.
-        # Annotating frames
-        for i in trange(total_frames):
+        for idx in trange(total_frames):
             # Reading next vid frame
             ret, frame = in_cap.read()
             if ret is False:
                 break
             # Annotating frame
-            # arr_out = frame
-            arr_out = vid_func_runner(frame, i)
+            arr_out = vid_func_runner(frame, idx)
             # Writing annotated frame to the VideoWriter
             out_cap.write(arr_out)
         # Release video objects
@@ -136,8 +133,8 @@ class EvalVidFuncBase(ABC):
     """
 
     name: str
-    w: int
-    h: int
+    width_output: int
+    height_output: int
 
     @abstractmethod
     def __init__(self, **kwargs):
@@ -158,13 +155,13 @@ class Johansson(EvalVidFuncBase):
 
     name = "johansson"
 
-    def __init__(self, w_i: int, h_i: int, **kwargs):
-        self.w_i = w_i
-        self.h_i = h_i
+    def __init__(self, width_input: int, height_input: int, **kwargs):
+        self.width_output = width_input
+        self.heigth_output = height_input
 
     def __call__(self, frame: np.ndarray, idx: int) -> np.ndarray:
         return np.full(
-            shape=(self.h_i, self.w_i, 3),
+            shape=(self.heigth_output, self.width_output, 3),
             fill_value=(0, 0, 0),
             dtype=np.uint8,
         )
@@ -180,8 +177,8 @@ class Keypoints(EvalVidFuncBase):
 
     def __init__(
         self,
-        w_i: int,
-        h_i: int,
+        width_input: int,
+        height_input: int,
         dlc_df,
         colour_level,
         cmap,
@@ -189,8 +186,8 @@ class Keypoints(EvalVidFuncBase):
         radius,
         **kwargs,
     ):
-        self.w_i = w_i
-        self.h_i = h_i
+        self.width_output = width_input
+        self.height_output = height_input
         self.dlc_df: pd.DataFrame = dlc_df
         self.colour_level = colour_level
         self.cmap = cmap
@@ -237,9 +234,10 @@ class Keypoints(EvalVidFuncBase):
         self.colours = _make_colours(measures_ls, self.cmap)
 
     def __call__(self, frame: np.ndarray, idx: int) -> np.ndarray:
-        # Getting row
-        # Also checking that the idx exists
-        # TODO: is this the fastest way?
+        # Asserting the frame's dimensions
+        assert frame.shape[0] == self.height_output
+        assert frame.shape[1] == self.width_output
+        # Getting idx row and asserting the idx exists
         try:
             row = self.dlc_df.loc[idx]
         except KeyError:
@@ -255,87 +253,6 @@ class Keypoints(EvalVidFuncBase):
                     thickness=-1,
                 )
         return frame
-
-
-# class Behavs(EvalVidFuncBase):
-#     """
-#     Annotates a text table in the top-left corner, with the format:
-#     ```
-#             actual pred
-#     Behav_1   X     X
-#     Behav_2         X
-#     ...
-#     ```
-
-#     Parameters
-#     ----------
-#     frame : np.ndarray
-#         cv2 frame array.
-#     row : pd.Series
-#         row in scored_behavs dataframe.
-#     behavs_ls : tuple[str]
-#         list of behaviours to include.
-
-#     Returns
-#     -------
-#     np.ndarray
-#         cv2 frame array.
-#     """
-
-#     name = "behavs"
-
-#     def __init__(self, w_i: int, h_i: int, behavs_df, behavs_ls, **kwargs):
-#         self.w_i = w_i
-#         self.h_i = h_i
-#         self.behavs_df: pd.DataFrame = behavs_df
-#         self.behavs_ls = behavs_ls
-
-#     def __call__(self, frame: np.ndarray, idx: int) -> np.ndarray:
-#         # Initialising the behavs frame panel
-#         behav_tile = np.full(
-#             shape=(self.h_i, self.w_i, 3),
-#             fill_value=(255, 255, 255),
-#             dtype=np.uint8,
-#         )
-#         # Getting row
-#         # Also checking that the idx exists
-#         # TODO: is this the fastest way?
-#         try:
-#             row = self.behavs_df.loc[idx]
-#         except KeyError:
-#             return behav_tile
-#         # colour = (3, 219, 252)  # Yellow
-#         colour = (0, 0, 0)  # Black
-#         # Making outcome headings
-#         for j, outcome in enumerate((BehavColumns.PRED, BehavColumns.ACTUAL)):
-#             outcome = outcome.value
-#             x = 120 + j * 40
-#             y = 50
-#             cv2.putText(
-#                 behav_tile, outcome, (x, y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, colour, 2
-#             )
-#         # Making behav rows
-#         for i, behav in enumerate(self.behavs_ls):
-#             x = 20
-#             y = 100 + i * 30
-#             # Annotating with label
-#             cv2.putText(
-#                 behav_tile, behav, (x, y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, colour, 2
-#             )
-#             for j, outcome in enumerate((BehavColumns.PRED, BehavColumns.ACTUAL)):
-#                 outcome = outcome.value
-#                 x = 120 + j * 40
-#                 if row[f"{behav}_{outcome}"] == 1:
-#                     cv2.putText(
-#                         behav_tile,
-#                         "X",
-#                         (x, y),
-#                         cv2.FONT_HERSHEY_SIMPLEX,
-#                         0.5,
-#                         colour,
-#                         2,
-#                     )
-#         return behav_tile
 
 
 class Analysis(EvalVidFuncBase):
@@ -354,8 +271,8 @@ class Analysis(EvalVidFuncBase):
 
     def __init__(
         self,
-        w_i: int,
-        h_i: int,
+        width_input: int,
+        height_input: int,
         analysis_df: pd.DataFrame,
         cmap: str,
         padding: int,
@@ -364,8 +281,8 @@ class Analysis(EvalVidFuncBase):
     ):
         # TODO make aspect-ratio-weighted value for w_i.
         # Maybe have custom configs value `w_h_ratio`
-        self.w_i = w_i
-        self.h_i = h_i
+        self.width_output = width_input
+        self.height_output = height_input
         self.analysis_df: pd.DataFrame = analysis_df
         self.cmap = cmap
         self.padding = padding
@@ -387,7 +304,7 @@ class Analysis(EvalVidFuncBase):
         analysis_ls = self.analysis_df.columns.unique(
             AnalyseCombinedDf.CN.ANALYSIS.value
         )
-        h_p = int(np.round(self.h_i / len(analysis_ls)))
+        height_plot = int(np.round(self.height_output / len(analysis_ls)))
         # Making list of lists to store each plot (for "analysis")
         self.plot_arr = []
         self.x_line_arr = []
@@ -397,7 +314,7 @@ class Analysis(EvalVidFuncBase):
             indivs_ls = self.analysis_df[(analysis_i,)].columns.unique(
                 AnalyseCombinedDf.CN.INDIVIDUALS.value
             )
-            w_p = int(np.round(self.w_i / len(indivs_ls)))
+            width_plot = int(np.round(self.width_output / len(indivs_ls)))
             # Making list to store each plot (for "individuals")
             plot_arr_i = []
             x_line_arr_i = []
@@ -414,14 +331,12 @@ class Analysis(EvalVidFuncBase):
                     labels={"left": "value", "bottom": "second"},
                 )
                 # Setting width and height
-                plot_arr_ij.setFixedHeight(h_p)
-                plot_arr_ij.setFixedWidth(w_p)
+                plot_arr_ij.setFixedHeight(height_plot)
+                plot_arr_ij.setFixedWidth(width_plot)
                 # Plot "Current Time" vertical line
                 x_line_arr_ij = pg.InfiniteLine(pos=0, angle=90)
                 x_line_arr_ij.setZValue(10)
                 plot_arr_ij.addItem(x_line_arr_ij)
-                # Setting data
-                # TODO implement for bouts as well, NOT just line graph
                 # Making the corresponding colours list for each measures instance
                 colours_ls = _make_colours(measures_ls, self.cmap)
                 # Making overal plot's legend
@@ -450,15 +365,15 @@ class Analysis(EvalVidFuncBase):
     def __call__(self, frame: np.ndarray, idx: int) -> np.ndarray:
         # For each plot (rows (analysis), columns (indivs))
         plot_frame = np.full(
-            shape=(self.h_i, self.w_i, 3),
+            shape=(self.height_output, self.width_output, 3),
             fill_value=(0, 0, 0),
             dtype=np.uint8,
         )
         # Initialising columns start
-        h_p_0 = 0
+        height_plot_start = 0
         for i in range(len(self.plot_arr)):
             # Initialising rows start
-            w_p_0 = 0
+            width_plot_start = 0
             for j in range(len(self.plot_arr[i])):
                 # Updating plot
                 self.update_plot(idx, i, j)
@@ -466,13 +381,13 @@ class Analysis(EvalVidFuncBase):
                 plot_frame_ij = self.plot2cv_(self.plot_arr[i][j])
                 # Superimposing plot_frame_ij on plot_frame
                 plot_frame[
-                    h_p_0 : h_p_0 + plot_frame_ij.shape[0],
-                    w_p_0 : w_p_0 + plot_frame_ij.shape[1],
+                    height_plot_start : height_plot_start + plot_frame_ij.shape[0],
+                    width_plot_start : width_plot_start + plot_frame_ij.shape[1],
                 ] = plot_frame_ij
                 # Updating columns start
-                w_p_0 += plot_frame_ij.shape[1]
+                width_plot_start += plot_frame_ij.shape[1]
             # Updating rows start
-            h_p_0 += plot_frame_ij.shape[0]
+            height_plot_start += plot_frame_ij.shape[0]
         # Returning
         return plot_frame
 
@@ -572,19 +487,21 @@ class VidFuncRunner:
     keypoints: Keypoints | None
     analysis: Analysis | None
 
-    w_i: int
-    h_i: int
-    w_o: int
-    h_o: int
+    width_input: int
+    height_input: int
+    width_out: int
+    height_out: int
 
-    def __init__(self, func_names: list[str], w_i: int, h_i: int, **kwargs):
+    def __init__(
+        self, func_names: list[str], width_input: int, height_input: int, **kwargs
+    ):
         """
         NOTE: kwargs are the constructor parameters for
         EvalVidFuncBase classes.
         """
         # Storing frame input dimensions
-        self.w_i = w_i
-        self.h_i = h_i
+        self.width_input = width_input
+        self.height_input = height_input
 
         # Initialising funcs from func_names_ls
         self.funcs = []
@@ -597,7 +514,7 @@ class VidFuncRunner:
                 setattr(
                     self,
                     func.name,
-                    func(w_i=w_i, h_i=h_i, **kwargs),
+                    func(width_input=width_input, height_input=height_input, **kwargs),
                 )
             else:
                 setattr(self, func.name, None)
@@ -606,20 +523,20 @@ class VidFuncRunner:
         # Storing frame output dimensions
         # width
         # vid panel
-        self.w_o = self.w_i
+        self.width_out = self.width_input
         # analysis panel
         if self.analysis:
-            self.w_o = self.w_o * 2
+            self.width_out = self.width_out * 2
         # # height
         # # vid panel
-        self.h_o = self.h_i
+        self.height_out = self.height_input
         # # behav panel
         # if self.behavs:
         #     self.h_o = self.h_o * 2
 
     def __call__(self, vid_frame: np.ndarray, idx: int):
         # Initialise output arr (image) with given dimensions
-        arr_out = np.zeros(shape=(self.h_o, self.w_o, 3), dtype=np.uint8)
+        arr_out = np.zeros(shape=(self.height_out, self.width_out, 3), dtype=np.uint8)
         # For overwriting vid_frame
         arr_video = np.copy(vid_frame)
         # video tile
@@ -627,13 +544,13 @@ class VidFuncRunner:
             arr_video = self.johansson(arr_video, idx)
         if self.keypoints:
             arr_video = self.keypoints(arr_video, idx)
-        arr_out[: self.h_i, : self.w_i] = arr_video
+        arr_out[: self.height_input, : self.width_input] = arr_video
         # analysis tile
         if self.analysis:
             arr_analysis = self.analysis(arr_video, idx)
             arr_out[
-                : self.analysis.h_i,
-                self.w_i : self.w_i + self.analysis.w_i,
+                : self.analysis.height_output,
+                self.width_input : self.width_input + self.analysis.width_output,
             ] = arr_analysis
         # Returning output arr
         return arr_out

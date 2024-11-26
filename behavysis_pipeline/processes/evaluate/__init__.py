@@ -240,8 +240,8 @@ class Evaluate:
         # Making VidFuncOrganiser object to annotate each frame with
         vid_func_runner = VidFuncRunner(
             func_names=funcs_names,
-            w_i=in_width,
-            h_i=in_height,
+            width_input=in_width,
+            height_input=in_height,
             # kwargs for EvalVidFuncBase
             dlc_df=dlc_df,
             analysis_df=analysis_df,
@@ -256,7 +256,7 @@ class Evaluate:
             out_fp,
             cv2.VideoWriter_fourcc(*"mp4v"),  # type: ignore
             fps,
-            (vid_func_runner.w_o, vid_func_runner.h_o),
+            (vid_func_runner.width_out, vid_func_runner.height_out),
         )
         # Annotating each frame using the created functions
         # TODO: NOTE: The funcs themselves will modify the frame size.
