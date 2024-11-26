@@ -436,7 +436,7 @@ class Analysis(EvalVidFuncBase):
                     line_item = pg.PlotDataItem(
                         x=self.analysis_df.index.values / self.fps,
                         y=self.analysis_df[(analysis_i, indivs_j, measures_k)].values,
-                        pen=pg.mkPen(color=colours_k, width=10),
+                        pen=pg.mkPen(color=colours_k, width=5),
                         # brush=pg.mkBrush(color=colours_k),
                     )
                     # line_item.setFillLevel(0)
