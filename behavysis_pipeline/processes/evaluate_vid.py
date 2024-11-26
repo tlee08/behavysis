@@ -428,6 +428,7 @@ class Analysis(EvalVidFuncBase):
                 legend = plot_arr_ij.addLegend()
                 for k, measures_k in enumerate(measures_ls):
                     colours_k = colours_ls[k]
+                    colours_k = (100, 150, 0)
                     # Making measure's line
                     # NOTE using seconds (frames / fps). "update_plot" method also converts to seconds
                     line_item = pg.PlotDataItem(
