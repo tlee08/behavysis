@@ -427,17 +427,13 @@ class Analysis(EvalVidFuncBase):
                 # Making overal plot's legend
                 legend = plot_arr_ij.addLegend()
                 for k, measures_k in enumerate(measures_ls):
-                    colours_k = colours_ls[k]
-                    print(self.cmap)
-                    print(colours_k)
-                    # colours_k = (100, 150, 0)
                     # Making measure's line
                     # NOTE using seconds (frames / fps). "update_plot" method also converts to seconds
                     line_item = pg.PlotDataItem(
                         x=self.analysis_df.index.values / self.fps,
                         y=self.analysis_df[(analysis_i, indivs_j, measures_k)].values,
-                        pen=pg.mkPen(color=colours_k, width=5),
-                        # brush=pg.mkBrush(color=colours_k),
+                        pen=pg.mkPen(color=colours_ls[k], width=5),
+                        # brush=pg.mkBrush(color=colours_ls[k]),
                     )
                     # line_item.setFillLevel(0)
                     plot_arr_ij.addItem(line_item)
