@@ -442,6 +442,7 @@ class Analysis(EvalVidFuncBase):
                     plot_arr_ij.addItem(line_item)
                     # Make measure's legend
                     legend.addItem(item=line_item, name=measures_k)
+                ImageExporter(plot_arr_ij).export(f"test_{i}_{j}.png")
                 # Adding to plot_arr_i and x_line_arr_i row list
                 plot_arr_i.append(plot_arr_ij)
                 x_line_arr_i.append(x_line_arr_ij)
