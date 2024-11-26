@@ -443,9 +443,6 @@ class Analysis(EvalVidFuncBase):
                     plot_arr_ij.addItem(line_item)
                     # Make measure's legend
                     legend.addItem(item=line_item, name=measures_k)
-                exporter = ImageExporter(plot_arr_ij)
-                exporter.parameters()["width"] = 1000
-                exporter.export(f"test_{i}_{j}.png")
                 # Adding to plot_arr_i and x_line_arr_i row list
                 plot_arr_i.append(plot_arr_ij)
                 x_line_arr_i.append(x_line_arr_ij)
@@ -647,8 +644,15 @@ class VidFuncRunner:
 
 
 def _make_colours(vals, cmap):
+    # Encoding colours as 0, 1, 2, ... for each unique value
     colours_idx, _ = pd.factorize(vals)
-    colours_ls = (plt.cm.get_cmap(cmap)(colours_idx / colours_idx.max()) * 255)[
-        :, [2, 1, 0, 3]
-    ]
+    # Normalising to 0-1 (if only 1 unique value, it will be 0 div so setting values to 0)
+    colours_idx = np.nan_to_num(colours_idx / colours_idx.max())
+    # Getting corresponding colour for each item in `vals` list and from cmap
+    colours_ls = plt.cm.get_cmap(cmap)(colours_idx)
+    # Reassigning the order of the colours to be RGBA (not BGRA)
+    colours_ls = colours_ls[:, [2, 1, 0, 3]]
+    # Converting to uint8 and 255
+    colours_ls = (colours_ls * 255).astype(np.uint8)
+    # Returning
     return colours_ls
