@@ -648,7 +648,7 @@ def _make_colours(vals, cmap):
     colours_ls = plt.cm.get_cmap(cmap)(colours_idx)
     # Reassigning the order of the colours to be RGBA (not BGRA)
     colours_ls = colours_ls[:, [2, 1, 0, 3]]
-    # Converting to uint8 and 255
-    colours_ls = (colours_ls * 255).astype(np.uint8)
+    # Converting to (0, 255) range
+    colours_ls = colours_ls * 255
     # Returning
     return colours_ls
