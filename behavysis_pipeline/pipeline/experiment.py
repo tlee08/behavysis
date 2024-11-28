@@ -101,6 +101,7 @@ class Experiment:
         ValueError
             ValueError: Folder name is not valid. Refer to FOLDERS constant for valid folder names.
         """
+        # Getting folder as Enum
         # If folder is str, converting to Enum
         if isinstance(_folder, str):
             try:
