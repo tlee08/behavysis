@@ -87,7 +87,7 @@ class ExtractFeatures:
         )
         # Exporting SimBA feature extraction csv to feather
         simba_out_fp = os.path.join(features_from_dir, f"{name}.csv")
-        export_2_feather(simba_out_fp, out_fp, index)
+        export2feather(simba_out_fp, out_fp, index)
         # Removing temp folders (simba_in_dir, simba_dir)
         IOMixin.silent_rm(simba_in_dir)
         IOMixin.silent_rm(simba_dir)
@@ -211,7 +211,7 @@ def remove_bpts_cols(
     return df.iloc[:, n:]
 
 
-def export_2_feather(in_fp: str, out_fp: str, index: pd.Index) -> str:
+def export2feather(in_fp: str, out_fp: str, index: pd.Index) -> str:
     """
     __summary__
     """

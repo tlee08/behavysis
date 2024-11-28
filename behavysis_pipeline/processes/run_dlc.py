@@ -71,7 +71,7 @@ class RunDLC:
         run_dlc_subproc(model_fp, [vid_fp], dlc_out_dir, TEMP_DIR, gputouse)
 
         # Exporting the h5 to feather the out_dir
-        export_2_feather(vid_fp, dlc_out_dir, out_dir)
+        export2feather(vid_fp, dlc_out_dir, out_dir)
         # IOMixin.silent_rm(dlc_out_dir)
 
         return outcome
@@ -135,7 +135,7 @@ class RunDLC:
 
         # Exporting the h5 to feather the out_dir
         for vid_fp in vid_fp_ls:
-            outcome += export_2_feather(vid_fp, dlc_out_dir, out_dir)
+            outcome += export2feather(vid_fp, dlc_out_dir, out_dir)
         IOMixin.silent_rm(dlc_out_dir)
         # Returning outcome
         return outcome
@@ -183,7 +183,7 @@ def run_dlc_subproc(
     IOMixin.silent_rm(script_fp)
 
 
-def export_2_feather(name: str, in_dir: str, out_dir: str) -> str:
+def export2feather(name: str, in_dir: str, out_dir: str) -> str:
     """
     __summary__
     """
