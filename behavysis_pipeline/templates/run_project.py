@@ -43,6 +43,7 @@ if __name__ == "__main__":
             CalculateParams.stop_frame,
             CalculateParams.exp_dur,
             CalculateParams.px_per_mm,
+            CalculateParams.dlc_scorer_name,
         )
     )
 
