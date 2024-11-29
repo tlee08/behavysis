@@ -247,7 +247,7 @@ class Keypoints(EvalVidFuncBase):
             if row[f"{indiv}_{bpt}_likelihood"] >= self.pcutoff:
                 cv2.circle(
                     img=frame,
-                    centre=(int(row[f"{indiv}_{bpt}_x"]), int(row[f"{indiv}_{bpt}_y"])),  # type: ignore
+                    center=(int(row[f"{indiv}_{bpt}_x"]), int(row[f"{indiv}_{bpt}_y"])),  # type: ignore
                     radius=self.radius,
                     color=self.colours[i],
                     thickness=-1,
