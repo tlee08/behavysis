@@ -6,7 +6,6 @@ import os
 from abc import ABC, abstractmethod
 
 import cv2
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import pyqtgraph as pg
@@ -14,6 +13,7 @@ from behavysis_core.df_classes.analyse_combined_df import AnalyseCombinedDf
 from behavysis_core.df_classes.keypoints_df import IndivColumns, KeypointsDf
 from behavysis_core.mixins.diagnostics_mixin import DiagnosticsMixin
 from behavysis_core.mixins.io_mixin import IOMixin
+from behavysis_core.mixins.misc_mixin import MiscMixin
 from behavysis_core.pydantic_models.experiment_configs import ExperimentConfigs
 from pyqtgraph.exporters import ImageExporter
 from PySide6 import QtGui
@@ -231,7 +231,7 @@ class Keypoints(EvalVidFuncBase):
         # Making the corresponding colours list for each bodypart instance
         # (colours depend on indiv/bpt)
         measures_ls = self.indivs_bpts_ls.get_level_values(self.colour_level)
-        self.colours = _make_colours(measures_ls, self.cmap)
+        self.colours = MiscMixin.make_colours(measures_ls, self.cmap)
 
     def __call__(self, frame: np.ndarray, idx: int) -> np.ndarray:
         # Asserting the frame's dimensions
@@ -338,7 +338,7 @@ class Analysis(EvalVidFuncBase):
                 x_line_arr_ij.setZValue(10)
                 plot_arr_ij.addItem(x_line_arr_ij)
                 # Making the corresponding colours list for each measures instance
-                colours_ls = _make_colours(measures_ls, self.cmap)
+                colours_ls = MiscMixin.make_colours(measures_ls, self.cmap)
                 # Making overal plot's legend
                 legend = plot_arr_ij.addLegend()
                 for k, measures_k in enumerate(measures_ls):
@@ -553,18 +553,3 @@ class VidFuncRunner:
             ] = arr_analysis
         # Returning output arr
         return arr_out
-
-
-def _make_colours(vals, cmap):
-    # Encoding colours as 0, 1, 2, ... for each unique value
-    colours_idx, _ = pd.factorize(vals)
-    # Normalising to 0-1 (if only 1 unique value, it will be 0 div so setting values to 0)
-    colours_idx = np.nan_to_num(colours_idx / colours_idx.max())
-    # Getting corresponding colour for each item in `vals` list and from cmap
-    colours_ls = plt.cm.get_cmap(cmap)(colours_idx)
-    # Reassigning the order of the colours to be RGBA (not BGRA)
-    colours_ls = colours_ls[:, [2, 1, 0, 3]]
-    # Converting to (0, 255) range
-    colours_ls = colours_ls * 255
-    # Returning
-    return colours_ls
