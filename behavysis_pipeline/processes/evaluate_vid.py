@@ -97,6 +97,8 @@ class EvaluateVid:
         )
         # Opening the input video
         in_cap = cv2.VideoCapture(vid_fp)
+        # Making output folder
+        os.makedirs(os.path.dirname(out_fp), exist_ok=True)
         # Define the codec and create VideoWriter object
         out_cap = cv2.VideoWriter(
             out_fp,
