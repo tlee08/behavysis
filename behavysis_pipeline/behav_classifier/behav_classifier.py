@@ -15,12 +15,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
-from behavysis_core.constants import Folders
-from behavysis_core.df_classes.behav_df import BehavColumns, BehavDf
-from behavysis_core.df_classes.df_mixin import DFMixin
-from behavysis_core.pydantic_models.behav_classifier_configs import (
-    BehavClassifierConfigs,
-)
 from matplotlib.figure import Figure
 from sklearn.metrics import (
     classification_report,
@@ -30,6 +24,12 @@ from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import MinMaxScaler
 
+from behavysis_core.constants import Folders
+from behavysis_core.df_classes.behav_df import BehavColumns, BehavDf
+from behavysis_core.df_classes.df_mixin import DFMixin
+from behavysis_core.pydantic_models.behav_classifier_configs import (
+    BehavClassifierConfigs,
+)
 from behavysis_pipeline.behav_classifier.clf_models.base_torch_model import (
     BaseTorchModel,
 )
@@ -70,11 +70,12 @@ class BehavClassifier:
     def __init__(self, model_dir: str) -> None:
         # Storing model directory path
         self.model_dir = os.path.abspath(model_dir)
-        # Trying to read configs file. Making a new one if it doesn't exist
         try:
+            # Trying to read configs file.
             self.configs
             logging.info("Reading existing model configs")
         except FileNotFoundError:
+            # Making a new configs file if it doesn't exist
             self.configs = BehavClassifierConfigs()
             logging.info("Making new model configs")
         # Trying to read clf file. Making basic DDN1 if not exists
