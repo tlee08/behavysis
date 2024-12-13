@@ -1,11 +1,11 @@
 import os
 
 import numpy as np
+
 from behavysis_core.df_classes.behav_df import BehavColumns, BehavDf
 from behavysis_core.df_classes.df_mixin import DFMixin
 from behavysis_core.mixins.io_mixin import IOMixin
 from behavysis_core.pydantic_models.experiment_configs import ExperimentConfigs
-
 from behavysis_pipeline.behav_classifier.behav_classifier import BehavClassifier
 
 
@@ -65,7 +65,7 @@ class Export:
             # Loading behav_model
             try:
                 behav_model_i = BehavClassifier.load(model.model_fp)
-            except FileNotFoundError:
+            except (FileNotFoundError, OSError):
                 outcome += "WARNING: Model file not found. Skipping model.\n"
                 continue
             behav_name_i = behav_model_i.configs.behaviour_name
