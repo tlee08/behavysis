@@ -66,7 +66,9 @@ class Export:
             try:
                 behav_model_i = BehavClassifier.load(model.model_fp)
             except (FileNotFoundError, OSError):
-                outcome += "WARNING: Model file not found. Skipping model.\n"
+                outcome += (
+                    f"WARNING: Model file {model.model_fp} not found. Skipping model.\n"
+                )
                 continue
             behav_name_i = behav_model_i.configs.behaviour_name
             user_behavs_i = configs.get_ref(model.user_behavs)
