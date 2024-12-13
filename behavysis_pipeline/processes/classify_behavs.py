@@ -3,13 +3,13 @@ Classify Behaviours
 """
 
 import pandas as pd
+
 from behavysis_core.df_classes.behav_df import BehavColumns, BehavDf
 from behavysis_core.df_classes.bouts_df import BoutsDf
 from behavysis_core.df_classes.df_mixin import DFMixin
 from behavysis_core.mixins.io_mixin import IOMixin
 from behavysis_core.mixins.misc_mixin import MiscMixin
 from behavysis_core.pydantic_models.experiment_configs import ExperimentConfigs
-
 from behavysis_pipeline.behav_classifier.behav_classifier import BehavClassifier
 
 # TODO: handle reading the model file whilst in multiprocessing
@@ -72,7 +72,7 @@ class ClassifyBehavs:
             model_fp = configs.get_ref(model_config.model_fp)
             try:
                 behav_model = BehavClassifier.load(model_fp)
-            except FileNotFoundError:
+            except (FileNotFoundError, OSError):
                 outcome += "WARNING: Model file not found. Skipping model.\n"
                 continue
             behav_name = behav_model.configs.behaviour_name
