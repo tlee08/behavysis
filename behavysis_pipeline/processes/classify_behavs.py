@@ -73,7 +73,9 @@ class ClassifyBehavs:
             try:
                 behav_model = BehavClassifier.load(model_fp)
             except (FileNotFoundError, OSError):
-                outcome += "WARNING: Model file not found. Skipping model.\n"
+                outcome += (
+                    f"WARNING: Model file {model_fp} not found. Skipping model.\n"
+                )
                 continue
             behav_name = behav_model.configs.behaviour_name
             pcutoff = cls._check_init_pcutoff(
@@ -99,6 +101,9 @@ class ClassifyBehavs:
             outcome += (
                 f"Completed {behav_model.configs.behaviour_name} classification.\n"
             )
+        # If no models were run, then return outcome
+        if len(df_ls) == 0:
+            return outcome
         # Concatenating predictions to a single dataframe
         behavs_df = pd.concat(df_ls, axis=1)
         # Setting the index and column names
