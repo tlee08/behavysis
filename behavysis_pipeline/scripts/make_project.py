@@ -10,9 +10,7 @@ def import_template(src_fp, dst_fp, overwrite):
     """
     # If not overwrite and file exists, then don't overwrite
     if not overwrite and os.path.exists(dst_fp):
-        print(
-            f"File {dst_fp} already exists and overwriting set to False. Not overwriting."
-        )
+        print(f"File {dst_fp} already exists and overwriting set to False. Not overwriting.")
         return
     # Saving the template to the file
     IOMixin.save_template(
@@ -31,10 +29,7 @@ def main(root_dir: str = ".", overwrite: bool = False, dialogue: bool = False) -
     """
     if dialogue:
         # Dialogue to check if the user wants to make the files
-        to_continue = (
-            input("Making project in current directory. Continue? [y/N]: ").lower()
-            + " "
-        )
+        to_continue = input("Making project in current directory. Continue? [y/N]: ").lower() + " "
         if to_continue[0] != "y":
             print("Exiting.")
             return

@@ -41,6 +41,12 @@ priority = "explicit"
 behavysis_make_project = "behavysis_pipeline.scripts.make_project:main"
 behavysis_project_gui = "behavysis_pipeline.scripts.project_gui:run_script"
 
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.format]
+docstring-code-format = true
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
