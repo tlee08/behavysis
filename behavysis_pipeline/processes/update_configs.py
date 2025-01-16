@@ -18,8 +18,9 @@ str
 
 from typing import Literal
 
-from behavysis_core.pydantic_models.experiment_configs import ExperimentConfigs
 from pydantic import ValidationError
+
+from behavysis_pipeline.pydantic_models.experiment_configs import ExperimentConfigs
 
 
 class UpdateConfigs:
@@ -69,8 +70,7 @@ class UpdateConfigs:
             outcome += "Updating all configs.\n"
         else:
             raise ValueError(
-                f'Invalid value "{overwrite}" passed to function. '
-                + 'The value must be either "user", or "all".'
+                f'Invalid value "{overwrite}" passed to function. ' + 'The value must be either "user", or "all".'
             )
         # Writing new configs to JSON file
         configs.write_json(configs_fp)

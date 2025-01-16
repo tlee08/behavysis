@@ -24,18 +24,18 @@ from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import MinMaxScaler
 
-from behavysis_core.constants import Folders
-from behavysis_core.df_classes.behav_df import BehavColumns, BehavDf
-from behavysis_core.df_classes.df_mixin import DFMixin
-from behavysis_core.pydantic_models.behav_classifier_configs import (
-    BehavClassifierConfigs,
-)
 from behavysis_pipeline.behav_classifier.clf_models.base_torch_model import (
     BaseTorchModel,
 )
 from behavysis_pipeline.behav_classifier.clf_models.clf_templates import (
     CLF_TEMPLATES,
     DNN1,
+)
+from behavysis_pipeline.constants import Folders
+from behavysis_pipeline.df_classes.behav_df import BehavColumns, BehavDf
+from behavysis_pipeline.df_classes.df_mixin import DFMixin
+from behavysis_pipeline.pydantic_models.behav_classifier_configs import (
+    BehavClassifierConfigs,
 )
 
 if TYPE_CHECKING:
@@ -154,9 +154,7 @@ class BehavClassifier:
             The loaded BehavClassifier instance.
         """
         # Getting the list of behaviours
-        y_df = cls.wrangle_columns_y(
-            cls.combine(os.path.join(proj.root_dir, Folders.SCORED_BEHAVS.value))
-        )
+        y_df = cls.wrangle_columns_y(cls.combine(os.path.join(proj.root_dir, Folders.SCORED_BEHAVS.value)))
         # For each behaviour, making a new BehavClassifier instance
         behavs_ls = y_df.columns.to_list()
         model_dir = os.path.join(proj.root_dir, BEHAV_MODELS_SUBDIR)
@@ -239,8 +237,7 @@ class BehavClassifier:
     @staticmethod
     def combine(src_dir):
         data_dict = {
-            os.path.splitext(i)[0]: pd.read_feather(os.path.join(src_dir, i))
-            for i in os.listdir(os.path.join(src_dir))
+            os.path.splitext(i)[0]: pd.read_feather(os.path.join(src_dir, i)) for i in os.listdir(os.path.join(src_dir))
         }
         return pd.concat(data_dict.values(), axis=0, keys=data_dict.keys())
 
@@ -322,9 +319,7 @@ class BehavClassifier:
         # Converting MultiIndex columns to single columns by
         # setting the column names from `(behav, outcome)` to `{behav}__{outcome}`
         y.columns = [
-            f"{behav_name}"
-            if outcome_name == BehavColumns.ACTUAL.value
-            else f"{behav_name}__{outcome_name}"
+            f"{behav_name}" if outcome_name == BehavColumns.ACTUAL.value else f"{behav_name}__{outcome_name}"
             for behav_name, outcome_name in y.columns
         ]
         return y
@@ -425,9 +420,7 @@ class BehavClassifier:
             stratify=y[index],
         )
         # Undersampling training index
-        ind_train = self.undersample(
-            ind_train, y[ind_train], self.configs.undersample_ratio
-        )
+        ind_train = self.undersample(ind_train, y[ind_train], self.configs.undersample_ratio)
         # Return
         return x, y, ind_train, ind_test
 
@@ -579,9 +572,7 @@ class BehavClassifier:
 
     def clf_eval_save_history(self, history: pd.DataFrame, name: None | str = ""):
         # Saving history df
-        DFMixin.write_feather(
-            history, os.path.join(self.eval_dir, f"{name}_history.feather")
-        )
+        DFMixin.write_feather(history, os.path.join(self.eval_dir, f"{name}_history.feather"))
         # Making and saving history figure
         fig, ax = plt.subplots(figsize=(10, 7))
         sns.lineplot(data=history, ax=ax)
@@ -627,9 +618,7 @@ class BehavClassifier:
         # Logistic curve
         logc_fig = self.eval_logc(y_true, y_prob)
         # Saving data and figures
-        DFMixin.write_feather(
-            y_eval, os.path.join(self.eval_dir, f"{name}_eval.feather")
-        )
+        DFMixin.write_feather(y_eval, os.path.join(self.eval_dir, f"{name}_eval.feather"))
         with open(os.path.join(self.eval_dir, f"{name}_report.json"), "w") as f:
             json.dump(report_dict, f)
         metrics_fig.savefig(os.path.join(self.eval_dir, f"{name}_confm.png"))
@@ -769,9 +758,7 @@ class BehavClassifier:
             y_eval_grouped.apply(lambda x: (x["y_pred"] == x["y_true"]).mean()),
             columns=["proportion"],
         )
-        y_eval_summary["actual_bout"] = y_eval_grouped.apply(
-            lambda x: x["y_true"].mean()
-        )
+        y_eval_summary["actual_bout"] = y_eval_grouped.apply(lambda x: x["y_true"].mean())
         y_eval_summary["bout_len"] = y_eval_grouped.apply(lambda x: x.shape[0])
         y_eval_summary = y_eval_summary.sort_values("proportion")
         # # Making figure

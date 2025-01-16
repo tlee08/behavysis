@@ -18,9 +18,9 @@ str
     Description of the function's outcome.
 """
 
-from behavysis_core.mixins.io_mixin import IOMixin
-from behavysis_core.mixins.process_vid_mixin import ProcessVidMixin
-from behavysis_core.pydantic_models.experiment_configs import ExperimentConfigs
+from behavysis_pipeline.mixins.io_mixin import IOMixin
+from behavysis_pipeline.mixins.process_vid_mixin import ProcessVidMixin
+from behavysis_pipeline.pydantic_models.experiment_configs import ExperimentConfigs
 
 
 class FormatVid:
@@ -71,9 +71,7 @@ class FormatVid:
         return outcome
 
     @staticmethod
-    def get_vid_metadata(
-        in_fp: str, out_fp: str, configs_fp: str, overwrite: bool
-    ) -> str:
+    def get_vid_metadata(in_fp: str, out_fp: str, configs_fp: str, overwrite: bool) -> str:
         """
         Finds the video metadata/parameters for either the raw or formatted video,
         and stores this data in the experiment's config file.

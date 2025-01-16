@@ -22,19 +22,20 @@ import os
 
 import numpy as np
 import pandas as pd
-from behavysis_core.df_classes.analyse_binned_df import AnalyseBinnedDf
-from behavysis_core.df_classes.analyse_df import (
+from pydantic import BaseModel, ConfigDict
+
+from behavysis_pipeline.df_classes.analyse_binned_df import AnalyseBinnedDf
+from behavysis_pipeline.df_classes.analyse_df import (
     AnalyseDf,
 )
-from behavysis_core.df_classes.bouts_df import BoutsDf
-from behavysis_core.df_classes.keypoints_df import (
+from behavysis_pipeline.df_classes.bouts_df import BoutsDf
+from behavysis_pipeline.df_classes.keypoints_df import (
     Coords,
     IndivColumns,
     KeypointsDf,
 )
-from behavysis_core.mixins.io_mixin import IOMixin
-from behavysis_core.pydantic_models.experiment_configs import ExperimentConfigs
-from pydantic import BaseModel, ConfigDict
+from behavysis_pipeline.mixins.io_mixin import IOMixin
+from behavysis_pipeline.pydantic_models.experiment_configs import ExperimentConfigs
 
 ###################################################################################################
 #               ANALYSIS API FUNCS
@@ -100,9 +101,9 @@ class Analyse:
             KeypointsDf.check_bpts_exist(dlc_df, bpts)
             KeypointsDf.check_bpts_exist(dlc_df, roi_corners)
             # Getting average corner coordinates. Assumes arena does not move.
-            corners_i_df = pd.DataFrame(
-                [dlc_df[(IndivColumns.SINGLE.value, pt)].mean() for pt in roi_corners]
-            ).drop(columns=["likelihood"])
+            corners_i_df = pd.DataFrame([dlc_df[(IndivColumns.SINGLE.value, pt)].mean() for pt in roi_corners]).drop(
+                columns=["likelihood"]
+            )
             # Adjusting x-y to have `thresh_px` dilation/erosion from the points themselves
             roi_center = corners_i_df.mean()
             for i in corners_i_df.index:
@@ -112,12 +113,8 @@ class Analyse:
                     corners_i_df.loc[i, x] - roi_center[x],
                 )
                 # Getting x, y distances so point is `thresh_px` padded (away) from center
-                corners_i_df.loc[i, x] = corners_i_df.loc[i, x] + (
-                    thresh_px * np.cos(theta)
-                )
-                corners_i_df.loc[i, y] = corners_i_df.loc[i, y] + (
-                    thresh_px * np.sin(theta)
-                )
+                corners_i_df.loc[i, x] = corners_i_df.loc[i, x] + (thresh_px * np.cos(theta))
+                corners_i_df.loc[i, y] = corners_i_df.loc[i, y] + (thresh_px * np.sin(theta))
             # Saving corners_df to list
             corners_df_ls.append(corners_i_df)
             # Making the res_df
@@ -148,9 +145,7 @@ class Analyse:
             )
         # Concatenating all analysis_df_ls and roi_corners_df_ls
         analysis_df = pd.concat(analysis_df_ls, axis=1)
-        corners_df = pd.concat(
-            corners_df_ls, keys=roi_names_ls, names=["roi"]
-        ).reset_index(level="roi")
+        corners_df = pd.concat(corners_df_ls, keys=roi_names_ls, names=["roi"]).reset_index(level="roi")
         # Saving analysis_df
         fbf_fp = os.path.join(out_dir, "fbf", f"{name}.feather")
         AnalyseDf.write_feather(analysis_df, fbf_fp)
@@ -223,9 +218,7 @@ class Analyse:
             # Making a rolling window of 3 frames for average body-centre
             # Otherwise jitter contributes to movement
             jitter_frames = 3
-            smoothed_xy_df = dlc_df.rolling(
-                window=jitter_frames, min_periods=1, center=True
-            ).agg(np.nanmean)
+            smoothed_xy_df = dlc_df.rolling(window=jitter_frames, min_periods=1, center=True).agg(np.nanmean)
             # Getting changes in x-y values between frames (deltas)
             delta_x = smoothed_xy_df.loc[:, idx[indiv, bpts, "x"]].mean(axis=1).diff()  # type: ignore
             delta_y = smoothed_xy_df.loc[:, idx[indiv, bpts, "y"]].mean(axis=1).diff()  # type: ignore
@@ -385,14 +378,12 @@ class Analyse:
                 temp_df[f"{bpt}_dist"] = delta
                 # Smoothing
                 temp_df[f"{bpt}_dist"] = (
-                    temp_df[f"{bpt}_dist"]
-                    .rolling(window=smoothing_frames, min_periods=1, center=True)
-                    .agg(np.nanmean)
+                    temp_df[f"{bpt}_dist"].rolling(window=smoothing_frames, min_periods=1, center=True).agg(np.nanmean)
                 )
             # If ALL bodypoints do not leave `thresh_px`
-            analysis_df[(indiv, f_name)] = temp_df.apply(
-                lambda x: pd.Series(np.all(x < thresh_px)), axis=1
-            ).astype(np.int8)
+            analysis_df[(indiv, f_name)] = temp_df.apply(lambda x: pd.Series(np.all(x < thresh_px)), axis=1).astype(
+                np.int8
+            )
 
             # Getting start, stop, and duration of each freezing behav bout
             freezingbouts_df = BoutsDf.vect2bouts(analysis_df[(indiv, f_name)] == 1)

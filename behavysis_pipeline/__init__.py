@@ -15,7 +15,8 @@ import warnings
 import matplotlib
 import matplotlib.pyplot as plt
 import seaborn as sns
-from behavysis_core.constants import PLOT_DPI, PLOT_STYLE
+
+from behavysis_pipeline.constants import PLOT_DPI, PLOT_STYLE
 
 #####################################################################
 #               FILTERING STDOUT WARNINGS

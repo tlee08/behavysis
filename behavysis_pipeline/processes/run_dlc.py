@@ -25,12 +25,13 @@ import os
 import re
 
 import pandas as pd
-from behavysis_core.constants import TEMP_DIR
-from behavysis_core.df_classes.keypoints_df import KeypointsDf
-from behavysis_core.mixins.io_mixin import IOMixin
-from behavysis_core.mixins.misc_mixin import MiscMixin
-from behavysis_core.mixins.subproc_mixin import SubprocMixin
-from behavysis_core.pydantic_models.experiment_configs import ExperimentConfigs
+
+from behavysis_pipeline.constants import TEMP_DIR
+from behavysis_pipeline.df_classes.keypoints_df import KeypointsDf
+from behavysis_pipeline.mixins.io_mixin import IOMixin
+from behavysis_pipeline.mixins.misc_mixin import MiscMixin
+from behavysis_pipeline.mixins.subproc_mixin import SubprocMixin
+from behavysis_pipeline.pydantic_models.experiment_configs import ExperimentConfigs
 
 DLC_HDF_KEY = "data"
 
@@ -98,11 +99,7 @@ class RunDLC:
         if not overwrite:
             # Getting only the vid_fp_ls elements that do not exist in out_dir
             vid_fp_ls = [
-                i
-                for i in vid_fp_ls
-                if not os.path.exists(
-                    os.path.join(out_dir, f"{IOMixin.get_name(i)}.feather")
-                )
+                i for i in vid_fp_ls if not os.path.exists(os.path.join(out_dir, f"{IOMixin.get_name(i)}.feather"))
             ]
 
         # If there are no videos to process, return

@@ -31,17 +31,17 @@ import os
 import cv2
 import pandas as pd
 import seaborn as sns
-from behavysis_core.df_classes.analyse_combine_df import AnalyseCombineDf
-from behavysis_core.df_classes.behav_df import BehavDf
-from behavysis_core.df_classes.keypoints_df import Coords, KeypointsDf
-from behavysis_core.mixins.diagnostics_mixin import DiagnosticsMixin
-from behavysis_core.mixins.io_mixin import IOMixin
-from behavysis_core.pydantic_models.experiment_configs import ExperimentConfigs
 from tqdm import trange
 
+from behavysis_pipeline.df_classes.analyse_combine_df import AnalyseCombineDf
+from behavysis_pipeline.df_classes.behav_df import BehavDf
+from behavysis_pipeline.df_classes.keypoints_df import Coords, KeypointsDf
+from behavysis_pipeline.mixins.diagnostics_mixin import DiagnosticsMixin
+from behavysis_pipeline.mixins.io_mixin import IOMixin
 from behavysis_pipeline.processes.evaluate_vid import (
     VidFuncRunner,
 )
+from behavysis_pipeline.pydantic_models.experiment_configs import ExperimentConfigs
 
 
 class Evaluate:

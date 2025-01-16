@@ -13,26 +13,26 @@ import dask
 import numpy as np
 import pandas as pd
 import seaborn as sns
-from behavysis_core.constants import (
+from dask.distributed import LocalCluster
+from natsort import natsort_keygen, natsorted
+
+from behavysis_pipeline.constants import (
     ANALYSIS_DIR,
     DIAGNOSTICS_DIR,
     STR_DIV,
     Folders,
 )
-from behavysis_core.df_classes.analyse_binned_df import AnalyseBinnedDf
-from behavysis_core.df_classes.df_mixin import DFMixin
-from behavysis_core.mixins.diagnostics_mixin import DiagnosticsMixin
-from behavysis_core.mixins.io_mixin import IOMixin
-from behavysis_core.mixins.multiproc_mixin import MultiprocMixin
-from behavysis_core.pydantic_models.experiment_configs import (
+from behavysis_pipeline.df_classes.analyse_binned_df import AnalyseBinnedDf
+from behavysis_pipeline.df_classes.df_mixin import DFMixin
+from behavysis_pipeline.mixins.diagnostics_mixin import DiagnosticsMixin
+from behavysis_pipeline.mixins.io_mixin import IOMixin
+from behavysis_pipeline.mixins.multiproc_mixin import MultiprocMixin
+from behavysis_pipeline.pipeline.experiment import Experiment
+from behavysis_pipeline.processes.run_dlc import RunDLC
+from behavysis_pipeline.pydantic_models.experiment_configs import (
     ConfigsAuto,
     ExperimentConfigs,
 )
-from dask.distributed import LocalCluster
-from natsort import natsort_keygen, natsorted
-
-from behavysis_pipeline.pipeline.experiment import Experiment
-from behavysis_pipeline.processes.run_dlc import RunDLC
 from behavysis_pipeline.utils.dask_utils import cluster_proc_contxt
 
 
@@ -201,9 +201,7 @@ class Project:
         """
         if name in self.experiments:
             return self.experiments[name]
-        raise ValueError(
-            f'Experiment with the name "{name}" does not exist in the project.'
-        )
+        raise ValueError(f'Experiment with the name "{name}" does not exist in the project.')
 
     def get_experiments(self) -> list[Experiment]:
         """
@@ -225,9 +223,7 @@ class Project:
     #     method, exp, args, kwargs = args_tuple
     #     return method(exp, *args, **kwargs)
 
-    def _process_scaffold_mp(
-        self, method: Callable, *args: Any, **kwargs: Any
-    ) -> list[dict]:
+    def _process_scaffold_mp(self, method: Callable, *args: Any, **kwargs: Any) -> list[dict]:
         """
         Processes an experiment with the given `Experiment` method and records
         the diagnostics of the process in a MULTI-PROCESSING way.
@@ -254,21 +250,14 @@ class Project:
         #         [(method, exp, args, kwargs) for exp in self.get_experiments()],
         #     )
         # Starting a dask cluster
-        with cluster_proc_contxt(
-            LocalCluster(n_workers=self.nprocs, threads_per_worker=1)
-        ):
+        with cluster_proc_contxt(LocalCluster(n_workers=self.nprocs, threads_per_worker=1)):
             # Preparing all experiments for execution
-            f_d_ls = [
-                dask.delayed(method)(exp, *args, **kwargs)
-                for exp in self.get_experiments()
-            ]
+            f_d_ls = [dask.delayed(method)(exp, *args, **kwargs) for exp in self.get_experiments()]
             # Executing in parallel
             dd_ls = dask.compute(*f_d_ls)
         return dd_ls
 
-    def _process_scaffold_sp(
-        self, method: Callable, *args: Any, **kwargs: Any
-    ) -> list[dict]:
+    def _process_scaffold_sp(self, method: Callable, *args: Any, **kwargs: Any) -> list[dict]:
         """
         Processes an experiment with the given `Experiment` method and records
         the diagnostics of the process in a SINGLE-PROCESSING way.
@@ -306,11 +295,7 @@ class Project:
         dd_ls = scaffold_func(method, *args, **kwargs)
         if len(dd_ls) > 0:
             # Processing all experiments
-            df = (
-                pd.DataFrame(dd_ls)
-                .set_index("experiment")
-                .sort_index(key=natsort_keygen())
-            )
+            df = pd.DataFrame(dd_ls).set_index("experiment").sort_index(key=natsort_keygen())
             # Updating the diagnostics file at each step
             self._save_diagnostics(method.__name__, df)
             # Finishing
@@ -341,11 +326,7 @@ class Project:
         exp_ls = self.get_experiments()
         # If overwrite is False, filtering for only experiments that need processing
         if not overwrite:
-            exp_ls = [
-                exp
-                for exp in exp_ls
-                if not os.path.isfile(exp.get_fp(Folders.DLC.value))
-            ]
+            exp_ls = [exp for exp in exp_ls if not os.path.isfile(exp.get_fp(Folders.DLC.value))]
 
         # Running DLC on each batch of experiments with each GPU (given allocated GPU ID)
         # TODO: have error handling
@@ -530,16 +511,10 @@ class Project:
         # Making and saving histogram plots of the numerical auto fields
         # NOTE: NOT including string frequencies, only numerical
         df_configs = df_configs.loc[:, df_configs.apply(pd.api.types.is_numeric_dtype)]
-        g = sns.FacetGrid(
-            data=df_configs.fillna(-1).melt(), col="variable", sharex=False, col_wrap=4
-        )
+        g = sns.FacetGrid(data=df_configs.fillna(-1).melt(), col="variable", sharex=False, col_wrap=4)
         g.map(sns.histplot, "value", bins=10)
         g.set_titles("{col_name}")
-        g.savefig(
-            os.path.join(
-                self.root_dir, DIAGNOSTICS_DIR, "collated_configs_auto_hist.png"
-            )
-        )
+        g.savefig(os.path.join(self.root_dir, DIAGNOSTICS_DIR, "collated_configs_auto_hist.png"))
         g.figure.clf()
 
     #####################################################################
@@ -567,9 +542,7 @@ class Project:
         # AGGREGATING BINNED DATA
         # NOTE: need a more robust way of getting the list of bin sizes
         proj_analyse_dir = os.path.join(self.root_dir, ANALYSIS_DIR)
-        configs = ExperimentConfigs.read_json(
-            self.get_experiments()[0].get_fp(Folders.CONFIGS.value)
-        )
+        configs = ExperimentConfigs.read_json(self.get_experiments()[0].get_fp(Folders.CONFIGS.value))
         bin_sizes_sec = configs.get_ref(configs.user.analyse.bins_sec)
         bin_sizes_sec = np.append(bin_sizes_sec, "custom")
         # Searching through all the analysis subdir
@@ -613,16 +586,12 @@ class Project:
             df_ls = []
             names_ls = []
             for exp in self.get_experiments():
-                in_fp = os.path.join(
-                    proj_analyse_dir, analyse_subdir, "summary", f"{exp.name}.feather"
-                )
+                in_fp = os.path.join(proj_analyse_dir, analyse_subdir, "summary", f"{exp.name}.feather")
                 if os.path.isfile(in_fp):
                     # Reading exp summary df
                     df_ls.append(DFMixin.read_feather(in_fp))
                     names_ls.append(exp.name)
-            out_fp = os.path.join(
-                proj_analyse_dir, analyse_subdir, "__ALL_summary.feather"
-            )
+            out_fp = os.path.join(proj_analyse_dir, analyse_subdir, "__ALL_summary.feather")
             # Concatenating total_df with df across columns, with experiment name to column MultiIndex
             if len(df_ls) > 0:
                 total_df = pd.concat(df_ls, keys=names_ls, names=["experiment"], axis=0)

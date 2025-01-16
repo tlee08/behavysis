@@ -2,7 +2,7 @@
 # import shutil
 
 # import pytest
-# from behavysis_core.mixins.io_mixin import IOMixin
+# from behavysis_pipeline.mixins.io_mixin import IOMixin
 
 # from behavysis_pipeline import Project
 # from behavysis_pipeline.processes import *

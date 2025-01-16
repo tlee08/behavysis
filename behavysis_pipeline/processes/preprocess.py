@@ -23,15 +23,16 @@ from typing import Literal
 
 import numpy as np
 import pandas as pd
-from behavysis_core.df_classes.df_mixin import DFMixin
-from behavysis_core.df_classes.keypoints_df import (
+from pydantic import BaseModel
+
+from behavysis_pipeline.df_classes.df_mixin import DFMixin
+from behavysis_pipeline.df_classes.keypoints_df import (
     Coords,
     IndivColumns,
     KeypointsDf,
 )
-from behavysis_core.mixins.io_mixin import IOMixin
-from behavysis_core.pydantic_models.experiment_configs import ExperimentConfigs
-from pydantic import BaseModel
+from behavysis_pipeline.mixins.io_mixin import IOMixin
+from behavysis_pipeline.pydantic_models.experiment_configs import ExperimentConfigs
 
 
 class Preprocess:
@@ -39,9 +40,7 @@ class Preprocess:
 
     @staticmethod
     @IOMixin.overwrite_check()
-    def start_stop_trim(
-        dlc_fp: str, out_fp: str, configs_fp: str, overwrite: bool
-    ) -> str:
+    def start_stop_trim(dlc_fp: str, out_fp: str, configs_fp: str, overwrite: bool) -> str:
         """
         Filters the rows of a DLC formatted dataframe to include only rows within the start
         and end time of the experiment, given a corresponding configs dict.
@@ -90,9 +89,7 @@ class Preprocess:
 
     @staticmethod
     @IOMixin.overwrite_check()
-    def interpolate_stationary(
-        dlc_fp: str, out_fp: str, configs_fp: str, overwrite: bool
-    ) -> str:
+    def interpolate_stationary(dlc_fp: str, out_fp: str, configs_fp: str, overwrite: bool) -> str:
         """
         If the point detection (above a certain threshold) is below a certain proportion, then the x and y coordinates are set to the given values (usually corners).
         Otherwise, does nothing (encouraged to run Preprocess.interpolage afterwards).
@@ -141,9 +138,7 @@ class Preprocess:
             x = x * width_px
             y = y * height_px
             # Getting "is_detected" for each frame for the bodypart
-            is_detected = (
-                df[(scorer, "single", bodypart, Coords.LIKELIHOOD.value)] >= pcutoff
-            )
+            is_detected = df[(scorer, "single", bodypart, Coords.LIKELIHOOD.value)] >= pcutoff
             # If the bodypart is detected in less than the given proportion of the video, then set the x and y coordinates to the given values
             if is_detected.mean() < pcutoff_all:
                 df[(scorer, "single", bodypart, Coords.X.value)] = x
@@ -187,13 +182,9 @@ class Preprocess:
         # Setting low-likelihood points to Nan to later interpolate
         for scorer, indiv, bp in unique_cols:
             # Imputing Nan likelihood points with 0
-            df[(scorer, indiv, bp, Coords.LIKELIHOOD.value)].fillna(
-                value=0, inplace=True
-            )
+            df[(scorer, indiv, bp, Coords.LIKELIHOOD.value)].fillna(value=0, inplace=True)
             # Setting x and y coordinates of points that have low likelihood to Nan
-            to_remove = (
-                df[(scorer, indiv, bp, Coords.LIKELIHOOD.value)] < configs_filt.pcutoff
-            )
+            to_remove = df[(scorer, indiv, bp, Coords.LIKELIHOOD.value)] < configs_filt.pcutoff
             df.loc[to_remove, (scorer, indiv, bp, Coords.X.value)] = np.nan
             df.loc[to_remove, (scorer, indiv, bp, Coords.Y.value)] = np.nan
         # linearly interpolating Nan x and y points.
@@ -251,8 +242,7 @@ class Preprocess:
         ]:
             if column not in df.columns.unique(level):
                 raise ValueError(
-                    f'The marking value in the config file, "{column}",'
-                    " is not a column name in the DLC file."
+                    f'The marking value in the config file, "{column}",' " is not a column name in the DLC file."
                 )
         # Checking that bodyparts are all valid
         KeypointsDf.check_bpts_exist(df, bpts)
@@ -303,12 +293,8 @@ def aggregate_df(
     # Getting the distance between each mouse and the colour marking in each frame
     for indiv in indivs:
         df_aggr[(indiv, "dist")] = np.sqrt(
-            np.square(
-                df_aggr[(indiv, Coords.X.value)] - df_aggr[("mark", Coords.X.value)]
-            )
-            + np.square(
-                df_aggr[(indiv, Coords.Y.value)] - df_aggr[("mark", Coords.Y.value)]
-            )
+            np.square(df_aggr[(indiv, Coords.X.value)] - df_aggr[("mark", Coords.X.value)])
+            + np.square(df_aggr[(indiv, Coords.Y.value)] - df_aggr[("mark", Coords.Y.value)])
         )
     # Formatting columns as a MultiIndex
     df_aggr.columns = pd.MultiIndex.from_tuples(df_aggr.columns)
@@ -346,23 +332,14 @@ def decice_switch(
     df_switch["current"] = df_aggr[(marked, "dist")] > df_aggr[(unmarked, "dist")]
     #   - Decision rolling
     df_switch["rolling"] = (
-        df_switch["current"]
-        .rolling(window_frames, min_periods=1)
-        .apply(lambda x: x.mode()[0])
-        .map({1: True, 0: False})
+        df_switch["current"].rolling(window_frames, min_periods=1).apply(lambda x: x.mode()[0]).map({1: True, 0: False})
     )
     #   - Decision binned
-    bins = np.arange(
-        df_switch.index.min(), df_switch.index.max() + window_frames, window_frames
-    )
+    bins = np.arange(df_switch.index.min(), df_switch.index.max() + window_frames, window_frames)
     df_switch_x = pd.DataFrame()
-    df_switch_x["bins"] = pd.Series(
-        pd.cut(df_switch.index, bins=bins, labels=bins[1:], include_lowest=True)
-    )
+    df_switch_x["bins"] = pd.Series(pd.cut(df_switch.index, bins=bins, labels=bins[1:], include_lowest=True))
     df_switch_x["current"] = df_switch["current"]
-    df_switch["binned"] = df_switch_x.groupby("bins")["current"].transform(
-        lambda x: x.mode()
-    )
+    df_switch["binned"] = df_switch_x.groupby("bins")["current"].transform(lambda x: x.mode())
     return df_switch
 
 

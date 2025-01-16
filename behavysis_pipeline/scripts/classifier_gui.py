@@ -4,14 +4,14 @@ import subprocess
 
 import pandas as pd
 import streamlit as st
-from behavysis_core.mixins.io_mixin import IOMixin
-from behavysis_core.pydantic_models.experiment_configs import ExperimentConfigs
 
+from behavysis_pipeline.mixins.io_mixin import IOMixin
 from behavysis_pipeline.pipeline.project import Project
 from behavysis_pipeline.processes.calculate_params import CalculateParams
 from behavysis_pipeline.processes.extract_features import run_simba_subproc
 from behavysis_pipeline.processes.preprocess import Preprocess
 from behavysis_pipeline.processes.run_dlc import run_dlc_subproc
+from behavysis_pipeline.pydantic_models.experiment_configs import ExperimentConfigs
 
 #####################################################################
 # Pipeline Functions (callbacks)
@@ -37,9 +37,7 @@ def status_wrapper(func):
 
 def get_class_methods(cls):
     return [
-        getattr(cls, method)
-        for method in dir(cls)
-        if callable(getattr(cls, method)) and not method.startswith("__")
+        getattr(cls, method) for method in dir(cls) if callable(getattr(cls, method)) and not method.startswith("__")
     ]
 
 
@@ -192,10 +190,7 @@ def page_calculate_params():
     # Recalling session state variables
     proj: Project = st.session_state.get("proj", None)
     # Page description
-    st.write(
-        "Calculate the project's inherent parameters "
-        "from the video and DLC keypoints data"
-    )
+    st.write("Calculate the project's inherent parameters " "from the video and DLC keypoints data")
     # List of checkboxes for each method
     st.subheader("Select Methods to Run")
     methods = get_class_methods(CalculateParams)
@@ -221,10 +216,7 @@ def page_preprocess():
     # Recalling session state variables
     proj: Project = st.session_state.get("proj", None)
     # Page description
-    st.write(
-        "Calculate the project's inherent parameters "
-        "from the video and DLC keypoints data"
-    )
+    st.write("Calculate the project's inherent parameters " "from the video and DLC keypoints data")
     # List of checkboxes for each method
     st.subheader("Select Methods to Run")
     methods = get_class_methods(Preprocess)
@@ -295,9 +287,7 @@ def main_old():
     st.title("Behavysis Pipeline Runner")
 
     # Sidebar for navigation
-    app_mode = st.sidebar.selectbox(
-        "Choose the application mode", ["Run DLC Subprocess", "Run SimBA Subprocess"]
-    )
+    app_mode = st.sidebar.selectbox("Choose the application mode", ["Run DLC Subprocess", "Run SimBA Subprocess"])
 
     if app_mode == "Run DLC Subprocess":
         st.header("Run DLC Subprocess")

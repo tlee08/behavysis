@@ -21,12 +21,13 @@ from __future__ import annotations
 import os
 
 import numpy as np
-from behavysis_core.df_classes.analyse_binned_df import AnalyseBinnedDf
-from behavysis_core.df_classes.analyse_df import AnalyseDf
-from behavysis_core.df_classes.behav_df import BehavColumns, BehavDf
-from behavysis_core.mixins.io_mixin import IOMixin
-from behavysis_core.mixins.misc_mixin import MiscMixin
-from behavysis_core.pydantic_models.experiment_configs import ExperimentConfigs
+
+from behavysis_pipeline.df_classes.analyse_binned_df import AnalyseBinnedDf
+from behavysis_pipeline.df_classes.analyse_df import AnalyseDf
+from behavysis_pipeline.df_classes.behav_df import BehavColumns, BehavDf
+from behavysis_pipeline.mixins.io_mixin import IOMixin
+from behavysis_pipeline.mixins.misc_mixin import MiscMixin
+from behavysis_pipeline.pydantic_models.experiment_configs import ExperimentConfigs
 
 ###################################################################################################
 #               ANALYSIS API FUNCS

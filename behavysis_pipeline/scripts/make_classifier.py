@@ -1,6 +1,6 @@
 import os
 
-from behavysis_core.mixins.io_mixin import IOMixin
+from behavysis_pipeline.mixins.io_mixin import IOMixin
 
 
 # TODO: what is happening here? Fix up for make_classifier script

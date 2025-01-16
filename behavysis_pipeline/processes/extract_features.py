@@ -5,14 +5,15 @@ _summary_
 import os
 
 import pandas as pd
-from behavysis_core.constants import TEMP_DIR
-from behavysis_core.df_classes.features_df import FeaturesDf
-from behavysis_core.df_classes.keypoints_df import KeypointsDf
-from behavysis_core.mixins.io_mixin import IOMixin
-from behavysis_core.mixins.misc_mixin import MiscMixin
-from behavysis_core.mixins.multiproc_mixin import MultiprocMixin
-from behavysis_core.mixins.subproc_mixin import SubprocMixin
-from behavysis_core.pydantic_models.experiment_configs import ExperimentConfigs
+
+from behavysis_pipeline.constants import TEMP_DIR
+from behavysis_pipeline.df_classes.features_df import FeaturesDf
+from behavysis_pipeline.df_classes.keypoints_df import KeypointsDf
+from behavysis_pipeline.mixins.io_mixin import IOMixin
+from behavysis_pipeline.mixins.misc_mixin import MiscMixin
+from behavysis_pipeline.mixins.multiproc_mixin import MultiprocMixin
+from behavysis_pipeline.mixins.subproc_mixin import SubprocMixin
+from behavysis_pipeline.pydantic_models.experiment_configs import ExperimentConfigs
 
 # Order of bodyparts is from
 # - https://github.com/sgoldenlab/simba/blob/master/docs/Multi_animal_pose.md
@@ -64,9 +65,7 @@ class ExtractFeatures:
         configs_dir = os.path.split(configs_fp)[0]
         simba_in_dir = os.path.join(TEMP_DIR, f"input_{cpid}")
         simba_dir = os.path.join(TEMP_DIR, f"simba_proj_{cpid}")
-        features_from_dir = os.path.join(
-            simba_dir, "project_folder", "csv", "features_extracted"
-        )
+        features_from_dir = os.path.join(simba_dir, "project_folder", "csv", "features_extracted")
         # Preparing dlc dfs for input to SimBA project
         os.makedirs(simba_in_dir, exist_ok=True)
         simba_in_fp = os.path.join(simba_in_dir, f"{name}.csv")
@@ -82,9 +81,7 @@ class ExtractFeatures:
         # Removing simba folder (if it exists)
         IOMixin.silent_rm(simba_dir)
         # Running SimBA env and script to run SimBA feature extraction
-        outcome += run_simba_subproc(
-            simba_dir, simba_in_dir, configs_dir, TEMP_DIR, cpid
-        )
+        outcome += run_simba_subproc(simba_dir, simba_in_dir, configs_dir, TEMP_DIR, cpid)
         # Exporting SimBA feature extraction csv to feather
         simba_out_fp = os.path.join(features_from_dir, f"{name}.csv")
         export2feather(simba_out_fp, out_fp, index)

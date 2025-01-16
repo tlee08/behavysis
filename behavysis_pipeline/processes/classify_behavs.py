@@ -4,13 +4,13 @@ Classify Behaviours
 
 import pandas as pd
 
-from behavysis_core.df_classes.behav_df import BehavColumns, BehavDf
-from behavysis_core.df_classes.bouts_df import BoutsDf
-from behavysis_core.df_classes.df_mixin import DFMixin
-from behavysis_core.mixins.io_mixin import IOMixin
-from behavysis_core.mixins.misc_mixin import MiscMixin
-from behavysis_core.pydantic_models.experiment_configs import ExperimentConfigs
 from behavysis_pipeline.behav_classifier.behav_classifier import BehavClassifier
+from behavysis_pipeline.df_classes.behav_df import BehavColumns, BehavDf
+from behavysis_pipeline.df_classes.bouts_df import BoutsDf
+from behavysis_pipeline.df_classes.df_mixin import DFMixin
+from behavysis_pipeline.mixins.io_mixin import IOMixin
+from behavysis_pipeline.mixins.misc_mixin import MiscMixin
+from behavysis_pipeline.pydantic_models.experiment_configs import ExperimentConfigs
 
 # TODO: handle reading the model file whilst in multiprocessing
 
@@ -73,14 +73,10 @@ class ClassifyBehavs:
             try:
                 behav_model = BehavClassifier.load(model_fp)
             except (FileNotFoundError, OSError):
-                outcome += (
-                    f"WARNING: Model file {model_fp} not found. Skipping model.\n"
-                )
+                outcome += f"WARNING: Model file {model_fp} not found. Skipping model.\n"
                 continue
             behav_name = behav_model.configs.behaviour_name
-            pcutoff = cls._check_init_pcutoff(
-                configs.get_ref(model_config.pcutoff), behav_model.configs.pcutoff
-            )
+            pcutoff = cls._check_init_pcutoff(configs.get_ref(model_config.pcutoff), behav_model.configs.pcutoff)
             min_window_frames = configs.get_ref(model_config.min_window_frames)
             user_behavs = configs.get_ref(model_config.user_behavs)
             # Running the clf pipeline
@@ -98,9 +94,7 @@ class ClassifyBehavs:
             # Adding model predictions df to list
             df_ls.append(df_i)
             # Logging outcome
-            outcome += (
-                f"Completed {behav_model.configs.behaviour_name} classification.\n"
-            )
+            outcome += f"Completed {behav_model.configs.behaviour_name} classification.\n"
         # If no models were run, then return outcome
         if len(df_ls) == 0:
             return outcome
@@ -126,13 +120,10 @@ class ClassifyBehavs:
         if pcutoff == -1:
             # Checking if model_pcutoff is valid
             assert 0 <= model_pcutoff <= 1, (
-                "pcutoff is relying on the modedel's pcutoff, "
-                "but the model's pcutoff is invalid."
+                "pcutoff is relying on the modedel's pcutoff, " "but the model's pcutoff is invalid."
             )
             return model_pcutoff
-        assert (
-            0 <= pcutoff <= 1
-        ), "init_pcutoff must be between 0 and 1, or the special value -1."
+        assert 0 <= pcutoff <= 1, "init_pcutoff must be between 0 and 1, or the special value -1."
         return pcutoff
 
     @staticmethod

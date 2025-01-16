@@ -16,14 +16,15 @@ str
 
 import numpy as np
 import pandas as pd
-from behavysis_core.df_classes.keypoints_df import (
+from pydantic import BaseModel, ConfigDict
+
+from behavysis_pipeline.df_classes.keypoints_df import (
     Coords,
     IndivColumns,
     KeypointsDf,
 )
-from behavysis_core.mixins.io_mixin import IOMixin
-from behavysis_core.pydantic_models.experiment_configs import ExperimentConfigs
-from pydantic import BaseModel, ConfigDict
+from behavysis_pipeline.mixins.io_mixin import IOMixin
+from behavysis_pipeline.pydantic_models.experiment_configs import ExperimentConfigs
 
 
 class CalculateParams:
@@ -141,18 +142,14 @@ class CalculateParams:
         fps = configs.auto.formatted_vid.fps
         total_frames = configs.auto.formatted_vid.total_frames
         # Asserting that the necessary auto configs are valid
-        assert (
-            start_frame is not None
-        ), "start_frame is None. Please calculate start_frame first."
+        assert start_frame is not None, "start_frame is None. Please calculate start_frame first."
         assert fps is not None, "fps is None. Please calculate fps first."
         # Calculating stop_frame
         dur_frames = int(dur_sec * fps)
         stop_frame = start_frame + dur_frames
         # Make a warning if the use-specified dur_sec is larger than the duration of the video.
         if total_frames is None:
-            outcome += (
-                "WARNING: The length of the video itself has not been calculated yet."
-            )
+            outcome += "WARNING: The length of the video itself has not been calculated yet."
         elif stop_frame > total_frames:
             outcome += (
                 "WARNING: The user specified dur_sec in the configs file is greater "
@@ -244,9 +241,7 @@ class CalculateParams:
         csv_fp = configs.get_ref(configs_filt.csv_fp)
         name = configs.get_ref(configs_filt.name)
         # Assert fps should not be negative (-1 is a special value for None)
-        assert (
-            fps > 0
-        ), "fps should not be negative. Run FormatVid.get_vid_metadata() beforehand."
+        assert fps > 0, "fps should not be negative. Run FormatVid.get_vid_metadata() beforehand."
         # Using the name of the video as the name of the experiment if not specified
         if name is None:
             name = IOMixin.get_name(dlc_fp)
@@ -254,9 +249,7 @@ class CalculateParams:
         df = pd.read_csv(csv_fp, index_col=0)
         df.index = df.index.astype(str)
         # Asserting that the name and col_name is in the df
-        assert (
-            name in df.index.values
-        ), f"{name} not in {csv_fp}. Update the `name` parameter in the configs file."
+        assert name in df.index.values, f"{name} not in {csv_fp}. Update the `name` parameter in the configs file."
         # Getting start time in seconds
         start_sec = df.loc[name][0]
         # Converting to start frame
@@ -318,12 +311,7 @@ class CalculateParams:
         pt_b_df.loc[pt_b_df[Coords.LIKELIHOOD.value] < pcutoff] = np.nan
         pt_b_df = pt_b_df.interpolate(method="linear", axis=0).bfill()
         # Getting distance between calibration points
-        dist_px = np.nanmean(
-            np.sqrt(
-                np.square(pt_a_df["x"] - pt_b_df["x"])
-                + np.square(pt_a_df["y"] - pt_b_df["y"])
-            )
-        )
+        dist_px = np.nanmean(np.sqrt(np.square(pt_a_df["x"] - pt_b_df["x"]) + np.square(pt_a_df["y"] - pt_b_df["y"])))
         # Finding pixels per mm conversion, using the given arena width and height as calibration
         px_per_mm = dist_px / dist_mm
         # Saving to configs file
@@ -350,9 +338,7 @@ def calc_likelihoods(
     df_bpts_lhoods = df.loc[:, idx[:, bpts, Coords.LIKELIHOOD.value]]  # type: ignore
     df_lhoods["current"] = df_bpts_lhoods.apply(np.nanmedian, axis=1)
     # Calculating likelihood of subject existing over time window
-    df_lhoods["rolling"] = (
-        df_lhoods["current"].rolling(window_frames, center=True).agg(np.nanmean)
-    )
+    df_lhoods["rolling"] = df_lhoods["current"].rolling(window_frames, center=True).agg(np.nanmean)
     # Returning df_lhoods
     return df_lhoods
 

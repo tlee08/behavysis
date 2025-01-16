@@ -10,15 +10,15 @@ from enum import Enum
 from typing import Any, Callable
 
 import numpy as np
-from behavysis_core.constants import (
+
+from behavysis_pipeline.constants import (
     ANALYSIS_DIR,
     STR_DIV,
     FileExts,
     Folders,
 )
-from behavysis_core.mixins.diagnostics_mixin import DiagnosticsMixin
-from behavysis_core.mixins.misc_mixin import MiscMixin
-
+from behavysis_pipeline.mixins.diagnostics_mixin import DiagnosticsMixin
+from behavysis_pipeline.mixins.misc_mixin import MiscMixin
 from behavysis_pipeline.processes.analyse_behaviours import AnalyseBehaviours
 from behavysis_pipeline.processes.analyse_combine import AnalyseCombine
 from behavysis_pipeline.processes.classify_behavs import ClassifyBehavs
@@ -61,8 +61,7 @@ class Experiment:
         # Assertion: root_dir mus† exist
         if not os.path.isdir(root_dir):
             raise ValueError(
-                f'Cannot find the project folder named "{root_dir}".\n'
-                "Please specify a folder that exists."
+                f'Cannot find the project folder named "{root_dir}".\n' "Please specify a folder that exists."
             )
         # Setting up instance variables
         self.name = name

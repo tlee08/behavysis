@@ -9,15 +9,16 @@ import cv2
 import numpy as np
 import pandas as pd
 import pyqtgraph as pg
-from behavysis_core.df_classes.analyse_combined_df import AnalyseCombinedDf
-from behavysis_core.df_classes.keypoints_df import IndivColumns, KeypointsDf
-from behavysis_core.mixins.diagnostics_mixin import DiagnosticsMixin
-from behavysis_core.mixins.io_mixin import IOMixin
-from behavysis_core.mixins.misc_mixin import MiscMixin
-from behavysis_core.pydantic_models.experiment_configs import ExperimentConfigs
 from pyqtgraph.exporters import ImageExporter
 from PySide6 import QtGui
 from tqdm import trange
+
+from behavysis_pipeline.df_classes.analyse_combined_df import AnalyseCombinedDf
+from behavysis_pipeline.df_classes.keypoints_df import IndivColumns, KeypointsDf
+from behavysis_pipeline.mixins.diagnostics_mixin import DiagnosticsMixin
+from behavysis_pipeline.mixins.io_mixin import IOMixin
+from behavysis_pipeline.mixins.misc_mixin import MiscMixin
+from behavysis_pipeline.pydantic_models.experiment_configs import ExperimentConfigs
 
 ###################################################################################################
 # EVALUATE VID FUNC, WHICH FACES OUT
@@ -73,10 +74,7 @@ class EvaluateVid:
         try:
             analysis_df = AnalyseCombinedDf.read_feather(analyse_combined_fp)
         except FileNotFoundError:
-            outcome += (
-                "WARNING: analysis combined file not found or could not be loaded."
-                "Disregarding analysis."
-            )
+            outcome += "WARNING: analysis combined file not found or could not be loaded." "Disregarding analysis."
             analysis_df = AnalyseCombinedDf.init_df(dlc_df.index)
 
         # MAKING ANNOTATED VIDEO
@@ -208,28 +206,20 @@ class Keypoints(EvalVidFuncBase):
         - Making the corresponding colours list for each bodypart instance (colours depend on indiv/bpt)
         """
         # Filtering out IndivColumns.PROCESS.value columns
-        if IndivColumns.PROCESS.value in self.dlc_df.columns.unique(
-            KeypointsDf.CN.INDIVIDUALS.value
-        ):
+        if IndivColumns.PROCESS.value in self.dlc_df.columns.unique(KeypointsDf.CN.INDIVIDUALS.value):
             self.dlc_df.drop(
                 columns=IndivColumns.PROCESS.value,
                 level=KeypointsDf.CN.INDIVIDUALS.value,
             )
         # Getting (indivs, bpts) MultiIndex
         # TODO: make explicitly selecting (indivs, bpts) levels
-        self.indivs_bpts_ls = self.dlc_df.columns.droplevel(
-            level=KeypointsDf.CN.COORDS.value
-        ).unique()
+        self.indivs_bpts_ls = self.dlc_df.columns.droplevel(level=KeypointsDf.CN.COORDS.value).unique()
         # Rounding and converting to correct dtypes - "x" and "y" values are ints
         self.dlc_df = self.dlc_df.fillna(0)
-        columns = self.dlc_df.columns[
-            self.dlc_df.columns.get_level_values("coords").isin(["x", "y"])
-        ]
+        columns = self.dlc_df.columns[self.dlc_df.columns.get_level_values("coords").isin(["x", "y"])]
         self.dlc_df[columns] = self.dlc_df[columns].round(0).astype(int)
         # Changing the columns MultiIndex to a single-level index. For speedup
-        self.dlc_df.columns = [
-            f"{indiv}_{bpt}_{coord}" for indiv, bpt, coord in self.dlc_df.columns
-        ]
+        self.dlc_df.columns = [f"{indiv}_{bpt}_{coord}" for indiv, bpt, coord in self.dlc_df.columns]
         # Making the corresponding colours list for each bodypart instance
         # (colours depend on indiv/bpt)
         measures_ls = self.indivs_bpts_ls.get_level_values(self.colour_level)
@@ -303,9 +293,7 @@ class Analysis(EvalVidFuncBase):
         self.plots_layout = pg.GraphicsLayoutWidget()
         # Getting the uniques analysis group names
         # And calculating each plot's height
-        analysis_ls = self.analysis_df.columns.unique(
-            AnalyseCombinedDf.CN.ANALYSIS.value
-        )
+        analysis_ls = self.analysis_df.columns.unique(AnalyseCombinedDf.CN.ANALYSIS.value)
         height_plot = int(np.round(self.height_output / len(analysis_ls)))
         # Making list of lists to store each plot (for "analysis")
         self.plot_arr = []
@@ -313,9 +301,7 @@ class Analysis(EvalVidFuncBase):
         for i, analysis_i in enumerate(analysis_ls):
             # Getting the uniques individual names in the analysis group
             # And calculating the width of each plot in the current row
-            indivs_ls = self.analysis_df[(analysis_i,)].columns.unique(
-                AnalyseCombinedDf.CN.INDIVIDUALS.value
-            )
+            indivs_ls = self.analysis_df[(analysis_i,)].columns.unique(AnalyseCombinedDf.CN.INDIVIDUALS.value)
             width_plot = int(np.round(self.width_output / len(indivs_ls)))
             # Making list to store each plot (for "individuals")
             plot_arr_i = []
@@ -493,9 +479,7 @@ class VidFuncRunner:
     width_out: int
     height_out: int
 
-    def __init__(
-        self, func_names: list[str], width_input: int, height_input: int, **kwargs
-    ):
+    def __init__(self, func_names: list[str], width_input: int, height_input: int, **kwargs):
         """
         NOTE: kwargs are the constructor parameters for
         EvalVidFuncBase classes.
