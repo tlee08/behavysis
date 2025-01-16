@@ -1,4 +1,3 @@
-import datetime
 import functools
 import logging
 import os
@@ -26,8 +25,8 @@ def init_logger(name: str = __name__) -> logging.Logger:
         formatter = logging.Formatter(LOG_FORMAT)
         # File handler
         # NOTE: May not work for multiprocessing - multiple files will be created
-        curr_time = datetime.datetime.now().strftime(LOG_FILE_FORMAT)
-        log_fp = os.path.join(CACHE_DIR, f"debug_{curr_time}.log")
+        # curr_time = datetime.datetime.now().strftime(LOG_FILE_FORMAT)
+        log_fp = os.path.join(CACHE_DIR, "debug.log")
         file_handler = logging.FileHandler(log_fp, mode="a")
         file_handler.setLevel(logging.DEBUG)
         file_handler.setFormatter(formatter)

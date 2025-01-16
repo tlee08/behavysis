@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 from dask.distributed import LocalCluster
-from natsort import natsort_keygen, natsorted
+from natsort import natsorted
 
 from behavysis_pipeline.constants import (
     ANALYSIS_DIR,
@@ -38,106 +38,6 @@ from behavysis_pipeline.utils.multiproc_utils import get_gpu_ids
 class Project:
     """
     A project is used to process and analyse many experiments at the same time.
-
-    Expected filesystem hierarchy of project directory is below:
-    ```
-        - dir
-            - 0_configs
-                - exp1.json
-                - exp2.json
-                - ...
-            - 1_raw_vid
-                - .mp4
-                - exp2.mp4
-                - ...
-            - 2_formatted_vid
-                - exp1.mp4
-                - exp2.mp4
-                - ...
-            - 3_dlc
-                - exp1.feather
-                - exp2.feather
-                - ...
-            - 4_preprocessed
-                - exp1.feather
-                - exp2.feather
-                - ...
-            - 5_features_extracted
-                - exp1.feather
-                - exp2.feather
-                - ...
-            - 6_predicted_behavs
-                - exp1.feather
-                - exp2.feather
-                - ...
-            - 7_scored_behavs
-                - exp1.feather
-                - exp2.feather
-                - ...
-            - diagnostics
-                - <outputs for every tranformation>.csv
-            - analysis
-                - thigmotaxis
-                    - fbf
-                        - exp1.feather
-                        - exp2.feather
-                        - ...
-                    - summary
-                        - exp1.feather
-                        - exp2.feather
-                        - ...
-                        - __ALL.feather
-                    - binned_5
-                        - exp1.feather
-                        - exp2.feather
-                        - ...
-                        - __ALL.feather
-                    - binned_5_plot
-                        - exp1.feather
-                        - exp2.feather
-                        - ...
-                        - __ALL.feather
-                    - binned_30
-                        - exp1.feather
-                        - exp2.feather
-                        - ...
-                        - __ALL.feather
-                    - binned_30_plot
-                        - exp1.feather
-                        - exp2.feather
-                        - ...
-                        - __ALL.feather
-                    - binned_custom
-                        - exp1.feather
-                        - exp2.feather
-                        - ...
-                        - __ALL.feather
-                    - binned_custom_plot
-                        - exp1.feather
-                        - exp2.feather
-                        - ...
-                        - __ALL.feather
-                - speed
-                    - fbf
-                    - summary
-                    - binned_5
-                    - binned_5_plot
-                    - ...
-                - EPM
-                - SFC
-                - 3Chamber
-                - Withdrawal
-                - ...
-            - evaluate
-                - keypoints_plot
-                    - exp1.feather
-                    - exp2.feather
-                    - ...
-                - eval_vid
-                    - exp1.feather
-                    - exp2.feather
-                    - ...
-    ```
 
     Attributes
     ----------
@@ -284,7 +184,7 @@ class Project:
         dd_ls = scaffold_func(method, *args, **kwargs)
         if len(dd_ls) > 0:
             # Processing all experiments
-            df = pd.DataFrame(dd_ls).set_index("experiment").sort_index(key=natsort_keygen())
+            df = DiagnosticsDf.init_from_dd_ls(dd_ls)
             # Updating the diagnostics file at each step
             DiagnosticsDf.write(df, os.path.join(self.root_dir, DIAGNOSTICS_DIR, f"{method.__name__}.csv"))
             # Finishing
@@ -382,10 +282,12 @@ class Project:
         Refer to Project.addExperiment() for details about how each experiment is added.
         """
         self.logger.info("Searching project folder: %s\n", self.root_dir)
+        # Storing file existences in {folder1: [file1, file2, ...], ...} format
+        dd_dict = {}
         # Adding all experiments within given project dir
-        failed = []
         for f in Folders:
             folder = os.path.join(self.root_dir, f.value)
+            dd_dict[f.value] = []
             # If folder does not exist, skip
             if not os.path.isdir(folder):
                 continue
@@ -396,30 +298,21 @@ class Project:
                 name = get_name(j)
                 try:
                     self.import_experiment(name)
+                    dd_dict[f.value].append(name)
                 except ValueError as e:  # do not add invalid files
                     self.logger.info("failed: %s    --    %s:\n%s", f.value, j, e)
-                    failed.append(name)
         # Logging outcome of imported and failed experiments
         self.logger.info("Experiments imported successfully:")
-        self.logger.info("%s\n\n", "\n".join([f"    - {i}" for i in self.experiments]))
-        self.logger.info("Experiments failed to import:")
-        self.logger.info("%s\n\n", "\n".join([f"    - {i}" for i in failed]))
-        # If there are no experiments, then return
-        if not self.experiments:
-            return
-        # # Making diagnostics DataFrame of all the files associated with each experiment that exists
-        # cols_ls = [f.value for f in Folders]
-        # rows_ls = list(self.experiments)
-        # shape = (len(rows_ls), len(cols_ls))
-        # dd_arr = np.apply_along_axis(
-        #     lambda i: os.path.isfile(self.experiments[i[1]].get_fp(i[0])),
-        #     axis=0,
-        #     arr=np.array(np.meshgrid(cols_ls, rows_ls)).reshape((2, np.prod(shape))),
-        # ).reshape(shape)
-        # # Creating the diagnostics DataFrame
-        # dd_df = pd.DataFrame(dd_arr, index=rows_ls, columns=cols_ls)
-        # # Saving the diagnostics DataFrame
-        # self.save_diagnostics("import_experiments", dd_df)
+        self.logger.info("\n%s\n", "\n".join([f"    - {i}" for i in self.experiments]))
+        # Constructing dd_df from dd_dict
+        dd_df = DiagnosticsDf.init_df(np.unique(np.concatenate(list(dd_dict.values()))))
+        # Setting each (experiment, folder) pair to True if the file exists
+        for folder in dd_dict:
+            dd_df[folder] = False
+            for exp_name in dd_dict[folder]:
+                dd_df.loc[exp_name, folder] = True
+        # Saving the diagnostics DataFrame
+        DiagnosticsDf.write(dd_df, os.path.join(self.root_dir, DIAGNOSTICS_DIR, "import_experiments.csv"))
 
     #####################################################################
     #                CONFIGS DIAGONOSTICS METHODS
@@ -452,6 +345,7 @@ class Project:
         - The summary data. The index is (expName, indiv, measure) and columns are
         (statistics -e.g., mean).
         """
+        # TODO: fix up
         self._analyse_collate_binned()
         self._analyse_collate_summary()
 
