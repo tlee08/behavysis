@@ -29,7 +29,8 @@ import seaborn as sns
 from behavysis_pipeline.df_classes.analyse_df import AnalyseDf
 from behavysis_pipeline.df_classes.bouts_df import BoutsDf
 from behavysis_pipeline.df_classes.df_mixin import DFMixin
-from behavysis_pipeline.mixins.misc_mixin import MiscMixin
+from behavysis_pipeline.utils.logging_utils import init_logger
+from behavysis_pipeline.utils.misc_utils import MiscMixin
 
 FBF = "fbf"
 SUMMARY = "summary"
@@ -59,6 +60,8 @@ class AnalyseBinnedIN(Enum):
 
 class AnalyseBinnedDf(DFMixin):
     """__summary__"""
+
+    logger = init_logger(__name__)
 
     NULLABLE = False
     IN = AnalyseBinnedIN
@@ -203,8 +206,9 @@ class AnalyseBinnedDf(DFMixin):
         # returning binned_df
         return binned_df
 
-    @staticmethod
+    @classmethod
     def make_binned_plot(
+        cls,
         binned_df: pd.DataFrame,
         out_fp: str,
         agg_column: str,

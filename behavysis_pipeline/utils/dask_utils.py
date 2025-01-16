@@ -1,8 +1,11 @@
 import contextlib
-import logging
 from typing import Callable
 
 from dask.distributed import Client, SpecCluster
+
+from behavysis_pipeline.utils.logging_utils import init_logger
+
+logger = init_logger(__name__)
 
 
 def cluster_proc_dec(cluster_factory: Callable[[], SpecCluster]):
@@ -16,7 +19,7 @@ def cluster_proc_dec(cluster_factory: Callable[[], SpecCluster]):
         def wrapper(*args, **kwargs):
             cluster = cluster_factory()
             client = Client(cluster)
-            logging.debug(client.dashboard_link)
+            logger.debug(client.dashboard_link)
             res = func(*args, **kwargs)
             client.close()
             cluster.close()
@@ -34,7 +37,7 @@ def cluster_proc_contxt(cluster: SpecCluster):
     then closes the client and cluster.
     """
     client = Client(cluster)
-    logging.debug(client.dashboard_link)
+    logger.debug(client.dashboard_link)
     try:
         yield
     finally:

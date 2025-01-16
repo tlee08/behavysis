@@ -5,13 +5,13 @@ import subprocess
 import pandas as pd
 import streamlit as st
 
-from behavysis_pipeline.mixins.io_mixin import IOMixin
 from behavysis_pipeline.pipeline.project import Project
 from behavysis_pipeline.processes.calculate_params import CalculateParams
 from behavysis_pipeline.processes.extract_features import run_simba_subproc
 from behavysis_pipeline.processes.preprocess import Preprocess
 from behavysis_pipeline.processes.run_dlc import run_dlc_subproc
 from behavysis_pipeline.pydantic_models.experiment_configs import ExperimentConfigs
+from behavysis_pipeline.utils.io_utils import IOMixin
 
 #####################################################################
 # Pipeline Functions (callbacks)

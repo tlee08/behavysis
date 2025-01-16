@@ -9,8 +9,8 @@ import pandas as pd
 from scipy.stats import mode
 
 from behavysis_pipeline.df_classes.behav_df import BehavColumns, BehavDf
-from behavysis_pipeline.mixins.misc_mixin import MiscMixin
 from behavysis_pipeline.pydantic_models.bouts import Bouts
+from behavysis_pipeline.utils.misc_utils import MiscMixin
 
 ####################################################################################################
 # DF CLASS
@@ -26,8 +26,11 @@ class BoutsDf(BehavDf):
     TODO: is this structure correct?
     """
 
-    @staticmethod
-    def vect2bouts(vect: np.ndarray | pd.Series) -> pd.DataFrame:
+    @classmethod
+    def vect2bouts(
+        cls,
+        vect: np.ndarray | pd.Series,
+    ) -> pd.DataFrame:
         """
         Will return a dataframe with the start and stop indexes of each contiguous set of
         positive values (i.e. a bout).

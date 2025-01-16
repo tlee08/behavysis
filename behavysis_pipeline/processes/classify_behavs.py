@@ -8,9 +8,11 @@ from behavysis_pipeline.behav_classifier.behav_classifier import BehavClassifier
 from behavysis_pipeline.df_classes.behav_df import BehavColumns, BehavDf
 from behavysis_pipeline.df_classes.bouts_df import BoutsDf
 from behavysis_pipeline.df_classes.df_mixin import DFMixin
-from behavysis_pipeline.mixins.io_mixin import IOMixin
-from behavysis_pipeline.mixins.misc_mixin import MiscMixin
+from behavysis_pipeline.df_classes.diagnostics_df import DiagnosticsMixin
 from behavysis_pipeline.pydantic_models.experiment_configs import ExperimentConfigs
+from behavysis_pipeline.utils.io_utils import IOMixin
+from behavysis_pipeline.utils.logging_utils import func_decorator, init_logger
+from behavysis_pipeline.utils.misc_utils import MiscMixin
 
 # TODO: handle reading the model file whilst in multiprocessing
 
@@ -18,8 +20,10 @@ from behavysis_pipeline.pydantic_models.experiment_configs import ExperimentConf
 class ClassifyBehavs:
     """__summary__"""
 
+    logger = init_logger(__name__)
+
     @classmethod
-    @IOMixin.overwrite_check()
+    @func_decorator(logger)
     def classify_behavs(
         cls,
         features_fp: str,
@@ -57,6 +61,8 @@ class ClassifyBehavs:
         ```
         Where the `models` list is a list of `model_config.json` filepaths.
         """
+        if not overwrite and IOMixin.check_files_exist(out_fp):
+            return DiagnosticsMixin.file_exists_msg(out_fp)
         outcome = ""
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)

@@ -14,11 +14,12 @@ from PySide6 import QtGui
 from tqdm import trange
 
 from behavysis_pipeline.df_classes.analyse_combined_df import AnalyseCombinedDf
+from behavysis_pipeline.df_classes.diagnostics_df import DiagnosticsMixin
 from behavysis_pipeline.df_classes.keypoints_df import IndivColumns, KeypointsDf
-from behavysis_pipeline.mixins.diagnostics_mixin import DiagnosticsMixin
-from behavysis_pipeline.mixins.io_mixin import IOMixin
-from behavysis_pipeline.mixins.misc_mixin import MiscMixin
 from behavysis_pipeline.pydantic_models.experiment_configs import ExperimentConfigs
+from behavysis_pipeline.utils.io_utils import IOMixin
+from behavysis_pipeline.utils.logging_utils import func_decorator, init_logger
+from behavysis_pipeline.utils.misc_utils import MiscMixin
 
 ###################################################################################################
 # EVALUATE VID FUNC, WHICH FACES OUT
@@ -28,9 +29,12 @@ from behavysis_pipeline.pydantic_models.experiment_configs import ExperimentConf
 class EvaluateVid:
     """__summary__"""
 
-    @staticmethod
-    @IOMixin.overwrite_check()
+    logger = init_logger(__name__)
+
+    @classmethod
+    @func_decorator(logger)
     def evaluate_vid(
+        cls,
         vid_fp: str,
         dlc_fp: str,
         analyse_combined_fp: str,
@@ -43,6 +47,8 @@ class EvaluateVid:
         all experiments. The DLC model's config.yaml filepath must be specified in the `config_path`
         parameter in the `user` section of the config file.
         """
+        if not overwrite and IOMixin.check_files_exist(out_fp):
+            return DiagnosticsMixin.file_exists_msg(out_fp)
         outcome = ""
         # If overwrite is False, checking if we should skip processing
         if not overwrite and os.path.exists(out_fp):

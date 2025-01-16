@@ -27,6 +27,7 @@ import seaborn as sns
 from behavysis_pipeline.df_classes.df_mixin import DFMixin, FramesIN
 from behavysis_pipeline.df_classes.keypoints_df import Coords
 from behavysis_pipeline.pydantic_models.experiment_configs import ExperimentConfigs
+from behavysis_pipeline.utils.logging_utils import init_logger
 
 ####################################################################################################
 # DF CONSTANTS
@@ -52,12 +53,15 @@ class AnalyseCN(Enum):
 class AnalyseDf(DFMixin):
     """__summary__"""
 
+    logger = init_logger(__name__)
+
     NULLABLE = False
     IN = FramesIN
     CN = AnalyseCN
 
-    @staticmethod
+    @classmethod
     def get_configs(
+        cls,
         configs: ExperimentConfigs,
     ) -> tuple[
         float,
@@ -93,8 +97,14 @@ class AnalyseDf(DFMixin):
             list(configs.get_ref(configs.user.analyse.custom_bins_sec)),
         )
 
-    @staticmethod
-    def make_location_scatterplot(scatter_df: pd.DataFrame, corners_df: pd.DataFrame, out_fp, measure: str):
+    @classmethod
+    def make_location_scatterplot(
+        cls,
+        scatter_df: pd.DataFrame,
+        corners_df: pd.DataFrame,
+        out_fp,
+        measure: str,
+    ):
         """
         Expects analysis_df index levels to be (frame,),
         and column levels to be (individual, measure).

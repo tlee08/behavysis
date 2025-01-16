@@ -5,7 +5,6 @@ _summary_
 from __future__ import annotations
 
 import json
-import logging
 import os
 import shutil
 from typing import TYPE_CHECKING, Callable
@@ -37,6 +36,7 @@ from behavysis_pipeline.df_classes.df_mixin import DFMixin
 from behavysis_pipeline.pydantic_models.behav_classifier_configs import (
     BehavClassifierConfigs,
 )
+from behavysis_pipeline.utils.logging_utils import init_logger
 
 if TYPE_CHECKING:
     from behavysis_pipeline.pipeline.project import Project
@@ -64,6 +64,8 @@ class BehavClassifier:
         _description_
     """
 
+    logger = init_logger(__name__)
+
     model_dir: str
     clf: BaseTorchModel
 
@@ -73,11 +75,11 @@ class BehavClassifier:
         try:
             # Trying to read configs file.
             self.configs
-            logging.info("Reading existing model configs")
+            self.logger.info("Reading existing model configs")
         except FileNotFoundError:
             # Making a new configs file if it doesn't exist
             self.configs = BehavClassifierConfigs()
-            logging.info("Making new model configs")
+            self.logger.info("Making new model configs")
         # Trying to read clf file. Making basic DDN1 if not exists
         try:
             self.clf_load()
@@ -234,8 +236,8 @@ class BehavClassifier:
     #            COMBINING DFS TO SINGLE DF
     #################################################
 
-    @staticmethod
-    def combine(src_dir):
+    @classmethod
+    def combine(cls, src_dir):
         data_dict = {
             os.path.splitext(i)[0]: pd.read_feather(os.path.join(src_dir, i)) for i in os.listdir(os.path.join(src_dir))
         }
@@ -269,8 +271,8 @@ class BehavClassifier:
     #            PREPROCESSING DFS
     #################################################
 
-    @staticmethod
-    def preproc_x_fit(x: np.ndarray | pd.DataFrame, preproc_fp: str) -> None:
+    @classmethod
+    def preproc_x_fit(cls, x: np.ndarray | pd.DataFrame, preproc_fp: str) -> None:
         """
         __summary__
         """
@@ -281,8 +283,8 @@ class BehavClassifier:
         # Saving pipeline
         joblib.dump(preproc_pipe, preproc_fp)
 
-    @staticmethod
-    def preproc_x(x: np.ndarray | pd.DataFrame, preproc_fp: str) -> np.ndarray:
+    @classmethod
+    def preproc_x(cls, x: np.ndarray | pd.DataFrame, preproc_fp: str) -> np.ndarray:
         """
         The preprocessing steps are:
         - MinMax scaling (using previously fitted MinMaxScaler)
@@ -294,8 +296,8 @@ class BehavClassifier:
         # Returning df
         return x_preproc
 
-    @staticmethod
-    def wrangle_columns_y(y: pd.DataFrame) -> pd.DataFrame:
+    @classmethod
+    def wrangle_columns_y(cls, y: pd.DataFrame) -> pd.DataFrame:
         """
         _summary_
 
@@ -324,8 +326,8 @@ class BehavClassifier:
         ]
         return y
 
-    @staticmethod
-    def preproc_y(y: np.ndarray | pd.DataFrame) -> np.ndarray:
+    @classmethod
+    def preproc_y(cls, y: np.ndarray | pd.DataFrame) -> np.ndarray:
         """
         The preprocessing steps are:
         - Imputing NaN values with 0
@@ -340,8 +342,8 @@ class BehavClassifier:
         # Returning arr
         return y
 
-    @staticmethod
-    def undersample(index: np.ndarray, y: np.ndarray, ratio: float) -> np.ndarray:
+    @classmethod
+    def undersample(cls, index: np.ndarray, y: np.ndarray, ratio: float) -> np.ndarray:
         # Assert that index and y are the same length
         assert index.shape[0] == y.shape[0]
         # Getting array of True indices
@@ -649,8 +651,8 @@ class BehavClassifier:
     # EVALUATION METRICS FUNCTIONS
     #################################################
 
-    @staticmethod
-    def eval_report(y_true: pd.Series, y_pred: pd.Series) -> dict:
+    @classmethod
+    def eval_report(cls, y_true: pd.Series, y_pred: pd.Series) -> dict:
         """
         __summary__
         """
@@ -661,8 +663,8 @@ class BehavClassifier:
             output_dict=True,
         )  # type: ignore
 
-    @staticmethod
-    def eval_conf_matr(y_true: pd.Series, y_pred: pd.Series) -> Figure:
+    @classmethod
+    def eval_conf_matr(cls, y_true: pd.Series, y_pred: pd.Series) -> Figure:
         """
         __summary__
         """
@@ -682,8 +684,8 @@ class BehavClassifier:
         ax.set_ylabel("True")
         return fig
 
-    @staticmethod
-    def eval_metrics_pcutoffs(y_true: pd.Series, y_prob: pd.Series) -> Figure:
+    @classmethod
+    def eval_metrics_pcutoffs(cls, y_true: pd.Series, y_prob: pd.Series) -> Figure:
         """
         __summary__
         """
@@ -714,8 +716,8 @@ class BehavClassifier:
         sns.lineplot(x=pcutoffs, y=accuracies, label="accuracy", ax=ax)
         return fig
 
-    @staticmethod
-    def eval_logc(y_true: pd.Series, y_prob: pd.Series) -> Figure:
+    @classmethod
+    def eval_logc(cls, y_true: pd.Series, y_prob: pd.Series) -> Figure:
         """
         __summary__
         """
@@ -745,8 +747,8 @@ class BehavClassifier:
         # Returning figure
         return fig
 
-    @staticmethod
-    def eval_bouts(y_true: pd.Series, y_pred: pd.Series) -> pd.DataFrame:
+    @classmethod
+    def eval_bouts(cls, y_true: pd.Series, y_pred: pd.Series) -> pd.DataFrame:
         """
         __summary__
         """

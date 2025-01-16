@@ -4,7 +4,6 @@ _summary_
 
 from __future__ import annotations
 
-import logging
 import os
 from enum import Enum
 from typing import Any, Callable
@@ -17,8 +16,7 @@ from behavysis_pipeline.constants import (
     FileExts,
     Folders,
 )
-from behavysis_pipeline.mixins.diagnostics_mixin import DiagnosticsMixin
-from behavysis_pipeline.mixins.misc_mixin import MiscMixin
+from behavysis_pipeline.df_classes.diagnostics_df import DiagnosticsMixin
 from behavysis_pipeline.processes.analyse_behaviours import AnalyseBehaviours
 from behavysis_pipeline.processes.analyse_combine import AnalyseCombine
 from behavysis_pipeline.processes.classify_behavs import ClassifyBehavs
@@ -27,6 +25,8 @@ from behavysis_pipeline.processes.export import Export
 from behavysis_pipeline.processes.extract_features import ExtractFeatures
 from behavysis_pipeline.processes.run_dlc import RunDLC
 from behavysis_pipeline.processes.update_configs import UpdateConfigs
+from behavysis_pipeline.utils.logging_utils import init_logger
+from behavysis_pipeline.utils.misc_utils import MiscMixin
 
 
 class Experiment:
@@ -53,6 +53,8 @@ class Experiment:
     ValueError
         ValueError: `root_dir` does not exist or `name` does not exist in the `root_dir` folder.
     """
+
+    logger = init_logger(__name__)
 
     def __init__(self, name: str, root_dir: str) -> None:
         """
@@ -154,7 +156,7 @@ class Experiment:
         func(*args, **kwargs)
         ```
         """
-        logging.info(f"Processing experiment: {self.name}")
+        self.logger.info(f"Processing experiment: {self.name}")
         # Setting up diagnostics dict
         dd = {"experiment": self.name}
         # Running functions and saving outcome to diagnostics dict
@@ -165,8 +167,8 @@ class Experiment:
                 dd[f.__name__] += f"SUCCESS: {DiagnosticsMixin.success_msg()}\n"
             except Exception as e:
                 dd[f.__name__] = f"ERROR: {e}"
-            logging.info(f"{f.__name__}: {dd[f.__name__]}")
-        logging.info(STR_DIV)
+            self.logger.info(f"{f.__name__}: {dd[f.__name__]}")
+        self.logger.info(STR_DIV)
         return dd
 
     #####################################################################

@@ -1,7 +1,7 @@
 import os
 
 from behavysis_pipeline.constants import Folders
-from behavysis_pipeline.mixins.io_mixin import IOMixin
+from behavysis_pipeline.utils.io_utils import IOMixin
 
 
 def import_template(src_fp, dst_fp, overwrite):

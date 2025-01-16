@@ -3,7 +3,6 @@ _summary_
 """
 
 import functools
-import logging
 import os
 import re
 from multiprocessing import Pool
@@ -24,9 +23,7 @@ from behavysis_pipeline.constants import (
 )
 from behavysis_pipeline.df_classes.analyse_binned_df import AnalyseBinnedDf
 from behavysis_pipeline.df_classes.df_mixin import DFMixin
-from behavysis_pipeline.mixins.diagnostics_mixin import DiagnosticsMixin
-from behavysis_pipeline.mixins.io_mixin import IOMixin
-from behavysis_pipeline.mixins.multiproc_mixin import MultiprocMixin
+from behavysis_pipeline.df_classes.diagnostics_df import DiagnosticsDf
 from behavysis_pipeline.pipeline.experiment import Experiment
 from behavysis_pipeline.processes.run_dlc import RunDLC
 from behavysis_pipeline.pydantic_models.experiment_configs import (
@@ -34,6 +31,9 @@ from behavysis_pipeline.pydantic_models.experiment_configs import (
     ExperimentConfigs,
 )
 from behavysis_pipeline.utils.dask_utils import cluster_proc_contxt
+from behavysis_pipeline.utils.io_utils import IOMixin
+from behavysis_pipeline.utils.logging_utils import init_logger
+from behavysis_pipeline.utils.multiproc_utils import MultiprocMixin
 
 
 class Project:
@@ -151,6 +151,8 @@ class Project:
             The number of processes to use for multiprocessing.
     """
 
+    logger = init_logger(__name__)
+
     root_dir: str
     experiments: dict[str, Experiment]
     nprocs: int
@@ -218,11 +220,6 @@ class Project:
     #               PROJECT PROCESSING SCAFFOLD METHODS
     #####################################################################
 
-    # @staticmethod
-    # def _process_scaffold_mp_worker(args_tuple: tuple):
-    #     method, exp, args, kwargs = args_tuple
-    #     return method(exp, *args, **kwargs)
-
     def _process_scaffold_mp(self, method: Callable, *args: Any, **kwargs: Any) -> list[dict]:
         """
         Processes an experiment with the given `Experiment` method and records
@@ -242,13 +239,6 @@ class Project:
         method(exp, *args, **kwargs)
         ```
         """
-        # # Create a Pool of processes
-        # with Pool(processes=self.nprocs) as p:
-        #     # Apply method to each experiment in self.get_experiments() in parallel
-        #     return p.map(
-        #         Project._process_scaffold_mp_worker,
-        #         [(method, exp, args, kwargs) for exp in self.get_experiments()],
-        #     )
         # Starting a dask cluster
         with cluster_proc_contxt(LocalCluster(n_workers=self.nprocs, threads_per_worker=1)):
             # Preparing all experiments for execution
@@ -290,16 +280,16 @@ class Project:
             scaffold_func = self._process_scaffold_mp
         # Running the scaffold function
         # Starting
-        logging.info("Running %s", method.__name__)
+        self.logger.info("Running %s", method.__name__)
         # Running
         dd_ls = scaffold_func(method, *args, **kwargs)
         if len(dd_ls) > 0:
             # Processing all experiments
             df = pd.DataFrame(dd_ls).set_index("experiment").sort_index(key=natsort_keygen())
             # Updating the diagnostics file at each step
-            self._save_diagnostics(method.__name__, df)
+            DiagnosticsDf.write(df, os.path.join(self.root_dir, DIAGNOSTICS_DIR, f"{method.__name__}.csv"))
             # Finishing
-            logging.info("Finished %s!\n%s\n%s\n", method.__name__, STR_DIV, STR_DIV)
+            self.logger.info("Finished %s!\n%s\n%s\n", method.__name__, STR_DIV, STR_DIV)
 
     #####################################################################
     #               BATCH PROCESSING METHODS
@@ -364,41 +354,6 @@ class Project:
     # DIAGNOSTICS LOAD/SAVE METHODS
     #####################################################################
 
-    def _load_diagnostics(self, name: str) -> pd.DataFrame:
-        """
-        Reads the data from the diagnostics file with the given name.
-
-        Parameters
-        ----------
-        name : str
-            The name of the diagnostics file to overwrite and open.
-
-        Returns
-        -------
-        pd.DataFrame
-            The pandas DataFrame of the diagnostics file.
-        """
-        # Getting filepath
-        fp = os.path.join(self.root_dir, DIAGNOSTICS_DIR, f"{name}.csv")
-        # Reading from file
-        return DiagnosticsMixin.load_diagnostics(fp)
-
-    def _save_diagnostics(self, name: str, df: pd.DataFrame) -> None:
-        """
-        Writes the given data to a diagnostics file with the given name.
-
-        Parameters
-        ----------
-        name : str
-            The name of the diagnostics file to overwrite and open.
-        df : pd.DataFrame
-            The pandas DataFrame to write to the diagnostics file.
-        """
-        # Getting filepath
-        fp = os.path.join(self.root_dir, DIAGNOSTICS_DIR, f"{name}.csv")
-        # Writing to file
-        DiagnosticsMixin.save_diagnostics(df, fp)
-
     #####################################################################
     #               IMPORT EXPERIMENTS METHODS
     #####################################################################
@@ -431,7 +386,7 @@ class Project:
         The key of each experiment in the .experiments dict is "name".
         Refer to Project.addExperiment() for details about how each experiment is added.
         """
-        logging.info("Searching project folder: %s\n", self.root_dir)
+        self.logger.info("Searching project folder: %s\n", self.root_dir)
         # Adding all experiments within given project dir
         failed = []
         for f in Folders:
@@ -447,13 +402,13 @@ class Project:
                 try:
                     self.import_experiment(name)
                 except ValueError as e:  # do not add invalid files
-                    logging.info("failed: %s    --    %s:\n%s", f.value, j, e)
+                    self.logger.info("failed: %s    --    %s:\n%s", f.value, j, e)
                     failed.append(name)
         # Logging outcome of imported and failed experiments
-        logging.info("Experiments imported successfully:")
-        logging.info("%s\n\n", "\n".join([f"    - {i}" for i in self.experiments]))
-        logging.info("Experiments failed to import:")
-        logging.info("%s\n\n", "\n".join([f"    - {i}" for i in failed]))
+        self.logger.info("Experiments imported successfully:")
+        self.logger.info("%s\n\n", "\n".join([f"    - {i}" for i in self.experiments]))
+        self.logger.info("Experiments failed to import:")
+        self.logger.info("%s\n\n", "\n".join([f"    - {i}" for i in failed]))
         # If there are no experiments, then return
         if not self.experiments:
             return
@@ -479,10 +434,11 @@ class Project:
         """
         Collates the auto fields of the configs of all experiments into a DataFrame.
         """
+        # TODO: must overhaul
         # TODO: include diagnostics_df recording
         # Initialising the process and logging description
         description = "Combining binned analysis"
-        logging.info("%s...", description)
+        self.logger.info("%s...", description)
         # Getting all the auto field keys
         auto_field_keys = ConfigsAuto.get_field_names(ConfigsAuto)
         # Making a DataFrame to store all the auto fields for each experiment
@@ -506,8 +462,8 @@ class Project:
         # Imputing na values with -1
         df_configs = df_configs.fillna(-1)
         # Saving the collated auto fields DataFrame to diagnostics folder
-        self._save_diagnostics("collated_configs_auto", df_configs)
-
+        # TODO: make collate_configs_auto func for Experiment class
+        DiagnosticsDf.write(df_configs, os.path.join(self.root_dir, DIAGNOSTICS_DIR, "collate_configs_auto.csv"))
         # Making and saving histogram plots of the numerical auto fields
         # NOTE: NOT including string frequencies, only numerical
         df_configs = df_configs.loc[:, df_configs.apply(pd.api.types.is_numeric_dtype)]
@@ -538,7 +494,7 @@ class Project:
         """
         # Initialising the process and logging description
         description = "Combining binned analysis"
-        logging.info("%s...", description)
+        self.logger.info("%s...", description)
         # AGGREGATING BINNED DATA
         # NOTE: need a more robust way of getting the list of bin sizes
         proj_analyse_dir = os.path.join(self.root_dir, ANALYSIS_DIR)
@@ -578,7 +534,7 @@ class Project:
         """
         # Initialising the process and logging description
         description = "Combining summary analysis"
-        logging.info("%s...", description)
+        self.logger.info("%s...", description)
         # AGGREGATING SUMMARY DATA
         proj_analyse_dir = os.path.join(self.root_dir, ANALYSIS_DIR)
         # Searching through all the analysis subdir

@@ -9,7 +9,6 @@ interpretable plotted and tabulated data for different analysises. This pipeline
 - Extracting meaningful data analysis from the preprocessed coordinates file
 """
 
-import logging
 import warnings
 
 import matplotlib
@@ -36,9 +35,3 @@ sns.set_theme(style=PLOT_STYLE)
 
 plt.rcParams["figure.dpi"] = PLOT_DPI
 plt.rcParams["savefig.dpi"] = PLOT_DPI
-
-#####################################################################
-#           SETTING UP LOGGING
-#####################################################################
-
-# logging.basicConfig(level=logging.INFO)

@@ -5,13 +5,13 @@ import numpy as np
 import pandas as pd
 
 from behavysis_pipeline.constants import Coords, KeypointsCN, KeypointsIN
-from behavysis_pipeline.mixins.misc_mixin import MiscMixin
 from behavysis_pipeline.processes.calculate_params import (
     CalculateParams,
     Model_check_exists,
     Model_stop_frame,
 )
 from behavysis_pipeline.pydantic_models.experiment_configs import ExperimentConfigs
+from behavysis_pipeline.utils.misc_utils import MiscMixin
 
 
 def make_dlc_df_for_dur(sections_params_ls, columns):

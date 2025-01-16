@@ -6,14 +6,16 @@ import os
 
 import pandas as pd
 
-from behavysis_pipeline.constants import TEMP_DIR
+from behavysis_pipeline.constants import CACHE_DIR
+from behavysis_pipeline.df_classes.diagnostics_df import DiagnosticsMixin
 from behavysis_pipeline.df_classes.features_df import FeaturesDf
 from behavysis_pipeline.df_classes.keypoints_df import KeypointsDf
-from behavysis_pipeline.mixins.io_mixin import IOMixin
-from behavysis_pipeline.mixins.misc_mixin import MiscMixin
-from behavysis_pipeline.mixins.multiproc_mixin import MultiprocMixin
-from behavysis_pipeline.mixins.subproc_mixin import SubprocMixin
 from behavysis_pipeline.pydantic_models.experiment_configs import ExperimentConfigs
+from behavysis_pipeline.utils.io_utils import IOMixin
+from behavysis_pipeline.utils.logging_utils import func_decorator, init_logger
+from behavysis_pipeline.utils.misc_utils import MiscMixin
+from behavysis_pipeline.utils.multiproc_utils import MultiprocMixin
+from behavysis_pipeline.utils.subproc_utils import SubprocMixin
 
 # Order of bodyparts is from
 # - https://github.com/sgoldenlab/simba/blob/master/docs/Multi_animal_pose.md
@@ -30,8 +32,10 @@ from behavysis_pipeline.pydantic_models.experiment_configs import ExperimentConf
 class ExtractFeatures:
     """__summary__"""
 
+    logger = init_logger(__name__)
+
     @staticmethod
-    @IOMixin.overwrite_check()
+    @func_decorator(logger)
     def extract_features(
         dlc_fp: str,
         out_fp: str,
@@ -58,13 +62,15 @@ class ExtractFeatures:
         str
             The outcome of the process.
         """
+        if not overwrite and IOMixin.check_files_exist(out_fp):
+            return DiagnosticsMixin.file_exists_msg(out_fp)
         outcome = ""
         # Getting directory and file paths
         name = IOMixin.get_name(dlc_fp)
         cpid = MultiprocMixin.get_cpid()
         configs_dir = os.path.split(configs_fp)[0]
-        simba_in_dir = os.path.join(TEMP_DIR, f"input_{cpid}")
-        simba_dir = os.path.join(TEMP_DIR, f"simba_proj_{cpid}")
+        simba_in_dir = os.path.join(CACHE_DIR, f"input_{cpid}")
+        simba_dir = os.path.join(CACHE_DIR, f"simba_proj_{cpid}")
         features_from_dir = os.path.join(simba_dir, "project_folder", "csv", "features_extracted")
         # Preparing dlc dfs for input to SimBA project
         os.makedirs(simba_in_dir, exist_ok=True)
@@ -81,7 +87,7 @@ class ExtractFeatures:
         # Removing simba folder (if it exists)
         IOMixin.silent_rm(simba_dir)
         # Running SimBA env and script to run SimBA feature extraction
-        outcome += run_simba_subproc(simba_dir, simba_in_dir, configs_dir, TEMP_DIR, cpid)
+        outcome += run_simba_subproc(simba_dir, simba_in_dir, configs_dir, CACHE_DIR, cpid)
         # Exporting SimBA feature extraction csv to feather
         simba_out_fp = os.path.join(features_from_dir, f"{name}.csv")
         export2feather(simba_out_fp, out_fp, index)

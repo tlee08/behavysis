@@ -2,7 +2,7 @@ import os
 
 import pytest
 
-from behavysis_pipeline.mixins.io_mixin import IOMixin
+from behavysis_pipeline.utils.io_utils import IOMixin
 
 
 @pytest.fixture(scope="session", autouse=True)

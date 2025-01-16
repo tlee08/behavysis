@@ -9,7 +9,8 @@ from enum import Enum, EnumType
 
 import pandas as pd
 
-from behavysis_pipeline.mixins.misc_mixin import MiscMixin
+from behavysis_pipeline.utils.logging_utils import init_logger
+from behavysis_pipeline.utils.misc_utils import MiscMixin
 
 ####################################################################################################
 # DF CONSTANTS
@@ -27,6 +28,8 @@ class FramesIN(Enum):
 
 class DFMixin:
     """__summary"""
+
+    logger = init_logger(__name__)
 
     NULLABLE = True
     IN = None
@@ -210,8 +213,8 @@ class DFMixin:
         if cls.CN:
             cls.check_CN(df, cls.CN)
 
-    @staticmethod
-    def check_IN(df: pd.DataFrame, levels: EnumType | tuple[str] | str) -> None:
+    @classmethod
+    def check_IN(cls, df: pd.DataFrame, levels: EnumType | tuple[str] | str) -> None:
         """__summary__"""
         # Converting `levels` to a tuple
         if isinstance(levels, EnumType):  # If Enum
@@ -220,8 +223,8 @@ class DFMixin:
             levels = (levels,)
         assert df.index.names == levels, f"The index level is incorrect. Expected {levels} but got {df.index.names}."
 
-    @staticmethod
-    def check_CN(df: pd.DataFrame, levels: EnumType | tuple[str] | str) -> None:
+    @classmethod
+    def check_CN(cls, df: pd.DataFrame, levels: EnumType | tuple[str] | str) -> None:
         """__summary__"""
         # Converting `levels` to a tuple
         if isinstance(levels, EnumType):  # If Enum

@@ -54,9 +54,7 @@ class BaseTorchModel(nn.Module):
         val_split: float,
     ):
         # Split data into training and validation sets
-        ind_train, ind_val = train_test_split(
-            index, stratify=y[index], test_size=val_split
-        )
+        ind_train, ind_val = train_test_split(index, stratify=y[index], test_size=val_split)
         # Making data loaders
         train_ld = self.fit_loader(x, y, ind_train, batch_size=batch_size)
         val_ld = self.fit_loader(x, y, ind_val, batch_size=batch_size)
@@ -68,9 +66,7 @@ class BaseTorchModel(nn.Module):
         # Training the model
         for epoch in range(epochs):
             # Training model for one epoch
-            loss = self._train_epoch(
-                train_ld, self.criterion, self.optimizer, verbose=True
-            )
+            loss = self._train_epoch(train_ld, self.criterion, self.optimizer, verbose=True)
             # Validate model
             vloss = self._validate(val_ld, self.criterion)
             # Printing loss
@@ -176,8 +172,8 @@ class BaseTorchModel(nn.Module):
                 n += probs.shape[0]
         return probs_all
 
-    @staticmethod
-    def np_loader(*args, batch_size: int = 1, shuffle: bool = False) -> DataLoader:
+    @classmethod
+    def np_loader(cls, *args, batch_size: int = 1, shuffle: bool = False) -> DataLoader:
         return DataLoader(
             TensorDataset(*(torch.tensor(i, dtype=torch.float) for i in args)),
             batch_size=batch_size,
@@ -191,9 +187,7 @@ class BaseTorchModel(nn.Module):
         index: None | np.ndarray = None,
         batch_size: int = 1,
     ) -> DataLoader:
-        ds = MemoizedTimeSeriesDataset(
-            x=x, y=y, index=index, window_frames=self.window_frames
-        )
+        ds = MemoizedTimeSeriesDataset(x=x, y=y, index=index, window_frames=self.window_frames)
         return DataLoader(ds, batch_size=batch_size, shuffle=True)
         # return self.np_loader(x, y, batch_size=batch_size, shuffle=shuffle)
 
@@ -235,8 +229,8 @@ class TimeSeriesDataset(Dataset):
         self.index = index if index is not None else np.arange(x.shape[0])
         self.window_frames = window_frames
 
-    @staticmethod
-    def pad_arr(x: np.ndarray, n: int) -> np.ndarray:
+    @classmethod
+    def pad_arr(cls, x: np.ndarray, n: int) -> np.ndarray:
         """
         synthesising data by padding with bfill and ffill
         for window size

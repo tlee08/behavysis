@@ -26,21 +26,25 @@ import pandas as pd
 from pydantic import BaseModel
 
 from behavysis_pipeline.df_classes.df_mixin import DFMixin
+from behavysis_pipeline.df_classes.diagnostics_df import DiagnosticsMixin
 from behavysis_pipeline.df_classes.keypoints_df import (
     Coords,
     IndivColumns,
     KeypointsDf,
 )
-from behavysis_pipeline.mixins.io_mixin import IOMixin
 from behavysis_pipeline.pydantic_models.experiment_configs import ExperimentConfigs
+from behavysis_pipeline.utils.io_utils import IOMixin
+from behavysis_pipeline.utils.logging_utils import func_decorator, init_logger
 
 
 class Preprocess:
     """_summary_"""
 
-    @staticmethod
-    @IOMixin.overwrite_check()
-    def start_stop_trim(dlc_fp: str, out_fp: str, configs_fp: str, overwrite: bool) -> str:
+    logger = init_logger(__name__)
+
+    @classmethod
+    @func_decorator(logger)
+    def start_stop_trim(cls, dlc_fp: str, out_fp: str, configs_fp: str, overwrite: bool) -> str:
         """
         Filters the rows of a DLC formatted dataframe to include only rows within the start
         and end time of the experiment, given a corresponding configs dict.
@@ -73,6 +77,8 @@ class Preprocess:
                     - stop_frame: int
         ```
         """
+        if not overwrite and IOMixin.check_files_exist(out_fp):
+            return DiagnosticsMixin.file_exists_msg(out_fp)
         outcome = ""
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
@@ -87,9 +93,9 @@ class Preprocess:
         # Returning outcome
         return outcome
 
-    @staticmethod
-    @IOMixin.overwrite_check()
-    def interpolate_stationary(dlc_fp: str, out_fp: str, configs_fp: str, overwrite: bool) -> str:
+    @classmethod
+    @func_decorator(logger)
+    def interpolate_stationary(cls, dlc_fp: str, out_fp: str, configs_fp: str, overwrite: bool) -> str:
         """
         If the point detection (above a certain threshold) is below a certain proportion, then the x and y coordinates are set to the given values (usually corners).
         Otherwise, does nothing (encouraged to run Preprocess.interpolage afterwards).
@@ -110,6 +116,8 @@ class Preprocess:
                     ]
         ```
         """
+        if not overwrite and IOMixin.check_files_exist(out_fp):
+            return DiagnosticsMixin.file_exists_msg(out_fp)
         outcome = ""
         # Getting necessary config parameters list
         configs = ExperimentConfigs.read_json(configs_fp)
@@ -152,9 +160,9 @@ class Preprocess:
         # Returning outcome
         return outcome
 
-    @staticmethod
-    @IOMixin.overwrite_check()
-    def interpolate(dlc_fp: str, out_fp: str, configs_fp: str, overwrite: bool) -> str:
+    @classmethod
+    @func_decorator(logger)
+    def interpolate(cls, dlc_fp: str, out_fp: str, configs_fp: str, overwrite: bool) -> str:
         """
         "Smooths" out noticeable jitter of points, where the likelihood (and accuracy) of
         a point's coordinates are low (e.g., when the subject's head goes out of view). It
@@ -171,6 +179,8 @@ class Preprocess:
                     - pcutoff: float
         ```
         """
+        if not overwrite and IOMixin.check_files_exist(out_fp):
+            return DiagnosticsMixin.file_exists_msg(out_fp)
         outcome = ""
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
@@ -198,9 +208,9 @@ class Preprocess:
         KeypointsDf.write_feather(df, out_fp)
         return outcome
 
-    @staticmethod
-    @IOMixin.overwrite_check()
-    def refine_ids(dlc_fp: str, out_fp: str, configs_fp: str, overwrite: bool) -> str:
+    @classmethod
+    @func_decorator(logger)
+    def refine_ids(cls, dlc_fp: str, out_fp: str, configs_fp: str, overwrite: bool) -> str:
         """
         Ensures that the identity is correctly tracked for maDLC.
         Assumes interpolatePoints and calcBodyCentre has already been run.
@@ -219,6 +229,8 @@ class Preprocess:
                     - metric: ["current", "rolling", "binned"]
         ```
         """
+        if not overwrite and IOMixin.check_files_exist(out_fp):
+            return DiagnosticsMixin.file_exists_msg(out_fp)
         outcome = ""
         # Reading file
         df = KeypointsDf.read_feather(dlc_fp)

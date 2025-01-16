@@ -24,7 +24,9 @@ import pandas as pd
 
 from behavysis_pipeline.df_classes.analyse_combined_df import AnalyseCombinedDf
 from behavysis_pipeline.df_classes.analyse_df import AnalyseDf
-from behavysis_pipeline.mixins.io_mixin import IOMixin
+from behavysis_pipeline.df_classes.diagnostics_df import DiagnosticsMixin
+from behavysis_pipeline.utils.io_utils import IOMixin
+from behavysis_pipeline.utils.logging_utils import func_decorator, init_logger
 
 ###################################################################################################
 #               ANALYSIS API FUNCS
@@ -34,8 +36,10 @@ from behavysis_pipeline.mixins.io_mixin import IOMixin
 class AnalyseCombine:
     """__summary__"""
 
-    @staticmethod
-    @IOMixin.overwrite_check()
+    logger = init_logger(__name__)
+
+    @classmethod
+    @func_decorator(logger)
     def analyse_combine(
         analyse_dir: str,
         out_fp: str,
@@ -47,8 +51,8 @@ class AnalyseCombine:
         """
         Takes a behavs dataframe and generates a summary and binned version of the data.
         """
-        # TODO: maybe refactor to own folder
-        # (because it's another step of the pipeline)
+        if not overwrite and IOMixin.check_files_exist(out_fp):
+            return DiagnosticsMixin.file_exists_msg(out_fp)
         outcome = ""
         name = IOMixin.get_name(configs_fp)
         # For each analysis subdir, combining fbf files

@@ -23,8 +23,8 @@ from behavysis_pipeline.df_classes.keypoints_df import (
     IndivColumns,
     KeypointsDf,
 )
-from behavysis_pipeline.mixins.io_mixin import IOMixin
 from behavysis_pipeline.pydantic_models.experiment_configs import ExperimentConfigs
+from behavysis_pipeline.utils.io_utils import IOMixin
 
 
 class CalculateParams:

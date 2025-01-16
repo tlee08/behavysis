@@ -25,9 +25,10 @@ import numpy as np
 from behavysis_pipeline.df_classes.analyse_binned_df import AnalyseBinnedDf
 from behavysis_pipeline.df_classes.analyse_df import AnalyseDf
 from behavysis_pipeline.df_classes.behav_df import BehavColumns, BehavDf
-from behavysis_pipeline.mixins.io_mixin import IOMixin
-from behavysis_pipeline.mixins.misc_mixin import MiscMixin
 from behavysis_pipeline.pydantic_models.experiment_configs import ExperimentConfigs
+from behavysis_pipeline.utils.io_utils import IOMixin
+from behavysis_pipeline.utils.logging_utils import init_logger
+from behavysis_pipeline.utils.misc_utils import MiscMixin
 
 ###################################################################################################
 #               ANALYSIS API FUNCS
@@ -37,8 +38,11 @@ from behavysis_pipeline.pydantic_models.experiment_configs import ExperimentConf
 class AnalyseBehaviours:
     """__summary__"""
 
-    @staticmethod
+    logger = init_logger(__name__)
+
+    @classmethod
     def analyse_behaviours(
+        cls,
         behavs_fp: str,
         out_dir: str,
         configs_fp: str,

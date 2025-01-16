@@ -18,9 +18,11 @@ str
     Description of the function's outcome.
 """
 
-from behavysis_pipeline.mixins.io_mixin import IOMixin
+from behavysis_pipeline.df_classes.diagnostics_df import DiagnosticsMixin
 from behavysis_pipeline.mixins.process_vid_mixin import ProcessVidMixin
 from behavysis_pipeline.pydantic_models.experiment_configs import ExperimentConfigs
+from behavysis_pipeline.utils.io_utils import IOMixin
+from behavysis_pipeline.utils.logging_utils import func_decorator, init_logger
 
 
 class FormatVid:
@@ -28,9 +30,11 @@ class FormatVid:
     Class for formatting videos based on given parameters.
     """
 
-    @staticmethod
-    @IOMixin.overwrite_check()
-    def format_vid(in_fp: str, out_fp: str, configs_fp: str, overwrite: bool) -> str:
+    logger = init_logger(__name__)
+
+    @classmethod
+    @func_decorator(logger)
+    def format_vid(cls, in_fp: str, out_fp: str, configs_fp: str, overwrite: bool) -> str:
         """
         Formats the input video with the given parameters.
 
@@ -50,6 +54,8 @@ class FormatVid:
         str
             Description of the function's outcome.
         """
+        if not overwrite and IOMixin.check_files_exist(out_fp):
+            return DiagnosticsMixin.file_exists_msg(out_fp)
         outcome = ""
         # Finding all necessary config parameters for video formatting
         configs = ExperimentConfigs.read_json(configs_fp)
@@ -70,8 +76,8 @@ class FormatVid:
         outcome += FormatVid.get_vid_metadata(in_fp, out_fp, configs_fp, overwrite)
         return outcome
 
-    @staticmethod
-    def get_vid_metadata(in_fp: str, out_fp: str, configs_fp: str, overwrite: bool) -> str:
+    @classmethod
+    def get_vid_metadata(cls, in_fp: str, out_fp: str, configs_fp: str, overwrite: bool) -> str:
         """
         Finds the video metadata/parameters for either the raw or formatted video,
         and stores this data in the experiment's config file.

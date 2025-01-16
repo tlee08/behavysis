@@ -8,15 +8,19 @@ import os
 
 import cv2
 
-from behavysis_pipeline.mixins.subproc_mixin import SubprocMixin
 from behavysis_pipeline.pydantic_models.vid_metadata import VidMetadata
+from behavysis_pipeline.utils.logging_utils import init_logger
+from behavysis_pipeline.utils.subproc_utils import SubprocMixin
 
 
 class ProcessVidMixin:
     """__summary__"""
 
-    @staticmethod
+    logger = init_logger(__name__)
+
+    @classmethod
     def process_vid(
+        cls,
         in_fp: str,
         out_fp: str,
         height_px: None | int = None,
@@ -87,8 +91,8 @@ class ProcessVidMixin:
         # Returning outcome
         return outcome
 
-    @staticmethod
-    def get_vid_metadata(fp: str) -> VidMetadata:
+    @classmethod
+    def get_vid_metadata(cls, fp: str) -> VidMetadata:
         """
         Finds the video metadata/parameters for either the raw or formatted video.
 
