@@ -16,7 +16,6 @@ from behavysis_pipeline.constants import (
     FileExts,
     Folders,
 )
-from behavysis_pipeline.df_classes.diagnostics_df import DiagnosticsMixin
 from behavysis_pipeline.processes.analyse_behaviours import AnalyseBehaviours
 from behavysis_pipeline.processes.analyse_combine import AnalyseCombine
 from behavysis_pipeline.processes.classify_behavs import ClassifyBehavs
@@ -25,8 +24,9 @@ from behavysis_pipeline.processes.export import Export
 from behavysis_pipeline.processes.extract_features import ExtractFeatures
 from behavysis_pipeline.processes.run_dlc import RunDLC
 from behavysis_pipeline.processes.update_configs import UpdateConfigs
+from behavysis_pipeline.utils.diagnostics_utils import success_msg
 from behavysis_pipeline.utils.logging_utils import init_logger
-from behavysis_pipeline.utils.misc_utils import MiscMixin
+from behavysis_pipeline.utils.misc_utils import enum2tuple
 
 
 class Experiment:
@@ -76,7 +76,7 @@ class Experiment:
                 f'Please specify a file that exists in "{root_dir}", in one of the'
                 " following folder WITH the correct file extension name:\n"
                 "    - "
-                "\n    - ".join(MiscMixin.enum2tuple(Folders))
+                "\n    - ".join(enum2tuple(Folders))
             )
 
     #####################################################################
@@ -164,7 +164,7 @@ class Experiment:
             # Running each func and saving outcome
             try:
                 dd[f.__name__] = f(*args, **kwargs)
-                dd[f.__name__] += f"SUCCESS: {DiagnosticsMixin.success_msg()}\n"
+                dd[f.__name__] += f"SUCCESS: {success_msg()}\n"
             except Exception as e:
                 dd[f.__name__] = f"ERROR: {e}"
             self.logger.info(f"{f.__name__}: {dd[f.__name__]}")

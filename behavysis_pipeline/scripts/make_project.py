@@ -1,24 +1,7 @@
 import os
 
 from behavysis_pipeline.constants import Folders
-from behavysis_pipeline.utils.io_utils import IOMixin
-
-
-def import_template(src_fp, dst_fp, overwrite):
-    """
-    Imports the template file to the project folder.
-    """
-    # If not overwrite and file exists, then don't overwrite
-    if not overwrite and os.path.exists(dst_fp):
-        print(f"File {dst_fp} already exists and overwriting set to False. Not overwriting.")
-        return
-    # Saving the template to the file
-    IOMixin.save_template(
-        src_fp,
-        "behavysis_pipeline",
-        "templates",
-        dst_fp,
-    )
+from behavysis_pipeline.utils.template_utils import import_template
 
 
 def main(root_dir: str = ".", overwrite: bool = False, dialogue: bool = False) -> None:

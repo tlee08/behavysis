@@ -24,7 +24,6 @@ from behavysis_pipeline.df_classes.keypoints_df import (
     KeypointsDf,
 )
 from behavysis_pipeline.pydantic_models.experiment_configs import ExperimentConfigs
-from behavysis_pipeline.utils.io_utils import IOMixin
 
 
 class CalculateParams:
@@ -244,7 +243,7 @@ class CalculateParams:
         assert fps > 0, "fps should not be negative. Run FormatVid.get_vid_metadata() beforehand."
         # Using the name of the video as the name of the experiment if not specified
         if name is None:
-            name = IOMixin.get_name(dlc_fp)
+            name = get_name(dlc_fp)
         # Reading csv_fp
         df = pd.read_csv(csv_fp, index_col=0)
         df.index = df.index.astype(str)

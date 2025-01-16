@@ -40,7 +40,7 @@ def init_logger(name: str = __name__) -> logging.Logger:
     return logger
 
 
-def func_decorator(logger: logging.Logger):
+def logger_func_decorator(logger: logging.Logger):
     def decorator(func: Callable):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):

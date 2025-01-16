@@ -1,3 +1,5 @@
+from typing import Optional
+
 import numpy as np
 
 DIAGNOSTICS_SUCCESS_MESSAGES = (
@@ -29,8 +31,14 @@ def success_msg() -> str:
     return np.random.choice(DIAGNOSTICS_SUCCESS_MESSAGES)
 
 
-def file_exists_msg() -> str:
+def file_exists_msg(fp: Optional[str] = None) -> str:
     """
     Return a warning message.
     """
-    return "WARNING: Output file already exists - not overwriting file.\n" "To overwrite, specify overwrite=True`.\n"
+    fp_str = f", {fp}, " if fp else " "
+    return (
+        f"WARNING: Output file"
+        f"{fp_str}"
+        "already exists - not overwriting file.\n"
+        "To overwrite, specify overwrite=True`.\n"
+    )

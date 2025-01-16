@@ -24,9 +24,9 @@ import pandas as pd
 
 from behavysis_pipeline.df_classes.analyse_combined_df import AnalyseCombinedDf
 from behavysis_pipeline.df_classes.analyse_df import AnalyseDf
-from behavysis_pipeline.df_classes.diagnostics_df import DiagnosticsMixin
-from behavysis_pipeline.utils.io_utils import IOMixin
-from behavysis_pipeline.utils.logging_utils import func_decorator, init_logger
+from behavysis_pipeline.utils.diagnostics_utils import file_exists_msg
+from behavysis_pipeline.utils.io_utils import get_name
+from behavysis_pipeline.utils.logging_utils import init_logger, logger_func_decorator
 
 ###################################################################################################
 #               ANALYSIS API FUNCS
@@ -39,7 +39,7 @@ class AnalyseCombine:
     logger = init_logger(__name__)
 
     @classmethod
-    @func_decorator(logger)
+    @logger_func_decorator(logger)
     def analyse_combine(
         analyse_dir: str,
         out_fp: str,
@@ -51,10 +51,10 @@ class AnalyseCombine:
         """
         Takes a behavs dataframe and generates a summary and binned version of the data.
         """
-        if not overwrite and IOMixin.check_files_exist(out_fp):
-            return DiagnosticsMixin.file_exists_msg(out_fp)
+        if not overwrite and os.path.exists(out_fp):
+            return file_exists_msg(out_fp)
         outcome = ""
-        name = IOMixin.get_name(configs_fp)
+        name = get_name(configs_fp)
         # For each analysis subdir, combining fbf files
         analysis_subdir_ls = [i for i in os.listdir(analyse_dir) if os.path.isdir(os.path.join(analyse_dir, i))]
         # If no analysis files, then return warning and don't make df

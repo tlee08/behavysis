@@ -2,17 +2,18 @@
 Classify Behaviours
 """
 
+import os
+
 import pandas as pd
 
 from behavysis_pipeline.behav_classifier.behav_classifier import BehavClassifier
 from behavysis_pipeline.df_classes.behav_df import BehavColumns, BehavDf
 from behavysis_pipeline.df_classes.bouts_df import BoutsDf
 from behavysis_pipeline.df_classes.df_mixin import DFMixin
-from behavysis_pipeline.df_classes.diagnostics_df import DiagnosticsMixin
 from behavysis_pipeline.pydantic_models.experiment_configs import ExperimentConfigs
-from behavysis_pipeline.utils.io_utils import IOMixin
-from behavysis_pipeline.utils.logging_utils import func_decorator, init_logger
-from behavysis_pipeline.utils.misc_utils import MiscMixin
+from behavysis_pipeline.utils.diagnostics_utils import file_exists_msg
+from behavysis_pipeline.utils.logging_utils import init_logger, logger_func_decorator
+from behavysis_pipeline.utils.misc_utils import enum2tuple
 
 # TODO: handle reading the model file whilst in multiprocessing
 
@@ -23,7 +24,7 @@ class ClassifyBehavs:
     logger = init_logger(__name__)
 
     @classmethod
-    @func_decorator(logger)
+    @logger_func_decorator(logger)
     def classify_behavs(
         cls,
         features_fp: str,
@@ -61,8 +62,8 @@ class ClassifyBehavs:
         ```
         Where the `models` list is a list of `model_config.json` filepaths.
         """
-        if not overwrite and IOMixin.check_files_exist(out_fp):
-            return DiagnosticsMixin.file_exists_msg(out_fp)
+        if not overwrite and os.path.exists(out_fp):
+            return file_exists_msg(out_fp)
         outcome = ""
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
@@ -107,8 +108,8 @@ class ClassifyBehavs:
         # Concatenating predictions to a single dataframe
         behavs_df = pd.concat(df_ls, axis=1)
         # Setting the index and column names
-        behavs_df.index.names = list(MiscMixin.enum2tuple(BehavDf.IN))
-        behavs_df.columns.names = list(MiscMixin.enum2tuple(BehavDf.CN))
+        behavs_df.index.names = list(enum2tuple(BehavDf.IN))
+        behavs_df.columns.names = list(enum2tuple(BehavDf.CN))
         # Saving behav_preds df
         BehavDf.write_feather(behavs_df, out_fp)
         # Returning outcome

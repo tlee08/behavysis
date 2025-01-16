@@ -30,7 +30,7 @@ from behavysis_pipeline.df_classes.analyse_df import AnalyseDf
 from behavysis_pipeline.df_classes.bouts_df import BoutsDf
 from behavysis_pipeline.df_classes.df_mixin import DFMixin
 from behavysis_pipeline.utils.logging_utils import init_logger
-from behavysis_pipeline.utils.misc_utils import MiscMixin
+from behavysis_pipeline.utils.misc_utils import enum2tuple
 
 FBF = "fbf"
 SUMMARY = "summary"
@@ -198,11 +198,11 @@ class AnalyseBinnedDf(DFMixin):
         grouped_df = analysis_df.groupby(bin_sec)
         binned_df = grouped_df.apply(
             lambda x: summary_func(x, fps)
-            .unstack(MiscMixin.enum2tuple(AnalyseDf.CN))
-            .reorder_levels(list(MiscMixin.enum2tuple(cls.CN)))
-            .sort_index(level=MiscMixin.enum2tuple(AnalyseDf.CN))
+            .unstack(enum2tuple(AnalyseDf.CN))
+            .reorder_levels(list(enum2tuple(cls.CN)))
+            .sort_index(level=enum2tuple(AnalyseDf.CN))
         )
-        binned_df.index.names = MiscMixin.enum2tuple(AnalyseBinnedIN)
+        binned_df.index.names = enum2tuple(AnalyseBinnedIN)
         # returning binned_df
         return binned_df
 
@@ -217,9 +217,7 @@ class AnalyseBinnedDf(DFMixin):
         _summary_
         """
         # Making binned_df long
-        binned_stacked_df = (
-            binned_df.stack(MiscMixin.enum2tuple(AnalyseDf.CN))[agg_column].rename("value").reset_index()
-        )
+        binned_stacked_df = binned_df.stack(enum2tuple(AnalyseDf.CN))[agg_column].rename("value").reset_index()
         # Plotting line graph
         g = sns.relplot(
             data=binned_stacked_df,

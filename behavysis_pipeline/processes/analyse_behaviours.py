@@ -26,9 +26,9 @@ from behavysis_pipeline.df_classes.analyse_binned_df import AnalyseBinnedDf
 from behavysis_pipeline.df_classes.analyse_df import AnalyseDf
 from behavysis_pipeline.df_classes.behav_df import BehavColumns, BehavDf
 from behavysis_pipeline.pydantic_models.experiment_configs import ExperimentConfigs
-from behavysis_pipeline.utils.io_utils import IOMixin
+from behavysis_pipeline.utils.io_utils import get_name
 from behavysis_pipeline.utils.logging_utils import init_logger
-from behavysis_pipeline.utils.misc_utils import MiscMixin
+from behavysis_pipeline.utils.misc_utils import enum2tuple
 
 ###################################################################################################
 #               ANALYSIS API FUNCS
@@ -53,7 +53,7 @@ class AnalyseBehaviours:
         Takes a behavs dataframe and generates a summary and binned version of the data.
         """
         outcome = ""
-        name = IOMixin.get_name(behavs_fp)
+        name = get_name(behavs_fp)
         out_dir = os.path.join(out_dir, AnalyseBehaviours.analyse_behaviours.__name__)
         # Calculating the deltas (changes in body position) between each frame for the subject
         configs = ExperimentConfigs.read_json(configs_fp)
@@ -71,7 +71,7 @@ class AnalyseBehaviours:
         )
         behavs_df = behavs_df.loc[:, columns]
         # Updating the column level names of behavs_df to match AnalyseDf structure
-        behavs_df.columns.names = list(MiscMixin.enum2tuple(AnalyseDf.CN))
+        behavs_df.columns.names = list(enum2tuple(AnalyseDf.CN))
         # Writing the behavs_df to the fbf file
         fbf_fp = os.path.join(out_dir, "fbf", f"{name}.feather")
         AnalyseDf.write_feather(behavs_df, fbf_fp)

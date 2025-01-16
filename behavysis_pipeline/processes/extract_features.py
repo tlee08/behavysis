@@ -7,15 +7,16 @@ import os
 import pandas as pd
 
 from behavysis_pipeline.constants import CACHE_DIR
-from behavysis_pipeline.df_classes.diagnostics_df import DiagnosticsMixin
 from behavysis_pipeline.df_classes.features_df import FeaturesDf
 from behavysis_pipeline.df_classes.keypoints_df import KeypointsDf
 from behavysis_pipeline.pydantic_models.experiment_configs import ExperimentConfigs
-from behavysis_pipeline.utils.io_utils import IOMixin
-from behavysis_pipeline.utils.logging_utils import func_decorator, init_logger
-from behavysis_pipeline.utils.misc_utils import MiscMixin
-from behavysis_pipeline.utils.multiproc_utils import MultiprocMixin
-from behavysis_pipeline.utils.subproc_utils import SubprocMixin
+from behavysis_pipeline.utils.diagnostics_utils import file_exists_msg
+from behavysis_pipeline.utils.io_utils import get_name, silent_remove
+from behavysis_pipeline.utils.logging_utils import init_logger, logger_func_decorator
+from behavysis_pipeline.utils.misc_utils import enum2tuple
+from behavysis_pipeline.utils.multiproc_utils import get_cpid
+from behavysis_pipeline.utils.subproc_utils import run_subproc_console
+from behavysis_pipeline.utils.template_utils import save_template
 
 # Order of bodyparts is from
 # - https://github.com/sgoldenlab/simba/blob/master/docs/Multi_animal_pose.md
@@ -35,7 +36,7 @@ class ExtractFeatures:
     logger = init_logger(__name__)
 
     @staticmethod
-    @func_decorator(logger)
+    @logger_func_decorator(logger)
     def extract_features(
         dlc_fp: str,
         out_fp: str,
@@ -62,12 +63,12 @@ class ExtractFeatures:
         str
             The outcome of the process.
         """
-        if not overwrite and IOMixin.check_files_exist(out_fp):
-            return DiagnosticsMixin.file_exists_msg(out_fp)
+        if not overwrite and os.path.exists(out_fp):
+            return file_exists_msg(out_fp)
         outcome = ""
         # Getting directory and file paths
-        name = IOMixin.get_name(dlc_fp)
-        cpid = MultiprocMixin.get_cpid()
+        name = get_name(dlc_fp)
+        cpid = get_cpid()
         configs_dir = os.path.split(configs_fp)[0]
         simba_in_dir = os.path.join(CACHE_DIR, f"input_{cpid}")
         simba_dir = os.path.join(CACHE_DIR, f"simba_proj_{cpid}")
@@ -85,15 +86,15 @@ class ExtractFeatures:
         # Saving as csv
         df.to_csv(simba_in_fp)
         # Removing simba folder (if it exists)
-        IOMixin.silent_rm(simba_dir)
+        silent_remove(simba_dir)
         # Running SimBA env and script to run SimBA feature extraction
         outcome += run_simba_subproc(simba_dir, simba_in_dir, configs_dir, CACHE_DIR, cpid)
         # Exporting SimBA feature extraction csv to feather
         simba_out_fp = os.path.join(features_from_dir, f"{name}.csv")
         export2feather(simba_out_fp, out_fp, index)
         # Removing temp folders (simba_in_dir, simba_dir)
-        IOMixin.silent_rm(simba_in_dir)
-        IOMixin.silent_rm(simba_dir)
+        silent_remove(simba_in_dir)
+        silent_remove(simba_dir)
         # Returning outcome
         return outcome
 
@@ -164,7 +165,7 @@ def run_simba_subproc(
     """
     # Saving the script to a file
     script_fp = os.path.join(temp_dir, f"simba_subproc_{cpid}.py")
-    IOMixin.save_template(
+    save_template(
         "simba_subproc.py",
         "behavysis_pipeline",
         "templates",
@@ -183,10 +184,10 @@ def run_simba_subproc(
         "python",
         script_fp,
     ]
-    # SubprocMixin.run_subproc_fstream(cmd)
-    SubprocMixin.run_subproc_console(cmd)
+    # run_subproc_fstream(cmd)
+    run_subproc_console(cmd)
     # Removing the script file
-    IOMixin.silent_rm(script_fp)
+    silent_remove(script_fp)
     return "Ran SimBA feature extraction script.\n"
 
 
@@ -222,8 +223,8 @@ def export2feather(in_fp: str, out_fp: str, index: pd.Index) -> str:
     # Setting index to same as dlc preprocessed df
     df.index = index
     # Setting index and column level names
-    df.index.names = list(MiscMixin.enum2tuple(FeaturesDf.IN))
-    df.columns.names = list(MiscMixin.enum2tuple(FeaturesDf.CN))
+    df.index.names = list(enum2tuple(FeaturesDf.IN))
+    df.columns.names = list(enum2tuple(FeaturesDf.CN))
     # Saving SimBA extracted features df as feather
     FeaturesDf.write_feather(df, out_fp)
     # Returning outcome

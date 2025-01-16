@@ -10,7 +10,7 @@ import cv2
 
 from behavysis_pipeline.pydantic_models.vid_metadata import VidMetadata
 from behavysis_pipeline.utils.logging_utils import init_logger
-from behavysis_pipeline.utils.subproc_utils import SubprocMixin
+from behavysis_pipeline.utils.subproc_utils import run_subproc_console
 
 
 class ProcessVidMixin:
@@ -86,8 +86,8 @@ class ProcessVidMixin:
         # Making the output directory
         os.makedirs(os.path.dirname(out_fp), exist_ok=True)
         # Running ffmpeg command
-        # SubprocMixin.run_subproc_fstream(cmd)
-        SubprocMixin.run_subproc_console(cmd)
+        # run_subproc_fstream(cmd)
+        run_subproc_console(cmd)
         # Returning outcome
         return outcome
 

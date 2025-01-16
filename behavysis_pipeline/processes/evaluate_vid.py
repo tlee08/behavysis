@@ -14,12 +14,11 @@ from PySide6 import QtGui
 from tqdm import trange
 
 from behavysis_pipeline.df_classes.analyse_combined_df import AnalyseCombinedDf
-from behavysis_pipeline.df_classes.diagnostics_df import DiagnosticsMixin
 from behavysis_pipeline.df_classes.keypoints_df import IndivColumns, KeypointsDf
 from behavysis_pipeline.pydantic_models.experiment_configs import ExperimentConfigs
-from behavysis_pipeline.utils.io_utils import IOMixin
-from behavysis_pipeline.utils.logging_utils import func_decorator, init_logger
-from behavysis_pipeline.utils.misc_utils import MiscMixin
+from behavysis_pipeline.utils.diagnostics_utils import file_exists_msg
+from behavysis_pipeline.utils.logging_utils import init_logger, logger_func_decorator
+from behavysis_pipeline.utils.plotting_utils import make_colours
 
 ###################################################################################################
 # EVALUATE VID FUNC, WHICH FACES OUT
@@ -32,7 +31,7 @@ class EvaluateVid:
     logger = init_logger(__name__)
 
     @classmethod
-    @func_decorator(logger)
+    @logger_func_decorator(logger)
     def evaluate_vid(
         cls,
         vid_fp: str,
@@ -47,12 +46,9 @@ class EvaluateVid:
         all experiments. The DLC model's config.yaml filepath must be specified in the `config_path`
         parameter in the `user` section of the config file.
         """
-        if not overwrite and IOMixin.check_files_exist(out_fp):
-            return DiagnosticsMixin.file_exists_msg(out_fp)
-        outcome = ""
-        # If overwrite is False, checking if we should skip processing
         if not overwrite and os.path.exists(out_fp):
-            return DiagnosticsMixin.warning_msg()
+            return file_exists_msg(out_fp)
+        outcome = ""
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
         configs_filt = configs.user.evaluate_vid
@@ -229,7 +225,7 @@ class Keypoints(EvalVidFuncBase):
         # Making the corresponding colours list for each bodypart instance
         # (colours depend on indiv/bpt)
         measures_ls = self.indivs_bpts_ls.get_level_values(self.colour_level)
-        self.colours = MiscMixin.make_colours(measures_ls, self.cmap)
+        self.colours = make_colours(measures_ls, self.cmap)
 
     def __call__(self, frame: np.ndarray, idx: int) -> np.ndarray:
         # Asserting the frame's dimensions
@@ -332,7 +328,7 @@ class Analysis(EvalVidFuncBase):
                 x_line_arr_ij.setZValue(10)
                 plot_arr_ij.addItem(x_line_arr_ij)
                 # Making the corresponding colours list for each measures instance
-                colours_ls = MiscMixin.make_colours(measures_ls, self.cmap)
+                colours_ls = make_colours(measures_ls, self.cmap)
                 # Making overal plot's legend
                 legend = plot_arr_ij.addLegend()
                 for k, measures_k in enumerate(measures_ls):

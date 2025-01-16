@@ -35,7 +35,7 @@ from behavysis_pipeline.df_classes.keypoints_df import (
     KeypointsDf,
 )
 from behavysis_pipeline.pydantic_models.experiment_configs import ExperimentConfigs
-from behavysis_pipeline.utils.io_utils import IOMixin
+from behavysis_pipeline.utils.io_utils import get_name
 
 ###################################################################################################
 #               ANALYSIS API FUNCS
@@ -65,7 +65,7 @@ class Analyse:
         Points are `thresh_px` padded (away) from center.
         """
         outcome = ""
-        name = IOMixin.get_name(dlc_fp)
+        name = get_name(dlc_fp)
         f_name = Analyse.in_roi.__name__
         out_dir = os.path.join(out_dir, f_name)
         # Calculating the deltas (changes in body position) between each frame for the subject
@@ -191,7 +191,7 @@ class Analyse:
         max) for DeltaMMperSec, and DeltaMMperSecSmoothed
         """
         outcome = ""
-        name = IOMixin.get_name(dlc_fp)
+        name = get_name(dlc_fp)
         f_name = Analyse.speed.__name__
         out_dir = os.path.join(out_dir, f_name)
         # Calculating the deltas (changes in body position) between each frame for the subject
@@ -263,7 +263,7 @@ class Analyse:
         max) for DeltaMMperSec, and DeltaMMperSecSmoothed
         """
         outcome = ""
-        name = IOMixin.get_name(dlc_fp)
+        name = get_name(dlc_fp)
         f_name = Analyse.social_distance.__name__
         out_dir = os.path.join(out_dir, f_name)
         # Calculating the deltas (changes in body position) between each frame for the subject
@@ -339,7 +339,7 @@ class Analyse:
         - Each row `is_frozen`, and bout number.
         """
         outcome = ""
-        name = IOMixin.get_name(dlc_fp)
+        name = get_name(dlc_fp)
         f_name = Analyse.freezing.__name__
         out_dir = os.path.join(out_dir, f_name)
         # Calculating the deltas (changes in body position) between each frame for the subject

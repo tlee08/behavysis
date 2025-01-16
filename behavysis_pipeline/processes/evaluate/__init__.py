@@ -33,15 +33,14 @@ import pandas as pd
 import seaborn as sns
 from tqdm import trange
 
-from behavysis_pipeline.df_classes.analyse_combine_df import AnalyseCombineDf
 from behavysis_pipeline.df_classes.behav_df import BehavDf
-from behavysis_pipeline.df_classes.diagnostics_df import DiagnosticsMixin
 from behavysis_pipeline.df_classes.keypoints_df import Coords, KeypointsDf
 from behavysis_pipeline.processes.evaluate_vid import (
     VidFuncRunner,
 )
 from behavysis_pipeline.pydantic_models.experiment_configs import ExperimentConfigs
-from behavysis_pipeline.utils.io_utils import IOMixin
+from behavysis_pipeline.utils.diagnostics_utils import file_exists_msg
+from behavysis_pipeline.utils.io_utils import get_name
 
 
 class Evaluate:
@@ -64,13 +63,10 @@ class Evaluate:
         Make keypoints evaluation plot of likelihood of each bodypart through time.
         """
         outcome = ""
-        name = IOMixin.get_name(dlc_fp)
+        name = get_name(dlc_fp)
         out_dir = os.path.join(out_dir, Evaluate.keypoints_plot.__name__)
         out_fp = os.path.join(out_dir, f"{name}.png")
         os.makedirs(out_dir, exist_ok=True)
-        # If overwrite is False, checking if we should skip processing
-        if not overwrite and os.path.exists(out_fp):
-            return DiagnosticsMixin.warning_msg()
 
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
@@ -129,13 +125,13 @@ class Evaluate:
         Make behaviour evaluation plot of the predicted and actual behaviours through time.
         """
         outcome = ""
-        name = IOMixin.get_name(behavs_fp)
+        name = get_name(behavs_fp)
         out_dir = os.path.join(out_dir, Evaluate.behav_plot.__name__)
         out_fp = os.path.join(out_dir, f"{name}.png")
         os.makedirs(out_dir, exist_ok=True)
         # If overwrite is False, checking if we should skip processing
         if not overwrite and os.path.exists(out_fp):
-            return DiagnosticsMixin.warning_msg()
+            return file_exists_msg()
 
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
@@ -195,13 +191,13 @@ class Evaluate:
         # TODO: implement analysis in eval vid.
         """
         outcome = ""
-        name = IOMixin.get_name(vid_fp)
+        name = get_name(vid_fp)
         out_dir = os.path.join(out_dir, Evaluate.eval_vid.__name__)
         out_fp = os.path.join(out_dir, f"{name}.mp4")
         os.makedirs(out_dir, exist_ok=True)
         # If overwrite is False, checking if we should skip processing
         if not overwrite and os.path.exists(out_fp):
-            return DiagnosticsMixin.warning_msg()
+            return file_exists_msg()
 
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)

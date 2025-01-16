@@ -31,9 +31,9 @@ from behavysis_pipeline.pydantic_models.experiment_configs import (
     ExperimentConfigs,
 )
 from behavysis_pipeline.utils.dask_utils import cluster_proc_contxt
-from behavysis_pipeline.utils.io_utils import IOMixin
+from behavysis_pipeline.utils.io_utils import get_name
 from behavysis_pipeline.utils.logging_utils import init_logger
-from behavysis_pipeline.utils.multiproc_utils import MultiprocMixin
+from behavysis_pipeline.utils.multiproc_utils import get_gpu_ids
 
 
 class Project:
@@ -308,7 +308,7 @@ class Project:
         """
         # If gputouse is not specified, using all GPUs
         if gputouse is None:
-            gputouse_ls = MultiprocMixin.get_gpu_ids()
+            gputouse_ls = get_gpu_ids()
         else:
             gputouse_ls = [gputouse]
         nprocs = len(gputouse_ls)
@@ -398,7 +398,7 @@ class Project:
             for j in natsorted(os.listdir(folder)):
                 if re.search(r"^\.", j):  # do not add hidden files
                     continue
-                name = IOMixin.get_name(j)
+                name = get_name(j)
                 try:
                     self.import_experiment(name)
                 except ValueError as e:  # do not add invalid files

@@ -5,10 +5,9 @@ import numpy as np
 from behavysis_pipeline.behav_classifier.behav_classifier import BehavClassifier
 from behavysis_pipeline.df_classes.behav_df import BehavColumns, BehavDf
 from behavysis_pipeline.df_classes.df_mixin import DFMixin
-from behavysis_pipeline.df_classes.diagnostics_df import DiagnosticsMixin
 from behavysis_pipeline.pydantic_models.experiment_configs import ExperimentConfigs
-from behavysis_pipeline.utils.io_utils import IOMixin
-from behavysis_pipeline.utils.logging_utils import func_decorator, init_logger
+from behavysis_pipeline.utils.diagnostics_utils import file_exists_msg
+from behavysis_pipeline.utils.logging_utils import init_logger, logger_func_decorator
 
 
 class Export:
@@ -17,7 +16,7 @@ class Export:
     logger = init_logger(__name__)
 
     @classmethod
-    @func_decorator(logger)
+    @logger_func_decorator(logger)
     def feather2feather(
         cls,
         src_fp: str,
@@ -25,8 +24,8 @@ class Export:
         overwrite: bool,
     ) -> str:
         """__summary__"""
-        if not overwrite and IOMixin.check_files_exist(out_fp):
-            return DiagnosticsMixin.file_exists_msg(out_fp)
+        if not overwrite and os.path.exists(out_fp):
+            return file_exists_msg(out_fp)
         # Reading file
         df = DFMixin.read_feather(src_fp)
         # Writing file
@@ -35,7 +34,7 @@ class Export:
         return "feather to feather\n"
 
     @classmethod
-    @func_decorator(logger)
+    @logger_func_decorator(logger)
     def feather2csv(
         cls,
         src_fp: str,
@@ -43,8 +42,8 @@ class Export:
         overwrite: bool,
     ) -> str:
         """__summary__"""
-        if not overwrite and IOMixin.check_files_exist(out_fp):
-            return DiagnosticsMixin.file_exists_msg(out_fp)
+        if not overwrite and os.path.exists(out_fp):
+            return file_exists_msg(out_fp)
         # Reading file
         df = DFMixin.read_feather(src_fp)
         # Writing file
@@ -54,7 +53,7 @@ class Export:
         return "feather to csv\n"
 
     @classmethod
-    @func_decorator(logger)
+    @logger_func_decorator(logger)
     def predbehavs2scoredbehavs(
         cls,
         src_fp: str,
@@ -63,8 +62,8 @@ class Export:
         overwrite: bool,
     ) -> str:
         """ """
-        if not overwrite and IOMixin.check_files_exist(out_fp):
-            return DiagnosticsMixin.file_exists_msg(out_fp)
+        if not overwrite and os.path.exists(out_fp):
+            return file_exists_msg(out_fp)
         outcome = ""
         # Reading the configs file
         configs = ExperimentConfigs.read_json(configs_fp)
@@ -101,7 +100,7 @@ class Export:
         return outcome
 
     @classmethod
-    @func_decorator(logger)
+    @logger_func_decorator(logger)
     def boris2behav(
         cls,
         src_fp: str,
@@ -110,8 +109,8 @@ class Export:
         behavs_ls: list[str],
         overwrite: bool,
     ) -> str:
-        if not overwrite and IOMixin.check_files_exist(out_fp):
-            return DiagnosticsMixin.file_exists_msg(out_fp)
+        if not overwrite and os.path.exists(out_fp):
+            return file_exists_msg(out_fp)
         # Reading the configs file
         configs = ExperimentConfigs.read_json(configs_fp)
         start_frame = configs.get_ref(configs.auto.start_frame)

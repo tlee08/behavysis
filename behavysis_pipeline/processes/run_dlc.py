@@ -27,13 +27,14 @@ import re
 import pandas as pd
 
 from behavysis_pipeline.constants import CACHE_DIR
-from behavysis_pipeline.df_classes.diagnostics_df import DiagnosticsMixin
 from behavysis_pipeline.df_classes.keypoints_df import KeypointsDf
 from behavysis_pipeline.pydantic_models.experiment_configs import ExperimentConfigs
-from behavysis_pipeline.utils.io_utils import IOMixin
-from behavysis_pipeline.utils.logging_utils import func_decorator, init_logger
-from behavysis_pipeline.utils.misc_utils import MiscMixin
-from behavysis_pipeline.utils.subproc_utils import SubprocMixin
+from behavysis_pipeline.utils.diagnostics_utils import file_exists_msg
+from behavysis_pipeline.utils.io_utils import get_name, silent_remove
+from behavysis_pipeline.utils.logging_utils import init_logger, logger_func_decorator
+from behavysis_pipeline.utils.misc_utils import enum2tuple
+from behavysis_pipeline.utils.subproc_utils import run_subproc_console
+from behavysis_pipeline.utils.template_utils import save_template
 
 DLC_HDF_KEY = "data"
 
@@ -44,7 +45,7 @@ class RunDLC:
     logger = init_logger(__name__)
 
     @classmethod
-    @func_decorator(logger)
+    @logger_func_decorator(logger)
     def ma_dlc_analyse_single(
         cls,
         vid_fp: str,
@@ -56,8 +57,8 @@ class RunDLC:
         """
         Running custom DLC script to generate a DLC keypoints dataframe from a single video.
         """
-        if not overwrite and IOMixin.check_files_exist(out_fp):
-            return DiagnosticsMixin.file_exists_msg(out_fp)
+        if not overwrite and os.path.exists(out_fp):
+            return file_exists_msg(out_fp)
         outcome = ""
         # Getting model_fp
         configs = ExperimentConfigs.read_json(configs_fp)
@@ -80,7 +81,7 @@ class RunDLC:
 
         # Exporting the h5 to feather the out_dir
         export2feather(vid_fp, dlc_out_dir, out_dir)
-        # IOMixin.silent_rm(dlc_out_dir)
+        # silent_remove(dlc_out_dir)
 
         return outcome
 
@@ -106,7 +107,9 @@ class RunDLC:
         if not overwrite:
             # Getting only the vid_fp_ls elements that do not exist in out_dir
             vid_fp_ls = [
-                i for i in vid_fp_ls if not os.path.exists(os.path.join(out_dir, f"{IOMixin.get_name(i)}.feather"))
+                vid_fp
+                for vid_fp in vid_fp_ls
+                if not os.path.exists(os.path.join(out_dir, f"{get_name(vid_fp)}.feather"))
             ]
 
         # If there are no videos to process, return
@@ -115,7 +118,7 @@ class RunDLC:
 
         # Getting the DLC model config path
         # Getting the names of the files that need processing
-        dlc_fp_ls = [IOMixin.get_name(i) for i in vid_fp_ls]
+        dlc_fp_ls = [get_name(i) for i in vid_fp_ls]
         # Getting their corresponding configs_fp
         dlc_fp_ls = [os.path.join(configs_dir, f"{i}.json") for i in dlc_fp_ls]
         # Reading their configs
@@ -140,7 +143,7 @@ class RunDLC:
         # Exporting the h5 to feather the out_dir
         for vid_fp in vid_fp_ls:
             outcome += export2feather(vid_fp, dlc_out_dir, out_dir)
-        IOMixin.silent_rm(dlc_out_dir)
+        silent_remove(dlc_out_dir)
         # Returning outcome
         return outcome
 
@@ -161,7 +164,7 @@ def run_dlc_subproc(
     # TODO: implement for and try for each video and get errors?? Maybe save a log to a file
     # Saving the script to a file
     script_fp = os.path.join(temp_dir, f"dlc_subproc_{gputouse}.py")
-    IOMixin.save_template(
+    save_template(
         "dlc_subproc.py",
         "behavysis_pipeline",
         "templates",
@@ -181,10 +184,10 @@ def run_dlc_subproc(
         "python",
         script_fp,
     ]
-    # SubprocMixin.run_subproc_fstream(cmd)
-    SubprocMixin.run_subproc_console(cmd)
+    # run_subproc_fstream(cmd)
+    run_subproc_console(cmd)
     # Removing the script file
-    IOMixin.silent_rm(script_fp)
+    silent_remove(script_fp)
 
 
 def export2feather(name: str, in_dir: str, out_dir: str) -> str:
@@ -192,7 +195,7 @@ def export2feather(name: str, in_dir: str, out_dir: str) -> str:
     __summary__
     """
     # Get name
-    name = IOMixin.get_name(name)
+    name = get_name(name)
     # Get the corresponding .h5 filename
     name_fp_ls = [i for i in os.listdir(in_dir) if re.search(rf"^{name}DLC.*\.h5$", i)]
     if len(name_fp_ls) == 0:
@@ -203,8 +206,8 @@ def export2feather(name: str, in_dir: str, out_dir: str) -> str:
         # NOTE: may need DLC_HDF_KEY
         df = pd.DataFrame(pd.read_hdf(name_fp))
         # Setting the column and index level names
-        df.index.names = list(MiscMixin.enum2tuple(KeypointsDf.IN))
-        df.columns.names = list(MiscMixin.enum2tuple(KeypointsDf.CN))
+        df.index.names = list(enum2tuple(KeypointsDf.IN))
+        df.columns.names = list(enum2tuple(KeypointsDf.CN))
         # Imputing na values with 0
         df = df.fillna(0)
         # Writing the .feather file

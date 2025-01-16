@@ -18,11 +18,12 @@ str
     Description of the function's outcome.
 """
 
-from behavysis_pipeline.df_classes.diagnostics_df import DiagnosticsMixin
+import os
+
 from behavysis_pipeline.mixins.process_vid_mixin import ProcessVidMixin
 from behavysis_pipeline.pydantic_models.experiment_configs import ExperimentConfigs
-from behavysis_pipeline.utils.io_utils import IOMixin
-from behavysis_pipeline.utils.logging_utils import func_decorator, init_logger
+from behavysis_pipeline.utils.diagnostics_utils import file_exists_msg
+from behavysis_pipeline.utils.logging_utils import init_logger, logger_func_decorator
 
 
 class FormatVid:
@@ -33,7 +34,7 @@ class FormatVid:
     logger = init_logger(__name__)
 
     @classmethod
-    @func_decorator(logger)
+    @logger_func_decorator(logger)
     def format_vid(cls, in_fp: str, out_fp: str, configs_fp: str, overwrite: bool) -> str:
         """
         Formats the input video with the given parameters.
@@ -54,8 +55,8 @@ class FormatVid:
         str
             Description of the function's outcome.
         """
-        if not overwrite and IOMixin.check_files_exist(out_fp):
-            return DiagnosticsMixin.file_exists_msg(out_fp)
+        if not overwrite and os.path.exists(out_fp):
+            return file_exists_msg(out_fp)
         outcome = ""
         # Finding all necessary config parameters for video formatting
         configs = ExperimentConfigs.read_json(configs_fp)

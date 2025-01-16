@@ -11,7 +11,7 @@ from behavysis_pipeline.processes.extract_features import run_simba_subproc
 from behavysis_pipeline.processes.preprocess import Preprocess
 from behavysis_pipeline.processes.run_dlc import run_dlc_subproc
 from behavysis_pipeline.pydantic_models.experiment_configs import ExperimentConfigs
-from behavysis_pipeline.utils.io_utils import IOMixin
+from behavysis_pipeline.utils.io_utils import silent_remove
 
 #####################################################################
 # Pipeline Functions (callbacks)
@@ -71,7 +71,7 @@ def update_configs(proj: Project, configs: dict, overwrite: str):
     # Updatng configs
     proj.update_configs(configs_fp, overwrite)
     # Removing temp file
-    IOMixin.silent_rm(configs_fp)
+    silent_remove(configs_fp)
     # Success message
     st.success("Configs Updated")
 

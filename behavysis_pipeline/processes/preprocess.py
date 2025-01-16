@@ -19,6 +19,7 @@ str
 
 """
 
+import os
 from typing import Literal
 
 import numpy as np
@@ -26,15 +27,14 @@ import pandas as pd
 from pydantic import BaseModel
 
 from behavysis_pipeline.df_classes.df_mixin import DFMixin
-from behavysis_pipeline.df_classes.diagnostics_df import DiagnosticsMixin
 from behavysis_pipeline.df_classes.keypoints_df import (
     Coords,
     IndivColumns,
     KeypointsDf,
 )
 from behavysis_pipeline.pydantic_models.experiment_configs import ExperimentConfigs
-from behavysis_pipeline.utils.io_utils import IOMixin
-from behavysis_pipeline.utils.logging_utils import func_decorator, init_logger
+from behavysis_pipeline.utils.diagnostics_utils import file_exists_msg
+from behavysis_pipeline.utils.logging_utils import init_logger, logger_func_decorator
 
 
 class Preprocess:
@@ -43,7 +43,7 @@ class Preprocess:
     logger = init_logger(__name__)
 
     @classmethod
-    @func_decorator(logger)
+    @logger_func_decorator(logger)
     def start_stop_trim(cls, dlc_fp: str, out_fp: str, configs_fp: str, overwrite: bool) -> str:
         """
         Filters the rows of a DLC formatted dataframe to include only rows within the start
@@ -77,8 +77,8 @@ class Preprocess:
                     - stop_frame: int
         ```
         """
-        if not overwrite and IOMixin.check_files_exist(out_fp):
-            return DiagnosticsMixin.file_exists_msg(out_fp)
+        if not overwrite and os.path.exists(out_fp):
+            return file_exists_msg(out_fp)
         outcome = ""
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
@@ -94,7 +94,7 @@ class Preprocess:
         return outcome
 
     @classmethod
-    @func_decorator(logger)
+    @logger_func_decorator(logger)
     def interpolate_stationary(cls, dlc_fp: str, out_fp: str, configs_fp: str, overwrite: bool) -> str:
         """
         If the point detection (above a certain threshold) is below a certain proportion, then the x and y coordinates are set to the given values (usually corners).
@@ -116,8 +116,8 @@ class Preprocess:
                     ]
         ```
         """
-        if not overwrite and IOMixin.check_files_exist(out_fp):
-            return DiagnosticsMixin.file_exists_msg(out_fp)
+        if not overwrite and os.path.exists(out_fp):
+            return file_exists_msg(out_fp)
         outcome = ""
         # Getting necessary config parameters list
         configs = ExperimentConfigs.read_json(configs_fp)
@@ -161,7 +161,7 @@ class Preprocess:
         return outcome
 
     @classmethod
-    @func_decorator(logger)
+    @logger_func_decorator(logger)
     def interpolate(cls, dlc_fp: str, out_fp: str, configs_fp: str, overwrite: bool) -> str:
         """
         "Smooths" out noticeable jitter of points, where the likelihood (and accuracy) of
@@ -179,8 +179,8 @@ class Preprocess:
                     - pcutoff: float
         ```
         """
-        if not overwrite and IOMixin.check_files_exist(out_fp):
-            return DiagnosticsMixin.file_exists_msg(out_fp)
+        if not overwrite and os.path.exists(out_fp):
+            return file_exists_msg(out_fp)
         outcome = ""
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
@@ -209,7 +209,7 @@ class Preprocess:
         return outcome
 
     @classmethod
-    @func_decorator(logger)
+    @logger_func_decorator(logger)
     def refine_ids(cls, dlc_fp: str, out_fp: str, configs_fp: str, overwrite: bool) -> str:
         """
         Ensures that the identity is correctly tracked for maDLC.
@@ -229,8 +229,8 @@ class Preprocess:
                     - metric: ["current", "rolling", "binned"]
         ```
         """
-        if not overwrite and IOMixin.check_files_exist(out_fp):
-            return DiagnosticsMixin.file_exists_msg(out_fp)
+        if not overwrite and os.path.exists(out_fp):
+            return file_exists_msg(out_fp)
         outcome = ""
         # Reading file
         df = KeypointsDf.read_feather(dlc_fp)
