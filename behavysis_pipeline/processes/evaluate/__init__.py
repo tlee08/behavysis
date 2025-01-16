@@ -33,6 +33,7 @@ import pandas as pd
 import seaborn as sns
 from tqdm import trange
 
+from behavysis_pipeline.df_classes.analyse_combined_df import AnalyseCombinedDf
 from behavysis_pipeline.df_classes.behav_df import BehavDf
 from behavysis_pipeline.df_classes.keypoints_df import Coords, KeypointsDf
 from behavysis_pipeline.processes.evaluate_vid import (
@@ -81,7 +82,7 @@ class Evaluate:
         # Making data-long ways
         idx = pd.IndexSlice
         df = (
-            df.loc[:, idx[:, bpts]]  # type: ignore
+            df.loc[:, idx[:, bpts]]
             .stack([KeypointsDf.CN.INDIVIDUALS.value, KeypointsDf.CN.BODYPARTS.value])
             .reset_index()
         )
@@ -213,14 +214,14 @@ class Evaluate:
         dlc_df = KeypointsDf.clean_headings(KeypointsDf.read_feather(dlc_fp))
 
         try:
-            analysis_df = AnalyseCombineDf.read_feather(analysis_fp)
+            analysis_df = AnalyseCombinedDf.read_feather(analysis_fp)
         except FileNotFoundError:
             outcome += (
                 "WARNING: behavs file not found or could not be loaded."
                 "Disregarding behaviour."
                 "If you have run the behaviour classifier, please check this file.\n"
             )
-            analysis_df = AnalyseCombineDf.init_df(dlc_df.index)
+            analysis_df = AnalyseCombinedDf.init_df(dlc_df.index)
 
         # OPENING INPUT VIDEO
         # Open the input video
@@ -250,7 +251,7 @@ class Evaluate:
         # Define the codec and create VideoWriter object
         out_cap = cv2.VideoWriter(
             out_fp,
-            cv2.VideoWriter_fourcc(*"mp4v"),  # type: ignore
+            cv2.VideoWriter_fourcc(*"mp4v"),
             fps,
             (vid_func_runner.width_out, vid_func_runner.height_out),
         )

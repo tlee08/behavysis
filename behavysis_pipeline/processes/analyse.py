@@ -71,7 +71,7 @@ class Analyse:
         # Calculating the deltas (changes in body position) between each frame for the subject
         configs = ExperimentConfigs.read_json(configs_fp)
         fps, _, _, px_per_mm, bins_ls, cbins_ls = AnalyseDf.get_configs(configs)
-        configs_filt_ls = list(configs.user.analyse.in_roi)  # type: ignore
+        configs_filt_ls = list(configs.user.analyse.in_roi)
         # Loading in dataframe
         dlc_df = KeypointsDf.clean_headings(KeypointsDf.read_feather(dlc_fp))
         # Getting indivs list
@@ -122,27 +122,19 @@ class Analyse:
             # For each individual, getting the in-roi status
             for indiv in indivs:
                 # Getting average body center (x, y) for each individual
-                analysis_i_df[(indiv, x)] = (
-                    dlc_df.loc[:, idx[indiv, bpts, x]].mean(axis=1).values  # type: ignore
-                )
-                analysis_i_df[(indiv, y)] = (
-                    dlc_df.loc[:, idx[indiv, bpts, y]].mean(axis=1).values  # type: ignore
-                )
+                analysis_i_df[(indiv, x)] = dlc_df.loc[:, idx[indiv, bpts, x]].mean(axis=1).values
+                analysis_i_df[(indiv, y)] = dlc_df.loc[:, idx[indiv, bpts, y]].mean(axis=1).values
                 # Determining if the indiv body center is in the ROI
                 analysis_i_df[(indiv, roi_name)] = analysis_i_df[indiv].apply(
                     lambda pt: pt_in_roi(pt, corners_i_df), axis=1
                 )
             # Inverting in_roi status if is_in is False
             if not is_in:
-                analysis_i_df.loc[:, idx[:, roi_name]] = (  # type: ignore
-                    ~analysis_i_df.loc[:, idx[:, roi_name]]  # type: ignore
-                )
+                analysis_i_df.loc[:, idx[:, roi_name]] = ~analysis_i_df.loc[:, idx[:, roi_name]]
             # Saving scatter_df to list
             scatter_df_ls.append(analysis_i_df)
             # Saving analysis_df to list
-            analysis_df_ls.append(
-                analysis_i_df.loc[:, idx[:, roi_name]].astype(np.int8)  # type: ignore
-            )
+            analysis_df_ls.append(analysis_i_df.loc[:, idx[:, roi_name]].astype(np.int8))
         # Concatenating all analysis_df_ls and roi_corners_df_ls
         analysis_df = pd.concat(analysis_df_ls, axis=1)
         corners_df = pd.concat(corners_df_ls, keys=roi_names_ls, names=["roi"]).reset_index(level="roi")
@@ -153,10 +145,10 @@ class Analyse:
         # First getting scatter_in_roi columns
         # TODO: any way to include all different "x", "y" to use, rather
         # than the last res_df?
-        scatter_df = analysis_i_df.loc[:, idx[:, ["x", "y"]]]  # type: ignore
+        scatter_df = analysis_i_df.loc[:, idx[:, ["x", "y"]]]
         for i in indivs:
             scatter_df[(i, "roi")] = analysis_df[(i, "thigmo")]
-            # scatter_df[(i, "roi")] = analysis_df.loc[:, idx[i, roi_names_ls]].apply(  # type: ignore
+            # scatter_df[(i, "roi")] = analysis_df.loc[:, idx[i, roi_names_ls]].apply(
             #     lambda x: " - ".join(np.array(roi_names_ls)[x.values.astype(bool)]),
             #     axis=1,
             # )
@@ -197,7 +189,7 @@ class Analyse:
         # Calculating the deltas (changes in body position) between each frame for the subject
         configs = ExperimentConfigs.read_json(configs_fp)
         fps, _, _, px_per_mm, bins_ls, cbins_ls = AnalyseDf.get_configs(configs)
-        configs_filt = Model_speed(**configs.user.analyse.speed)  # type: ignore
+        configs_filt = Model_speed(**configs.user.analyse.speed)
         bpts = configs.get_ref(configs_filt.bodyparts)
         smoothing_sec = configs.get_ref(configs_filt.smoothing_sec)
         # Calculating more parameters
@@ -220,8 +212,8 @@ class Analyse:
             jitter_frames = 3
             smoothed_xy_df = dlc_df.rolling(window=jitter_frames, min_periods=1, center=True).agg(np.nanmean)
             # Getting changes in x-y values between frames (deltas)
-            delta_x = smoothed_xy_df.loc[:, idx[indiv, bpts, "x"]].mean(axis=1).diff()  # type: ignore
-            delta_y = smoothed_xy_df.loc[:, idx[indiv, bpts, "y"]].mean(axis=1).diff()  # type: ignore
+            delta_x = smoothed_xy_df.loc[:, idx[indiv, bpts, "x"]].mean(axis=1).diff()
+            delta_y = smoothed_xy_df.loc[:, idx[indiv, bpts, "y"]].mean(axis=1).diff()
             delta = np.sqrt(np.power(delta_x, 2) + np.power(delta_y, 2))
             # Storing speed (raw and smoothed)
             analysis_df[(indiv, "SpeedMMperSec")] = (delta / px_per_mm) * fps
@@ -269,7 +261,7 @@ class Analyse:
         # Calculating the deltas (changes in body position) between each frame for the subject
         configs = ExperimentConfigs.read_json(configs_fp)
         fps, _, _, px_per_mm, bins_ls, cbins_ls = AnalyseDf.get_configs(configs)
-        configs_filt = Model_social_distance(**configs.user.analyse.social_distance)  # type: ignore
+        configs_filt = Model_social_distance(**configs.user.analyse.social_distance)
         bpts = configs.get_ref(configs_filt.bodyparts)
         smoothing_sec = configs.get_ref(configs_filt.smoothing_sec)
         # Calculating more parameters
@@ -291,9 +283,9 @@ class Analyse:
         indiv_b = indivs[1]
         # Getting distances between each individual
         idx_a = idx[indiv_b, bpts, "x"]
-        dist_x = (dlc_df.loc[:, idx_a] - dlc_df.loc[:, idx_a]).mean(axis=1)  # type: ignore
+        dist_x = (dlc_df.loc[:, idx_a] - dlc_df.loc[:, idx_a]).mean(axis=1)
         idx_b = idx[indiv_a, bpts, "y"]
-        dist_y = (dlc_df.loc[:, idx_b] - dlc_df.loc[:, idx_b]).mean(axis=1)  # type: ignore
+        dist_y = (dlc_df.loc[:, idx_b] - dlc_df.loc[:, idx_b]).mean(axis=1)
         dist = np.sqrt(np.power(dist_x, 2) + np.power(dist_y, 2))
         # Adding mm distance to saved analysis_df table
         analysis_df[(f"{indiv_a}_{indiv_b}", "DistMM")] = dist / px_per_mm
@@ -345,7 +337,7 @@ class Analyse:
         # Calculating the deltas (changes in body position) between each frame for the subject
         configs = ExperimentConfigs.read_json(configs_fp)
         fps, _, _, px_per_mm, bins_ls, cbins_ls = AnalyseDf.get_configs(configs)
-        configs_filt = Model_freezing(**configs.user.analyse.freezing)  # type: ignore
+        configs_filt = Model_freezing(**configs.user.analyse.freezing)
         bpts = configs.get_ref(configs_filt.bodyparts)
         thresh_mm = configs.get_ref(configs_filt.thresh_mm)
         smoothing_sec = configs.get_ref(configs_filt.smoothing_sec)

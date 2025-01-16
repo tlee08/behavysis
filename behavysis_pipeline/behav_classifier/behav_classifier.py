@@ -389,7 +389,7 @@ class BehavClassifier:
         # Preprocessing y df
         y = self.wrangle_columns_y(y)[self.configs.behaviour_name].values
         # TODO: why is this linting error?
-        y = self.preproc_y(y)  # type: ignore
+        y = self.preproc_y(y)
         # Returning x, y, and index to use
         return x, y
 
@@ -661,7 +661,7 @@ class BehavClassifier:
             y_pred,
             target_names=GENERIC_BEHAV_LABELS,
             output_dict=True,
-        )  # type: ignore
+        )
 
     @classmethod
     def eval_conf_matr(cls, y_true: pd.Series, y_pred: pd.Series) -> Figure:
@@ -704,10 +704,10 @@ class BehavClassifier:
                 target_names=GENERIC_BEHAV_LABELS,
                 output_dict=True,
             )
-            precisions[i] = report[GENERIC_BEHAV_LABELS[1]]["precision"]  # type: ignore
-            recalls[i] = report[GENERIC_BEHAV_LABELS[1]]["recall"]  # type: ignore
-            f1[i] = report[GENERIC_BEHAV_LABELS[1]]["f1-score"]  # type: ignore
-            accuracies[i] = report["accuracy"]  # type: ignore
+            precisions[i] = report[GENERIC_BEHAV_LABELS[1]]["precision"]
+            recalls[i] = report[GENERIC_BEHAV_LABELS[1]]["recall"]
+            f1[i] = report[GENERIC_BEHAV_LABELS[1]]["f1-score"]
+            accuracies[i] = report["accuracy"]
         # Making figure
         fig, ax = plt.subplots(figsize=(10, 7))
         sns.lineplot(x=pcutoffs, y=precisions, label="precision", ax=ax)

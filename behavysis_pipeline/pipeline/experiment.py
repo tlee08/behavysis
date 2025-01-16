@@ -24,6 +24,7 @@ from behavysis_pipeline.processes.export import Export
 from behavysis_pipeline.processes.extract_features import ExtractFeatures
 from behavysis_pipeline.processes.run_dlc import RunDLC
 from behavysis_pipeline.processes.update_configs import UpdateConfigs
+from behavysis_pipeline.pydantic_models.experiment_configs import ConfigsAuto, ExperimentConfigs
 from behavysis_pipeline.utils.diagnostics_utils import success_msg
 from behavysis_pipeline.utils.logging_utils import init_logger
 from behavysis_pipeline.utils.misc_utils import enum2tuple
@@ -294,6 +295,27 @@ class Experiment:
             dlc_fp=self.get_fp(Folders.DLC),
             configs_fp=self.get_fp(Folders.CONFIGS),
         )
+
+    def collate_auto_configs(self) -> dict:
+        """
+        Collates the auto-configs of the experiment into the main configs file.
+        """
+        auto_field_keys = ConfigsAuto.get_field_names()
+        auto_configs_dict = {"experiment": self.name}
+        # Reading the experiment's configs file
+        try:
+            configs = ExperimentConfigs.read_json(self.get_fp(Folders.CONFIGS))
+            auto_configs_dict["outcome"] = success_msg()
+        except FileNotFoundError:
+            auto_configs_dict["outcome"] = "ERROR: no configs file found"
+            return auto_configs_dict
+        # Getting all the auto fields from the configs file
+        for key in auto_field_keys:
+            val = configs
+            for k in key:
+                val = getattr(val, k)
+            auto_configs_dict["_".join(key)] = val
+        return auto_configs_dict
 
     def preprocess(self, funcs: tuple[Callable, ...], overwrite: bool) -> dict:
         """

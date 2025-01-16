@@ -63,14 +63,11 @@ class PydanticBaseModel(BaseModel):
     def validate_attr_closed_set(v, closed_set):
         """Validate that the attribute is in the given closed set."""
         if v not in closed_set:
-            raise ValueError(
-                f"Invalid value: {v}.\nOption must be one of: {', '.join(closed_set)}"
-            )
+            raise ValueError(f"Invalid value: {v}.\nOption must be one of: {', '.join(closed_set)}")
         return v
 
-    # TODO: convert to class method maybe??
-    @staticmethod
-    def get_field_names(type_) -> list[tuple[str, ...]]:
+    @classmethod
+    def get_field_names(cls) -> list[tuple[str, ...]]:
         """
         Returns the nested field names of the class as
         a list of tuples.
@@ -79,14 +76,14 @@ class PydanticBaseModel(BaseModel):
         For example, the following
         ```
         {
-            "field1" : {
+            "field1": {
                 "fieldA": xxx,
                 "fieldB": {
                     "fieldI": xxx,
                     "fieldII": xxx,
-                }
+                },
             },
-            "field2": xxx
+            "field2": xxx,
         }
         ```
         Becomes
@@ -101,7 +98,7 @@ class PydanticBaseModel(BaseModel):
         """
         fields = []
         # For each field in the class
-        for name, type_ in type_.__annotations__.items():
+        for name, type_ in cls.__annotations__.items():
             if hasattr(type_, "__annotations__"):  # Is a nested class
                 for subfield in PydanticBaseModel.get_field_names(type_):
                     fields.append((name,) + subfield)

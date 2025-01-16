@@ -102,7 +102,7 @@ class EvaluateVid:
         # Define the codec and create VideoWriter object
         out_cap = cv2.VideoWriter(
             out_fp,
-            cv2.VideoWriter_fourcc(*"mp4v"),  # type: ignore
+            cv2.VideoWriter_fourcc(*"mp4v"),
             fps,
             (vid_func_runner.width_out, vid_func_runner.height_out),
         )
@@ -241,7 +241,7 @@ class Keypoints(EvalVidFuncBase):
             if row[f"{indiv}_{bpt}_likelihood"] >= self.pcutoff:
                 cv2.circle(
                     img=frame,
-                    center=(int(row[f"{indiv}_{bpt}_x"]), int(row[f"{indiv}_{bpt}_y"])),  # type: ignore
+                    center=(int(row[f"{indiv}_{bpt}_x"]), int(row[f"{indiv}_{bpt}_y"])),
                     radius=self.radius,
                     color=self.colours[i],
                     thickness=-1,
@@ -314,7 +314,7 @@ class Analysis(EvalVidFuncBase):
                     AnalyseCombinedDf.CN.MEASURES.value
                 )
                 # Making plot
-                plot_arr_ij = self.plots_layout.addPlot(  # type: ignore
+                plot_arr_ij = self.plots_layout.addPlot(
                     row=i,
                     col=j,
                     title=f"{analysis_i} - {indivs_j}",
@@ -425,7 +425,7 @@ class Analysis(EvalVidFuncBase):
         # Exporting to QImage (bytes)
         img_qt = exporter.export(toBytes=True)
         # QImage to cv2 image (using mixin)
-        img_cv = cls.qt2cv(img_qt)  # type: ignore
+        img_cv = cls.qt2cv(img_qt)
         # cv2 BGR to RGB
         img_cv = cv2.cvtColor(img_cv, cv2.COLOR_BGR2RGB)
         # Resize to widget size
@@ -444,7 +444,7 @@ class Analysis(EvalVidFuncBase):
         # Exporting to QImage (bytes)
         img_qt = exporter.export(toBytes=True)
         # QImage to cv2 image (using mixin)
-        img_cv = cls.qt2cv(img_qt)  # type: ignore
+        img_cv = cls.qt2cv(img_qt)
         # cv2 BGR to RGB
         img_cv = cv2.cvtColor(img_cv, cv2.COLOR_BGR2RGB)
         # Resize to widget size

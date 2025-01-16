@@ -27,7 +27,6 @@ from behavysis_pipeline.df_classes.diagnostics_df import DiagnosticsDf
 from behavysis_pipeline.pipeline.experiment import Experiment
 from behavysis_pipeline.processes.run_dlc import RunDLC
 from behavysis_pipeline.pydantic_models.experiment_configs import (
-    ConfigsAuto,
     ExperimentConfigs,
 )
 from behavysis_pipeline.utils.dask_utils import cluster_proc_contxt
@@ -351,10 +350,6 @@ class Project:
         self.nprocs = nprocs
 
     #####################################################################
-    # DIAGNOSTICS LOAD/SAVE METHODS
-    #####################################################################
-
-    #####################################################################
     #               IMPORT EXPERIMENTS METHODS
     #####################################################################
 
@@ -430,47 +425,20 @@ class Project:
     #                CONFIGS DIAGONOSTICS METHODS
     #####################################################################
 
-    def collate_configs_auto(self) -> None:
+    def collate_auto_configs(self) -> None:
         """
         Collates the auto fields of the configs of all experiments into a DataFrame.
         """
-        # TODO: must overhaul
-        # TODO: include diagnostics_df recording
-        # Initialising the process and logging description
-        description = "Combining binned analysis"
-        self.logger.info("%s...", description)
-        # Getting all the auto field keys
-        auto_field_keys = ConfigsAuto.get_field_names(ConfigsAuto)
-        # Making a DataFrame to store all the auto fields for each experiment
-        df_configs = pd.DataFrame(
-            index=[exp.name for exp in self.get_experiments()],
-            columns=["_".join(i) for i in auto_field_keys],
-        )
-        # Collating all the auto fields for each experiment
-        dd_ls = []
-        for exp in self.get_experiments():
-            try:
-                configs = ExperimentConfigs.read_json(exp.get_fp(Folders.CONFIGS.value))
-                for i in auto_field_keys:
-                    val = configs.auto
-                    for j in i:
-                        val = getattr(val, j)
-                    df_configs.loc[exp.name, "_".join(i)] = val  # type: ignore
-                dd_ls.append({"experiment": exp.name, "outcome": "combined"})
-            except Exception:
-                dd_ls.append({"experiment": exp.name, "outcome": "ERROR: e"})
-        # Imputing na values with -1
-        df_configs = df_configs.fillna(-1)
-        # Saving the collated auto fields DataFrame to diagnostics folder
-        # TODO: make collate_configs_auto func for Experiment class
-        DiagnosticsDf.write(df_configs, os.path.join(self.root_dir, DIAGNOSTICS_DIR, "collate_configs_auto.csv"))
+        # Saving the auto fields of the configs of all experiments in the diagnostics folder
+        auto_configs_df = self._process_scaffold(Experiment.collate_auto_configs)
+        DiagnosticsDf.write(auto_configs_df, os.path.join(self.root_dir, DIAGNOSTICS_DIR, "collate_auto_configs.csv"))
         # Making and saving histogram plots of the numerical auto fields
         # NOTE: NOT including string frequencies, only numerical
-        df_configs = df_configs.loc[:, df_configs.apply(pd.api.types.is_numeric_dtype)]
-        g = sns.FacetGrid(data=df_configs.fillna(-1).melt(), col="variable", sharex=False, col_wrap=4)
+        auto_configs_df = auto_configs_df.loc[:, auto_configs_df.apply(pd.api.types.is_numeric_dtype)]
+        g = sns.FacetGrid(data=auto_configs_df.fillna(-1).melt(), col="variable", sharex=False, col_wrap=4)
         g.map(sns.histplot, "value", bins=10)
         g.set_titles("{col_name}")
-        g.savefig(os.path.join(self.root_dir, DIAGNOSTICS_DIR, "collated_configs_auto_hist.png"))
+        g.savefig(os.path.join(self.root_dir, DIAGNOSTICS_DIR, "collate_auto_configs.png"))
         g.figure.clf()
 
     #####################################################################

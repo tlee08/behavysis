@@ -121,7 +121,7 @@ class Preprocess:
         outcome = ""
         # Getting necessary config parameters list
         configs = ExperimentConfigs.read_json(configs_fp)
-        configs_filt_ls = list(configs.user.preprocess.interpolate_stationary)  # type: ignore
+        configs_filt_ls = list(configs.user.preprocess.interpolate_stationary)
         # scorer = configs.auto.scorer_name
         width_px = configs.auto.formatted_vid.width_px
         height_px = configs.auto.formatted_vid.height_px
@@ -184,7 +184,7 @@ class Preprocess:
         outcome = ""
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
-        configs_filt = Model_interpolate(**configs.user.preprocess.interpolate)  # type: ignore
+        configs_filt = Model_interpolate(**configs.user.preprocess.interpolate)
         # Reading file
         df = KeypointsDf.read_feather(dlc_fp)
         # Gettings the unique groups of (individual, bodypart) groups.
@@ -236,7 +236,7 @@ class Preprocess:
         df = KeypointsDf.read_feather(dlc_fp)
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
-        configs_filt = Model_refine_ids(**configs.user.preprocess.refine_ids)  # type: ignore
+        configs_filt = Model_refine_ids(**configs.user.preprocess.refine_ids)
         marked = configs.get_ref(configs_filt.marked)
         unmarked = configs.get_ref(configs_filt.unmarked)
         marking = configs.get_ref(configs_filt.marking)
@@ -301,7 +301,7 @@ def aggregate_df(
         for indiv in indivs:
             # Getting the coordinates of each individual (average of the given bodyparts list)
             idx_a = idx[l0, indiv, bpts, coord]
-            df_aggr[(indiv, coord)] = df.loc[:, idx_a].mean(axis=1)  # type: ignore
+            df_aggr[(indiv, coord)] = df.loc[:, idx_a].mean(axis=1)
     # Getting the distance between each mouse and the colour marking in each frame
     for indiv in indivs:
         df_aggr[(indiv, "dist")] = np.sqrt(

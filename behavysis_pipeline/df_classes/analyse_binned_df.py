@@ -194,7 +194,7 @@ class AnalyseBinnedDf(DFMixin):
         t_max = np.max(timestamps)
         bins = np.append(bins, t_max) if np.max(bins) < t_max else bins
         # Making binned data
-        bin_sec = pd.cut(timestamps, bins=bins, labels=bins[1:], include_lowest=True)  # type: ignore
+        bin_sec = pd.cut(timestamps, bins=bins, labels=bins[1:], include_lowest=True)
         grouped_df = analysis_df.groupby(bin_sec)
         binned_df = grouped_df.apply(
             lambda x: summary_func(x, fps)

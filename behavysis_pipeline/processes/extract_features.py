@@ -132,7 +132,7 @@ def select_cols(
     KeypointsDf.check_bpts_exist(df, bpts)
     # Selecting given columns
     idx = pd.IndexSlice
-    df = df.loc[:, idx[:, indivs, bpts]]  # type: ignore
+    df = df.loc[:, idx[:, indivs, bpts]]
     # returning df
     return df
 

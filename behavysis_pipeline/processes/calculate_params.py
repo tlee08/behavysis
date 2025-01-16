@@ -24,6 +24,7 @@ from behavysis_pipeline.df_classes.keypoints_df import (
     KeypointsDf,
 )
 from behavysis_pipeline.pydantic_models.experiment_configs import ExperimentConfigs
+from behavysis_pipeline.utils.io_utils import get_name
 
 
 class CalculateParams:
@@ -83,7 +84,7 @@ class CalculateParams:
         outcome = ""
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
-        configs_filt = Model_check_exists(**configs.user.calculate_params.start_frame)  # type: ignore
+        configs_filt = Model_check_exists(**configs.user.calculate_params.start_frame)
         bpts = configs.get_ref(configs_filt.bodyparts)
         window_sec = configs.get_ref(configs_filt.window_sec)
         pcutoff = configs.get_ref(configs_filt.pcutoff)
@@ -135,7 +136,7 @@ class CalculateParams:
         outcome = ""
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
-        configs_filt = Model_stop_frame(**configs.user.calculate_params.stop_frame)  # type: ignore
+        configs_filt = Model_stop_frame(**configs.user.calculate_params.stop_frame)
         dur_sec = configs.get_ref(configs_filt.dur_sec)
         start_frame = configs.auto.start_frame
         fps = configs.auto.formatted_vid.fps
@@ -173,7 +174,7 @@ class CalculateParams:
         outcome = ""
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
-        configs_filt = Model_check_exists(**configs.user.calculate_params.exp_dur)  # type: ignore
+        configs_filt = Model_check_exists(**configs.user.calculate_params.exp_dur)
         bpts = configs.get_ref(configs_filt.bodyparts)
         window_sec = configs.get_ref(configs_filt.window_sec)
         pcutoff = configs.get_ref(configs_filt.pcutoff)
@@ -233,9 +234,7 @@ class CalculateParams:
         outcome = ""
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
-        configs_filt = Model_start_frame_from_csv(
-            **configs.user.calculate_params.start_frame_from_csv  # type: ignore
-        )
+        configs_filt = Model_start_frame_from_csv(**configs.user.calculate_params.start_frame_from_csv)
         fps = configs.auto.formatted_vid.fps
         csv_fp = configs.get_ref(configs_filt.csv_fp)
         name = configs.get_ref(configs_filt.name)
@@ -290,7 +289,7 @@ class CalculateParams:
         outcome = ""
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
-        configs_filt = Model_px_per_mm(**configs.user.calculate_params.px_per_mm)  # type: ignore
+        configs_filt = Model_px_per_mm(**configs.user.calculate_params.px_per_mm)
         pt_a = configs.get_ref(configs_filt.pt_a)
         pt_b = configs.get_ref(configs_filt.pt_b)
         pcutoff = configs.get_ref(configs_filt.pcutoff)
@@ -334,7 +333,7 @@ def calc_likelihoods(
     # Calculating likelihood of subject (given bpts) existing.
     idx = pd.IndexSlice
     df_lhoods = pd.DataFrame(index=df.index)
-    df_bpts_lhoods = df.loc[:, idx[:, bpts, Coords.LIKELIHOOD.value]]  # type: ignore
+    df_bpts_lhoods = df.loc[:, idx[:, bpts, Coords.LIKELIHOOD.value]]
     df_lhoods["current"] = df_bpts_lhoods.apply(np.nanmedian, axis=1)
     # Calculating likelihood of subject existing over time window
     df_lhoods["rolling"] = df_lhoods["current"].rolling(window_frames, center=True).agg(np.nanmean)

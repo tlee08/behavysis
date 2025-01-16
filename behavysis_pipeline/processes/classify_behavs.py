@@ -162,6 +162,6 @@ class ClassifyBehavs:
         # For each non-behav bout, if less than min_window_frames, then call it a behav
         for _, row in nonbouts_df.iterrows():
             if row["dur"] < min_window_frames:
-                vect.loc[row["start"] : row["stop"]] = 1  # type: ignore
+                vect.loc[row["start"] : row["stop"]] = 1
         # Returning df
         return vect
