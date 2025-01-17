@@ -80,8 +80,8 @@ class EvaluateVid:
             analysis_df = AnalyseCombinedDf.init_df(dlc_df.index)
 
         # MAKING ANNOTATED VIDEO
-        # Making VidFuncOrganiser object to annotate each frame with
-        vid_func_runner = VidFuncRunner(
+        # Making VidFuncsRunner object to annotate each frame with.
+        vid_funcs_runner = VidFuncsRunner(
             func_names=funcs_names,
             width_input=width_input,
             height_input=height_input,
@@ -104,7 +104,7 @@ class EvaluateVid:
             out_fp,
             cv2.VideoWriter_fourcc(*"mp4v"),
             fps,
-            (vid_func_runner.width_out, vid_func_runner.height_out),
+            (vid_funcs_runner.width_out, vid_funcs_runner.height_out),
         )
         # Annotating each frame using the created functions
         for idx in trange(total_frames):
@@ -113,7 +113,7 @@ class EvaluateVid:
             if ret is False:
                 break
             # Annotating frame
-            arr_out = vid_func_runner(frame, idx)
+            arr_out = vid_funcs_runner(frame, idx)
             # Writing annotated frame to the VideoWriter
             out_cap.write(arr_out)
         # Release video objects
@@ -454,7 +454,7 @@ class Analysis(EvalVidFuncBase):
         return img_cv
 
 
-class VidFuncRunner:
+class VidFuncsRunner:
     """
     Given a list of the EvalVidFuncBase funcs to run in the constructor,
     it can be called as a function to convert a video frame and df index
@@ -494,7 +494,7 @@ class VidFuncRunner:
         self.funcs = []
         # NOTE: ORDER MATTERS so going through in predefined order
         # Concatenating Vid, Behav, and Analysis funcs together in order
-        func_check_ls = [Johansson, Keypoints, Analysis]
+        func_check_ls: list[EvalVidFuncBase] = [Johansson, Keypoints, Analysis]
         # Creating EvalVidFuncBase instances and adding to funcs list
         for func in func_check_ls:
             if func.name in func_names:

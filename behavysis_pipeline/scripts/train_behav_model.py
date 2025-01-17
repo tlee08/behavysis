@@ -1,7 +1,7 @@
 from behavysis_pipeline.utils.template_utils import import_static_templates_script
 
 
-def main(root_dir: str = ".", overwrite: bool = False, dialogue: bool = True) -> None:
+def main() -> None:
     """
     Makes a script to build a BehavClassifier.
     """

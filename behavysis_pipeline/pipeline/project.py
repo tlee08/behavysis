@@ -191,65 +191,6 @@ class Project:
             self.logger.info("Finished %s!\n%s\n%s\n", method.__name__, STR_DIV, STR_DIV)
 
     #####################################################################
-    #         BATCH PROCESSING WRAPPING EXPERIMENT METHODS
-    #####################################################################
-
-    @functools.wraps(Experiment.run_dlc)
-    def run_dlc(self, gputouse: int | None = None, overwrite: bool = False) -> None:
-        """
-        Batch processing corresponding to
-        [behavysis_pipeline.pipeline.experiment.Experiment.run_dlc][]
-
-        Uses a multiprocessing pool to run DLC on each batch of experiments with each GPU
-        natively as batch in the same spawned subprocess (a DLC subprocess is spawned).
-        This is a slight tweak from the regular method of running
-        each experiment separately with multiprocessing.
-        """
-        # If gputouse is not specified, using all GPUs
-        if gputouse is None:
-            gputouse_ls = get_gpu_ids()
-        else:
-            gputouse_ls = [gputouse]
-        nprocs = len(gputouse_ls)
-        # Getting the experiments to run DLC on
-        exp_ls = self.get_experiments()
-        # If overwrite is False, filtering for only experiments that need processing
-        if not overwrite:
-            exp_ls = [exp for exp in exp_ls if not os.path.isfile(exp.get_fp(Folders.DLC.value))]
-
-        # Running DLC on each batch of experiments with each GPU (given allocated GPU ID)
-        # TODO: have error handling
-        exp_batches_ls = np.array_split(np.array(exp_ls), nprocs)
-        with Pool(processes=nprocs) as p:
-            p.starmap(
-                RunDLC.ma_dlc_analyse_batch,
-                [
-                    (
-                        [exp.get_fp(Folders.FORMATTED_VID.value) for exp in exp_batch],
-                        os.path.join(self.root_dir, Folders.DLC.value),
-                        os.path.join(self.root_dir, Folders.CONFIGS.value),
-                        gputouse,
-                        overwrite,
-                    )
-                    for gputouse, exp_batch in zip(gputouse_ls, exp_batches_ls)
-                ],
-            )
-
-    @functools.wraps(Experiment.classify_behaviours)
-    def classify_behaviours(self, *args, **kwargs) -> None:
-        """
-        Batch processing corresponding to
-        [behavysis_pipeline.pipeline.experiment.Experiment.classify_behaviours][]
-        """
-        # TODO: handle reading the model file whilst in multiprocessing.
-        # Current fix is single processing.
-        nprocs = self.nprocs
-        self.nprocs = 1
-        method = Experiment.classify_behaviours
-        self._proc_scaff(method, *args, **kwargs)
-        self.nprocs = nprocs
-
-    #####################################################################
     #               IMPORT EXPERIMENTS METHODS
     #####################################################################
 
@@ -315,13 +256,109 @@ class Project:
         DiagnosticsDf.write(dd_df, os.path.join(self.root_dir, DIAGNOSTICS_DIR, "import_experiments.csv"))
 
     #####################################################################
+    #         BATCH PROCESSING WRAPPING EXPERIMENT METHODS
+    #####################################################################
+
+    @functools.wraps(Experiment.update_configs)
+    def update_configs(self, *args, **kwargs):
+        self._proc_scaff(Experiment.update_configs, *args, **kwargs)
+
+    @functools.wraps(Experiment.format_vid)
+    def format_vid(self, *args, **kwargs):
+        self._proc_scaff(Experiment.format_vid, *args, **kwargs)
+
+    @functools.wraps(Experiment.run_dlc)
+    def run_dlc(self, gputouse: int | None = None, overwrite: bool = False) -> None:
+        """
+        Batch processing corresponding to
+        [behavysis_pipeline.pipeline.experiment.Experiment.run_dlc][]
+
+        Uses a multiprocessing pool to run DLC on each batch of experiments with each GPU
+        natively as batch in the same spawned subprocess (a DLC subprocess is spawned).
+        This is a slight tweak from the regular method of running
+        each experiment separately with multiprocessing.
+        """
+        # If gputouse is not specified, using all GPUs
+        if gputouse is None:
+            gputouse_ls = get_gpu_ids()
+        else:
+            gputouse_ls = [gputouse]
+        nprocs = len(gputouse_ls)
+        # Getting the experiments to run DLC on
+        exp_ls = self.get_experiments()
+        # If overwrite is False, filtering for only experiments that need processing
+        if not overwrite:
+            exp_ls = [exp for exp in exp_ls if not os.path.isfile(exp.get_fp(Folders.DLC.value))]
+
+        # Running DLC on each batch of experiments with each GPU (given allocated GPU ID)
+        # TODO: have error handling
+        exp_batches_ls = np.array_split(np.array(exp_ls), nprocs)
+        with Pool(processes=nprocs) as p:
+            p.starmap(
+                RunDLC.ma_dlc_analyse_batch,
+                [
+                    (
+                        [exp.get_fp(Folders.FORMATTED_VID.value) for exp in exp_batch],
+                        os.path.join(self.root_dir, Folders.DLC.value),
+                        os.path.join(self.root_dir, Folders.CONFIGS.value),
+                        gputouse,
+                        overwrite,
+                    )
+                    for gputouse, exp_batch in zip(gputouse_ls, exp_batches_ls)
+                ],
+            )
+
+    @functools.wraps(Experiment.calculate_parameters)
+    def calculate_parameters(self, *args, **kwargs):
+        self._proc_scaff(Experiment.calculate_parameters, *args, **kwargs)
+
+    @functools.wraps(Experiment.preprocess)
+    def preprocess(self, *args, **kwargs):
+        self._proc_scaff(Experiment.preprocess, *args, **kwargs)
+
+    @functools.wraps(Experiment.extract_features)
+    def extract_features(self, *args, **kwargs):
+        self._proc_scaff(Experiment.extract_features, *args, **kwargs)
+
+    @functools.wraps(Experiment.classify_behaviours)
+    def classify_behaviours(self, *args, **kwargs):
+        # TODO: handle reading the model file whilst in multiprocessing.
+        # Current fix is single processing.
+        nprocs = self.nprocs
+        self.nprocs = 1
+        method = Experiment.classify_behaviours
+        self._proc_scaff(method, *args, **kwargs)
+        self.nprocs = nprocs
+
+    @functools.wraps(Experiment.export_behaviours)
+    def export_behaviours(self, *args, **kwargs):
+        self._proc_scaff(Experiment.export_behaviours, *args, **kwargs)
+
+    @functools.wraps(Experiment.analyse)
+    def analyse(self, *args, **kwargs):
+        self._proc_scaff(Experiment.analyse, *args, **kwargs)
+
+    @functools.wraps(Experiment.analyse_behaviours)
+    def analyse_behaviours(self, *args, **kwargs):
+        self._proc_scaff(Experiment.analyse_behaviours, *args, **kwargs)
+
+    @functools.wraps(Experiment.combine_analysis)
+    def combine_analysis(self, *args, **kwargs):
+        self._proc_scaff(Experiment.combine_analysis, *args, **kwargs)
+
+    @functools.wraps(Experiment.evaluate_vid)
+    def evaluate_vid(self, *args, **kwargs):
+        self._proc_scaff(Experiment.evaluate_vid, *args, **kwargs)
+
+    @functools.wraps(Experiment.export_feather)
+    def export_feather(self, *args, **kwargs):
+        self._proc_scaff(Experiment.export_feather, *args, **kwargs)
+
+    #####################################################################
     #                CONFIGS DIAGONOSTICS METHODS
     #####################################################################
 
-    def collate_auto_configs(self) -> None:
-        """
-        Collates the auto fields of the configs of all experiments into a DataFrame.
-        """
+    def collate_auto_configs(self):
         # Saving the auto fields of the configs of all experiments in the diagnostics folder
         auto_configs_df = self._proc_scaff(Experiment.collate_auto_configs)
         DiagnosticsDf.write(auto_configs_df, os.path.join(self.root_dir, DIAGNOSTICS_DIR, "collate_auto_configs.csv"))
@@ -414,37 +451,3 @@ class Project:
             if len(df_ls) > 0:
                 total_df = pd.concat(df_ls, keys=names_ls, names=["experiment"], axis=0)
                 DFMixin.write_feather(total_df, out_fp)
-
-
-###################################################################################################
-# DYNAMICALLY MAKING PROJECT PIPELINE METHODS (FROM EXPERIMENT METHODS) FOR PROJECT CLASS
-###################################################################################################
-
-
-def create_wrapped_method(func: Callable):
-    @functools.wraps(func)
-    def wrapper(self: Project, *args, **kwargs):
-        self._proc_scaff(func, *args, **kwargs)
-
-    return wrapper
-
-
-# Dynamically add methods to Project class
-for func in [
-    Experiment.update_configs,
-    Experiment.format_vid,
-    Experiment.run_dlc,
-    Experiment.calculate_parameters,
-    Experiment.preprocess,
-    Experiment.extract_features,
-    Experiment.classify_behaviours,
-    Experiment.export_behaviours,
-    Experiment.export_feather,
-    Experiment.analyse,
-    Experiment.analyse_behaviours,
-    Experiment.analyse_combine,
-    Experiment.evaluate_vid,
-]:
-    func_name = func.__name__
-    if func_name not in dir(Project):
-        setattr(Project, func_name, create_wrapped_method(func))

@@ -73,7 +73,7 @@ if __name__ == "__main__":
 
     proj.analyse_behaviours()
 
-    proj.analyse_combine(overwrite)
+    proj.combine_analysis(overwrite)
 
     proj.evaluate_vid(overwrite)
 

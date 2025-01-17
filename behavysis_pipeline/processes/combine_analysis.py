@@ -33,14 +33,14 @@ from behavysis_pipeline.utils.logging_utils import init_logger
 ###################################################################################################
 
 
-class AnalyseCombine:
+class CombineAnalysis:
     """__summary__"""
 
     logger = init_logger(__name__)
 
     @classmethod
     # @logger_func_decorator(logger)
-    def analyse_combine(
+    def combine_analysis(
         cls,
         analyse_dir: str,
         out_fp: str,

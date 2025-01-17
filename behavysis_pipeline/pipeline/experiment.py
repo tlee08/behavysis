@@ -17,8 +17,8 @@ from behavysis_pipeline.constants import (
     Folders,
 )
 from behavysis_pipeline.processes.analyse_behaviours import AnalyseBehaviours
-from behavysis_pipeline.processes.analyse_combine import AnalyseCombine
 from behavysis_pipeline.processes.classify_behavs import ClassifyBehavs
+from behavysis_pipeline.processes.combine_analysis import CombineAnalysis
 from behavysis_pipeline.processes.evaluate_vid import EvaluateVid
 from behavysis_pipeline.processes.export import Export
 from behavysis_pipeline.processes.extract_features import ExtractFeatures
@@ -488,13 +488,13 @@ class Experiment:
             configs_fp=self.get_fp(Folders.CONFIGS),
         )
 
-    def analyse_combine(self, overwrite: bool) -> dict:
+    def combine_analysis(self, overwrite: bool) -> dict:
         """
         Combine the experiment's analysis in each fbf into a single df
         """
         # TODO: make new subfolder called combined_analysis and make ONLY(??) fbf analysis.
         return self._process_scaffold(
-            (AnalyseCombine.analyse_combine,),
+            (CombineAnalysis.combine_analysis,),
             analyse_dir=os.path.join(self.root_dir, ANALYSIS_DIR),
             out_fp=self.get_fp(Folders.ANALYSE_COMBINED),
             configs_fp=self.get_fp(Folders.CONFIGS),
