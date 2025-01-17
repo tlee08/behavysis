@@ -47,7 +47,7 @@ if __name__ == "__main__":
         )
     )
 
-    # proj.collate_configs_auto()
+    proj.collate_auto_configs()
 
     proj.preprocess(
         (

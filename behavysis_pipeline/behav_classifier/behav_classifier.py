@@ -36,6 +36,7 @@ from behavysis_pipeline.df_classes.df_mixin import DFMixin
 from behavysis_pipeline.pydantic_models.behav_classifier_configs import (
     BehavClassifierConfigs,
 )
+from behavysis_pipeline.utils.io_utils import get_name
 from behavysis_pipeline.utils.logging_utils import init_logger
 
 if TYPE_CHECKING:
@@ -50,6 +51,8 @@ class BehavClassifier:
     """
     BehavClassifier abstract class peforms behav classifier model preparation, training, saving,
     evaluation, and inference.
+
+    NOTE: don't instatiate directly. Instead use `create_new_model` `create_from_project`, or `load` classmethods.
 
     Attributes
     ----------
@@ -75,11 +78,11 @@ class BehavClassifier:
         try:
             # Trying to read configs file.
             self.configs
-            self.logger.info("Reading existing model configs")
+            self.logger.debug("Reading existing model configs")
         except FileNotFoundError:
             # Making a new configs file if it doesn't exist
             self.configs = BehavClassifierConfigs()
-            self.logger.info("Making new model configs")
+            self.logger.debug("Making new model configs")
         # Trying to read clf file. Making basic DDN1 if not exists
         try:
             self.clf_load()
@@ -141,6 +144,27 @@ class BehavClassifier:
     #################################################
 
     @classmethod
+    def create_new_model(cls, root_dir: str, behaviour_name: str) -> BehavClassifier:
+        """
+        Creating a new BehavClassifier model in the given directory
+        """
+        # Getting model directory
+        model_dir = os.path.join(root_dir, behaviour_name)
+        # Checking if model directory already exists
+        if os.path.exists(model_dir):
+            cls.logger.debug(f"Model already exists: {model_dir}\n using `load` method instead.")
+            return cls.load(model_dir)
+        # Making new BehavClassifier instance
+        cls.logger.debug(f"Creating new model: {model_dir}")
+        inst = cls(model_dir)
+        # Updating configs with project data
+        configs = inst.configs
+        configs.behaviour_name = behaviour_name
+        inst.configs = configs
+        # Returning model
+        return inst
+
+    @classmethod
     def create_from_project(cls, proj: Project) -> list[BehavClassifier]:
         """
         Loading classifier from given Project instance.
@@ -158,6 +182,7 @@ class BehavClassifier:
         # Getting the list of behaviours
         y_df = cls.wrangle_columns_y(cls.combine(os.path.join(proj.root_dir, Folders.SCORED_BEHAVS.value)))
         # For each behaviour, making a new BehavClassifier instance
+        # TODO: is the behavs_ls list going to a list of tuples?
         behavs_ls = y_df.columns.to_list()
         model_dir = os.path.join(proj.root_dir, BEHAV_MODELS_SUBDIR)
         models_ls = [cls.create_new_model(model_dir, behav) for behav in behavs_ls]
@@ -169,26 +194,6 @@ class BehavClassifier:
                 False,
             )
         return models_ls
-
-    @classmethod
-    def create_new_model(cls, root_dir: str, behaviour_name: str) -> BehavClassifier:
-        """
-        Creating a new BehavClassifier model in the given directory
-        """
-        # Getting model directory
-        model_dir = os.path.join(root_dir, behaviour_name)
-        # Checking if model directory already exists
-        if os.path.exists(model_dir):
-            print(f"Model already exists: {model_dir}\n using `load` method instead.")
-            return cls.load(model_dir)
-        # Making new BehavClassifier instance
-        inst = cls(model_dir)
-        # Updating configs with project data
-        configs = inst.configs
-        configs.behaviour_name = behaviour_name
-        inst.configs = configs
-        # Returning model
-        return inst
 
     #################################################
     #            READING MODEL
@@ -238,9 +243,7 @@ class BehavClassifier:
 
     @classmethod
     def combine(cls, src_dir):
-        data_dict = {
-            os.path.splitext(i)[0]: pd.read_feather(os.path.join(src_dir, i)) for i in os.listdir(os.path.join(src_dir))
-        }
+        data_dict = {get_name(i): DFMixin.read(os.path.join(src_dir, i)) for i in os.listdir(os.path.join(src_dir))}
         return pd.concat(data_dict.values(), axis=0, keys=data_dict.keys())
 
     def combine_dfs(self) -> tuple[pd.DataFrame, pd.DataFrame]:

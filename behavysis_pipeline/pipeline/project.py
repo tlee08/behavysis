@@ -291,7 +291,7 @@ class Project:
             exp_ls = [exp for exp in exp_ls if not os.path.isfile(exp.get_fp(Folders.DLC.value))]
 
         # Running DLC on each batch of experiments with each GPU (given allocated GPU ID)
-        # TODO: have error handling
+        # TODO: implement error handling
         exp_batches_ls = np.array_split(np.array(exp_ls), nprocs)
         with Pool(processes=nprocs) as p:
             p.starmap(
@@ -326,8 +326,7 @@ class Project:
         # Current fix is single processing.
         nprocs = self.nprocs
         self.nprocs = 1
-        method = Experiment.classify_behaviours
-        self._proc_scaff(method, *args, **kwargs)
+        self._proc_scaff(Experiment.classify_behaviours, *args, **kwargs)
         self.nprocs = nprocs
 
     @functools.wraps(Experiment.export_behaviours)
@@ -348,7 +347,12 @@ class Project:
 
     @functools.wraps(Experiment.evaluate_vid)
     def evaluate_vid(self, *args, **kwargs):
+        # TODO: handle reading the model file whilst in multiprocessing.
+        # Current fix is single processing.
+        nprocs = self.nprocs
+        self.nprocs = 1
         self._proc_scaff(Experiment.evaluate_vid, *args, **kwargs)
+        self.nprocs = nprocs
 
     @functools.wraps(Experiment.export_feather)
     def export_feather(self, *args, **kwargs):
@@ -375,7 +379,7 @@ class Project:
     #            COMBINING ANALYSIS DATA ACROSS EXPS METHODS
     #####################################################################
 
-    def analyse_collate(self) -> None:
+    def collate_analysis(self) -> None:
         """
         Combines an analysis of all the experiments together to generate combined files for:
         - Each binned data. The index is (bin) and columns are (expName, indiv, measure).

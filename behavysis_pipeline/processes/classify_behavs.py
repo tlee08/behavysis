@@ -80,8 +80,7 @@ class ClassifyBehavs:
             try:
                 behav_model = BehavClassifier.load(model_fp)
             except (FileNotFoundError, OSError):
-                outcome += f"WARNING: Model file {model_fp} not found. Skipping model.\n"
-                continue
+                raise ValueError(f"Model file {model_fp} not found.\n" "Please check file path." "Note that the \n")
             behav_name = behav_model.configs.behaviour_name
             pcutoff = cls._check_init_pcutoff(configs.get_ref(model_config.pcutoff), behav_model.configs.pcutoff)
             min_window_frames = configs.get_ref(model_config.min_window_frames)

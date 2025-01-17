@@ -98,7 +98,7 @@ class Preprocess:
     def interpolate_stationary(cls, dlc_fp: str, out_fp: str, configs_fp: str, overwrite: bool) -> str:
         """
         If the point detection (above a certain threshold) is below a certain proportion, then the x and y coordinates are set to the given values (usually corners).
-        Otherwise, does nothing (encouraged to run Preprocess.interpolage afterwards).
+        Otherwise, does nothing (encouraged to run Preprocess.interpolate afterwards).
 
         Notes
         -----
