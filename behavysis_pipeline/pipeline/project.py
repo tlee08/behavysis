@@ -119,7 +119,7 @@ class Project:
     #               PROJECT PROCESSING SCAFFOLD METHODS
     #####################################################################
 
-    def _process_scaffold_mp(self, method: Callable, *args: Any, **kwargs: Any) -> list[dict]:
+    def _proc_scaff_mp(self, method: Callable, *args: Any, **kwargs: Any) -> list[dict]:
         """
         Processes an experiment with the given `Experiment` method and records
         the diagnostics of the process in a MULTI-PROCESSING way.
@@ -134,7 +134,7 @@ class Project:
         Can call any `Experiment` methods instance.
         Effectively, `method` gets called with:
         ```
-        # exp is a Experiment instance
+        exp is a Experiment instance
         method(exp, *args, **kwargs)
         ```
         """
@@ -146,7 +146,7 @@ class Project:
             dd_ls = dask.compute(*f_d_ls)
         return dd_ls
 
-    def _process_scaffold_sp(self, method: Callable, *args: Any, **kwargs: Any) -> list[dict]:
+    def _proc_scaff_sp(self, method: Callable, *args: Any, **kwargs: Any) -> list[dict]:
         """
         Processes an experiment with the given `Experiment` method and records
         the diagnostics of the process in a SINGLE-PROCESSING way.
@@ -161,22 +161,22 @@ class Project:
         Can call any `Experiment` instance method.
         Effectively, `method` gets called with:
         ```
-        # exp is a Experiment instance
+        exp is a Experiment instance
         method(exp, *args, **kwargs)
         ```
         """
         # Processing all experiments and storing process outcomes as list of dicts
         return [method(exp, *args, **kwargs) for exp in self.get_experiments()]
 
-    def _process_scaffold(self, method: Callable, *args: Any, **kwargs: Any) -> None:
+    def _proc_scaff(self, method: Callable, *args: Any, **kwargs: Any) -> None:
         """
         Runs the given method on all experiments in the project.
         """
         # Choosing whether to run the scaffold function in single or multi-processing mode
         if self.nprocs == 1:
-            scaffold_func = self._process_scaffold_sp
+            scaffold_func = self._proc_scaff_sp
         else:
-            scaffold_func = self._process_scaffold_mp
+            scaffold_func = self._proc_scaff_mp
         # Running the scaffold function
         # Starting
         self.logger.info("Running %s", method.__name__)
@@ -191,7 +191,7 @@ class Project:
             self.logger.info("Finished %s!\n%s\n%s\n", method.__name__, STR_DIV, STR_DIV)
 
     #####################################################################
-    #               BATCH PROCESSING METHODS
+    #         BATCH PROCESSING WRAPPING EXPERIMENT METHODS
     #####################################################################
 
     @functools.wraps(Experiment.run_dlc)
@@ -246,7 +246,7 @@ class Project:
         nprocs = self.nprocs
         self.nprocs = 1
         method = Experiment.classify_behaviours
-        self._process_scaffold(method, *args, **kwargs)
+        self._proc_scaff(method, *args, **kwargs)
         self.nprocs = nprocs
 
     #####################################################################
@@ -323,7 +323,7 @@ class Project:
         Collates the auto fields of the configs of all experiments into a DataFrame.
         """
         # Saving the auto fields of the configs of all experiments in the diagnostics folder
-        auto_configs_df = self._process_scaffold(Experiment.collate_auto_configs)
+        auto_configs_df = self._proc_scaff(Experiment.collate_auto_configs)
         DiagnosticsDf.write(auto_configs_df, os.path.join(self.root_dir, DIAGNOSTICS_DIR, "collate_auto_configs.csv"))
         # Making and saving histogram plots of the numerical auto fields
         # NOTE: NOT including string frequencies, only numerical
@@ -424,7 +424,7 @@ class Project:
 def create_wrapped_method(func: Callable):
     @functools.wraps(func)
     def wrapper(self: Project, *args, **kwargs):
-        self._process_scaffold(func, *args, **kwargs)
+        self._proc_scaff(func, *args, **kwargs)
 
     return wrapper
 

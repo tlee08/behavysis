@@ -49,8 +49,8 @@ def logger_func_decorator(logger: logging.Logger):
                 logger.info(f"FINISHED {func.__name__}")
                 return output
             except Exception as e:
-                logger.error(f"ERROR {func.__name__}")
-                logger.error(traceback.format_exc())
+                logger.error(f"Error in {func.__name__}: {e}")
+                logger.debug(traceback.format_exc())
                 raise e
 
         return wrapper

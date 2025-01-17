@@ -1,13 +1,13 @@
 from behavysis_pipeline.utils.template_utils import import_static_templates_script
 
 
-def main(root_dir: str = ".", overwrite: bool = False, dialogue: bool = False) -> None:
+def main(root_dir: str = ".", overwrite: bool = False) -> None:
     """
-    Makes a script to run a behavysis analysis project.
+    Makes a script to build a DeepLabCut model.
     """
     import_static_templates_script(
-        description="Make Behavysis Pipeline Project",
-        templates_ls=["run_pipeline.py", "default_configs.json"],
+        description="Make DLC Model Script",
+        templates_ls=["train_dlc_model.py"],
         pkg_name="behavysis_pipeline",
         pkg_subdir="templates",
         root_dir=".",

@@ -10,6 +10,7 @@ from typing import Any
 from jinja2 import Environment, PackageLoader
 
 from behavysis_pipeline.utils.diagnostics_utils import file_exists_msg
+from behavysis_pipeline.utils.io_utils import check_files_exist
 from behavysis_pipeline.utils.logging_utils import init_logger
 
 logger = init_logger(__name__)
@@ -40,18 +41,35 @@ def save_template(tmpl_name: str, pkg_name: str, pkg_subdir: str, dst_fp: str, *
         f.write(rendered)
 
 
-# TODO: move back to scripts. A bit redundant here.
-def import_template(src_fp: str, dst_fp: str, overwrite: bool):
+def import_static_templates_script(
+    description: str,
+    templates_ls: list[str],
+    pkg_name: str,
+    pkg_subdir: str,
+    root_dir: str = ".",
+    overwrite: bool = False,
+    dialogue: bool = True,
+) -> None:
     """
-    Imports the template file to the project folder.
+    A function to import static templates to a folder.
+    Useful for calling scripts from the command line.
     """
-    if not overwrite and os.path.exists(dst_fp):
-        print(file_exists_msg(dst_fp))
-        return
-    # Saving the template to the file
-    save_template(
-        src_fp,
-        "behavysis_pipeline",
-        "templates",
-        dst_fp,
-    )
+    if dialogue:
+        # Dialogue to check if the user wants to make the files
+        to_continue = input(f"Running {description} in current directory. Continue? [y/N]: ").lower() + " "
+        if to_continue[0] != "y":
+            print("Exiting.")
+            return
+        # Dialogue to check if the user wants to overwrite the files
+        to_overwrite = input("Overwrite existing files? [y/N]: ").lower() + " "
+        overwrite = to_overwrite[0] == "y"
+    # Making the root folder
+    os.makedirs(root_dir, exist_ok=True)
+    # Copying the Python files to the project folder
+    for template_fp in templates_ls:
+        dst_fp = os.path.join(root_dir, template_fp)
+        if not overwrite and check_files_exist(dst_fp):
+            # Check if we should skip importing (i.e. overwrite is False and file exists)
+            print(file_exists_msg(dst_fp))
+            continue
+        save_template(template_fp, pkg_name, pkg_subdir, dst_fp)

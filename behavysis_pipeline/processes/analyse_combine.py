@@ -26,7 +26,7 @@ from behavysis_pipeline.df_classes.analyse_combined_df import AnalyseCombinedDf
 from behavysis_pipeline.df_classes.analyse_df import AnalyseDf
 from behavysis_pipeline.utils.diagnostics_utils import file_exists_msg
 from behavysis_pipeline.utils.io_utils import get_name
-from behavysis_pipeline.utils.logging_utils import init_logger, logger_func_decorator
+from behavysis_pipeline.utils.logging_utils import init_logger
 
 ###################################################################################################
 #               ANALYSIS API FUNCS
@@ -39,8 +39,9 @@ class AnalyseCombine:
     logger = init_logger(__name__)
 
     @classmethod
-    @logger_func_decorator(logger)
+    # @logger_func_decorator(logger)
     def analyse_combine(
+        cls,
         analyse_dir: str,
         out_fp: str,
         configs_fp: str,
