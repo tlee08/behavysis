@@ -11,5 +11,6 @@ dependencies:
   - ipykernel
   - ffmpeg
   - hdf5
-  # - pip:
-  #     - behavysis_pipeline
+  - pip:
+      # - behavysis_pipeline
+      - -e "."
