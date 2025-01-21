@@ -211,7 +211,7 @@ class DFMixin:
         IN = enum2tuple(cls.IN) if cls.IN else (None,)
         CN = enum2tuple(cls.CN) if cls.CN else (None,)
         return pd.DataFrame(
-            index=pd.MultiIndex(frame_vect, name=IN),
+            index=pd.MultiIndex(frame_vect, names=IN),
             columns=pd.MultiIndex.from_tuples((), names=CN),
         )
 
