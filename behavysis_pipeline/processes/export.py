@@ -6,6 +6,7 @@ from behavysis_pipeline.df_classes.behav_df import (
     BehavScoredDf,
 )
 from behavysis_pipeline.df_classes.df_mixin import DFMixin
+from behavysis_pipeline.pydantic_models.bouts import BoutStruct
 from behavysis_pipeline.pydantic_models.experiment_configs import ExperimentConfigs
 from behavysis_pipeline.utils.diagnostics_utils import file_exists_msg
 from behavysis_pipeline.utils.logging_utils import init_logger, logger_func_decorator
@@ -15,6 +16,23 @@ class Export:
     """__summary__"""
 
     logger = init_logger(__name__)
+
+    @classmethod
+    def df2df(
+        cls,
+        src_fp: str,
+        dst_fp: str,
+        overwrite: bool,
+    ) -> str:
+        """__summary__"""
+        if not overwrite and os.path.exists(dst_fp):
+            return file_exists_msg(dst_fp)
+        # Reading file
+        df = DFMixin.read(src_fp)
+        # Writing file
+        DFMixin.write(df, dst_fp)
+        # Returning outcome
+        return "df to df\n"
 
     @classmethod
     @logger_func_decorator(logger)
@@ -65,10 +83,12 @@ class Export:
             BehavClassifier.load(proj_dir, behav_name)
             # Adding to bouts_struct
             bouts_struct.append(
-                {
-                    BehavScoredDf.BoutCols.BEHAV.value: behav_name,
-                    BehavScoredDf.BoutCols.USER_DEFINED.value: user_defined,
-                }
+                BoutStruct.model_validate(
+                    {
+                        BehavScoredDf.BoutCols.BEHAV.value: behav_name,
+                        BehavScoredDf.BoutCols.USER_DEFINED.value: user_defined,
+                    }
+                )
             )
         # Getting scored behavs df from predicted behavs df and bouts_struct
         src_df = BehavPredictedDf.read(src_fp)

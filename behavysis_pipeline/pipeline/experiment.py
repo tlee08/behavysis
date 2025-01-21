@@ -343,13 +343,13 @@ class Experiment:
         """
         # Exporting 3_dlc df to 4_preprocessed folder
         dd = self._process_scaffold(
-            (Export.feather2feather,),
+            (Export.df2df,),
             src_fp=self.get_fp(Folders.DLC),
             out_fp=self.get_fp(Folders.PREPROCESSED),
             overwrite=overwrite,
         )
         # If there is an error, OR warning (indicates not to ovewrite), then return early
-        res = dd[Export.feather2feather.__name__]
+        res = dd[Export.df2df.__name__]
         if res.startswith("ERROR") or res.startswith("WARNING"):
             return dd
         # Feeding through preprocessing functions

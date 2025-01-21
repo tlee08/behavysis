@@ -5,7 +5,7 @@ Utility functions.
 from __future__ import annotations
 
 from enum import Enum
-from typing import Dict, List
+from typing import List
 
 import numpy as np
 import pandas as pd
@@ -159,37 +159,26 @@ class BehavScoredDf(BehavDf):
     ###############################################################################################
 
     @classmethod
-    def get_bouts_struct_from_df(cls, df: pd.DataFrame) -> List[Dict]:
+    def get_bouts_struct_from_df(cls, df: pd.DataFrame) -> List[BoutStruct]:
         """
-        Returns the list-of-dicts structure as:
-        ```
-        [
-            {
-                "behav": <behav_name>
-                "user_defined": [<user_defined1>, <user_defined2>, ...]
-            },
-            ...
-        ]
-        ```
-
-        Equivalent structure to List[BoutsStruct]
+        Returns the list BoutStruct objects from the given BehavDf's columns.
         """
         bouts_struct = []
         for behav in df.columns.unique(cls.CN.BEHAVS.value):
             bouts_struct.append(
-                {
-                    cls.BoutCols.BEHAV.value: behav,
-                    cls.BoutCols.USER_DEFINED.value: list(df[behav].columns.unique(cls.CN.OUTCOMES.value)),
-                }
+                BoutStruct.model_validate(
+                    {
+                        cls.BoutCols.BEHAV.value: behav,
+                        cls.BoutCols.USER_DEFINED.value: list(df[behav].columns.unique(cls.CN.OUTCOMES.value)),
+                    }
+                )
             )
         return bouts_struct
 
     @classmethod
-    def predicted2scored(cls, df: pd.DataFrame, bouts_struct: List[Dict] | None = None) -> pd.DataFrame:
+    def predicted2scored(cls, df: pd.DataFrame, bouts_struct: List[BoutStruct] | None = None) -> pd.DataFrame:
         """
         Convert a predicted behaviours dataframe to a scored behaviours dataframe.
-
-        `behav_outcomes_ls` is in the format from `get_bouts_struct_from_df`.
         """
         # If behav_outcomes_ls is None, then initialising it from df
         bouts_struct = bouts_struct or cls.get_bouts_struct_from_df(df)
@@ -197,8 +186,8 @@ class BehavScoredDf(BehavDf):
         scored_df = cls.init_df(df.index)
         # For each behaviour in behav_outcomes_ls
         for bout_struct in bouts_struct:
-            behav = bout_struct[cls.BoutCols.BEHAV.value]
-            user_defined = bout_struct[cls.BoutCols.USER_DEFINED.value]
+            behav = bout_struct.behav
+            user_defined = bout_struct.user_defined
             # Adding pred column
             scored_df[(behav, cls.OutcomesCols.PRED.value)] = df[(behav, cls.OutcomesCols.PRED.value)].values
             # Adding actual column
@@ -290,7 +279,7 @@ class BehavScoredDf(BehavDf):
             start=df.index[0],
             stop=df.index[-1] + 1,
             bouts=bouts_ls,
-            bouts_struct=[BoutStruct.model_validate(i) for i in cls.get_bouts_struct_from_df(df)],
+            bouts_struct=cls.get_bouts_struct_from_df(df),
         )
 
     @classmethod
@@ -298,25 +287,20 @@ class BehavScoredDf(BehavDf):
         """
         Bouts model object to frames df.
         """
-        # Making columns
-        all_behavs = {}  # behav: user_defined_ls pairs
-        for bout in bouts.bouts:
-            if bout.behav not in all_behavs:
-                all_behavs[bout.behav] = {
-                    cls.OutcomesCols.PRED.value,
-                    cls.OutcomesCols.ACTUAL.value,
-                }
-            all_behavs[bout.behav] |= set(bout.user_defined.keys())
-
-        # construct ret_df with index from given start and stop, and all_behavs dict
-        ret_df = cls.init_df(pd.Series(np.arange(bouts.start, bouts.stop)))
-        for behav, outcomes in all_behavs.items():
-            for outcome in outcomes:
-                ret_df[(behav, outcome)] = 0
-        ret_df = ret_df.sort_index(axis=1)
+        # Making dataframe
+        df = cls.init_df(pd.Series(np.arange(bouts.start, bouts.stop)))
+        # Making columns (for each behaviour, and for pred, actual, and user_defined)
+        for bout_struct in bouts.bouts_struct:
+            behav = bout_struct.behav
+            df[(behav, cls.OutcomesCols.PRED.value)] = 0
+            df[(behav, cls.OutcomesCols.ACTUAL.value)] = 0
+            for user_defined_i in bout_struct.user_defined:
+                df[(behav, user_defined_i)] = 0
+        # Sorting columns
+        df = df.sort_index(axis=1)
         # Filling in all user_defined columns for each behaviour
         for bout in bouts.bouts:
-            bout_ret_df = ret_df.loc[bout.start : bout.stop]
+            bout_ret_df = df.loc[bout.start : bout.stop]
             # Filling in predicted behaviour column
             bout_ret_df.loc[:, (bout.behav, cls.OutcomesCols.PRED.value)] = 1
             # Filling in actual behaviour column
@@ -325,4 +309,4 @@ class BehavScoredDf(BehavDf):
             for k, v in bout.user_defined.items():
                 bout_ret_df.loc[:, (bout.behav, k)] = v
         # Returning frames df
-        return ret_df
+        return df
