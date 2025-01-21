@@ -102,7 +102,7 @@ class PydanticBaseModel(BaseModel):
         # For each field in the class
         for name, type_ in cls.__annotations__.items():
             if hasattr(type_, "__annotations__"):  # Is a nested class
-                for subfield in PydanticBaseModel.get_field_names(type_):
+                for subfield in type_.get_field_names():
                     fields.append((name,) + subfield)
             else:  # is a primitive field
                 fields.append((name,))
