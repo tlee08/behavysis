@@ -568,7 +568,7 @@ class BehavClassifier:
         # Making predictions from probabilities (and pcutoff)
         y_preds = (y_probs > self.configs.pcutoff).astype(int)
         # Making df
-        pred_df = BehavScoredDf.init_df(pd.Series(index))
+        pred_df = BehavDf.init_df(pd.Series(index))
         pred_df[(self.configs.behav_name, BehavScoredDf.OutcomesCols.PROB.value)] = y_probs
         pred_df[(self.configs.behav_name, BehavScoredDf.OutcomesCols.PRED.value)] = y_preds
         # Returning predicted behavs
@@ -580,7 +580,7 @@ class BehavClassifier:
 
     def clf_eval_save_history(self, history: pd.DataFrame, name: None | str = ""):
         # Saving history df
-        DFMixin.write(history, os.path.join(self.eval_dir, f"{name}_history.parquet"))
+        DFMixin.write(history, os.path.join(self.eval_dir, f"{name}_history.{DFMixin.IO}"))
         # Making and saving history figure
         fig, ax = plt.subplots(figsize=(10, 7))
         sns.lineplot(data=history, ax=ax)
@@ -626,7 +626,7 @@ class BehavClassifier:
         # Logistic curve
         logc_fig = self.eval_logc(y_true, y_prob)
         # Saving data and figures
-        DFMixin.write(y_eval, os.path.join(self.eval_dir, f"{name}_eval.parquet"))
+        DFMixin.write(y_eval, os.path.join(self.eval_dir, f"{name}_eval.{DFMixin.IO}"))
         with open(os.path.join(self.eval_dir, f"{name}_report.json"), "w") as f:
             json.dump(report_dict, f)
         metrics_fig.savefig(os.path.join(self.eval_dir, f"{name}_confm.png"))
@@ -791,8 +791,8 @@ class BehavClassifier:
 
 # from sklearn.preprocessing import MinMaxScaler
 
-# x = pd.read_feather('/run/user/1000/gvfs/smb-share:server=shared.sydney.edu.au,share=research-data/PRJ-BowenLab/TimLee/resources/behav_models/behav_huddling/behav_models/x/608DVR_CH2_5_9_66_20240506121732.feather')
-# y =  pd.read_feather('/run/user/1000/gvfs/smb-share:server=shared.sydney.edu.au,share=research-data/PRJ-BowenLab/TimLee/resources/behav_models/behav_huddling/behav_models/y/608DVR_CH2_5_9_66_20240506121732.feather')
+# x = pd.read_parquet('/run/user/1000/gvfs/smb-share:server=shared.sydney.edu.au,share=research-data/PRJ-BowenLab/TimLee/resources/behav_models/behav_huddling/behav_models/x/608DVR_CH2_5_9_66_20240506121732.parquet')
+# y =  pd.read_parquet('/run/user/1000/gvfs/smb-share:server=shared.sydney.edu.au,share=research-data/PRJ-BowenLab/TimLee/resources/behav_models/behav_huddling/behav_models/y/608DVR_CH2_5_9_66_20240506121732.parquet')
 
 # # Preproc
 # x = MinMaxScaler().fit_transform(x.values)

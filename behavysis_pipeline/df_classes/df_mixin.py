@@ -9,6 +9,7 @@ from enum import Enum, EnumType
 
 import pandas as pd
 
+from behavysis_pipeline.constants import DF_IO_FORMAT
 from behavysis_pipeline.utils.logging_utils import init_logger
 from behavysis_pipeline.utils.misc_utils import enum2tuple
 
@@ -34,6 +35,7 @@ class DFMixin:
     NULLABLE = True
     IN = None
     CN = None
+    IO = DF_IO_FORMAT
 
     ###############################################################################################
     # DF Read Functions
@@ -97,7 +99,19 @@ class DFMixin:
         """
         Default dataframe read method.
         """
-        return cls.read_parquet(fp)
+        # Methods mapping
+        methods = {
+            "csv": cls.read_csv,
+            "h5": cls.read_h5,
+            "feather": cls.read_feather,
+            "parquet": cls.read_parquet,
+        }
+        # Asserting IO value is supported
+        assert cls.IO in methods, (
+            f"File type, {cls.IO}, not supported.\n" f"Supported IO types are: {list(methods.keys())}."
+        )
+        # Writing the file with corresponding method
+        return methods[cls.IO](fp)
 
     ###############################################################################################
     # DF Write Functions
@@ -143,7 +157,7 @@ class DFMixin:
     @classmethod
     def write_parquet(cls, df: pd.DataFrame, fp: str) -> None:
         """
-        Writing dataframe feather file.
+        Writing dataframe parquet file.
         """
         # Checking before writing
         cls.check_df(df)
@@ -155,9 +169,21 @@ class DFMixin:
     @classmethod
     def write(cls, df: pd.DataFrame, fp: str) -> None:
         """
-        Default dataframe read method.
+        Default dataframe read method based on IO attribute.
         """
-        return cls.write_parquet(df, fp)
+        # Methods mapping
+        methods = {
+            "csv": cls.write_csv,
+            "h5": cls.write_h5,
+            "feather": cls.write_feather,
+            "parquet": cls.write_parquet,
+        }
+        # Asserting IO value is supported
+        assert cls.IO in methods, (
+            f"File type, {cls.IO}, not supported.\n" f"Supported IO types are: {list(methods.keys())}."
+        )
+        # Writing the file with corresponding method
+        return methods[cls.IO](df, fp)
 
     ###############################################################################################
     # DF init functions

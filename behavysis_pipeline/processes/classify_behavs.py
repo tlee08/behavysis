@@ -103,7 +103,7 @@ class ClassifyBehavs:
         behavs_df.index.names = list(enum2tuple(BehavPredictedDf.IN))
         behavs_df.columns.names = list(enum2tuple(BehavPredictedDf.CN))
         # Saving behav_preds df
-        BehavPredictedDf.write_feather(behavs_df, out_fp)
+        BehavPredictedDf.write(behavs_df, out_fp)
         # Returning outcome
         return outcome
 

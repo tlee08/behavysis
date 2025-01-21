@@ -70,7 +70,7 @@
 #     # proj.extract_features(True, True)
 #     # proj.classify_behaviours(True)
 #     # proj.export_behaviours(True)
-#     # proj.export_feather("7_scored_behavs", "./scored_csv")
+#     # proj.export2csv("7_scored_behavs", "./scored_csv")
 
 #     proj.evaluate(
 #         (

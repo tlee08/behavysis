@@ -74,7 +74,7 @@ class Evaluate:
         fps = configs.auto.formatted_vid.fps
 
         # Read the file
-        df = KeypointsDf.clean_headings(KeypointsDf.read_feather(dlc_fp))
+        df = KeypointsDf.clean_headings(KeypointsDf.read(dlc_fp))
         # Checking the bodyparts specified in the configs exist in the dataframe
         KeypointsDf.check_bpts_exist(df, bpts)
         # Making data-long ways
@@ -138,7 +138,7 @@ class Evaluate:
         fps = float(configs.auto.formatted_vid.fps)
 
         # Read the file
-        df = BehavScoredDf.read_feather(behavs_fp)
+        df = BehavScoredDf.read(behavs_fp)
         # Making data-long ways
         df = (
             df.stack([BehavScoredDf.CN.BEHAVS.value, BehavScoredDf.CN.OUTCOMES.value])

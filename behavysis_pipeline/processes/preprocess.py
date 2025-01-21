@@ -88,7 +88,7 @@ class Preprocess:
         # Trimming dataframe
         df = df.loc[start_frame:stop_frame, :]
         # Writing file
-        KeypointsDf.write_feather(df, out_fp)
+        KeypointsDf.write(df, out_fp)
         # Returning outcome
         return outcome
 
@@ -155,7 +155,7 @@ class Preprocess:
             else:
                 outcome += f"{bodypart} is detected in more than {pcutoff_all} of the video. No need for stationary interpolation.\n"
         # Saving
-        KeypointsDf.write_feather(df, out_fp)
+        KeypointsDf.write(df, out_fp)
         # Returning outcome
         return outcome
 
@@ -204,7 +204,7 @@ class Preprocess:
         # if df.isnull().values.any() then the entire column is nan (print warning)
         df = df.fillna(0)
         # Writing file
-        KeypointsDf.write_feather(df, out_fp)
+        KeypointsDf.write(df, out_fp)
         return outcome
 
     @classmethod
@@ -264,7 +264,7 @@ class Preprocess:
         # Updating df with the switched values
         df_switched = switch_identities(df, df_switch[metric], marked, unmarked)
         # Writing to file
-        KeypointsDf.write_feather(df_switched, out_fp)
+        KeypointsDf.write(df_switched, out_fp)
         return outcome
 
 

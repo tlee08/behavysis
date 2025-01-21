@@ -55,13 +55,6 @@ class Analyse:
         Determines the frames in which the subject is inside the cage (from average
         of given bodypoints).
 
-        Takes DLC data as input and returns the following analysis output:
-
-        - a feather file with the following columns for each video frame (row).
-        - a feather file with the summary statistics (sum, mean, std, min, median, Q1, median,
-        Q3, max) for DeltaMMperSec, and DeltaMMperSecSmoothed
-        - Each row `is_frozen`, and bout number.
-
         Points are `thresh_px` padded (away) from center.
         """
         outcome = ""
@@ -73,7 +66,7 @@ class Analyse:
         fps, _, _, px_per_mm, bins_ls, cbins_ls = AnalyseDf.get_configs(configs)
         configs_filt_ls = list(configs.user.analyse.in_roi)
         # Loading in dataframe
-        dlc_df = KeypointsDf.clean_headings(KeypointsDf.read_feather(dlc_fp))
+        dlc_df = KeypointsDf.clean_headings(KeypointsDf.read(dlc_fp))
         # Getting indivs list
         indivs, _ = KeypointsDf.get_headings(dlc_df)
         # Making analysis_df
@@ -139,8 +132,8 @@ class Analyse:
         analysis_df = pd.concat(analysis_df_ls, axis=1)
         corners_df = pd.concat(corners_df_ls, keys=roi_names_ls, names=["roi"]).reset_index(level="roi")
         # Saving analysis_df
-        fbf_fp = os.path.join(out_dir, "fbf", f"{name}.feather")
-        AnalyseDf.write_feather(analysis_df, fbf_fp)
+        fbf_fp = os.path.join(out_dir, "fbf", f"{name}.{AnalyseDf.IO}")
+        AnalyseDf.write(analysis_df, fbf_fp)
         # Generating scatterplot
         # First getting scatter_in_roi columns
         # TODO: any way to include all different "x", "y" to use, rather
@@ -175,12 +168,6 @@ class Analyse:
     ) -> str:
         """
         Determines the speed of the subject in each frame.
-
-        Takes DLC data as input and returns the following analysis output:
-
-        - a feather file with the following columns for each video frame (row).
-        - a feather file with the summary statistics (sum, mean, std, min, median, Q1, median, Q3,
-        max) for DeltaMMperSec, and DeltaMMperSecSmoothed
         """
         outcome = ""
         name = get_name(dlc_fp)
@@ -196,7 +183,7 @@ class Analyse:
         smoothing_frames = int(smoothing_sec * fps)
 
         # Loading in dataframe
-        dlc_df = KeypointsDf.clean_headings(KeypointsDf.read_feather(dlc_fp))
+        dlc_df = KeypointsDf.clean_headings(KeypointsDf.read(dlc_fp))
         # Checking body-centre bodypart exists
         KeypointsDf.check_bpts_exist(dlc_df, bpts)
         # Getting indivs and bpts list
@@ -225,8 +212,8 @@ class Analyse:
         # Backfilling the analysis_df so no nan's
         analysis_df = analysis_df.bfill()
         # Saving analysis_df
-        fbf_fp = os.path.join(out_dir, "fbf", f"{name}.feather")
-        AnalyseDf.write_feather(analysis_df, fbf_fp)
+        fbf_fp = os.path.join(out_dir, "fbf", f"{name}.{AnalyseDf.IO}")
+        AnalyseDf.write(analysis_df, fbf_fp)
 
         # Summarising and binning analysis_df
         AnalyseBinnedDf.summary_binned_quantitative(
@@ -247,12 +234,6 @@ class Analyse:
     ) -> str:
         """
         Determines the speed of the subject in each frame.
-
-        Takes DLC data as input and returns the following analysis output:
-
-        - a feather file with the following columns for each video frame (row).
-        - a feather file with the summary statistics (sum, mean, std, min, median, Q1, median, Q3,
-        max) for DeltaMMperSec, and DeltaMMperSecSmoothed
         """
         outcome = ""
         name = get_name(dlc_fp)
@@ -268,7 +249,7 @@ class Analyse:
         smoothing_frames = int(smoothing_sec * fps)
 
         # Loading in dataframe
-        dlc_df = KeypointsDf.clean_headings(KeypointsDf.read_feather(dlc_fp))
+        dlc_df = KeypointsDf.clean_headings(KeypointsDf.read(dlc_fp))
         # Checking body-centre bodypart exists
         KeypointsDf.check_bpts_exist(dlc_df, bpts)
         # Getting indivs and bpts list
@@ -295,8 +276,8 @@ class Analyse:
             .agg(np.nanmean)
         )
         # Saving analysis_df
-        fbf_fp = os.path.join(out_dir, "fbf", f"{name}.feather")
-        AnalyseDf.write_feather(analysis_df, fbf_fp)
+        fbf_fp = os.path.join(out_dir, "fbf", f"{name}.{AnalyseDf.IO}")
+        AnalyseDf.write(analysis_df, fbf_fp)
 
         # Summarising and binning analysis_df
         AnalyseBinnedDf.summary_binned_quantitative(
@@ -322,13 +303,6 @@ class Analyse:
         includes bouts that last longer than `window_sec` spent seconds.
 
         NOTE: method is "greedy" because it looks at a freezing bout from earliest possible frame.
-
-        Takes DLC data as input and returns the following analysis output:
-
-        - a feather file with the following columns for each video frame (row).
-        - a feather file with the summary statistics (sum, mean, std, min, median, Q1, median,
-        Q3, max) for DeltaMMperSec, and DeltaMMperSecSmoothed
-        - Each row `is_frozen`, and bout number.
         """
         outcome = ""
         name = get_name(dlc_fp)
@@ -348,7 +322,7 @@ class Analyse:
         window_frames = int(np.round(fps * window_sec, 0))
 
         # Loading in dataframe
-        dlc_df = KeypointsDf.clean_headings(KeypointsDf.read_feather(dlc_fp))
+        dlc_df = KeypointsDf.clean_headings(KeypointsDf.read(dlc_fp))
         # Checking body-centre bodypart exists
         KeypointsDf.check_bpts_exist(dlc_df, bpts)
         # Getting indivs and bpts list
@@ -385,8 +359,8 @@ class Analyse:
                 if row["dur"] < window_frames:
                     analysis_df.loc[row["start"] : row["stop"], (indiv, f_name)] = 0
         # Saving analysis_df
-        fbf_fp = os.path.join(out_dir, "fbf", f"{name}.feather")
-        AnalyseDf.write_feather(analysis_df, fbf_fp)
+        fbf_fp = os.path.join(out_dir, "fbf", f"{name}.{AnalyseDf.IO}")
+        AnalyseDf.write(analysis_df, fbf_fp)
 
         # Summarising and binning analysis_df
         AnalyseBinnedDf.summary_binned_behavs(

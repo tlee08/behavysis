@@ -10,6 +10,8 @@ from enum import Enum
 # PIPELINE FOLDERS
 ####################################################################################################
 
+DF_IO_FORMAT = "parquet"
+
 
 class Folders(Enum):
     """Enum for the pipeline folders."""
@@ -28,16 +30,16 @@ class Folders(Enum):
 
 
 class FileExts(Enum):
-    CONFIGS = ".json"
-    RAW_VID = ".mp4"
-    FORMATTED_VID = ".mp4"
-    DLC = ".parquet"
-    PREPROCESSED = ".parquet"
-    FEATURES_EXTRACTED = ".parquet"
-    PREDICTED_BEHAVS = ".parquet"
-    SCORED_BEHAVS = ".parquet"
-    ANALYSE_COMBINED = ".parquet"
-    EVALUATE_VID = ".mp4"
+    CONFIGS = "json"
+    RAW_VID = "mp4"
+    FORMATTED_VID = "mp4"
+    DLC = DF_IO_FORMAT
+    PREPROCESSED = DF_IO_FORMAT
+    FEATURES_EXTRACTED = DF_IO_FORMAT
+    PREDICTED_BEHAVS = DF_IO_FORMAT
+    SCORED_BEHAVS = DF_IO_FORMAT
+    ANALYSE_COMBINED = DF_IO_FORMAT
+    EVALUATE_VID = "mp4"
 
 
 # TODO: is there a better way to do the subsubdirs?

@@ -65,7 +65,7 @@ class CombineAnalysis:
             return outcome
         # Reading in each fbf analysis df
         comb_df_ls = [
-            AnalyseDf.read(os.path.join(analyse_dir, analysis_subdir, "fbf", f"{name}.feather"))
+            AnalyseDf.read(os.path.join(analyse_dir, analysis_subdir, "fbf", f"{name}.{AnalyseDf.IO}"))
             for analysis_subdir in analysis_subdir_ls
         ]
         # Making combined df from list of dfs

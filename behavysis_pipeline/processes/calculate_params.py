@@ -47,7 +47,7 @@ class CalculateParams:
         """
         outcome = ""
         # Reading dataframe
-        dlc_df = KeypointsDf.read_feather(dlc_fp)
+        dlc_df = KeypointsDf.read(dlc_fp)
         # Getting scorer name
         scorer_name = dlc_df.columns.get_level_values(0)[0]
         # Writing to configs
@@ -94,7 +94,7 @@ class CalculateParams:
         # Deriving more parameters
         window_frames = int(np.round(fps * window_sec, 0))
         # Loading dataframe
-        dlc_df = KeypointsDf.clean_headings(KeypointsDf.read_feather(dlc_fp))
+        dlc_df = KeypointsDf.clean_headings(KeypointsDf.read(dlc_fp))
         # Getting likehoods of subject (given bpts) existing in each frame
         df_lhoods = calc_likelihoods(dlc_df, bpts, window_frames)
         # Determining start time. Start frame is the first frame of the rolling window's range
@@ -184,7 +184,7 @@ class CalculateParams:
         # Deriving more parameters
         window_frames = int(np.round(fps * window_sec, 0))
         # Loading dataframe
-        dlc_df = KeypointsDf.clean_headings(KeypointsDf.read_feather(dlc_fp))
+        dlc_df = KeypointsDf.clean_headings(KeypointsDf.read(dlc_fp))
         # Getting likehoods of subject (given bpts) existing in each frame
         df_lhoods = calc_likelihoods(dlc_df, bpts, window_frames)
         # Determining exist times from rolling average windows
@@ -295,7 +295,7 @@ class CalculateParams:
         pcutoff = configs.get_ref(configs_filt.pcutoff)
         dist_mm = configs.get_ref(configs_filt.dist_mm)
         # Loading dataframe
-        dlc_df = KeypointsDf.clean_headings(KeypointsDf.read_feather(dlc_fp))
+        dlc_df = KeypointsDf.clean_headings(KeypointsDf.read(dlc_fp))
         # Imputing missing values with 0 (only really relevant for `likelihood` columns)
         dlc_df = dlc_df.fillna(0)
         # Checking that the two reference points are valid

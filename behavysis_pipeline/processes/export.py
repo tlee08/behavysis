@@ -36,7 +36,7 @@ class Export:
 
     @classmethod
     @logger_func_decorator(logger)
-    def df_file2csv(
+    def df2csv(
         cls,
         src_fp: str,
         dst_fp: str,
@@ -50,7 +50,7 @@ class Export:
         # Writing file
         DFMixin.write_csv(df, dst_fp)
         # Returning outcome
-        return "feather to csv\n"
+        return "exported df to csv\n"
 
     @classmethod
     @logger_func_decorator(logger)
@@ -118,6 +118,6 @@ class Export:
         # Importing the boris file to the Behav df format
         df = BehavScoredDf.import_boris_tsv(src_fp, behavs_ls, start_frame, stop_frame)
         # Writing file
-        BehavScoredDf.write_feather(df, dst_fp)
+        BehavScoredDf.write(df, dst_fp)
         # Returning outcome
         return "boris tsv to behav\n"

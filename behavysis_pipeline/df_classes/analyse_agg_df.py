@@ -330,7 +330,7 @@ class AnalyseBinnedDf(DFMixin):
         # started, rather than when the recording started)
         analysis_df.index = analysis_df.index - analysis_df.index[0]
         # Summarising analysis_df
-        summary_fp = os.path.join(out_dir, "summary", f"{name}.feather")
+        summary_fp = os.path.join(out_dir, "summary", f"{name}.{cls.IO}")
         summary_df = summary_func(analysis_df, fps)
         AnalyseSummaryDf.write(summary_df, summary_fp)
         # Getting timestamps index
@@ -338,7 +338,7 @@ class AnalyseBinnedDf(DFMixin):
         # Binning analysis_df
         for bin_sec in bins_ls:
             # Making filepaths
-            binned_fp = os.path.join(out_dir, f"binned_{bin_sec}", f"{name}.feather")
+            binned_fp = os.path.join(out_dir, f"binned_{bin_sec}", f"{name}.{cls.IO}")
             binned_plot_fp = os.path.join(out_dir, f"binned_{bin_sec}_plot", f"{name}.png")
             # Making binned df
             bins = np.arange(0, np.max(timestamps) + bin_sec, bin_sec)
@@ -349,7 +349,7 @@ class AnalyseBinnedDf(DFMixin):
         # Custom binning analysis_df
         if cbins_ls:
             # Making filepaths
-            binned_fp = os.path.join(out_dir, "binned_custom", f"{name}.feather")
+            binned_fp = os.path.join(out_dir, "binned_custom", f"{name}.{cls.IO}")
             binned_plot_fp = os.path.join(out_dir, "binned_custom_plot", f"{name}.png")
             # Making binned df
             binned_df = cls.make_binned(analysis_df, fps, cbins_ls, summary_func)

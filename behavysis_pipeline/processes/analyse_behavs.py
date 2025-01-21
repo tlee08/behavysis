@@ -73,8 +73,8 @@ class AnalyseBehaviours:
         # Updating the column level names of behavs_df to match AnalyseDf structure
         behavs_df.columns.names = list(enum2tuple(AnalyseDf.CN))
         # Writing the behavs_df to the fbf file
-        fbf_fp = os.path.join(out_dir, "fbf", f"{name}.feather")
-        AnalyseDf.write_feather(behavs_df, fbf_fp)
+        fbf_fp = os.path.join(out_dir, "fbf", f"{name}.{AnalyseDf.IO}")
+        AnalyseDf.write(behavs_df, fbf_fp)
         # Making the summary and binned dataframes
         AnalyseBinnedDf.summary_binned_behavs(
             behavs_df,

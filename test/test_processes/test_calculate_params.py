@@ -75,7 +75,7 @@ def test_start_frame():
         ["a", "b", "c", "d", "e", "f", "g"],
     )
     dlc_df_io_in = BytesIO()
-    dlc_df.to_feather(dlc_df_io_in)
+    dlc_df.to_parquet(dlc_df_io_in)
 
     # Testing start_frame func
     output = CalculateParams.start_frame(dlc_df_io_in, configs_io)
@@ -117,7 +117,7 @@ def test_stop_frame():
         ["a", "b", "c", "d", "e", "f", "g"],
     )
     dlc_df_io_in = BytesIO()
-    dlc_df.to_feather(dlc_df_io_in)
+    dlc_df.to_parquet(dlc_df_io_in)
 
     # Testing start_frame func
     output = CalculateParams.stop_frame(dlc_df_io_in, configs_io)
@@ -159,7 +159,7 @@ def test_exp_dur():
         ["a", "b", "c", "d", "e", "f", "g"],
     )
     dlc_df_io_in = BytesIO()
-    dlc_df.to_feather(dlc_df_io_in)
+    dlc_df.to_parquet(dlc_df_io_in)
 
     # Testing start_frame func
     output = CalculateParams.exp_dur(dlc_df_io_in, configs_io)

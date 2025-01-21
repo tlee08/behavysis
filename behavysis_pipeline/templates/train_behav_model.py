@@ -23,7 +23,7 @@ if __name__ == "__main__":
         print(name)
         outcome = Export.boris2behav(
             src_fp=os.path.join(boris_dir, f"{name}.tsv"),
-            out_fp=os.path.join(behav_dir, f"{name}.feather"),
+            out_fp=os.path.join(behav_dir, f"{name}.parquet"),
             configs_fp=os.path.join(config_dir, f"{name}.json"),
             behavs_ls=behavs_ls,
             overwrite=overwrite,
@@ -48,8 +48,8 @@ if __name__ == "__main__":
     model.pipeline_build_save(DNN1)
 
     # Example of evaluating model with novel data
-    x = pd.read_feather("path/to/features_extracted.feather")
-    y = pd.read_feather("path/to/scored_behavs.feather")
+    x = pd.read("path/to/features_extracted")
+    y = pd.read("path/to/scored_behavs")
     # Evaluating classifier (results stored in "eval" folder)
     model.clf_eval_save_performance(x, y)
 
@@ -59,6 +59,6 @@ if __name__ == "__main__":
     # Loading classifier
     model.clf_load()
     # Getting data
-    x = pd.read_feather("path/to/features_extracted.feather")
+    x = pd.read_parquet("path/to/features_extracted.parquet")
     # Running inference
     res = model.pipeline_run(x)

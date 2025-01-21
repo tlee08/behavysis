@@ -89,9 +89,9 @@ class ExtractFeatures:
         silent_remove(simba_dir)
         # Running SimBA env and script to run SimBA feature extraction
         outcome += run_simba_subproc(simba_dir, simba_in_dir, configs_dir, CACHE_DIR, cpid)
-        # Exporting SimBA feature extraction csv to feather
+        # Exporting SimBA feature extraction csv to df on disk
         simba_out_fp = os.path.join(features_from_dir, f"{name}.csv")
-        export2feather(simba_out_fp, out_fp, index)
+        export2df(simba_out_fp, out_fp, index)
         # Removing temp folders (simba_in_dir, simba_dir)
         silent_remove(simba_in_dir)
         silent_remove(simba_dir)
@@ -215,7 +215,7 @@ def remove_bpts_cols(
     return df.iloc[:, n:]
 
 
-def export2feather(in_fp: str, out_fp: str, index: pd.Index) -> str:
+def export2df(in_fp: str, out_fp: str, index: pd.Index) -> str:
     """
     __summary__
     """
@@ -225,7 +225,7 @@ def export2feather(in_fp: str, out_fp: str, index: pd.Index) -> str:
     # Setting index and column level names
     df.index.names = list(enum2tuple(FeaturesDf.IN))
     df.columns.names = list(enum2tuple(FeaturesDf.CN))
-    # Saving SimBA extracted features df as feather
-    FeaturesDf.write_feather(df, out_fp)
+    # Saving SimBA extracted features df as df on disk
+    FeaturesDf.write(df, out_fp)
     # Returning outcome
-    return "Exported SimBA features to feather.\n"
+    return "Exported SimBA features to df on disk.\n"

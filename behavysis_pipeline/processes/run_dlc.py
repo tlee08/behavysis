@@ -79,8 +79,8 @@ class RunDLC:
         # Running the DLC subprocess (in a separate conda env)
         run_dlc_subproc(model_fp, [vid_fp], dlc_out_dir, CACHE_DIR, gputouse)
 
-        # Exporting the h5 to feather the out_dir
-        export2feather(vid_fp, dlc_out_dir, out_dir)
+        # Exporting the h5 to chosen file format in the out_dir
+        export2df(vid_fp, dlc_out_dir, out_dir)
         # silent_remove(dlc_out_dir)
 
         return outcome
@@ -109,7 +109,7 @@ class RunDLC:
             vid_fp_ls = [
                 vid_fp
                 for vid_fp in vid_fp_ls
-                if not os.path.exists(os.path.join(out_dir, f"{get_name(vid_fp)}.feather"))
+                if not os.path.exists(os.path.join(out_dir, f"{get_name(vid_fp)}.{KeypointsDf.IO}"))
             ]
 
         # If there are no videos to process, return
@@ -140,9 +140,9 @@ class RunDLC:
         # Running the DLC subprocess (in a separate conda env)
         run_dlc_subproc(model_fp, vid_fp_ls, dlc_out_dir, CACHE_DIR, gputouse)
 
-        # Exporting the h5 to feather the out_dir
+        # Exporting the h5 to chosen file format in the out_dir
         for vid_fp in vid_fp_ls:
-            outcome += export2feather(vid_fp, dlc_out_dir, out_dir)
+            outcome += export2df(vid_fp, dlc_out_dir, out_dir)
         silent_remove(dlc_out_dir)
         # Returning outcome
         return outcome
@@ -190,7 +190,7 @@ def run_dlc_subproc(
     silent_remove(script_fp)
 
 
-def export2feather(name: str, in_dir: str, out_dir: str) -> str:
+def export2df(name: str, in_dir: str, out_dir: str) -> str:
     """
     __summary__
     """
@@ -210,8 +210,8 @@ def export2feather(name: str, in_dir: str, out_dir: str) -> str:
         df.columns.names = list(enum2tuple(KeypointsDf.CN))
         # Imputing na values with 0
         df = df.fillna(0)
-        # Writing the .feather file
-        KeypointsDf.write_feather(df, os.path.join(out_dir, f"{name}.feather"))
+        # Writing the file
+        KeypointsDf.write(df, os.path.join(out_dir, f"{name}.{KeypointsDf.IO}"))
         return "Outputted DLC file successfully."
     else:
         raise ValueError(f"Multiple .h5 files found for {name}.")

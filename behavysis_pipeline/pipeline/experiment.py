@@ -5,7 +5,6 @@ _summary_
 from __future__ import annotations
 
 import os
-from enum import Enum
 from typing import Any, Callable
 
 import numpy as np
@@ -84,7 +83,7 @@ class Experiment:
     #               GET/CHECK FILEPATH METHODS
     #####################################################################
 
-    def get_fp(self, _folder: Enum | str) -> str:
+    def get_fp(self, _folder: Folders | str) -> str:
         """
         Returns the experiment's file path from the given folder.
 
@@ -101,10 +100,9 @@ class Experiment:
         Raises
         ------
         ValueError
-            ValueError: Folder name is not valid. Refer to FOLDERS constant for valid folder names.
+            ValueError: Folder name is not valid. Refer to Folders Enum for valid folder names.
         """
-        # Getting folder as Enum
-        # If folder is str, converting to Enum
+        # Getting Folder item
         if isinstance(_folder, str):
             try:
                 folder = Folders(_folder)
@@ -122,7 +120,7 @@ class Experiment:
         # Getting file extension from enum
         file_ext: FileExts = getattr(FileExts, folder.name)
         # Getting experiment filepath for given folder
-        fp = os.path.join(self.root_dir, folder.value, f"{self.name}{file_ext.value}")
+        fp = os.path.join(self.root_dir, folder.value, f"{self.name}.{file_ext.value}")
         # Returning filepath
         return fp
 
@@ -531,7 +529,7 @@ class Experiment:
             overwrite=overwrite,
         )
 
-    def export_feather(self, in_dir: str, out_dir: str, overwrite: bool) -> dict:
+    def export2csv(self, in_dir: str, out_dir: str, overwrite: bool) -> dict:
         """
         _summary_
 
@@ -548,7 +546,7 @@ class Experiment:
             _description_
         """
         return self._process_scaffold(
-            (Export.dffile2csv,),
+            (Export.df2csv,),
             in_fp=self.get_fp(in_dir),
             out_fp=os.path.join(out_dir, f"{self.name}.csv"),
             overwrite=overwrite,
