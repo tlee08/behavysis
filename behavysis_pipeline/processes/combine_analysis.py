@@ -50,7 +50,8 @@ class CombineAnalysis:
         overwrite: bool,
     ) -> str:
         """
-        Takes a behavs dataframe and generates a summary and binned version of the data.
+        Concatenates across columns the frame-by-frame dataframes for all analysis subdirectories
+        and saves this in a single dataframe.
         """
         if not overwrite and os.path.exists(out_fp):
             return file_exists_msg(out_fp)
@@ -64,7 +65,7 @@ class CombineAnalysis:
             return outcome
         # Reading in each fbf analysis df
         comb_df_ls = [
-            AnalyseDf.read_feather(os.path.join(analyse_dir, analysis_subdir, "fbf", f"{name}.feather"))
+            AnalyseDf.read(os.path.join(analyse_dir, analysis_subdir, "fbf", f"{name}.feather"))
             for analysis_subdir in analysis_subdir_ls
         ]
         # Making combined df from list of dfs
@@ -75,6 +76,6 @@ class CombineAnalysis:
             names=[AnalyseCombinedDf.CN.ANALYSIS.value],
         )
         # Writing to file
-        AnalyseCombinedDf.write_feather(comb_df, out_fp)
+        AnalyseCombinedDf.write(comb_df, out_fp)
         # Returning outcome
         return outcome

@@ -1,9 +1,10 @@
 import os
 
-import numpy as np
-
 from behavysis_pipeline.behav_classifier.behav_classifier import BehavClassifier
-from behavysis_pipeline.df_classes.behav_df import BehavColumns, BehavDf
+from behavysis_pipeline.df_classes.behav_df import (
+    BehavPredictedDf,
+    BehavScoredDf,
+)
 from behavysis_pipeline.df_classes.df_mixin import DFMixin
 from behavysis_pipeline.pydantic_models.experiment_configs import ExperimentConfigs
 from behavysis_pipeline.utils.diagnostics_utils import file_exists_msg
@@ -17,84 +18,63 @@ class Export:
 
     @classmethod
     @logger_func_decorator(logger)
-    def feather2feather(
+    def df_file2csv(
         cls,
         src_fp: str,
-        out_fp: str,
+        dst_fp: str,
         overwrite: bool,
     ) -> str:
         """__summary__"""
-        if not overwrite and os.path.exists(out_fp):
-            return file_exists_msg(out_fp)
+        if not overwrite and os.path.exists(dst_fp):
+            return file_exists_msg(dst_fp)
         # Reading file
-        df = DFMixin.read_feather(src_fp)
+        df = DFMixin.read(src_fp)
         # Writing file
-        DFMixin.write_feather(df, out_fp)
-        # Returning outcome
-        return "feather to feather\n"
-
-    @classmethod
-    @logger_func_decorator(logger)
-    def feather2csv(
-        cls,
-        src_fp: str,
-        out_fp: str,
-        overwrite: bool,
-    ) -> str:
-        """__summary__"""
-        if not overwrite and os.path.exists(out_fp):
-            return file_exists_msg(out_fp)
-        # Reading file
-        df = DFMixin.read_feather(src_fp)
-        # Writing file
-        os.makedirs(os.path.dirname(out_fp), exist_ok=True)
-        df.to_csv(out_fp)
+        DFMixin.write_csv(df, dst_fp)
         # Returning outcome
         return "feather to csv\n"
 
     @classmethod
     @logger_func_decorator(logger)
-    def predbehavs2scoredbehavs(
+    def predictedbehavs2scoredbehavs(
         cls,
         src_fp: str,
-        out_fp: str,
+        dst_fp: str,
         configs_fp: str,
         overwrite: bool,
     ) -> str:
-        """ """
-        if not overwrite and os.path.exists(out_fp):
-            return file_exists_msg(out_fp)
+        """
+        Converts a predicted_behavs df to a scored_behavs df.
+        Namely:
+        - Adds an "actual" column to the df. All predicted positive BEHAV frames are set to UNDETERMINED.
+        - Adds user_defined columns to the df and sets all values to 0 (NON_BEHAV).
+        """
+        if not overwrite and os.path.exists(dst_fp):
+            return file_exists_msg(dst_fp)
         outcome = ""
         # Reading the configs file
         configs = ExperimentConfigs.read_json(configs_fp)
-        models_ls = configs.user.classify_behaviours
-        # Reading file
-        in_df = BehavDf.read_feather(src_fp)
-        # Making out_df
-        out_df = BehavDf.init_df(in_df.index)
+        models_ls = configs.user.classify_behavs
         # Getting the behav_outcomes dict from the configs file
-        for model in models_ls:
-            # Loading behav_model
-            try:
-                behav_model_i = BehavClassifier.load(model.model_fp)
-            except (FileNotFoundError, OSError):
-                outcome += f"WARNING: Model file {model.model_fp} not found. Skipping model.\n"
-                continue
-            behav_name_i = behav_model_i.configs.behaviour_name
-            user_behavs_i = configs.get_ref(model.user_behavs)
-            # Adding pred column
-            out_df[(behav_name_i, BehavColumns.PRED.value)] = in_df[(behav_name_i, BehavColumns.PRED.value)].values
-            # Adding actual column
-            out_df[(behav_name_i, BehavColumns.ACTUAL.value)] = in_df[
-                (behav_name_i, BehavColumns.PRED.value)
-            ].values * np.array(-1)
-            # Adding user_behav columns
-            for user_behavs_i_j in user_behavs_i:
-                out_df[(behav_name_i, user_behavs_i_j)] = 0
-        # Ordering by "behaviours" level
-        out_df = out_df.sort_index(axis=1, level=BehavDf.CN.BEHAVIOURS.value)
+        bouts_struct = []
+        for model_config in models_ls:
+            proj_dir = configs.get_ref(model_config.proj_dir)
+            behav_name = configs.get_ref(model_config.behav_name)
+            user_defined = configs.get_ref(model_config.user_defined)
+            # Ensuring model exists
+            BehavClassifier.load(proj_dir, behav_name)
+            # Adding to bouts_struct
+            bouts_struct.append(
+                {
+                    BehavScoredDf.BoutCols.BEHAV.value: behav_name,
+                    BehavScoredDf.BoutCols.USER_DEFINED.value: user_defined,
+                }
+            )
+        # Getting scored behavs df from predicted behavs df and bouts_struct
+        src_df = BehavPredictedDf.read(src_fp)
+        dst_df = BehavScoredDf.predicted2scored(src_df, bouts_struct)
         # Writing file
-        BehavDf.write_feather(out_df, out_fp)
+        BehavScoredDf.write(dst_df, dst_fp)
         # Returning outcome
         outcome += "predicted_behavs to scored_behavs.\n"
         return outcome
@@ -104,20 +84,20 @@ class Export:
     def boris2behav(
         cls,
         src_fp: str,
-        out_fp: str,
+        dst_fp: str,
         configs_fp: str,
         behavs_ls: list[str],
         overwrite: bool,
     ) -> str:
-        if not overwrite and os.path.exists(out_fp):
-            return file_exists_msg(out_fp)
+        if not overwrite and os.path.exists(dst_fp):
+            return file_exists_msg(dst_fp)
         # Reading the configs file
         configs = ExperimentConfigs.read_json(configs_fp)
         start_frame = configs.get_ref(configs.auto.start_frame)
         stop_frame = configs.get_ref(configs.auto.stop_frame) + 1
         # Importing the boris file to the Behav df format
-        df = BehavDf.import_boris_tsv(src_fp, behavs_ls, start_frame, stop_frame)
+        df = BehavScoredDf.import_boris_tsv(src_fp, behavs_ls, start_frame, stop_frame)
         # Writing file
-        BehavDf.write_feather(df, out_fp)
+        BehavScoredDf.write_feather(df, dst_fp)
         # Returning outcome
         return "boris tsv to behav\n"

@@ -71,10 +71,10 @@ class EvaluateVid:
         assert total_frames > 0, assert_msg % "video total frames"
 
         # Getting dlc df
-        dlc_df = KeypointsDf.clean_headings(KeypointsDf.read_feather(dlc_fp))
+        dlc_df = KeypointsDf.clean_headings(KeypointsDf.read(dlc_fp))
         # Getting analysis combined df
         try:
-            analysis_df = AnalyseCombinedDf.read_feather(analyse_combined_fp)
+            analysis_df = AnalyseCombinedDf.read(analyse_combined_fp)
         except FileNotFoundError:
             outcome += "WARNING: analysis combined file not found or could not be loaded." "Disregarding analysis."
             analysis_df = AnalyseCombinedDf.init_df(dlc_df.index)

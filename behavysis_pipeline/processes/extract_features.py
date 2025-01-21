@@ -77,7 +77,7 @@ class ExtractFeatures:
         os.makedirs(simba_in_dir, exist_ok=True)
         simba_in_fp = os.path.join(simba_in_dir, f"{name}.csv")
         # Selecting bodyparts for SimBA (8 bpts, 2 indivs)
-        df = KeypointsDf.read_feather(dlc_fp)
+        df = KeypointsDf.read(dlc_fp)
         df = select_cols(df, configs_fp)
         # Saving dlc frame to place in the SimBA features extraction df
         index = df.index

@@ -34,11 +34,9 @@ import seaborn as sns
 from tqdm import trange
 
 from behavysis_pipeline.df_classes.analyse_combined_df import AnalyseCombinedDf
-from behavysis_pipeline.df_classes.behav_df import BehavDf
+from behavysis_pipeline.df_classes.behav_df import BehavScoredDf
 from behavysis_pipeline.df_classes.keypoints_df import Coords, KeypointsDf
-from behavysis_pipeline.processes.evaluate_vid import (
-    VidFuncsRunner,
-)
+from behavysis_pipeline.processes.evaluate_vid import VidFuncsRunner
 from behavysis_pipeline.pydantic_models.experiment_configs import ExperimentConfigs
 from behavysis_pipeline.utils.diagnostics_utils import file_exists_msg
 from behavysis_pipeline.utils.io_utils import get_name
@@ -140,19 +138,19 @@ class Evaluate:
         fps = float(configs.auto.formatted_vid.fps)
 
         # Read the file
-        df = BehavDf.read_feather(behavs_fp)
+        df = BehavScoredDf.read_feather(behavs_fp)
         # Making data-long ways
         df = (
-            df.stack([BehavDf.CN.BEHAVIOURS.value, BehavDf.CN.OUTCOMES.value])
+            df.stack([BehavScoredDf.CN.BEHAVS.value, BehavScoredDf.CN.OUTCOMES.value])
             .reset_index()
             .rename(columns={0: "value"})
         )
         # Adding the timestamp column
-        df["timestamp"] = df[BehavDf.IN.FRAME.value] / fps
+        df["timestamp"] = df[BehavScoredDf.IN.FRAME.value] / fps
         # Making plot
         g = sns.FacetGrid(
             df,
-            row=BehavDf.CN.BEHAVIOURS.value,
+            row=BehavScoredDf.CN.BEHAVS.value,
             height=5,
             aspect=10,
         )
@@ -160,7 +158,7 @@ class Evaluate:
             sns.lineplot,
             x="timestamp",
             y="value",
-            hue=BehavDf.CN.OUTCOMES.value,
+            hue=BehavScoredDf.CN.OUTCOMES.value,
             alpha=0.4,
         )
         g.add_legend()

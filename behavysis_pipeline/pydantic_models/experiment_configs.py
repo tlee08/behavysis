@@ -17,8 +17,6 @@ from behavysis_pipeline.utils.misc_utils import enum2tuple
 
 
 class ConfigsFormatVid(BaseModel):
-    """_summary_"""
-
     model_config = ConfigDict(extra="forbid")
 
     width_px: None | int | str = None
@@ -29,28 +27,20 @@ class ConfigsFormatVid(BaseModel):
 
 
 class ConfigsRunDLC(BaseModel):
-    """_summary_"""
-
     model_config = ConfigDict(extra="forbid")
 
     model_fp: str = os.path.join(".")  # FilePath
 
 
 class ConfigsCalculateParams(BaseModel):
-    """_summary_"""
-
     model_config = ConfigDict(extra="allow")
 
 
 class ConfigsPreprocess(BaseModel):
-    """_summary_"""
-
     model_config = ConfigDict(extra="allow")
 
 
 class ConfigsExtractFeatures(BaseModel):
-    """_summary_"""
-
     model_config = ConfigDict(extra="forbid")
 
     individuals: list[str] | str = ["mouse1marked", "mouse2unmarked"]
@@ -67,19 +57,16 @@ class ConfigsExtractFeatures(BaseModel):
 
 
 class ConfigsClassifyBehav(BaseModel):
-    """_summary_"""
-
     model_config = ConfigDict(extra="forbid")
 
-    model_fp: str = os.path.join(".")  # FilePath
+    proj_dir: str = os.path.join(".")  # FilePath
+    behav_name: str = "behav_name"
     pcutoff: float | str = -1
     min_window_frames: int | str = 1
-    user_behavs: list[str] | str = []
+    user_defined: list[str] | str = []
 
 
 class ConfigsAnalyse(BaseModel):
-    """_summary_"""
-
     model_config = ConfigDict(extra="allow")
 
     bins_sec: list[int] | str = [30, 60, 120]
@@ -87,8 +74,6 @@ class ConfigsAnalyse(BaseModel):
 
 
 class ConfigsEvalKeypointsPlot(BaseModel):
-    """_summary_"""
-
     model_config = ConfigDict(extra="forbid")
 
     bodyparts: list[str] | str = [
@@ -104,8 +89,6 @@ class ConfigsEvalKeypointsPlot(BaseModel):
 
 
 class ConfigsEvaluateVid(BaseModel):
-    """_summary_"""
-
     model_config = ConfigDict(extra="forbid")
 
     funcs: list[str] | str = ["keypoints", "analysis"]
@@ -118,20 +101,16 @@ class ConfigsEvaluateVid(BaseModel):
     @field_validator("cmap")
     @classmethod
     def validate_cmap(cls, v):
-        """_summary_"""
         return PydanticBaseModel.validate_attr_closed_set(v, plt.colormaps())
 
     @field_validator("colour_level")
     @classmethod
     def validate_colour_level(cls, v):
-        """_summary_"""
         vals = enum2tuple(KeypointsDf.CN)
         return PydanticBaseModel.validate_attr_closed_set(v, vals)
 
 
 class ConfigsUser(BaseModel):
-    """_summary_"""
-
     model_config = ConfigDict(extra="forbid")
 
     format_vid: ConfigsFormatVid = ConfigsFormatVid()
@@ -139,14 +118,12 @@ class ConfigsUser(BaseModel):
     calculate_params: ConfigsCalculateParams = ConfigsCalculateParams()
     preprocess: ConfigsPreprocess = ConfigsPreprocess()
     extract_features: ConfigsExtractFeatures = ConfigsExtractFeatures()
-    classify_behaviours: list[ConfigsClassifyBehav] = list()
+    classify_behavs: list[ConfigsClassifyBehav] = list()
     analyse: ConfigsAnalyse = ConfigsAnalyse()
     evaluate_vid: ConfigsEvaluateVid = ConfigsEvaluateVid()
 
 
 class ConfigsAuto(PydanticBaseModel):
-    """_summary_"""
-
     model_config = ConfigDict(extra="forbid")
 
     raw_vid: VidMetadata = VidMetadata()
@@ -160,14 +137,10 @@ class ConfigsAuto(PydanticBaseModel):
 
 
 class ConfigsRef(PydanticBaseModel):
-    """_summary_"""
-
     model_config = ConfigDict(extra="allow")
 
 
 class ExperimentConfigs(PydanticBaseModel):
-    """_summary_"""
-
     model_config = ConfigDict(extra="forbid")
 
     user: ConfigsUser = ConfigsUser()

@@ -22,9 +22,9 @@ import os
 
 import numpy as np
 
-from behavysis_pipeline.df_classes.analyse_binned_df import AnalyseBinnedDf
+from behavysis_pipeline.df_classes.analyse_agg_df import AnalyseBinnedDf
 from behavysis_pipeline.df_classes.analyse_df import AnalyseDf
-from behavysis_pipeline.df_classes.behav_df import BehavColumns, BehavDf
+from behavysis_pipeline.df_classes.behav_df import BehavScoredDf
 from behavysis_pipeline.pydantic_models.experiment_configs import ExperimentConfigs
 from behavysis_pipeline.utils.io_utils import get_name
 from behavysis_pipeline.utils.logging_utils import init_logger
@@ -59,14 +59,14 @@ class AnalyseBehaviours:
         configs = ExperimentConfigs.read_json(configs_fp)
         fps, _, _, _, bins_ls, cbins_ls = AnalyseDf.get_configs(configs)
         # Loading in dataframe
-        behavs_df = BehavDf.read(behavs_fp)
+        behavs_df = BehavScoredDf.read(behavs_fp)
         # Setting all na and -1 values to 0 (to make any undecided behav to non-behav)
         behavs_df = behavs_df.fillna(0).map(lambda x: np.maximum(0, x))
-        # Getting the behaviour names and each user_behav for the behaviour
+        # Getting the behaviour names and each user_defined for the behaviour
         # Not incl. the `pred` or `prob` (`prob` shouldn't be here anyway) columns
         columns = np.isin(
-            behavs_df.columns.get_level_values(BehavDf.CN.OUTCOMES.value),
-            [BehavColumns.PROB.value, BehavColumns.PRED.value],
+            behavs_df.columns.get_level_values(BehavScoredDf.CN.OUTCOMES.value),
+            [BehavScoredDf.OutcomesCols.PROB.value, BehavScoredDf.OutcomesCols.PRED.value],
             invert=True,
         )
         behavs_df = behavs_df.loc[:, columns]

@@ -16,7 +16,7 @@ from behavysis_pipeline.constants import (
     FileExts,
     Folders,
 )
-from behavysis_pipeline.processes.analyse_behaviours import AnalyseBehaviours
+from behavysis_pipeline.processes.analyse_behavs import AnalyseBehaviours
 from behavysis_pipeline.processes.classify_behavs import ClassifyBehavs
 from behavysis_pipeline.processes.combine_analysis import CombineAnalysis
 from behavysis_pipeline.processes.evaluate_vid import EvaluateVid
@@ -428,7 +428,7 @@ class Experiment:
         """
         # Exporting 6_predicted_behavs df to 7_scored_behavs folder
         return self._process_scaffold(
-            (Export.predbehavs2scoredbehavs,),
+            (Export.predictedbehavs2scoredbehavs,),
             src_fp=self.get_fp(Folders.PREDICTED_BEHAVS),
             out_fp=self.get_fp(Folders.SCORED_BEHAVS),
             configs_fp=self.get_fp(Folders.CONFIGS),
@@ -548,7 +548,7 @@ class Experiment:
             _description_
         """
         return self._process_scaffold(
-            (Export.feather2csv,),
+            (Export.dffile2csv,),
             in_fp=self.get_fp(in_dir),
             out_fp=os.path.join(out_dir, f"{self.name}.csv"),
             overwrite=overwrite,

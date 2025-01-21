@@ -26,7 +26,6 @@ import numpy as np
 import pandas as pd
 from pydantic import BaseModel
 
-from behavysis_pipeline.df_classes.df_mixin import DFMixin
 from behavysis_pipeline.df_classes.keypoints_df import (
     Coords,
     IndivColumns,
@@ -85,7 +84,7 @@ class Preprocess:
         start_frame = configs.auto.start_frame
         stop_frame = configs.auto.stop_frame
         # Reading file
-        df = KeypointsDf.read_feather(dlc_fp)
+        df = KeypointsDf.read(dlc_fp)
         # Trimming dataframe
         df = df.loc[start_frame:stop_frame, :]
         # Writing file
@@ -130,7 +129,7 @@ class Preprocess:
                 "Width and height must be provided in the formatted video. Try running FormatVid.format_vid."
             )
         # Reading file
-        df = DFMixin.read_feather(dlc_fp)
+        df = KeypointsDf.read(dlc_fp)
         # Getting the scorer name
         scorer = df.columns.unique(KeypointsDf.CN.SCORER.value)[0]
         # For each bodypart, filling in the given point
@@ -186,7 +185,7 @@ class Preprocess:
         configs = ExperimentConfigs.read_json(configs_fp)
         configs_filt = Model_interpolate(**configs.user.preprocess.interpolate)
         # Reading file
-        df = KeypointsDf.read_feather(dlc_fp)
+        df = KeypointsDf.read(dlc_fp)
         # Gettings the unique groups of (individual, bodypart) groups.
         unique_cols = df.columns.droplevel(["coords"]).unique()
         # Setting low-likelihood points to Nan to later interpolate
@@ -233,7 +232,7 @@ class Preprocess:
             return file_exists_msg(out_fp)
         outcome = ""
         # Reading file
-        df = KeypointsDf.read_feather(dlc_fp)
+        df = KeypointsDf.read(dlc_fp)
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
         configs_filt = Model_refine_ids(**configs.user.preprocess.refine_ids)
@@ -397,14 +396,10 @@ def switch_identities(
 
 
 class Model_interpolate(BaseModel):
-    """_summary_"""
-
     pcutoff: float | str = 0
 
 
 class Model_el_interpolate_stationary(BaseModel):
-    """_summary_"""
-
     bodypart: str = ""
     pcutoff: float = 0.8
     pcutoff_all: float = 0.6
@@ -413,8 +408,6 @@ class Model_el_interpolate_stationary(BaseModel):
 
 
 class Model_refine_ids(BaseModel):
-    """_summary_"""
-
     marked: str = ""
     unmarked: str = ""
     marking: str = ""

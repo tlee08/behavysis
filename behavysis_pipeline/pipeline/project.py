@@ -21,8 +21,7 @@ from behavysis_pipeline.constants import (
     STR_DIV,
     Folders,
 )
-from behavysis_pipeline.df_classes.analyse_binned_df import AnalyseBinnedDf
-from behavysis_pipeline.df_classes.df_mixin import DFMixin
+from behavysis_pipeline.df_classes.analyse_agg_df import AnalyseBinnedDf, AnalyseSummaryDf
 from behavysis_pipeline.df_classes.diagnostics_df import DiagnosticsDf
 from behavysis_pipeline.pipeline.experiment import Experiment
 from behavysis_pipeline.processes.run_dlc import RunDLC
@@ -410,14 +409,9 @@ class Project:
                 df_ls = []
                 names_ls = []
                 for exp in self.get_experiments():
-                    in_fp = os.path.join(
-                        proj_analyse_dir,
-                        analyse_subdir,
-                        f"binned_{bin_i}",
-                        f"{exp.name}.feather",
-                    )
+                    in_fp = os.path.join(proj_analyse_dir, analyse_subdir, f"binned_{bin_i}", f"{exp.name}.parquet")
                     if os.path.isfile(in_fp):
-                        df_ls.append(AnalyseBinnedDf.read_feather(in_fp))
+                        df_ls.append(AnalyseBinnedDf.read(in_fp))
                         names_ls.append(exp.name)
                 # Concatenating total_df with df across columns, with experiment name to column MultiIndex
                 if len(df_ls) > 0:
@@ -427,7 +421,7 @@ class Project:
                         analyse_subdir,
                         f"__ALL_binned_{bin_i}.feather",
                     )
-                    DFMixin.write_feather(df, out_fp)
+                    AnalyseBinnedDf.write(df, out_fp)
 
     def _analyse_collate_summary(self) -> None:
         """
@@ -445,13 +439,13 @@ class Project:
             df_ls = []
             names_ls = []
             for exp in self.get_experiments():
-                in_fp = os.path.join(proj_analyse_dir, analyse_subdir, "summary", f"{exp.name}.feather")
+                in_fp = os.path.join(proj_analyse_dir, analyse_subdir, "summary", f"{exp.name}.parquet")
                 if os.path.isfile(in_fp):
                     # Reading exp summary df
-                    df_ls.append(DFMixin.read_feather(in_fp))
+                    df_ls.append(AnalyseSummaryDf.read(in_fp))
                     names_ls.append(exp.name)
             out_fp = os.path.join(proj_analyse_dir, analyse_subdir, "__ALL_summary.feather")
             # Concatenating total_df with df across columns, with experiment name to column MultiIndex
             if len(df_ls) > 0:
                 total_df = pd.concat(df_ls, keys=names_ls, names=["experiment"], axis=0)
-                DFMixin.write_feather(total_df, out_fp)
+                AnalyseSummaryDf.write(total_df, out_fp)

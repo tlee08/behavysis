@@ -40,7 +40,7 @@ class DFMixin:
     ###############################################################################################
 
     @classmethod
-    def read_dlc_csv(cls, fp: str) -> pd.DataFrame:
+    def read_csv(cls, fp: str) -> pd.DataFrame:
         """
         Reading DLC dataframe csv file.
         """
@@ -96,17 +96,15 @@ class DFMixin:
     def read(cls, fp: str) -> pd.DataFrame:
         """
         Default dataframe read method.
-
-        `cls.read_feather`
         """
-        return cls.read_feather(fp)
+        return cls.read_parquet(fp)
 
     ###############################################################################################
     # DF Write Functions
     ###############################################################################################
 
     @classmethod
-    def write_dlc_csv(cls, df: pd.DataFrame, fp: str) -> None:
+    def write_csv(cls, df: pd.DataFrame, fp: str) -> None:
         """
         Writing DLC dataframe to csv file.
         """
@@ -131,7 +129,7 @@ class DFMixin:
         df.to_hdf(fp, key=DLC_HDF_KEY, mode="w")
 
     @classmethod
-    def write_feather(cls, df: pd.Series | pd.DataFrame, fp: str) -> None:
+    def write_feather(cls, df: pd.DataFrame, fp: str) -> None:
         """
         Writing dataframe feather file.
         """
@@ -158,10 +156,8 @@ class DFMixin:
     def write(cls, df: pd.DataFrame, fp: str) -> None:
         """
         Default dataframe read method.
-
-        `cls.write_feather`
         """
-        return cls.write_feather(df, fp)
+        return cls.write_parquet(df, fp)
 
     ###############################################################################################
     # DF init functions
@@ -185,11 +181,12 @@ class DFMixin:
         pd.DataFrame
             _description_
         """
-        IN = cls.IN or [None]
-        CN = cls.CN or [None]
+        # IN = enum2tuple(cls.IN)[0] if cls.IN else None
+        IN = enum2tuple(cls.IN) if cls.IN else (None,)
+        CN = enum2tuple(cls.CN) if cls.CN else (None,)
         return pd.DataFrame(
-            index=pd.Index(frame_vect, name=enum2tuple(IN)[0]),
-            columns=pd.MultiIndex.from_tuples((), names=enum2tuple(CN)),
+            index=pd.MultiIndex(frame_vect, name=IN),
+            columns=pd.MultiIndex.from_tuples((), names=CN),
         )
 
     ###############################################################################################
@@ -200,7 +197,7 @@ class DFMixin:
     def check_df(cls, df: pd.DataFrame) -> None:
         """__summary__"""
         # Checking that df is a DataFrame
-        assert isinstance(df, pd.DataFrame), "The dataframe is not a pandas DataFrame."
+        assert isinstance(df, pd.DataFrame), "The dataframe must be a pandas DataFrame."
         # Checking there are no null values
         if not cls.NULLABLE:
             assert (

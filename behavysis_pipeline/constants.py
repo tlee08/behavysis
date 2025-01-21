@@ -31,12 +31,12 @@ class FileExts(Enum):
     CONFIGS = ".json"
     RAW_VID = ".mp4"
     FORMATTED_VID = ".mp4"
-    DLC = ".feather"
-    PREPROCESSED = ".feather"
-    FEATURES_EXTRACTED = ".feather"
-    PREDICTED_BEHAVS = ".feather"
-    SCORED_BEHAVS = ".feather"
-    ANALYSE_COMBINED = ".feather"
+    DLC = ".parquet"
+    PREPROCESSED = ".parquet"
+    FEATURES_EXTRACTED = ".parquet"
+    PREDICTED_BEHAVS = ".parquet"
+    SCORED_BEHAVS = ".parquet"
+    ANALYSE_COMBINED = ".parquet"
     EVALUATE_VID = ".mp4"
 
 

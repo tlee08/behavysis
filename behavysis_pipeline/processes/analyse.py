@@ -24,11 +24,11 @@ import numpy as np
 import pandas as pd
 from pydantic import BaseModel, ConfigDict
 
-from behavysis_pipeline.df_classes.analyse_binned_df import AnalyseBinnedDf
+from behavysis_pipeline.df_classes.analyse_agg_df import AnalyseBinnedDf
 from behavysis_pipeline.df_classes.analyse_df import (
     AnalyseDf,
 )
-from behavysis_pipeline.df_classes.bouts_df import BoutsDf
+from behavysis_pipeline.df_classes.behav_df import BehavScoredDf
 from behavysis_pipeline.df_classes.keypoints_df import (
     Coords,
     IndivColumns,
@@ -378,7 +378,7 @@ class Analyse:
             )
 
             # Getting start, stop, and duration of each freezing behav bout
-            freezingbouts_df = BoutsDf.vect2bouts(analysis_df[(indiv, f_name)] == 1)
+            freezingbouts_df = BehavScoredDf.vect2bouts(analysis_df[(indiv, f_name)] == 1)
             # For each freezing bout, if there is less than window_frames, tehn
             # it is not actually freezing
             for _, row in freezingbouts_df.iterrows():
@@ -426,8 +426,6 @@ def pt_in_roi(pt: pd.Series, corners_df: pd.DataFrame) -> bool:
 
 
 class Model_speed(BaseModel):
-    """_summary_"""
-
     model_config = ConfigDict(extra="forbid")
 
     smoothing_sec: float | str
@@ -435,8 +433,6 @@ class Model_speed(BaseModel):
 
 
 class Model_social_distance(BaseModel):
-    """_summary_"""
-
     model_config = ConfigDict(extra="forbid")
 
     smoothing_sec: float | str
@@ -444,8 +440,6 @@ class Model_social_distance(BaseModel):
 
 
 class Model_freezing(BaseModel):
-    """_summary_"""
-
     model_config = ConfigDict(extra="forbid")
 
     window_sec: float | str
@@ -455,8 +449,6 @@ class Model_freezing(BaseModel):
 
 
 class Model_in_roi(BaseModel):
-    """_summary_"""
-
     model_config = ConfigDict(extra="forbid")
 
     roi_name: str

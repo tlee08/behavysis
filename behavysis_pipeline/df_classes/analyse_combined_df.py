@@ -27,7 +27,7 @@ from behavysis_pipeline.df_classes.df_mixin import DFMixin, FramesIN
 ####################################################################################################
 
 
-class AnalyseCombineCN(Enum):
+class AnalyseCombinedCN(Enum):
     ANALYSIS = "analysis"
     INDIVIDUALS = "individuals"
     MEASURES = "measures"
@@ -43,4 +43,4 @@ class AnalyseCombinedDf(DFMixin):
 
     NULLABLE = False
     IN = FramesIN
-    CN = AnalyseCombineCN
+    CN = AnalyseCombinedCN

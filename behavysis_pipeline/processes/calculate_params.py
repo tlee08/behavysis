@@ -342,16 +342,12 @@ def calc_likelihoods(
 
 
 class Model_stop_frame(BaseModel):
-    """_summary_"""
-
     model_config = ConfigDict(extra="forbid")
 
     dur_sec: float | str = 0
 
 
 class Model_start_frame_from_csv(BaseModel):
-    """_summary_"""
-
     model_config = ConfigDict(extra="forbid")
 
     csv_fp: str = ""
@@ -359,8 +355,6 @@ class Model_start_frame_from_csv(BaseModel):
 
 
 class Model_check_exists(BaseModel):
-    """__summary__"""
-
     model_config = ConfigDict(extra="forbid")
 
     bodyparts: list[str] | str = []
@@ -369,8 +363,6 @@ class Model_check_exists(BaseModel):
 
 
 class Model_px_per_mm(BaseModel):
-    """_summary_"""
-
     model_config = ConfigDict(extra="forbid")
 
     pt_a: str = "pt_a"

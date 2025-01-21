@@ -8,8 +8,6 @@ from behavysis_pipeline.pydantic_models.pydantic_base_model import PydanticBaseM
 
 
 class VidMetadata(PydanticBaseModel):
-    """_summary_"""
-
     model_config = ConfigDict(extra="forbid")
 
     fps: float = -1

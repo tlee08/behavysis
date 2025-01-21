@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import json
 import os
-import shutil
+from enum import Enum
 from typing import TYPE_CHECKING, Callable
 
 import joblib
@@ -28,214 +28,217 @@ from behavysis_pipeline.behav_classifier.clf_models.base_torch_model import (
 )
 from behavysis_pipeline.behav_classifier.clf_models.clf_templates import (
     CLF_TEMPLATES,
-    DNN1,
+    CNN1,
 )
 from behavysis_pipeline.constants import Folders
-from behavysis_pipeline.df_classes.behav_df import BehavColumns, BehavDf
+from behavysis_pipeline.df_classes.behav_df import BehavScoredDf
 from behavysis_pipeline.df_classes.df_mixin import DFMixin
 from behavysis_pipeline.pydantic_models.behav_classifier_configs import (
     BehavClassifierConfigs,
 )
 from behavysis_pipeline.utils.io_utils import get_name
 from behavysis_pipeline.utils.logging_utils import init_logger
+from behavysis_pipeline.utils.misc_utils import enum2tuple
 
 if TYPE_CHECKING:
     from behavysis_pipeline.pipeline.project import Project
 
-BEHAV_MODELS_SUBDIR = "behav_models"
 
-GENERIC_BEHAV_LABELS = ["nil", "behav"]
+BEHAV_MODELS_SUBDIR = "behav_models"
+CONFIGS_NAME = "configs.json"
+PREPROC_NAME = "preproc.sav"
+MODEL_NAME = "model.sav"
+
+
+class GenericBehavLabels(Enum):
+    NIL = "nil"
+    BEHAV = "behav"
 
 
 class BehavClassifier:
     """
     BehavClassifier abstract class peforms behav classifier model preparation, training, saving,
     evaluation, and inference.
-
-    NOTE: don't instatiate directly. Instead use `create_new_model` `create_from_project`, or `load` classmethods.
-
-    Attributes
-    ----------
-    configs_fp
-        _description_
-    clf
-        _description_
-
-    Parameters
-    ----------
-    model_dir :
-        _description_
     """
 
     logger = init_logger(__name__)
 
-    model_dir: str
-    clf: BaseTorchModel
+    _proj_dir: str
+    _behav_name: str
+    _clf: BaseTorchModel
 
-    def __init__(self, model_dir: str) -> None:
-        # Storing model directory path
-        self.model_dir = os.path.abspath(model_dir)
+    def __init__(self, proj_dir: str, behav_name: str) -> None:
+        # Assert that the behaviour is scored in the project (in the scored_behavs directory)
+        # Getting the list of behaviours in project to check against
+        y_df = self.wrangle_columns_y(self.combine(os.path.join(proj_dir, Folders.SCORED_BEHAVS.value)))
+        assert np.isin(behav_name, y_df.columns)
+        # Setting attributes
+        self._proj_dir = proj_dir
+        self._behav_name = behav_name
+        # Trying to load configs (or making new configs)
         try:
-            # Trying to read configs file.
-            self.configs
-            self.logger.debug("Reading existing model configs")
+            configs = BehavClassifierConfigs.read_json(self.configs_fp)
+            self.logger.debug("Loaded existing configs")
+            return
         except FileNotFoundError:
-            # Making a new configs file if it doesn't exist
-            self.configs = BehavClassifierConfigs()
-            self.logger.debug("Making new model configs")
-        # Trying to read clf file. Making basic DDN1 if not exists
+            configs = BehavClassifierConfigs()
+            self.logger.debug("Made new model configs")
+        finally:
+            # Setting and saving configs
+            configs.proj_dir = proj_dir
+            configs.behav_name = behav_name
+            self.configs = configs
+        # Trying to load classifier (or making new classifier)
         try:
             self.clf_load()
+            self.logger.debug("Loaded existing model")
         except FileNotFoundError:
-            self.clf = DNN1()
+            self.clf = CNN1()
+            self.logger.debug("Made new model")
 
     #################################################
     #            GETTER AND SETTERS
     #################################################
 
     @property
+    def proj_dir(self) -> str:
+        return self._proj_dir
+
+    @property
+    def behav_name(self) -> str:
+        return self._behav_name
+
+    @property
+    def clf(self) -> BaseTorchModel:
+        return self._clf
+
+    @clf.setter
+    def clf(self, clf: BaseTorchModel) -> None:
+        clf_name = type(clf).__name__
+        self.logger.debug(f"Setting new classifier: {clf_name}")
+        self._clf = clf
+        self.logger.debug("Updating classifier in model configs")
+        configs = self.configs
+        configs.clf_struct = clf_name
+        self.configs = configs
+
+    @property
+    def model_dir(self) -> str:
+        return os.path.join(self.proj_dir, BEHAV_MODELS_SUBDIR, self.behav_name)
+
+    @property
     def configs_fp(self) -> str:
-        """Returns the model's root directory"""
-        return os.path.join(self.model_dir, "configs.json")
+        return os.path.join(self.model_dir, CONFIGS_NAME)
 
     @property
     def configs(self) -> BehavClassifierConfigs:
-        """Returns the config model from the expected config file."""
         return BehavClassifierConfigs.read_json(self.configs_fp)
 
     @configs.setter
     def configs(self, configs: BehavClassifierConfigs) -> None:
-        """Sets the configs to the given configs."""
         configs.write_json(self.configs_fp)
 
     @property
     def clf_fp(self) -> str:
-        """Returns the model's filepath"""
-        return os.path.join(self.model_dir, "model.sav")
+        return os.path.join(self.model_dir, MODEL_NAME)
 
     @property
     def preproc_fp(self) -> str:
-        """Returns the model's preprocessor filepath"""
-        return os.path.join(self.model_dir, "preproc.sav")
+        return os.path.join(self.model_dir, PREPROC_NAME)
 
     @property
     def eval_dir(self) -> str:
-        """Returns the model's evaluation directory"""
         return os.path.join(self.model_dir, "eval")
 
     @property
     def x_dir(self) -> str:
         """
         Returns the model's x directory.
-        It gets the x directory from the parent directory of the model directory.
+        It gets the features_extracted directory from the parent Behavysis model directory.
         """
-        return os.path.join(os.path.dirname(self.model_dir), "x")
+        return os.path.join(os.path.dirname(self.proj_dir), Folders.FEATURES_EXTRACTED.value)
 
     @property
     def y_dir(self) -> str:
         """
-        Returns the model's x directory.
-        It gets the x directory from the parent directory of the model directory.
+        Returns the model's y directory.
+        It gets the scored_behavs directory from the parent Behavysis model directory.
         """
-        return os.path.join(os.path.dirname(self.model_dir), "y")
+        return os.path.join(os.path.dirname(self.proj_dir), Folders.SCORED_BEHAVS.value)
 
     #################################################
     # CREATE MODEL METHODS
     #################################################
 
     @classmethod
-    def create_new_model(cls, root_dir: str, behaviour_name: str) -> BehavClassifier:
+    def create_from_project_dir(cls, proj_dir: str) -> list:
         """
-        Creating a new BehavClassifier model in the given directory
+        Loading classifier from given Behavysis project directory.
         """
-        # Getting model directory
-        model_dir = os.path.join(root_dir, behaviour_name)
-        # Checking if model directory already exists
-        if os.path.exists(model_dir):
-            cls.logger.debug(f"Model already exists: {model_dir}\n using `load` method instead.")
-            return cls.load(model_dir)
-        # Making new BehavClassifier instance
-        cls.logger.debug(f"Creating new model: {model_dir}")
-        inst = cls(model_dir)
-        # Updating configs with project data
-        configs = inst.configs
-        configs.behaviour_name = behaviour_name
-        inst.configs = configs
-        # Returning model
-        return inst
+        # Getting the list of behaviours (after wrangling column names)
+        y_df = cls.wrangle_columns_y(cls.combine(os.path.join(proj_dir, Folders.SCORED_BEHAVS.value)))
+        behavs_ls = y_df.columns.to_list()
+        # For each behaviour, making a new BehavClassifier instance
+        models_ls = [cls(proj_dir, behav) for behav in behavs_ls]
+        # Returning list of models
+        return models_ls
 
     @classmethod
     def create_from_project(cls, proj: Project) -> list[BehavClassifier]:
         """
-        Loading classifier from given Project instance.
-
-        Parameters
-        ----------
-        proj :
-            The Project instance.
-
-        Returns
-        -------
-        :
-            The loaded BehavClassifier instance.
+        Loading classifier from given Behavysis project instance.
+        Wraps the `create_from_project_dir` method.
         """
-        # Getting the list of behaviours
-        y_df = cls.wrangle_columns_y(cls.combine(os.path.join(proj.root_dir, Folders.SCORED_BEHAVS.value)))
-        # For each behaviour, making a new BehavClassifier instance
-        # TODO: is the behavs_ls list going to a list of tuples?
-        behavs_ls = y_df.columns.to_list()
-        model_dir = os.path.join(proj.root_dir, BEHAV_MODELS_SUBDIR)
-        models_ls = [cls.create_new_model(model_dir, behav) for behav in behavs_ls]
-        # Importing data from project to "behav_models" folder (only need one model for this)
-        if len(models_ls) > 0:
-            models_ls[0].import_data(
-                os.path.join(proj.root_dir, Folders.FEATURES_EXTRACTED.value),
-                os.path.join(proj.root_dir, Folders.SCORED_BEHAVS.value),
-                False,
-            )
-        return models_ls
+        return cls.create_from_project_dir(proj.root_dir)
 
     #################################################
     #            READING MODEL
     #################################################
 
     @classmethod
-    def load(cls, model_dir: str) -> BehavClassifier:
+    def load(cls, proj_dir: str, behav_name: str) -> BehavClassifier:
         """
         Reads the model from the expected model file.
         """
         # Checking that the configs file exists and is valid
-        # will throw Error if not
-        BehavClassifierConfigs.read_json(os.path.join(model_dir, "configs.json"))
-        return cls(model_dir)
+        # will throw FileNotFoundError if not
+        configs_fp = os.path.join(proj_dir, BEHAV_MODELS_SUBDIR, behav_name, CONFIGS_NAME)
+        try:
+            BehavClassifierConfigs.read_json(configs_fp)
+        except (FileNotFoundError, OSError):
+            raise ValueError(
+                f"Model in project directory, {proj_dir}, and behav name, {behav_name}, not found.\n"
+                "Please check file path."
+            )
+        return cls(proj_dir, behav_name)
 
     #################################################
     #            IMPORTING DATA TO MODEL
     #################################################
 
-    def import_data(self, x_dir: str, y_dir: str, overwrite=False) -> None:
-        """
-        Importing data from extracted features and labelled behaviours dataframes.
+    # def import_data(self, x_dir: str, y_dir: str, overwrite=False) -> None:
+    #     """
+    #     Importing data from extracted features and labelled behaviours dataframes.
 
-        Parameters
-        ----------
-        x_dir :
-            _description_
-        y_dir :
-            _description_
-        """
-        # For each x and y directory
-        for in_dir, out_dir in ((x_dir, self.x_dir), (y_dir, self.y_dir)):
-            os.makedirs(out_dir, exist_ok=True)
-            # Copying each file to model root directory
-            for fp in os.listdir(in_dir):
-                in_fp = os.path.join(in_dir, fp)
-                out_fp = os.path.join(out_dir, fp)
-                # If not overwriting and out file already exists, then skip
-                if not overwrite and os.path.exists(out_fp):
-                    continue
-                # Copying file
-                shutil.copyfile(in_fp, out_fp)
+    #     Parameters
+    #     ----------
+    #     x_dir :
+    #         _description_
+    #     y_dir :
+    #         _description_
+    #     """
+    #     # For each x and y directory
+    #     for in_dir, out_dir in ((x_dir, self.x_dir), (y_dir, self.y_dir)):
+    #         os.makedirs(out_dir, exist_ok=True)
+    #         # Copying each file to model root directory
+    #         for fp in os.listdir(in_dir):
+    #             in_fp = os.path.join(in_dir, fp)
+    #             out_fp = os.path.join(out_dir, fp)
+    #             # If not overwriting and out file already exists, then skip
+    #             if not overwrite and os.path.exists(out_fp):
+    #                 continue
+    #             # Copying file
+    #             shutil.copyfile(in_fp, out_fp)
 
     #################################################
     #            COMBINING DFS TO SINGLE DF
@@ -243,13 +246,17 @@ class BehavClassifier:
 
     @classmethod
     def combine(cls, src_dir):
+        """
+        Combines the data in the given directory into a single dataframe.
+        Adds a MultiIndex level to the rows, with the values as the filenames in the directory.
+        """
         data_dict = {get_name(i): DFMixin.read(os.path.join(src_dir, i)) for i in os.listdir(os.path.join(src_dir))}
         return pd.concat(data_dict.values(), axis=0, keys=data_dict.keys())
 
     def combine_dfs(self) -> tuple[pd.DataFrame, pd.DataFrame]:
         """
         Combines the data into a single `X` df, `y` df, and index.
-        The indexes of `x` and `y` will be the same (with an inner join)
+        The indexes of `x` and `y` will be the same (by set intersection).
 
         Returns
         -------
@@ -316,15 +323,17 @@ class BehavClassifier:
         """
         # Filtering out the prob and pred columns (in the `outcomes` level)
         cols_filter = np.isin(
-            y.columns.get_level_values(BehavDf.CN.OUTCOMES.value),
-            [BehavColumns.PROB.value, BehavColumns.PRED.value],
+            y.columns.get_level_values(BehavScoredDf.CN.OUTCOMES.value),
+            [BehavScoredDf.OutcomesCols.PROB.value, BehavScoredDf.OutcomesCols.PRED.value],
             invert=True,
         )
         y = y.loc[:, cols_filter]
         # Converting MultiIndex columns to single columns by
         # setting the column names from `(behav, outcome)` to `{behav}__{outcome}`
         y.columns = [
-            f"{behav_name}" if outcome_name == BehavColumns.ACTUAL.value else f"{behav_name}__{outcome_name}"
+            f"{behav_name}"
+            if outcome_name == BehavScoredDf.OutcomesCols.ACTUAL.value
+            else f"{behav_name}__{outcome_name}"
             for behav_name, outcome_name in y.columns
         ]
         return y
@@ -390,7 +399,7 @@ class BehavClassifier:
         # Preprocessing x df
         x = self.preproc_x(x, self.preproc_fp)
         # Preprocessing y df
-        y = self.wrangle_columns_y(y)[self.configs.behaviour_name].values
+        y = self.wrangle_columns_y(y)[self.configs.behav_name].values
         # TODO: why is this linting error?
         y = self.preproc_y(y)
         # Returning x, y, and index to use
@@ -461,8 +470,6 @@ class BehavClassifier:
         x, y, ind_train, ind_test = self.prepare_data_training_pipeline()
         # Initialising the model
         self.clf = clf_cls()
-        # Getting model name
-        clf_name = self.configs.clf_structure
         # Training the model
         history = self.clf.fit(
             x=x,
@@ -473,10 +480,10 @@ class BehavClassifier:
             val_split=self.configs.val_split,
         )
         # Saving history
-        self.clf_eval_save_history(history, clf_name)
+        self.clf_eval_save_history(history, self.configs.clf_struct)
         # Evaluating on train and test data
-        self.clf_eval_save_performance(x, y, ind_train, f"{clf_name}_train")
-        self.clf_eval_save_performance(x, y, ind_test, f"{clf_name}_test")
+        self.clf_eval_save_performance(x, y, ind_train, f"{self.configs.clf_struct}_train")
+        self.clf_eval_save_performance(x, y, ind_test, f"{self.configs.clf_struct}_test")
 
     def pipeline_build_save(self, clf_cls: Callable) -> None:
         """
@@ -488,10 +495,6 @@ class BehavClassifier:
         self.pipeline_build(clf_cls)
         # Saving the model to disk
         self.clf_save()
-        # Updating clf_structure name in model configs
-        configs = self.configs
-        configs.clf_structure = type(self.clf).__name__
-        self.configs = configs
 
     def pipeline_run(self, x: pd.DataFrame) -> pd.DataFrame:
         """
@@ -551,8 +554,8 @@ class BehavClassifier:
         pd.DataFrame
             Predicted behaviour classifications. Dataframe columns are in the format:
             ```
-            behaviours :  behav    behav
-            outcomes   :  "prob"   "pred"
+            behavs     :  <behav>   <behav>
+            outcomes   :  "prob"    "pred"
             ```
         """
         # Getting probabilities
@@ -565,9 +568,9 @@ class BehavClassifier:
         # Making predictions from probabilities (and pcutoff)
         y_preds = (y_probs > self.configs.pcutoff).astype(int)
         # Making df
-        pred_df = BehavDf.init_df(pd.Series(index))
-        pred_df[(self.configs.behaviour_name, BehavColumns.PROB.value)] = y_probs
-        pred_df[(self.configs.behaviour_name, BehavColumns.PRED.value)] = y_preds
+        pred_df = BehavScoredDf.init_df(pd.Series(index))
+        pred_df[(self.configs.behav_name, BehavScoredDf.OutcomesCols.PROB.value)] = y_probs
+        pred_df[(self.configs.behav_name, BehavScoredDf.OutcomesCols.PRED.value)] = y_preds
         # Returning predicted behavs
         return pred_df
 
@@ -577,7 +580,7 @@ class BehavClassifier:
 
     def clf_eval_save_history(self, history: pd.DataFrame, name: None | str = ""):
         # Saving history df
-        DFMixin.write_feather(history, os.path.join(self.eval_dir, f"{name}_history.feather"))
+        DFMixin.write(history, os.path.join(self.eval_dir, f"{name}_history.parquet"))
         # Making and saving history figure
         fig, ax = plt.subplots(figsize=(10, 7))
         sns.lineplot(data=history, ax=ax)
@@ -609,11 +612,11 @@ class BehavClassifier:
         index = np.arange(x.shape[0]) if index is None else index
         y_eval = self.clf_predict(x=x, index=index, batch_size=self.configs.batch_size)
         # Including `actual` lables in `y_eval`
-        y_eval[self.configs.behaviour_name, BehavColumns.ACTUAL.value] = y[index]
+        y_eval[self.configs.behav_name, BehavScoredDf.OutcomesCols.ACTUAL.value] = y[index]
         # Getting individual columns
-        y_prob = y_eval[self.configs.behaviour_name, BehavColumns.PROB.value]
-        y_pred = y_eval[self.configs.behaviour_name, BehavColumns.PRED.value]
-        y_true = y_eval[self.configs.behaviour_name, BehavColumns.ACTUAL.value]
+        y_prob = y_eval[self.configs.behav_name, BehavScoredDf.OutcomesCols.PROB.value]
+        y_pred = y_eval[self.configs.behav_name, BehavScoredDf.OutcomesCols.PRED.value]
+        y_true = y_eval[self.configs.behav_name, BehavScoredDf.OutcomesCols.ACTUAL.value]
         # Making classification report
         report_dict = self.eval_report(y_true, y_pred)
         # Making confusion matrix figure
@@ -623,7 +626,7 @@ class BehavClassifier:
         # Logistic curve
         logc_fig = self.eval_logc(y_true, y_prob)
         # Saving data and figures
-        DFMixin.write_feather(y_eval, os.path.join(self.eval_dir, f"{name}_eval.feather"))
+        DFMixin.write(y_eval, os.path.join(self.eval_dir, f"{name}_eval.parquet"))
         with open(os.path.join(self.eval_dir, f"{name}_report.json"), "w") as f:
             json.dump(report_dict, f)
         metrics_fig.savefig(os.path.join(self.eval_dir, f"{name}_confm.png"))
@@ -660,11 +663,11 @@ class BehavClassifier:
         __summary__
         """
         return classification_report(
-            y_true,
-            y_pred,
-            target_names=GENERIC_BEHAV_LABELS,
+            y_true=y_true,
+            y_pred=y_pred,
+            target_names=enum2tuple(GenericBehavLabels),
             output_dict=True,
-        )
+        )  # type: ignore
 
     @classmethod
     def eval_conf_matr(cls, y_true: pd.Series, y_pred: pd.Series) -> Figure:
@@ -679,8 +682,8 @@ class BehavClassifier:
             fmt="d",
             cmap="viridis",
             cbar=False,
-            xticklabels=GENERIC_BEHAV_LABELS,
-            yticklabels=GENERIC_BEHAV_LABELS,
+            xticklabels=enum2tuple(GenericBehavLabels),
+            yticklabels=enum2tuple(GenericBehavLabels),
             ax=ax,
         )
         ax.set_xlabel("Predicted")
@@ -704,13 +707,13 @@ class BehavClassifier:
             report = classification_report(
                 y_true,
                 y_pred,
-                target_names=GENERIC_BEHAV_LABELS,
+                target_names=enum2tuple(GenericBehavLabels),
                 output_dict=True,
             )
-            precisions[i] = report[GENERIC_BEHAV_LABELS[1]]["precision"]
-            recalls[i] = report[GENERIC_BEHAV_LABELS[1]]["recall"]
-            f1[i] = report[GENERIC_BEHAV_LABELS[1]]["f1-score"]
-            accuracies[i] = report["accuracy"]
+            precisions[i] = report[GenericBehavLabels.BEHAV.value]["precision"]  # type: ignore
+            recalls[i] = report[GenericBehavLabels.BEHAV.value]["recall"]  # type: ignore
+            f1[i] = report[GenericBehavLabels.BEHAV.value]["f1-score"]  # type: ignore
+            accuracies[i] = report["accuracy"]  # type: ignore
         # Making figure
         fig, ax = plt.subplots(figsize=(10, 7))
         sns.lineplot(x=pcutoffs, y=precisions, label="precision", ax=ax)
