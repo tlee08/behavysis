@@ -190,7 +190,7 @@ class DFMixin:
     ###############################################################################################
 
     @classmethod
-    def init_df(cls, frame_vect: pd.Series | pd.Index) -> pd.DataFrame:
+    def init_df(cls, index: pd.Series | pd.Index) -> pd.DataFrame:
         """
         # TODO: write better docstring
         Returning a frame-by-frame analysis_df with the frame number (according to original video)
@@ -207,11 +207,11 @@ class DFMixin:
         pd.DataFrame
             _description_
         """
-        # IN = enum2tuple(cls.IN)[0] if cls.IN else None
         IN = enum2tuple(cls.IN) if cls.IN else (None,)
         CN = enum2tuple(cls.CN) if cls.CN else (None,)
+        index_df = index.to_frame()
         return pd.DataFrame(
-            index=pd.MultiIndex(frame_vect, names=IN),
+            index=pd.MultiIndex.from_frame(index_df, names=IN),
             columns=pd.MultiIndex.from_tuples((), names=CN),
         )
 
