@@ -142,7 +142,7 @@ class Project:
             # Preparing all experiments for execution
             f_d_ls = [dask.delayed(method)(exp, *args, **kwargs) for exp in self.get_experiments()]
             # Executing in parallel
-            dd_ls = dask.compute(*f_d_ls)
+            dd_ls = list(dask.compute(*f_d_ls))
         return dd_ls
 
     def _proc_scaff_sp(self, method: Callable, *args: Any, **kwargs: Any) -> list[dict]:
@@ -245,7 +245,7 @@ class Project:
         self.logger.info("Experiments imported successfully:")
         self.logger.info("\n%s\n", "\n".join([f"    - {i}" for i in self.experiments]))
         # Constructing dd_df from dd_dict
-        dd_df = DiagnosticsDf.init_df(np.unique(np.concatenate(list(dd_dict.values()))))
+        dd_df = DiagnosticsDf.init_df(pd.Series(np.unique(np.concatenate(list(dd_dict.values())))))
         # Setting each (experiment, folder) pair to True if the file exists
         for folder in dd_dict:
             dd_df[folder] = False
@@ -363,8 +363,10 @@ class Project:
 
     def collate_auto_configs(self):
         # Saving the auto fields of the configs of all experiments in the diagnostics folder
-        auto_configs_df = self._proc_scaff(Experiment.collate_auto_configs)
-        DiagnosticsDf.write(auto_configs_df, os.path.join(self.root_dir, DIAGNOSTICS_DIR, "collate_auto_configs.csv"))
+        self._proc_scaff(Experiment.collate_auto_configs)
+        auto_configs_df = DiagnosticsDf.read(
+            os.path.join(self.root_dir, DIAGNOSTICS_DIR, f"{Experiment.collate_auto_configs.__name__}.csv")
+        )
         # Making and saving histogram plots of the numerical auto fields
         # NOTE: NOT including string frequencies, only numerical
         auto_configs_df = auto_configs_df.loc[:, auto_configs_df.apply(pd.api.types.is_numeric_dtype)]
