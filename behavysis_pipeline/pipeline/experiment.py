@@ -157,6 +157,8 @@ class Experiment:
         """
         self.logger.info(f"Processing experiment: {self.name}")
         # Setting up diagnostics dict
+        # TODO: Make custom logger that records the success/error to log
+        # AND diagnostics dict (maybe in an IOStream object)
         dd = {"experiment": self.name}
         # Running functions and saving outcome to diagnostics dict
         for f in funcs:

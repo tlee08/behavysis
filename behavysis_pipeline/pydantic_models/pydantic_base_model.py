@@ -4,11 +4,13 @@ Utility functions.
 
 import os
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class PydanticBaseModel(BaseModel):
     """Mixin class for Pydantic models (i.e. configs)."""
+
+    model_config = ConfigDict(extra="forbid")
 
     @classmethod
     def read_json(cls, fp: str):

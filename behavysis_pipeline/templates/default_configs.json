@@ -58,24 +58,27 @@
       "individuals": ["mouse1marked", "mouse2unmarked"],
       "bodyparts": "--bodyparts_simba"
     },
-    "classify_behaviours": [
+    "classify_behavs": [
       {
-        "model_fp": "Z:\\PRJ-BowenLab\\TimLee\\resources\\behav_models\\behav_aggression\\behav_models\\aggression\\configs.json",
+        "proj_dir": "Z:\\PRJ-BowenLab\\TimLee\\resources\\behav_models\\behav_aggression\\behav_models",
+        "behav_name": "aggression",
         "pcutoff": -1,
         "min_window_frames": "--min_window_frames",
-        "user_behavs": "--user_behavs"
+        "user_defined": "--user_defined"
       },
       {
-        "model_fp": "Z:\\PRJ-BowenLab\\TimLee\\resources\\behav_models\\behav_fight\\behav_models\\fight\\configs.json",
+        "proj_dir": "Z:\\PRJ-BowenLab\\TimLee\\resources\\behav_models\\behav_fight\\behav_models",
+        "behav_name": "fight",
         "pcutoff": -1,
         "min_window_frames": "--min_window_frames",
-        "user_behavs": "--user_behavs"
+        "user_defined": "--user_defined"
       },
       {
-        "model_fp": "/run/user/1000/gvfs/smb-share:server=shared.sydney.edu.au,share=research-data/PRJ-BowenLab/TimLee/resources/behav_models/behav_fight/behav_models/fight/configs.json",
+        "proj_dir": "/run/user/1000/gvfs/smb-share:server=shared.sydney.edu.au,share=research-data/PRJ-BowenLab/TimLee/resources/behav_models/behav_fight/behav_models/",
+        "behav_name": "fight",
         "pcutoff": -1,
         "min_window_frames": "--min_window_frames",
-        "user_behavs": "--user_behavs"
+        "user_defined": "--user_defined"
       }
     ],
     "analyse": {
@@ -135,6 +138,6 @@
     "bodyparts_front": ["LeftEar", "RightEar", "Nose", "BodyCentre"],
     "corners": ["TopLeft", "TopRight", "BottomRight", "BottomLeft"],
     "min_window_frames": 2,
-    "user_behavs": []
+    "user_defined": []
   }
 }

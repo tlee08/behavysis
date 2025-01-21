@@ -2,7 +2,6 @@
 _summary_
 """
 
-import os
 from typing import Any
 
 import matplotlib.pyplot as plt
@@ -29,7 +28,7 @@ class ConfigsFormatVid(BaseModel):
 class ConfigsRunDLC(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    model_fp: str = os.path.join(".")  # FilePath
+    model_fp: str
 
 
 class ConfigsCalculateParams(BaseModel):
@@ -59,8 +58,8 @@ class ConfigsExtractFeatures(BaseModel):
 class ConfigsClassifyBehav(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    proj_dir: str = os.path.join(".")  # FilePath
-    behav_name: str = "behav_name"
+    proj_dir: str
+    behav_name: str
     pcutoff: float | str = -1
     min_window_frames: int | str = 1
     user_defined: list[str] | str = []

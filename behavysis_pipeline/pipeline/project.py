@@ -5,7 +5,6 @@ _summary_
 import functools
 import os
 import re
-from multiprocessing import Pool
 from typing import Any, Callable
 
 import dask
@@ -277,35 +276,33 @@ class Project:
         This is a slight tweak from the regular method of running
         each experiment separately with multiprocessing.
         """
+        # TODO: implement diagnostics
+        # TODO: implement error handling
         # If gputouse is not specified, using all GPUs
-        if gputouse is None:
-            gputouse_ls = get_gpu_ids()
-        else:
-            gputouse_ls = [gputouse]
+        gputouse_ls = get_gpu_ids() if gputouse is None else [gputouse]
         nprocs = len(gputouse_ls)
         # Getting the experiments to run DLC on
         exp_ls = self.get_experiments()
         # If overwrite is False, filtering for only experiments that need processing
         if not overwrite:
             exp_ls = [exp for exp in exp_ls if not os.path.isfile(exp.get_fp(Folders.DLC.value))]
-
         # Running DLC on each batch of experiments with each GPU (given allocated GPU ID)
-        # TODO: implement error handling
         exp_batches_ls = np.array_split(np.array(exp_ls), nprocs)
-        with Pool(processes=nprocs) as p:
-            p.starmap(
-                RunDLC.ma_dlc_analyse_batch,
-                [
-                    (
-                        [exp.get_fp(Folders.FORMATTED_VID.value) for exp in exp_batch],
-                        os.path.join(self.root_dir, Folders.DLC.value),
-                        os.path.join(self.root_dir, Folders.CONFIGS.value),
-                        gputouse,
-                        overwrite,
-                    )
-                    for gputouse, exp_batch in zip(gputouse_ls, exp_batches_ls)
-                ],
-            )
+        # Starting a dask cluster
+        with cluster_proc_contxt(LocalCluster(n_workers=nprocs, threads_per_worker=1)):
+            # Preparing all experiments for execution
+            f_d_ls = [
+                dask.delayed(RunDLC.ma_dlc_analyse_batch)(
+                    [exp.get_fp(Folders.FORMATTED_VID.value) for exp in exp_batch],
+                    os.path.join(self.root_dir, Folders.DLC.value),
+                    os.path.join(self.root_dir, Folders.CONFIGS.value),
+                    gputouse,
+                    overwrite,
+                )
+                for gputouse, exp_batch in zip(gputouse_ls, exp_batches_ls)
+            ]
+            # Executing in parallel
+            list(dask.compute(*f_d_ls))
 
     @functools.wraps(Experiment.calculate_parameters)
     def calculate_parameters(self, *args, **kwargs):
