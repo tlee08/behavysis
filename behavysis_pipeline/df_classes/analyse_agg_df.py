@@ -110,13 +110,10 @@ class AnalyseSummaryDf(DFMixin):
                 .to_frame()
                 .T
             )
-        # Concatenating summary_df_ls
+        # Concatenating summary_df_ls, setting index, and cleaning
         summary_df = pd.concat(summary_df_ls, axis=0)
-        # Setting the index and columns
         summary_df.index = analysis_df.columns
-        summary_df.columns.name = cls.CN.AGGS.value
-        # Checking
-        cls.check_df(summary_df)
+        cls.basic_clean(summary_df)
         return summary_df
 
     @classmethod
@@ -169,13 +166,10 @@ class AnalyseSummaryDf(DFMixin):
                 .to_frame()
                 .T
             )
-        # Concatenating summary_df_ls
+        # Concatenating summary_df_ls, setting index, and cleaning
         summary_df = pd.concat(summary_df_ls, axis=0)
-        # Setting the index and columns
         summary_df.index = analysis_df.columns
-        summary_df.columns.name = cls.CN.AGGS.value
-        # Checking
-        cls.check_df(summary_df)
+        cls.basic_clean(summary_df)
         return summary_df
 
 
