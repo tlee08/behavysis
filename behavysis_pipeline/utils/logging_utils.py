@@ -12,7 +12,7 @@ LOG_IO_OBJ_FORMAT = "%(levelname)s - %(message)s"
 
 
 def init_logger(
-    name: str = __name__, console_level: int = logging.INFO, file_level: int = logging.DEBUG
+    name: str = __name__, console_level: int = logging.DEBUG, file_level: int = logging.DEBUG
 ) -> logging.Logger:
     """
     Setup logging configuration.

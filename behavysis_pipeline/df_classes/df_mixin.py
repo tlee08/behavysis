@@ -167,11 +167,13 @@ class DFMixin:
 
         Also checks that the df structure is as expected with `check_df`.
         """
+        print(df)
         df.index = df.index.set_names(enum2tuple(cls.IN) if cls.IN else (None,))
         df.columns = df.columns.set_names(enum2tuple(cls.CN) if cls.CN else (None,))
         df = df.sort_index()
         df = df.sort_index(axis=1)
         cls.check_df(df)
+        print(df)
         return df
 
     ###############################################################################################
