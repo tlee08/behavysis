@@ -88,6 +88,7 @@ def split_log_line(log_line: str) -> tuple[str, str, str, str]:
     """
     Splits the log line into the datetime, name, level, and message.
     """
+    print(log_line)
     datetime, name, level, message = log_line.split(" - ", 3)
     return datetime, name, level, message
 
