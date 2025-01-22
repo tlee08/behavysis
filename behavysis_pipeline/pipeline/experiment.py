@@ -157,20 +157,20 @@ class Experiment:
         dd = {"experiment": self.name}
         # Running functions and saving outcome to diagnostics dict
         for f in funcs:
-            func_name = f.__name__
+            f_name = f.__name__
             # Getting logger and corresponding io object
-            func_logger, func_io_obj = init_logger_with_io_obj(func_name)
+            f_logger, f_io_obj = init_logger_with_io_obj(f_name)
             # Running each func and saving outcome
             try:
                 f(*args, **kwargs)
-                func_logger.info(success_msg())
+                f_logger.info(success_msg())
             except Exception as e:
-                func_logger.error(e)
+                f_logger.error(e)
                 self.logger.debug(traceback.format_exc())
             # Adding to diagnostics dict
-            dd[func_name] = get_io_obj_content(func_io_obj)
+            dd[f_name] = get_io_obj_content(f_io_obj)
             # Clearing io object
-            func_io_obj.truncate(0)
+            f_io_obj.truncate(0)
         self.logger.info(f"Finished processing experiment: {self.name}")
         return dd
 
