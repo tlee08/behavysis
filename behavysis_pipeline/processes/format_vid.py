@@ -25,7 +25,7 @@ import cv2
 from behavysis_pipeline.pydantic_models.configs import ExperimentConfigs
 from behavysis_pipeline.pydantic_models.vid_metadata import VidMetadata
 from behavysis_pipeline.utils.diagnostics_utils import file_exists_msg
-from behavysis_pipeline.utils.logging_utils import init_logger_with_io_obj, io_obj_to_msg
+from behavysis_pipeline.utils.logging_utils import get_io_obj_content, init_logger_with_io_obj
 from behavysis_pipeline.utils.misc_utils import get_current_funct_name
 from behavysis_pipeline.utils.subproc_utils import run_subproc_console
 
@@ -59,7 +59,7 @@ class FormatVid:
         logger, io_obj = init_logger_with_io_obj(get_current_funct_name())
         if not overwrite and os.path.exists(out_fp):
             logger.warning(file_exists_msg(out_fp))
-            return io_obj_to_msg(io_obj)
+            return get_io_obj_content(io_obj)
         # Finding all necessary config parameters for video formatting
         configs = ExperimentConfigs.read_json(configs_fp)
         configs_filt = configs.user.format_vid
@@ -79,7 +79,7 @@ class FormatVid:
 
         # Saving video metadata to configs dict
         logger.info(FormatVid.get_vid_metadata(in_fp, out_fp, configs_fp, overwrite))
-        return io_obj_to_msg(io_obj)
+        return get_io_obj_content(io_obj)
 
     @classmethod
     def get_vid_metadata(cls, in_fp: str, out_fp: str, configs_fp: str, overwrite: bool) -> str:
@@ -113,7 +113,7 @@ class FormatVid:
                 logger.warning(str(e))
         logger.info("Video metadata stored in config file.")
         configs.write_json(configs_fp)
-        return io_obj_to_msg(io_obj)
+        return get_io_obj_content(io_obj)
 
 
 class ProcessVidMixin:
@@ -188,7 +188,7 @@ class ProcessVidMixin:
         # Running ffmpeg command
         # run_subproc_fstream(cmd)
         run_subproc_console(cmd)
-        return io_obj_to_msg(io_obj)
+        return get_io_obj_content(io_obj)
 
     @classmethod
     def get_vid_metadata(cls, fp: str) -> VidMetadata:

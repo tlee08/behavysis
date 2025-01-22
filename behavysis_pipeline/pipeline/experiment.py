@@ -23,7 +23,7 @@ from behavysis_pipeline.processes.run_dlc import RunDLC
 from behavysis_pipeline.processes.update_configs import UpdateConfigs
 from behavysis_pipeline.pydantic_models.configs import AutoConfigs, ExperimentConfigs
 from behavysis_pipeline.utils.diagnostics_utils import success_msg
-from behavysis_pipeline.utils.logging_utils import init_logger, init_logger_with_io_obj, io_obj_to_msg
+from behavysis_pipeline.utils.logging_utils import get_io_obj_content, init_logger, init_logger_with_io_obj
 from behavysis_pipeline.utils.misc_utils import enum2tuple
 
 
@@ -170,7 +170,7 @@ class Experiment:
                 func_logger.error(e)
                 self.logger.debug(traceback.format_exc())
             # Adding to diagnostics dict
-            dd[func_name] = io_obj_to_msg(func_io_obj)
+            dd[func_name] = get_io_obj_content(func_io_obj)
             # Clearing io object
             func_io_obj.truncate(0)
         self.logger.info(f"Finished processing experiment: {self.name}")

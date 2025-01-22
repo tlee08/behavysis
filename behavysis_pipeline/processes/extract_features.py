@@ -12,7 +12,7 @@ from behavysis_pipeline.df_classes.keypoints_df import KeypointsDf
 from behavysis_pipeline.pydantic_models.configs import ExperimentConfigs
 from behavysis_pipeline.utils.diagnostics_utils import file_exists_msg
 from behavysis_pipeline.utils.io_utils import get_name, silent_remove
-from behavysis_pipeline.utils.logging_utils import init_logger_with_io_obj, io_obj_to_msg
+from behavysis_pipeline.utils.logging_utils import get_io_obj_content, init_logger_with_io_obj
 from behavysis_pipeline.utils.misc_utils import enum2tuple, get_current_funct_name
 from behavysis_pipeline.utils.multiproc_utils import get_cpid
 from behavysis_pipeline.utils.subproc_utils import run_subproc_console
@@ -63,7 +63,7 @@ class ExtractFeatures:
         logger, io_obj = init_logger_with_io_obj(get_current_funct_name())
         if not overwrite and os.path.exists(out_fp):
             logger.warning(file_exists_msg(out_fp))
-            return io_obj_to_msg(io_obj)
+            return get_io_obj_content(io_obj)
         # Getting directory and file paths
         name = get_name(dlc_fp)
         cpid = get_cpid()
@@ -93,7 +93,7 @@ class ExtractFeatures:
         # Removing temp folders (simba_in_dir, simba_dir)
         silent_remove(simba_in_dir)
         silent_remove(simba_dir)
-        return io_obj_to_msg(io_obj)
+        return get_io_obj_content(io_obj)
 
 
 #####################################################################

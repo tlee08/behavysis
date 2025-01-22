@@ -25,7 +25,7 @@ from behavysis_pipeline.df_classes.analyse_df import AnalyseDf
 from behavysis_pipeline.df_classes.behav_df import BehavScoredDf
 from behavysis_pipeline.pydantic_models.configs import ExperimentConfigs
 from behavysis_pipeline.utils.io_utils import get_name
-from behavysis_pipeline.utils.logging_utils import init_logger_with_io_obj, io_obj_to_msg
+from behavysis_pipeline.utils.logging_utils import get_io_obj_content, init_logger_with_io_obj
 from behavysis_pipeline.utils.misc_utils import enum2tuple, get_current_funct_name
 
 ###################################################################################################
@@ -78,4 +78,4 @@ class AnalyseBehaviours:
             bins_ls,
             cbins_ls,
         )
-        return io_obj_to_msg(io_obj)
+        return get_io_obj_content(io_obj)

@@ -13,7 +13,7 @@ from behavysis_pipeline.df_classes.behav_df import BehavPredictedDf, BehavScored
 from behavysis_pipeline.df_classes.features_df import FeaturesDf
 from behavysis_pipeline.pydantic_models.configs import ExperimentConfigs
 from behavysis_pipeline.utils.diagnostics_utils import file_exists_msg
-from behavysis_pipeline.utils.logging_utils import init_logger_with_io_obj, io_obj_to_msg
+from behavysis_pipeline.utils.logging_utils import get_io_obj_content, init_logger_with_io_obj
 from behavysis_pipeline.utils.misc_utils import enum2tuple, get_current_funct_name
 
 # TODO: handle reading the model file whilst in multiprocessing
@@ -63,7 +63,7 @@ class ClassifyBehavs:
         logger, io_obj = init_logger_with_io_obj(get_current_funct_name())
         if not overwrite and os.path.exists(out_fp):
             logger.warning(file_exists_msg(out_fp))
-            return io_obj_to_msg(io_obj)
+            return get_io_obj_content(io_obj)
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
         model_configs_ls = configs.user.classify_behavs
@@ -91,10 +91,10 @@ class ClassifyBehavs:
             # Adding model predictions df to list
             df_ls.append(df_i)
             # Logging outcome
-            logger.info(f"Completed {behav_name} classification.\n")
+            logger.info(f"Completed {behav_name} classification.")
         # If no models were run, then return outcome
         if len(df_ls) == 0:
-            return io_obj_to_msg(io_obj)
+            return get_io_obj_content(io_obj)
         # Concatenating predictions to a single dataframe
         behavs_df = pd.concat(df_ls, axis=1)
         # Setting the index and column names
@@ -102,7 +102,7 @@ class ClassifyBehavs:
         behavs_df.columns.names = list(enum2tuple(BehavPredictedDf.CN))
         # Saving behav_preds df
         BehavPredictedDf.write(behavs_df, out_fp)
-        return io_obj_to_msg(io_obj)
+        return get_io_obj_content(io_obj)
 
     @staticmethod
     def _get_pcutoff(pcutoff: float, model_pcutoff: float) -> float:

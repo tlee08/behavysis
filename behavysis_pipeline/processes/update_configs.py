@@ -21,7 +21,7 @@ from typing import Literal
 from pydantic import ValidationError
 
 from behavysis_pipeline.pydantic_models.configs import ExperimentConfigs
-from behavysis_pipeline.utils.logging_utils import init_logger_with_io_obj, io_obj_to_msg
+from behavysis_pipeline.utils.logging_utils import get_io_obj_content, init_logger_with_io_obj
 from behavysis_pipeline.utils.misc_utils import get_current_funct_name
 
 
@@ -76,4 +76,4 @@ class UpdateConfigs:
             )
         # Writing new configs to JSON file
         configs.write_json(configs_fp)
-        return io_obj_to_msg(io_obj)
+        return get_io_obj_content(io_obj)

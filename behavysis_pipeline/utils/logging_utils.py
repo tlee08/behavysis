@@ -7,8 +7,8 @@ from typing import Callable
 
 from behavysis_pipeline.constants import CACHE_DIR
 
-LOG_FILE_FORMAT = "%Y-%m-$d_%H-%M-%S"
 LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+LOG_IO_OBJ_FORMAT = "%(levelname)s - %(message)s"
 
 
 def init_logger(name: str = __name__, level: int = logging.DEBUG) -> logging.Logger:
@@ -54,7 +54,7 @@ def init_logger_with_io_obj(name: str = __name__, level: int = logging.DEBUG) ->
     # Adding io object to logger no io object handler is found
     if io_obj is None:
         # Formatter
-        formatter = logging.Formatter(LOG_FORMAT)
+        formatter = logging.Formatter(LOG_IO_OBJ_FORMAT)
         # Making io object
         io_obj = io.StringIO()
         # StringIO object handler
@@ -84,28 +84,13 @@ def logger_func_decorator(logger: logging.Logger):
     return decorator
 
 
-def split_log_line(log_line: str) -> tuple[str, str, str, str]:
+def get_io_obj_content(io_obj: io.StringIO) -> str:
     """
-    Splits the log line into the datetime, name, level, and message.
-    """
-    print("MY LINE IS: ", log_line)
-    datetime, name, level, message = log_line.split(" - ", 3)
-    return datetime, name, level, message
-
-
-def io_obj_to_msg(io_obj: io.StringIO) -> str:
-    """
-    Converts the io object logger stream to a string message
-    (can be multi-line).
+    Gets the content from the StringIO object.
+    Also restores cursor position of the StringIO object.
     """
     cursor = io_obj.tell()
     io_obj.seek(0)
-    msg = ""
-    for line in io_obj.readlines():
-        line = line.strip()
-        if not line:  # Skip empty lines
-            continue
-        datetime, name, level, message = split_log_line(line)
-        msg += f"{level} - {message}\n"
+    msg = io_obj.read()
     io_obj.seek(cursor)
     return msg

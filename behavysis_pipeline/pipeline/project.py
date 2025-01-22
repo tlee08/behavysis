@@ -17,7 +17,6 @@ from natsort import natsorted
 from behavysis_pipeline.constants import (
     ANALYSIS_DIR,
     DIAGNOSTICS_DIR,
-    STR_DIV,
     Folders,
 )
 from behavysis_pipeline.df_classes.analyse_agg_df import AnalyseBinnedDf, AnalyseSummaryDf
@@ -186,7 +185,7 @@ class Project:
             # Updating the diagnostics file at each step
             DiagnosticsDf.write(df, os.path.join(self.root_dir, DIAGNOSTICS_DIR, f"{method.__name__}.csv"))
             # Finishing
-            self.logger.info("Finished %s!\n%s\n%s\n", method.__name__, STR_DIV, STR_DIV)
+            self.logger.info(f"Finished running {method.__name__} for all experiments")
 
     #####################################################################
     #               IMPORT EXPERIMENTS METHODS
@@ -220,7 +219,7 @@ class Project:
         The key of each experiment in the .experiments dict is "name".
         Refer to Project.addExperiment() for details about how each experiment is added.
         """
-        self.logger.info("Searching project folder: %s\n", self.root_dir)
+        self.logger.info(f"Searching project folder: {self.root_dir}")
         # Storing file existences in {folder1: [file1, file2, ...], ...} format
         dd_dict = {}
         # Adding all experiments within given project dir
@@ -231,18 +230,19 @@ class Project:
             if not os.path.isdir(folder):
                 continue
             # For each file in the folder
-            for j in natsorted(os.listdir(folder)):
-                if re.search(r"^\.", j):  # do not add hidden files
+            for fp_name in natsorted(os.listdir(folder)):
+                if re.search(r"^\.", fp_name):  # do not add hidden files
                     continue
-                name = get_name(j)
+                name = get_name(fp_name)
                 try:
                     self.import_experiment(name)
                     dd_dict[f.value].append(name)
                 except ValueError as e:  # do not add invalid files
-                    self.logger.info("failed: %s    --    %s:\n%s", f.value, j, e)
+                    self.logger.info(f"failed: {f.value}    --    {fp_name}: {e}")
         # Logging outcome of imported and failed experiments
         self.logger.info("Experiments imported successfully:")
-        self.logger.info("\n%s\n", "\n".join([f"    - {i}" for i in self.experiments]))
+        for exp in self.experiments:
+            self.logger.info(f"    - {exp}")
         # Constructing dd_df from dd_dict
         dd_df = DiagnosticsDf.init_df(pd.Series(np.unique(np.concatenate(list(dd_dict.values())))))
         # Setting each (experiment, folder) pair to True if the file exists

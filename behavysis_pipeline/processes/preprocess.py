@@ -31,7 +31,7 @@ from behavysis_pipeline.df_classes.keypoints_df import (
 )
 from behavysis_pipeline.pydantic_models.configs import ExperimentConfigs
 from behavysis_pipeline.utils.diagnostics_utils import file_exists_msg
-from behavysis_pipeline.utils.logging_utils import init_logger_with_io_obj, io_obj_to_msg
+from behavysis_pipeline.utils.logging_utils import get_io_obj_content, init_logger_with_io_obj
 from behavysis_pipeline.utils.misc_utils import get_current_funct_name
 
 
@@ -75,7 +75,7 @@ class Preprocess:
         logger, io_obj = init_logger_with_io_obj(get_current_funct_name())
         if not overwrite and os.path.exists(out_fp):
             logger.warning(file_exists_msg(out_fp))
-            return io_obj_to_msg(io_obj)
+            return get_io_obj_content(io_obj)
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
         start_frame = configs.auto.start_frame
@@ -85,7 +85,7 @@ class Preprocess:
         # Trimming dataframe between start and stop frames
         df = df.loc[start_frame:stop_frame, :]
         KeypointsDf.write(df, out_fp)
-        return io_obj_to_msg(io_obj)
+        return get_io_obj_content(io_obj)
 
     @classmethod
     def interpolate_stationary(cls, dlc_fp: str, out_fp: str, configs_fp: str, overwrite: bool) -> str:
@@ -112,7 +112,7 @@ class Preprocess:
         logger, io_obj = init_logger_with_io_obj(get_current_funct_name())
         if not overwrite and os.path.exists(out_fp):
             logger.warning(file_exists_msg(out_fp))
-            return io_obj_to_msg(io_obj)
+            return get_io_obj_content(io_obj)
         # Getting necessary config parameters list
         configs = ExperimentConfigs.read_json(configs_fp)
         configs_filt_ls = configs.user.preprocess.interpolate_stationary
@@ -156,7 +156,7 @@ class Preprocess:
                 )
         # Saving
         KeypointsDf.write(df, out_fp)
-        return io_obj_to_msg(io_obj)
+        return get_io_obj_content(io_obj)
 
     @classmethod
     def interpolate(cls, dlc_fp: str, out_fp: str, configs_fp: str, overwrite: bool) -> str:
@@ -179,7 +179,7 @@ class Preprocess:
         logger, io_obj = init_logger_with_io_obj(get_current_funct_name())
         if not overwrite and os.path.exists(out_fp):
             logger.warning(file_exists_msg(out_fp))
-            return io_obj_to_msg(io_obj)
+            return get_io_obj_content(io_obj)
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
         configs_filt = configs.user.preprocess.interpolate
@@ -203,7 +203,7 @@ class Preprocess:
         # if df.isnull().values.any() then the entire column is nan (print warning)
         df = df.fillna(0)
         KeypointsDf.write(df, out_fp)
-        return io_obj_to_msg(io_obj)
+        return get_io_obj_content(io_obj)
 
     @classmethod
     def refine_ids(cls, dlc_fp: str, out_fp: str, configs_fp: str, overwrite: bool) -> str:
@@ -228,7 +228,7 @@ class Preprocess:
         logger, io_obj = init_logger_with_io_obj(get_current_funct_name())
         if not overwrite and os.path.exists(out_fp):
             logger.warning(file_exists_msg(out_fp))
-            return io_obj_to_msg(io_obj)
+            return get_io_obj_content(io_obj)
         # Reading file
         df = KeypointsDf.read(dlc_fp)
         # Getting necessary config parameters
@@ -262,7 +262,7 @@ class Preprocess:
         # Updating df with the switched values
         df_switched = switch_identities(df, df_switch[metric], marked, unmarked)
         KeypointsDf.write(df_switched, out_fp)
-        return io_obj_to_msg(io_obj)
+        return get_io_obj_content(io_obj)
 
 
 def aggregate_df(

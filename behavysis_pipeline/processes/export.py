@@ -9,7 +9,7 @@ from behavysis_pipeline.df_classes.df_mixin import DFMixin
 from behavysis_pipeline.pydantic_models.bouts import BoutStruct
 from behavysis_pipeline.pydantic_models.configs import ExperimentConfigs
 from behavysis_pipeline.utils.diagnostics_utils import file_exists_msg
-from behavysis_pipeline.utils.logging_utils import init_logger_with_io_obj, io_obj_to_msg
+from behavysis_pipeline.utils.logging_utils import get_io_obj_content, init_logger_with_io_obj
 from behavysis_pipeline.utils.misc_utils import get_current_funct_name
 
 
@@ -27,11 +27,11 @@ class Export:
         logger, io_obj = init_logger_with_io_obj(get_current_funct_name())
         if not overwrite and os.path.exists(dst_fp):
             logger.warning(file_exists_msg(dst_fp))
-            return io_obj_to_msg(io_obj)
+            return get_io_obj_content(io_obj)
         df = DFMixin.read(src_fp)
         DFMixin.write(df, dst_fp)
         logger.info("df to df")
-        return io_obj_to_msg(io_obj)
+        return get_io_obj_content(io_obj)
 
     @classmethod
     def df2csv(
@@ -44,11 +44,11 @@ class Export:
         logger, io_obj = init_logger_with_io_obj(get_current_funct_name())
         if not overwrite and os.path.exists(dst_fp):
             logger.warning(file_exists_msg(dst_fp))
-            return io_obj_to_msg(io_obj)
+            return get_io_obj_content(io_obj)
         df = DFMixin.read(src_fp)
         DFMixin.write_csv(df, dst_fp)
         logger.info("exported df to csv")
-        return io_obj_to_msg(io_obj)
+        return get_io_obj_content(io_obj)
 
     @classmethod
     def predictedbehavs2scoredbehavs(
@@ -67,7 +67,7 @@ class Export:
         logger, io_obj = init_logger_with_io_obj(get_current_funct_name())
         if not overwrite and os.path.exists(dst_fp):
             logger.warning(file_exists_msg(dst_fp))
-            return io_obj_to_msg(io_obj)
+            return get_io_obj_content(io_obj)
         # Reading the configs file
         configs = ExperimentConfigs.read_json(configs_fp)
         models_ls = configs.user.classify_behavs
@@ -93,7 +93,7 @@ class Export:
         dst_df = BehavScoredDf.predicted2scored(src_df, bouts_struct)
         BehavScoredDf.write(dst_df, dst_fp)
         logger.info("predicted_behavs to scored_behavs.")
-        return io_obj_to_msg(io_obj)
+        return get_io_obj_content(io_obj)
 
     @classmethod
     def boris2behav(
@@ -107,7 +107,7 @@ class Export:
         logger, io_obj = init_logger_with_io_obj(get_current_funct_name())
         if not overwrite and os.path.exists(dst_fp):
             logger.warning(file_exists_msg(dst_fp))
-            return io_obj_to_msg(io_obj)
+            return get_io_obj_content(io_obj)
         # Reading the configs file
         configs = ExperimentConfigs.read_json(configs_fp)
         start_frame = configs.get_ref(configs.auto.start_frame)
@@ -116,4 +116,4 @@ class Export:
         df = BehavScoredDf.import_boris_tsv(src_fp, behavs_ls, start_frame, stop_frame)
         BehavScoredDf.write(df, dst_fp)
         logger.info("boris tsv to behav")
-        return io_obj_to_msg(io_obj)
+        return get_io_obj_content(io_obj)
