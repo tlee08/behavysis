@@ -55,5 +55,5 @@ class DiagnosticsDf(DFMixin):
         # Natural sort the index
         index = df.index.get_level_values(cls.IN.EXPERIMENT.value)
         assert index == index.unique()
-        df = df.loc[natsorted(index)]
+        df = df.loc[natsorted(index), :]
         return df
