@@ -111,6 +111,11 @@ class KeypointsDf(DFMixin):
         -------
         pd.DataFrame
             Keypoints pd.DataFrame.
+
+        Notes
+        -----
+        Does not return a dataframe with the same KeypointsDf schema
+        (it is missing the SCORER column level).
         """
         df = df.copy()
         # Keeping only the "individuals", "bodyparts", and "coords" levels
@@ -118,5 +123,4 @@ class KeypointsDf(DFMixin):
         columns = df.columns.to_frame(index=False)
         columns = columns[[cls.CN.INDIVIDUALS.value, cls.CN.BODYPARTS.value, cls.CN.COORDS.value]]
         df.columns = pd.MultiIndex.from_frame(columns)
-        df = cls.basic_clean(df)
         return df
