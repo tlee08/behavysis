@@ -220,7 +220,10 @@ class BehavScoredDf(BehavDf):
         start = np.flatnonzero(~z[:-1] & z[1:])
         stop = np.flatnonzero(z[:-1] & ~z[1:]) - 1
         # Making dataframe
-        bouts_df = pd.DataFrame({cls.BoutCols.START.value: start, cls.BoutCols.STOP.value: stop}) + offset
+        bouts_df = pd.DataFrame({cls.BoutCols.START.value: start, cls.BoutCols.STOP.value: stop})
+        print(bouts_df)
+        print(offset)
+        bouts_df = bouts_df + offset
         bouts_df[cls.BoutCols.DUR.value] = bouts_df[cls.BoutCols.STOP.value] - bouts_df[cls.BoutCols.START.value] + 1
         return bouts_df
 
