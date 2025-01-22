@@ -309,6 +309,21 @@ class Project:
     def calculate_parameters(self, *args, **kwargs):
         self._proc_scaff(Experiment.calculate_parameters, *args, **kwargs)
 
+    def collate_auto_configs(self):
+        # Saving the auto fields of the configs of all experiments in the diagnostics folder
+        self._proc_scaff(Experiment.collate_auto_configs)
+        auto_configs_df = DiagnosticsDf.read(
+            os.path.join(self.root_dir, DIAGNOSTICS_DIR, f"{Experiment.collate_auto_configs.__name__}.csv")
+        )
+        # Making and saving histogram plots of the numerical auto fields
+        # NOTE: NOT including string frequencies, only numerical
+        auto_configs_df = auto_configs_df.loc[:, auto_configs_df.apply(pd.api.types.is_numeric_dtype)]
+        g = sns.FacetGrid(data=auto_configs_df.fillna(-1).melt(), col="variable", sharex=False, col_wrap=4)
+        g.map(sns.histplot, "value", bins=10)
+        g.set_titles("{col_name}")
+        g.savefig(os.path.join(self.root_dir, DIAGNOSTICS_DIR, "collate_auto_configs.png"))
+        g.figure.clf()
+
     @functools.wraps(Experiment.preprocess)
     def preprocess(self, *args, **kwargs):
         self._proc_scaff(Experiment.preprocess, *args, **kwargs)
@@ -354,25 +369,6 @@ class Project:
     @functools.wraps(Experiment.export2csv)
     def export2csv(self, *args, **kwargs):
         self._proc_scaff(Experiment.export2csv, *args, **kwargs)
-
-    #####################################################################
-    #                CONFIGS DIAGONOSTICS METHODS
-    #####################################################################
-
-    def collate_auto_configs(self):
-        # Saving the auto fields of the configs of all experiments in the diagnostics folder
-        self._proc_scaff(Experiment.collate_auto_configs)
-        auto_configs_df = DiagnosticsDf.read(
-            os.path.join(self.root_dir, DIAGNOSTICS_DIR, f"{Experiment.collate_auto_configs.__name__}.csv")
-        )
-        # Making and saving histogram plots of the numerical auto fields
-        # NOTE: NOT including string frequencies, only numerical
-        auto_configs_df = auto_configs_df.loc[:, auto_configs_df.apply(pd.api.types.is_numeric_dtype)]
-        g = sns.FacetGrid(data=auto_configs_df.fillna(-1).melt(), col="variable", sharex=False, col_wrap=4)
-        g.map(sns.histplot, "value", bins=10)
-        g.set_titles("{col_name}")
-        g.savefig(os.path.join(self.root_dir, DIAGNOSTICS_DIR, "collate_auto_configs.png"))
-        g.figure.clf()
 
     #####################################################################
     #            COMBINING ANALYSIS DATA ACROSS EXPS METHODS

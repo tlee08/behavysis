@@ -20,7 +20,7 @@ class DiagnosticsIN(Enum):
 
 
 class DiagnosticsCN(Enum):
-    FEATURES = "features"
+    FEATURES = "functions"
 
 
 ####################################################################################################
