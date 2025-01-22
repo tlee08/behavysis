@@ -55,7 +55,7 @@ def test_start_frame():
 
     # Making configs
     configs = ExperimentConfigs()
-    configs.user.calculate_params.start_frame = Model_check_exists(
+    configs.user.calculate_params.start_frame_from_likelihood = Model_check_exists(
         bodyparts=["b", "c", "e"],
         window_sec=1,
         pcutoff=0.9,
@@ -78,7 +78,7 @@ def test_start_frame():
     dlc_df.to_parquet(dlc_df_io_in)
 
     # Testing start_frame func
-    output = CalculateParams.start_frame(dlc_df_io_in, configs_io)
+    output = CalculateParams.start_frame_from_likelihood(dlc_df_io_in, configs_io)
 
     # Getting updated configs
     configs = ExperimentConfigs.read_json(configs_io)
@@ -97,7 +97,7 @@ def test_stop_frame():
 
     # Making configs
     configs = ExperimentConfigs()
-    configs.user.calculate_params.stop_frame = Model_stop_frame(
+    configs.user.calculate_params.stop_frame_from_dur = Model_stop_frame(
         dur_sec=dur_sec,
     )
     configs.auto.formatted_vid.fps = fps
@@ -120,7 +120,7 @@ def test_stop_frame():
     dlc_df.to_parquet(dlc_df_io_in)
 
     # Testing start_frame func
-    output = CalculateParams.stop_frame(dlc_df_io_in, configs_io)
+    output = CalculateParams.stop_frame_from_dur(dlc_df_io_in, configs_io)
 
     # Getting updated configs
     configs = ExperimentConfigs.read_json(configs_io)
@@ -162,14 +162,14 @@ def test_exp_dur():
     dlc_df.to_parquet(dlc_df_io_in)
 
     # Testing start_frame func
-    output = CalculateParams.exp_dur(dlc_df_io_in, configs_io)
+    output = CalculateParams.dur_frames_from_likelihood(dlc_df_io_in, configs_io)
 
     # Getting updated configs
     configs = ExperimentConfigs.read_json(configs_io)
     logging.info(configs.auto.model_dump_json(indent=2))
 
     # Asserting
-    assert np.abs(configs.auto.exp_dur_frames - during_size) < 20
+    assert np.abs(configs.auto.dur_frames - during_size) < 20
 
 
 # def test_format_vid():

@@ -39,11 +39,12 @@ if __name__ == "__main__":
 
     proj.calculate_parameters(
         (
-            CalculateParams.start_frame,
-            CalculateParams.stop_frame,
-            CalculateParams.exp_dur,
-            CalculateParams.px_per_mm,
             CalculateParams.dlc_scorer_name,
+            CalculateParams.start_frame_from_likelihood,
+            CalculateParams.stop_frame_from_dur,
+            CalculateParams.stop_frame_from_likelihood,
+            CalculateParams.dur_frames_from_likelihood,
+            CalculateParams.px_per_mm,
         )
     )
 

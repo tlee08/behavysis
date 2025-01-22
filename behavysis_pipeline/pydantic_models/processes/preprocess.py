@@ -1,14 +1,15 @@
 from typing import List, Literal
 
+from behavysis_pipeline.constants import SIMBA_BODYPARTS
 from behavysis_pipeline.pydantic_models.pydantic_base_model import PydanticBaseModel
 
 
 class InterpolateConfigs(PydanticBaseModel):
-    pcutoff: float | str = 0
+    pcutoff: float | str = 0.5
 
 
 class InterpolateStationaryConfigs(PydanticBaseModel):
-    bodypart: str = ""
+    bodypart: str = "bodypart"
     pcutoff: float = 0.8
     pcutoff_all: float = 0.6
     x: float = 0
@@ -16,11 +17,11 @@ class InterpolateStationaryConfigs(PydanticBaseModel):
 
 
 class RefineIdsConfigs(PydanticBaseModel):
-    marked: str = ""
-    unmarked: str = ""
-    marking: str = ""
-    bodyparts: list[str] | str = []
-    window_sec: float | str = 0
+    marked: str = "marked"
+    unmarked: str = "unmarked"
+    marking: str = "marking"
+    bodyparts: list[str] | str = SIMBA_BODYPARTS
+    window_sec: float | str = 0.5
     metric: Literal["current", "rolling", "binned"] | str = "current"
 
 

@@ -39,7 +39,7 @@ class AutoConfigs(PydanticBaseModel):
     px_per_mm: float = -1
     start_frame: int = -1
     stop_frame: int = -1
-    exp_dur_frames: int = -1
+    dur_frames: int = -1
     scorer_name: str = "-1"
 
 

@@ -11,14 +11,9 @@
       "model_fp": "Z:\\PRJ-BowenLab\\DeepLabCut-Projects\\AGGRESSION_960px\\config.yaml"
     },
     "calculate_params": {
-      "start_frame": {
+      "from_likelihood": {
         "window_sec": 1,
-        "pcutoff": 0.9,
-        "bodyparts": "--bodyparts_simba"
-      },
-      "exp_dur": {
-        "window_sec": 1,
-        "pcutoff": 0.9,
+        "pcutoff": 0.8,
         "bodyparts": "--bodyparts_simba"
       },
       "stop_frame": {
