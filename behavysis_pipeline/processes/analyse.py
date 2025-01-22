@@ -198,10 +198,6 @@ class Analyse:
             delta_x = smoothed_xy_df.loc[:, idx[indiv, bpts, "x"]].mean(axis=1).diff()
             delta_y = smoothed_xy_df.loc[:, idx[indiv, bpts, "y"]].mean(axis=1).diff()
             delta = np.array(np.sqrt(np.power(delta_x, 2) + np.power(delta_y, 2)))
-
-            print(smoothed_xy_df)
-            print(delta)
-
             # Storing speed (raw and smoothed)
             analysis_df[(indiv, "SpeedMMperSec")] = (delta / px_per_mm) * fps
             analysis_df[(indiv, "SpeedMMperSecSmoothed")] = (
@@ -211,8 +207,6 @@ class Analyse:
             )
         # Backfilling the analysis_df so no nan's
         analysis_df = analysis_df.bfill()
-
-        print(analysis_df)
         # Saving analysis_df
         fbf_fp = os.path.join(dst_subdir, FBF, f"{name}.{AnalysisDf.IO}")
         AnalysisDf.write(analysis_df, fbf_fp)
