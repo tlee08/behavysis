@@ -186,6 +186,7 @@ class Project:
             DiagnosticsDf.write(df, os.path.join(self.root_dir, DIAGNOSTICS_DIR, f"{method.__name__}.csv"))
             # Finishing
             self.logger.info(f"Finished running {method.__name__} for all experiments")
+            print(df)
 
     #####################################################################
     #               IMPORT EXPERIMENTS METHODS
