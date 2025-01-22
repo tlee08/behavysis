@@ -319,12 +319,12 @@ class BehavClassifier:
             _description_
         """
         # Filtering out the prob and pred columns (in the `outcomes` level)
-        cols_filter = np.isin(
+        columns_filter = np.isin(
             y.columns.get_level_values(BehavScoredDf.CN.OUTCOMES.value),
             [BehavScoredDf.OutcomesCols.PROB.value, BehavScoredDf.OutcomesCols.PRED.value],
             invert=True,
         )
-        y = y.loc[:, cols_filter]
+        y = y.loc[:, columns_filter]
         # Converting MultiIndex columns to single columns by
         # setting the column names from `(behav, outcome)` to `{behav}__{outcome}`
         y.columns = [

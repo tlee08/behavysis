@@ -84,12 +84,12 @@ class KeypointsDf(DFMixin):
         columns = df.columns
         # Filtering out any single and processing columns
         # Not incl. the `single` or `process`columns
-        columns_filt = np.isin(
+        columns_filter = np.isin(
             df.columns.get_level_values(cls.CN.INDIVIDUALS.value),
             [IndivCols.PROCESSED.value, IndivCols.SINGLE.value],
             invert=True,
         )
-        columns = df.columns[columns_filt]
+        columns = df.columns[columns_filter]
         # Getting individuals list
         indivs = columns.unique("individuals").to_list()
         # Getting bodyparts list
