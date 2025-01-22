@@ -16,7 +16,7 @@
         "pcutoff": 0.8,
         "bodyparts": "--bodyparts_simba"
       },
-      "stop_frame": {
+      "stop_frame_from_dur": {
         "dur_sec": 6000
       },
       "px_per_mm": {
