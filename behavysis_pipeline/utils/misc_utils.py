@@ -21,6 +21,10 @@ def enum2tuple(my_enum: EnumType) -> tuple[Any]:
     return tuple(i.value for i in my_enum)  # type: ignore
 
 
+def enum2list(my_enum: EnumType) -> tuple[Any]:
+    return [i.value for i in my_enum]  # type: ignore
+
+
 def const2iter(x: Any, n: int) -> Iterable[Any]:
     """
     Iterates the object, `x`, `n` times.

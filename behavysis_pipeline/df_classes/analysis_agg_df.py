@@ -9,7 +9,7 @@ import seaborn as sns
 from behavysis_pipeline.df_classes.analysis_df import AnalysisDf
 from behavysis_pipeline.df_classes.behav_df import BehavScoredDf, BoutCols
 from behavysis_pipeline.df_classes.df_mixin import DFMixin
-from behavysis_pipeline.utils.misc_utils import enum2tuple
+from behavysis_pipeline.utils.misc_utils import enum2list, enum2tuple
 
 SUMMARY = "summary"
 BINNED = "binned"
@@ -177,7 +177,7 @@ class AnalysisBinnedDf(DFMixin):
         binned_df = grouped_df.apply(
             lambda x: summary_func(x, fps)
             .unstack(enum2tuple(AnalysisSummaryDf.IN))
-            .reorder_levels(list(enum2tuple(cls.CN)))
+            .reorder_levels(enum2list(cls.CN))
             .sort_index(level=enum2tuple(AnalysisSummaryDf.IN))
         )
         # Cleaning (sets index and column names) and checking

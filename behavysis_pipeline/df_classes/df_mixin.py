@@ -150,8 +150,8 @@ class DFMixin:
         pd.DataFrame
             _description_
         """
-        IN = enum2tuple(cls.IN) if cls.IN else (None,)
-        CN = enum2tuple(cls.CN) if cls.CN else (None,)
+        IN = enum2tuple(cls.IN) if cls.IN else None
+        CN = enum2tuple(cls.CN) if cls.CN else None
         index_df = index.to_frame()
         return pd.DataFrame(
             index=pd.MultiIndex.from_frame(index_df, names=IN),
@@ -162,13 +162,15 @@ class DFMixin:
     def basic_clean(cls, df: pd.DataFrame) -> pd.DataFrame:
         """
         Basic cleaning of the dataframe. Includes:
-        - Setting the index and column names
+        - Setting the index and column names (if they are specified)
         - Sorting the index
 
         Also checks that the df structure is as expected with `check_df`.
         """
-        df.index = df.index.set_names(enum2tuple(cls.IN) if cls.IN else (None,))
-        df.columns = df.columns.set_names(enum2tuple(cls.CN) if cls.CN else (None,))
+        if cls.IN:
+            df.index = df.index.set_names(enum2tuple(cls.IN))
+        if cls.CN:
+            df.columns = df.columns.set_names(enum2tuple(cls.CN))
         df = df.sort_index()
         df = df.sort_index(axis=1)
         cls.check_df(df)
