@@ -300,22 +300,23 @@ class Experiment:
         """
         Collates the auto-configs of the experiment into the main configs file.
         """
-        auto_field_keys = ConfigsAuto.get_field_names()
-        auto_configs_dict = {"experiment": self.name}
+        configs_auto_dict = {"experiment": self.name, "outcome": ""}
         # Reading the experiment's configs file
         try:
             configs = ExperimentConfigs.read_json(self.get_fp(Folders.CONFIGS))
-            auto_configs_dict["outcome"] = success_msg()
+            configs_auto_dict["outcome"] += "Read configs file.\n"
         except FileNotFoundError:
-            auto_configs_dict["outcome"] = "ERROR: no configs file found"
-            return auto_configs_dict
+            configs_auto_dict["outcome"] += "ERROR: no configs file found."
+            return configs_auto_dict
         # Getting all the auto fields from the configs file
-        for key in auto_field_keys:
-            val = configs
-            for k in key:
-                val = getattr(val, k)
-            auto_configs_dict["_".join(key)] = val
-        return auto_configs_dict
+        configs_auto_field_keys = ConfigsAuto.get_field_names()
+        for field_key_ls in configs_auto_field_keys:
+            value = configs.auto
+            for key in field_key_ls:
+                value = getattr(value, key)
+            configs_auto_dict["_".join(field_key_ls)] = value
+        configs_auto_dict["outcome"] += success_msg()
+        return configs_auto_dict
 
     def preprocess(self, funcs: tuple[Callable, ...], overwrite: bool) -> dict:
         """
