@@ -214,11 +214,8 @@ class AnalyseBinnedDf(DFMixin):
             .reorder_levels(list(enum2tuple(cls.CN)))
             .sort_index(level=enum2tuple(AnalyseDf.CN))
         )
-        # Setting the index and column names
-        binned_df.index.names = enum2tuple(cls.IN)
-        binned_df.columns.names = enum2tuple(cls.CN)
-        # Checking
-        cls.check_df(binned_df)
+        # Cleaning (sets index and column names) and checking
+        cls.basic_clean(binned_df)
         return binned_df
 
     @classmethod

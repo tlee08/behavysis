@@ -14,7 +14,7 @@ from behavysis_pipeline.df_classes.features_df import FeaturesDf
 from behavysis_pipeline.pydantic_models.configs import ExperimentConfigs
 from behavysis_pipeline.utils.diagnostics_utils import file_exists_msg
 from behavysis_pipeline.utils.logging_utils import get_io_obj_content, init_logger_with_io_obj
-from behavysis_pipeline.utils.misc_utils import enum2tuple, get_current_func_name
+from behavysis_pipeline.utils.misc_utils import get_current_func_name
 
 # TODO: handle reading the model file whilst in multiprocessing
 
@@ -97,9 +97,6 @@ class ClassifyBehavs:
             return get_io_obj_content(io_obj)
         # Concatenating predictions to a single dataframe
         behavs_df = pd.concat(df_ls, axis=1)
-        # Setting the index and column names
-        behavs_df.index.names = list(enum2tuple(BehavPredictedDf.IN))
-        behavs_df.columns.names = list(enum2tuple(BehavPredictedDf.CN))
         # Saving behav_preds df
         BehavPredictedDf.write(behavs_df, out_fp)
         return get_io_obj_content(io_obj)

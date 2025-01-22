@@ -34,6 +34,7 @@ class DFMixin:
     IN = None
     CN = None
     IO = DF_IO_FORMAT
+    sorting_key = None
 
     ###############################################################################################
     # DF Read Functions
@@ -41,48 +42,41 @@ class DFMixin:
 
     @classmethod
     def read_csv(cls, fp: str) -> pd.DataFrame:
-        """
-        Reading DLC dataframe csv file.
-        """
-        df = pd.read_csv(fp, index_col=0)
-        df = df.sort_index()
-        cls.check_df(df)
+        """Reading DLC dataframe csv file."""
+        df = pd.read_csv(
+            fp,
+            index_col=list(range(len(enum2tuple(cls.IN) if cls.IN else (None,)))),
+            header=list(range(len(enum2tuple(cls.CN) if cls.CN else (None,)))),
+        )
+        df = cls.basic_clean(df)
         return df
 
     @classmethod
     def read_h5(cls, fp: str) -> pd.DataFrame:
-        """
-        Reading dataframe h5 file.
-        """
+        """Reading dataframe h5 file."""
         df = pd.DataFrame(pd.read_hdf(fp, mode="r"))
-        df = df.sort_index()
-        cls.check_df(df)
+        df = cls.basic_clean(df)
         return df
 
     @classmethod
     def read_feather(cls, fp: str) -> pd.DataFrame:
-        """
-        Reading dataframe feather file.
-        """
+        """Reading dataframe feather file."""
         df = pd.read_feather(fp)
-        df = df.sort_index()
-        cls.check_df(df)
+        df = cls.basic_clean(df)
         return df
 
     @classmethod
     def read_parquet(cls, fp: str) -> pd.DataFrame:
-        """
-        Reading dataframe parquet file.
-        """
+        """Reading dataframe parquet file."""
         df = pd.read_parquet(fp)
-        df = df.sort_index()
-        cls.check_df(df)
+        df = cls.basic_clean(df)
         return df
 
     @classmethod
     def read(cls, fp: str) -> pd.DataFrame:
         """
         Default dataframe read method.
+        Based on `IO` class attribute.
         """
         methods = {
             "csv": cls.read_csv,
@@ -101,38 +95,29 @@ class DFMixin:
 
     @classmethod
     def write_csv(cls, df: pd.DataFrame, fp: str) -> None:
-        """
-        Writing DLC dataframe to csv file.
-        """
-        cls.check_df(df)
+        """Writing DLC dataframe to csv file."""
+        cls.basic_clean(df)
         os.makedirs(os.path.dirname(fp), exist_ok=True)
         df.to_csv(fp)
 
     @classmethod
     def write_h5(cls, df: pd.DataFrame, fp: str) -> None:
-        """
-        Writing dataframe h5 file.
-        """
-        cls.check_df(df)
+        """Writing dataframe h5 file."""
+        cls.basic_clean(df)
         os.makedirs(os.path.dirname(fp), exist_ok=True)
-        DLC_HDF_KEY = "data"
-        df.to_hdf(fp, key=DLC_HDF_KEY, mode="w")
+        df.to_hdf(fp, key="data", mode="w")
 
     @classmethod
     def write_feather(cls, df: pd.DataFrame, fp: str) -> None:
-        """
-        Writing dataframe feather file.
-        """
-        cls.check_df(df)
+        """Writing dataframe feather file."""
+        cls.basic_clean(df)
         os.makedirs(os.path.dirname(fp), exist_ok=True)
         df.to_feather(fp)
 
     @classmethod
     def write_parquet(cls, df: pd.DataFrame, fp: str) -> None:
-        """
-        Writing dataframe parquet file.
-        """
-        cls.check_df(df)
+        """Writing dataframe parquet file."""
+        cls.basic_clean(df)
         os.makedirs(os.path.dirname(fp), exist_ok=True)
         df.to_parquet(fp)
 
@@ -140,6 +125,7 @@ class DFMixin:
     def write(cls, df: pd.DataFrame, fp: str) -> None:
         """
         Default dataframe read method based on IO attribute.
+        Based on `IO` class attribute.
         """
         methods = {
             "csv": cls.write_csv,
@@ -181,6 +167,21 @@ class DFMixin:
             index=pd.MultiIndex.from_frame(index_df, names=IN),
             columns=pd.MultiIndex.from_tuples((), names=CN),
         )
+
+    @classmethod
+    def basic_clean(cls, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Basic cleaning of the dataframe. Includes:
+        - Setting the index and column names
+        - Sorting the index
+
+        Also checks that the df structure is as expected with `check_df`.
+        """
+        df.index.set_names(enum2tuple(cls.IN) if cls.IN else (None,))
+        df.columns.set_names(enum2tuple(cls.CN) if cls.CN else (None,))
+        df = df.sort_index(key=cls.sorting_key)
+        cls.check_df(df)
+        return df
 
     ###############################################################################################
     # DF Check functions

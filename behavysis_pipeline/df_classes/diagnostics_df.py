@@ -8,7 +8,6 @@ import pandas as pd
 from natsort import natsort_keygen
 
 from behavysis_pipeline.df_classes.df_mixin import DFMixin
-from behavysis_pipeline.utils.misc_utils import enum2tuple
 
 ####################################################################################################
 # DF CONSTANTS
@@ -39,6 +38,7 @@ class DiagnosticsDf(DFMixin):
     IN = DiagnosticsIN
     CN = DiagnosticsCN
     IO = "csv"
+    sorting_key = natsort_keygen()
 
     @classmethod
     def init_from_dd_ls(cls, dd_ls: list[dict]) -> pd.DataFrame:
@@ -46,8 +46,6 @@ class DiagnosticsDf(DFMixin):
         Initialises the features dataframe from a list of dictionaries.
         """
         assert all("experiment" in dd for dd in dd_ls), "All dictionaries must have the 'experiment' key."
-        df = pd.DataFrame(dd_ls).set_index("experiment").sort_index(key=natsort_keygen())
-        df.index.names = list(enum2tuple(cls.IN))
-        df.columns.names = list(enum2tuple(cls.CN))
-        cls.check_df(df)
+        df = pd.DataFrame(dd_ls).set_index("experiment")
+        cls.basic_clean(df)
         return df

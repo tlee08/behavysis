@@ -13,7 +13,7 @@ from behavysis_pipeline.pydantic_models.configs import ExperimentConfigs
 from behavysis_pipeline.utils.diagnostics_utils import file_exists_msg
 from behavysis_pipeline.utils.io_utils import get_name, silent_remove
 from behavysis_pipeline.utils.logging_utils import get_io_obj_content, init_logger_with_io_obj
-from behavysis_pipeline.utils.misc_utils import enum2tuple, get_current_func_name
+from behavysis_pipeline.utils.misc_utils import get_current_func_name
 from behavysis_pipeline.utils.multiproc_utils import get_cpid
 from behavysis_pipeline.utils.subproc_utils import run_subproc_console
 from behavysis_pipeline.utils.template_utils import save_template
@@ -215,12 +215,9 @@ def export2df(in_fp: str, out_fp: str, index: pd.Index) -> str:
     """
     __summary__
     """
-    df = pd.read_csv(in_fp, header=0, index_col=0)
-    # Setting index to same as dlc preprocessed df
-    df.index = index
-    # Setting index and column level names
-    df.index.names = list(enum2tuple(FeaturesDf.IN))
-    df.columns.names = list(enum2tuple(FeaturesDf.CN))
+    df = FeaturesDf.read_csv(in_fp)
+    # Setting index to the same as the dlc preprocessed df
+    df.set_index(index)
     # Saving SimBA extracted features df as df on disk
     FeaturesDf.write(df, out_fp)
     return "Exported SimBA features to df on disk.\n"

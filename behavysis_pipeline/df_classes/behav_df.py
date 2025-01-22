@@ -188,9 +188,8 @@ class BehavScoredDf(BehavDf):
             scored_df[(behav, cls.OutcomesCols.PRED.value)] = df[(behav, cls.OutcomesCols.PRED.value)].values
             # Adding actual column
             # NOTE: all predicted behav is set as undetermined in "actual" column
-            scored_df[(behav, cls.OutcomesCols.ACTUAL.value)] = scored_df[(behav, cls.OutcomesCols.PRED.value)].where(
-                cond=scored_df[(behav, cls.OutcomesCols.PRED.value)].values == BehavValues.BEHAV.value,
-                other=BehavValues.UNDETERMINED.value,
+            scored_df[(behav, cls.OutcomesCols.ACTUAL.value)] = scored_df[(behav, cls.OutcomesCols.PRED.value)].replace(
+                BehavValues.BEHAV.value, BehavValues.UNDETERMINED.value
             )
             # Adding user_defined columns and setting values to 0
             for user_defined_i in user_defined:

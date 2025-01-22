@@ -22,11 +22,11 @@ import numpy as np
 
 from behavysis_pipeline.df_classes.analyse_agg_df import AnalyseBinnedDf
 from behavysis_pipeline.df_classes.analyse_df import AnalyseDf
-from behavysis_pipeline.df_classes.behav_df import BehavScoredDf
+from behavysis_pipeline.df_classes.behav_df import BehavScoredDf, BehavValues
 from behavysis_pipeline.pydantic_models.configs import ExperimentConfigs
 from behavysis_pipeline.utils.io_utils import get_name
 from behavysis_pipeline.utils.logging_utils import get_io_obj_content, init_logger_with_io_obj
-from behavysis_pipeline.utils.misc_utils import enum2tuple, get_current_func_name
+from behavysis_pipeline.utils.misc_utils import get_current_func_name
 
 ###################################################################################################
 #               ANALYSIS API FUNCS
@@ -55,7 +55,7 @@ class AnalyseBehaviours:
         # Loading in dataframe
         behavs_df = BehavScoredDf.read(behavs_fp)
         # Setting all na and -1 values to 0 (to make any undecided behav to non-behav)
-        behavs_df = behavs_df.fillna(0).map(lambda x: np.maximum(0, x))
+        behavs_df = behavs_df.fillna(0).replace(BehavValues.UNDETERMINED.value, BehavValues.NON_BEHAV.value)
         # Getting the behaviour names and each user_defined for the behaviour
         # Not incl. the `pred` or `prob` (`prob` shouldn't be here anyway) columns
         columns = np.isin(
@@ -64,8 +64,7 @@ class AnalyseBehaviours:
             invert=True,
         )
         behavs_df = behavs_df.loc[:, columns]
-        # Updating the column level names of behavs_df to match AnalyseDf structure
-        behavs_df.columns.names = list(enum2tuple(AnalyseDf.CN))
+        behavs_df = AnalyseDf.basic_clean(behavs_df)
         # Writing the behavs_df to the fbf file
         fbf_fp = os.path.join(out_dir, "fbf", f"{name}.{AnalyseDf.IO}")
         AnalyseDf.write(behavs_df, fbf_fp)

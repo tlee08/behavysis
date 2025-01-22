@@ -32,7 +32,7 @@ from behavysis_pipeline.pydantic_models.configs import ExperimentConfigs
 from behavysis_pipeline.utils.diagnostics_utils import file_exists_msg
 from behavysis_pipeline.utils.io_utils import get_name, silent_remove
 from behavysis_pipeline.utils.logging_utils import get_io_obj_content, init_logger_with_io_obj
-from behavysis_pipeline.utils.misc_utils import enum2tuple, get_current_func_name
+from behavysis_pipeline.utils.misc_utils import get_current_func_name
 from behavysis_pipeline.utils.subproc_utils import run_subproc_console
 from behavysis_pipeline.utils.template_utils import save_template
 
@@ -202,9 +202,6 @@ def export2df(name: str, in_dir: str, out_dir: str) -> str:
         # Reading the .h5 file
         # NOTE: may need DLC_HDF_KEY
         df = pd.DataFrame(pd.read_hdf(name_fp))
-        # Setting the column and index level names
-        df.index.names = list(enum2tuple(KeypointsDf.IN))
-        df.columns.names = list(enum2tuple(KeypointsDf.CN))
         # Imputing na values with 0
         df = df.fillna(0)
         # Writing the file
