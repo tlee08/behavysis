@@ -4,6 +4,7 @@ Utility functions.
 
 from enum import Enum
 
+import numpy as np
 import pandas as pd
 from natsort import natsorted
 
@@ -54,6 +55,6 @@ class DiagnosticsDf(DFMixin):
         df = super().basic_clean(df)
         # Natural sort the index
         index = df.index.get_level_values(cls.IN.EXPERIMENT.value)
-        assert index == index.unique()
+        assert np.all(np.equal(natsorted(index), natsorted(index.unique())))
         df = df.loc[natsorted(index), :]
         return df
