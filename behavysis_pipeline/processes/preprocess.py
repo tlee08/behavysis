@@ -209,7 +209,7 @@ class Preprocess:
     def refine_ids(cls, dlc_fp: str, out_fp: str, configs_fp: str, overwrite: bool) -> str:
         """
         Ensures that the identity is correctly tracked for maDLC.
-        Assumes interpolatePoints and calcBodyCentre has already been run.
+        Assumes interpolate_points has already been run.
 
         Notes
         -----
@@ -255,7 +255,7 @@ class Preprocess:
                 )
         # Checking that bodyparts are all valid
         KeypointsDf.check_bpts_exist(df, bpts)
-        # Calculating the distances between the bodycentres and the marking
+        # Calculating the distances between the averaged bodycentres and the marking
         df_aggr = aggregate_df(df, marking, [marked, unmarked], bpts)
         # Getting "to_switch" decision series for each frame
         df_switch = decice_switch(df_aggr, window_frames, marked, unmarked)
@@ -297,7 +297,7 @@ def aggregate_df(
         for indiv in indivs:
             # Getting the coordinates of each individual (average of the given bodyparts list)
             df_aggr[(indiv, coord)] = df.loc[:, idx[l0, indiv, bpts, coord]].mean(axis=1)
-    # Getting the distance between each mouse and the colour marking in each frame
+    # Getting the Euclidean distance between each mouse and the colour marking in each frame
     for indiv in indivs:
         df_aggr[(indiv, "dist")] = np.sqrt(
             np.square(df_aggr[(indiv, Coords.X.value)] - df_aggr[("mark", Coords.X.value)])

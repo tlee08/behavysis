@@ -34,9 +34,6 @@
       "interpolate": {
         "pcutoff": 0.5
       },
-      "bodycentre": {
-        "bodyparts": "--bodyparts_centre"
-      },
       "refine_ids": {
         "marked": "mouse1marked",
         "unmarked": "mouse2unmarked",
