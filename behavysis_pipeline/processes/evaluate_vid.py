@@ -32,21 +32,19 @@ class EvaluateVid:
     @classmethod
     def evaluate_vid(
         cls,
-        vid_fp: str,
-        dlc_fp: str,
-        analyse_combined_fp: str,
-        out_fp: str,
+        formatted_vid_fp: str,
+        keypoints_fp: str,
+        analysis_combined_fp: str,
+        eval_vid_fp: str,
         configs_fp: str,
         overwrite: bool,
     ) -> str:
         """
-        Run the DLC model on the formatted video to generate a DLC annotated video and DLC file for
-        all experiments. The DLC model's config.yaml filepath must be specified in the `config_path`
-        parameter in the `user` section of the config file.
+        Generate an annotated video with (optionally) keypoints and tracking analysis graphs.
         """
         logger, io_obj = init_logger_with_io_obj(get_current_func_name())
-        if not overwrite and os.path.exists(out_fp):
-            logger.warning(file_exists_msg(out_fp))
+        if not overwrite and os.path.exists(eval_vid_fp):
+            logger.warning(file_exists_msg(eval_vid_fp))
             return get_io_obj_content(io_obj)
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
@@ -69,14 +67,14 @@ class EvaluateVid:
         assert fps > 0, assert_msg % "video fps"
         assert total_frames > 0, assert_msg % "video total frames"
 
-        # Getting dlc df
-        dlc_df = KeypointsDf.clean_headings(KeypointsDf.read(dlc_fp))
+        # Getting keypoints df
+        keypoints_df = KeypointsDf.clean_headings(KeypointsDf.read(keypoints_fp))
         # Getting analysis combined df
         try:
-            analysis_df = AnalyseCombinedDf.read(analyse_combined_fp)
+            analysis_df = AnalyseCombinedDf.read(analysis_combined_fp)
         except FileNotFoundError:
             logger.warning("Analysis combined file not found or could not be loaded." "Disregarding analysis.")
-            analysis_df = AnalyseCombinedDf.init_df(dlc_df.index)
+            analysis_df = AnalyseCombinedDf.init_df(keypoints_df.index)
 
         # MAKING ANNOTATED VIDEO
         # Making VidFuncsRunner object to annotate each frame with.
@@ -85,7 +83,7 @@ class EvaluateVid:
             width_input=width_input,
             height_input=height_input,
             # kwargs for EvalVidFuncBase
-            dlc_df=dlc_df,
+            keypoints_df=keypoints_df,
             analysis_df=analysis_df,
             colour_level=colour_level,
             pcutoff=pcutoff,
@@ -95,12 +93,12 @@ class EvaluateVid:
             fps=fps,
         )
         # Opening the input video
-        in_cap = cv2.VideoCapture(vid_fp)
+        formatted_vid_cap = cv2.VideoCapture(formatted_vid_fp)
         # Making output folder
-        os.makedirs(os.path.dirname(out_fp), exist_ok=True)
+        os.makedirs(os.path.dirname(eval_vid_fp), exist_ok=True)
         # Define the codec and create VideoWriter object
-        out_cap = cv2.VideoWriter(
-            out_fp,
+        eval_vid_cap = cv2.VideoWriter(
+            eval_vid_fp,
             cv2.VideoWriter_fourcc(*"mp4v"),
             fps,
             (vid_funcs_runner.width_out, vid_funcs_runner.height_out),
@@ -108,16 +106,16 @@ class EvaluateVid:
         # Annotating each frame using the created functions
         for idx in trange(total_frames):
             # Reading next vid frame
-            ret, frame = in_cap.read()
+            ret, frame = formatted_vid_cap.read()
             if ret is False:
                 break
             # Annotating frame
             arr_out = vid_funcs_runner(frame, idx)
             # Writing annotated frame to the VideoWriter
-            out_cap.write(arr_out)
+            eval_vid_cap.write(arr_out)
         # Release video objects
-        in_cap.release()
-        out_cap.release()
+        formatted_vid_cap.release()
+        eval_vid_cap.release()
         return get_io_obj_content(io_obj)
 
 
@@ -167,7 +165,7 @@ class Johansson(EvalVidFuncBase):
         )
 
 
-# TODO wrangle dlc_df HERE (not in eval_vid) for encapsulation
+# TODO wrangle keypoints_df HERE (not in eval_vid) for encapsulation
 class Keypoints(EvalVidFuncBase):
     """
     Adding the keypoints (given in `row`) to the frame.
@@ -179,7 +177,7 @@ class Keypoints(EvalVidFuncBase):
         self,
         width_input: int,
         height_input: int,
-        dlc_df,
+        keypoints_df,
         colour_level,
         cmap,
         pcutoff,
@@ -188,7 +186,7 @@ class Keypoints(EvalVidFuncBase):
     ):
         self.width_output = width_input
         self.height_output = height_input
-        self.dlc_df: pd.DataFrame = dlc_df
+        self.keypoints_df: pd.DataFrame = keypoints_df
         self.colour_level = colour_level
         self.cmap = cmap
         self.pcutoff = pcutoff
@@ -198,7 +196,7 @@ class Keypoints(EvalVidFuncBase):
 
     def init_df(self):
         """
-        Modifying dlc_df and making list of how to select dlc_df components to optimise processing
+        Modifying keypoints_df and making list of how to select keypoints_df components to optimise processing.
         Specifically:
         - Filtering out "process" columns
         - Rounding and converting to correct dtypes - "x" and "y" values are ints
@@ -206,20 +204,20 @@ class Keypoints(EvalVidFuncBase):
         - Making the corresponding colours list for each bodypart instance (colours depend on indiv/bpt)
         """
         # Filtering out IndivColumns.PROCESS.value columns
-        if IndivCols.PROCESS.value in self.dlc_df.columns.unique(KeypointsDf.CN.INDIVIDUALS.value):
-            self.dlc_df.drop(
+        if IndivCols.PROCESS.value in self.keypoints_df.columns.unique(KeypointsDf.CN.INDIVIDUALS.value):
+            self.keypoints_df.drop(
                 columns=IndivCols.PROCESS.value,
                 level=KeypointsDf.CN.INDIVIDUALS.value,
             )
         # Getting (indivs, bpts) MultiIndex
         # TODO: make explicitly selecting (indivs, bpts) levels
-        self.indivs_bpts_ls = self.dlc_df.columns.droplevel(level=KeypointsDf.CN.COORDS.value).unique()
+        self.indivs_bpts_ls = self.keypoints_df.columns.droplevel(level=KeypointsDf.CN.COORDS.value).unique()
         # Rounding and converting to correct dtypes - "x" and "y" values are ints
-        self.dlc_df = self.dlc_df.fillna(0)
-        columns = self.dlc_df.columns[self.dlc_df.columns.get_level_values("coords").isin(["x", "y"])]
-        self.dlc_df[columns] = self.dlc_df[columns].round(0).astype(int)
+        self.keypoints_df = self.keypoints_df.fillna(0)
+        columns = self.keypoints_df.columns[self.keypoints_df.columns.get_level_values("coords").isin(["x", "y"])]
+        self.keypoints_df[columns] = self.keypoints_df[columns].round(0).astype(int)
         # Changing the columns MultiIndex to a single-level index. For speedup
-        self.dlc_df.columns = [f"{indiv}_{bpt}_{coord}" for indiv, bpt, coord in self.dlc_df.columns]
+        self.keypoints_df.columns = [f"{indiv}_{bpt}_{coord}" for indiv, bpt, coord in self.keypoints_df.columns]
         # Making the corresponding colours list for each bodypart instance
         # (colours depend on indiv/bpt)
         measures_ls = self.indivs_bpts_ls.get_level_values(self.colour_level)
@@ -231,7 +229,7 @@ class Keypoints(EvalVidFuncBase):
         assert frame.shape[1] == self.width_output
         # Getting idx row and asserting the idx exists
         try:
-            row = self.dlc_df.loc[idx]
+            row = self.keypoints_df.loc[idx]
         except KeyError:
             return frame
         # Making the bpts keypoints annot
@@ -490,15 +488,15 @@ class VidFuncsRunner:
         # Concatenating Vid, Behav, and Analysis funcs together in order
         func_check_ls: list[type[EvalVidFuncBase]] = [Johansson, Keypoints, Analysis]
         # Creating EvalVidFuncBase instances and adding to funcs list
-        for func in func_check_ls:
-            if func.name in func_names:
+        for f in func_check_ls:
+            if f.name in func_names:
                 setattr(
                     self,
-                    func.name,
-                    func(width_input=width_input, height_input=height_input, **kwargs),
+                    f.name,
+                    f(width_input=width_input, height_input=height_input, **kwargs),
                 )
             else:
-                setattr(self, func.name, None)
+                setattr(self, f.name, None)
 
         # TODO: update w_o and h_o accoridng to analysis_df
         # Storing frame output dimensions

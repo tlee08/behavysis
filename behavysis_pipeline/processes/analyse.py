@@ -3,9 +3,9 @@ Functions have the following format:
 
 Parameters
 ----------
-dlc_fp : str
+keypoints_fp : str
     The DLC dataframe filepath of the experiment to analyse.
-out_dir : str
+dst_dir : str
     The analysis directory path.
 configs_fp : str
     the experiment's JSON configs file.
@@ -45,8 +45,8 @@ from behavysis_pipeline.utils.misc_utils import get_current_func_name
 class Analyse:
     @staticmethod
     def in_roi(
-        dlc_fp: str,
-        out_dir: str,
+        keypoints_fp: str,
+        dst_dir: str,
         configs_fp: str,
     ) -> str:
         """
@@ -56,17 +56,17 @@ class Analyse:
         Points are `thresh_px` padded (away) from center.
         """
         logger, io_obj = init_logger_with_io_obj(get_current_func_name())
-        name = get_name(dlc_fp)
-        f_name = Analyse.in_roi.__name__
-        out_dir = os.path.join(out_dir, f_name)
+        f_name = get_current_func_name()
+        name = get_name(keypoints_fp)
+        dst_subdir = os.path.join(dst_dir, f_name)
         # Calculating the deltas (changes in body position) between each frame for the subject
         configs = ExperimentConfigs.read_json(configs_fp)
         fps, _, _, px_per_mm, bins_ls, cbins_ls = configs.get_analyse_configs()
         configs_filt_ls = configs.user.analyse.in_roi
         # Loading in dataframe
-        dlc_df = KeypointsDf.clean_headings(KeypointsDf.read(dlc_fp))
+        keypoints_df = KeypointsDf.clean_headings(KeypointsDf.read(keypoints_fp))
         # Getting indivs list
-        indivs, _ = KeypointsDf.get_headings(dlc_df)
+        indivs, _ = KeypointsDf.get_headings(keypoints_df)
         # Making analysis_df
         analysis_df_ls = []
         scatter_df_ls = []
@@ -88,10 +88,10 @@ class Analyse:
             # Calculating more parameters
             thresh_px = thresh_mm / px_per_mm
             # Checking bodyparts and roi_corners exist
-            KeypointsDf.check_bpts_exist(dlc_df, bpts)
-            KeypointsDf.check_bpts_exist(dlc_df, roi_corners)
+            KeypointsDf.check_bpts_exist(keypoints_df, bpts)
+            KeypointsDf.check_bpts_exist(keypoints_df, roi_corners)
             # Getting average corner coordinates. Assumes arena does not move.
-            corners_i_df = pd.DataFrame([dlc_df[(IndivCols.SINGLE.value, pt)].mean() for pt in roi_corners]).drop(
+            corners_i_df = pd.DataFrame([keypoints_df[(IndivCols.SINGLE.value, pt)].mean() for pt in roi_corners]).drop(
                 columns=["likelihood"]
             )
             # Adjusting x-y to have `thresh_px` dilation/erosion from the points themselves
@@ -108,12 +108,12 @@ class Analyse:
             # Saving corners_df to list
             corners_df_ls.append(corners_i_df)
             # Making the res_df
-            analysis_i_df = AnalyseDf.init_df(dlc_df.index)
+            analysis_i_df = AnalyseDf.init_df(keypoints_df.index)
             # For each individual, getting the in-roi status
             for indiv in indivs:
                 # Getting average body center (x, y) for each individual
-                analysis_i_df[(indiv, x)] = dlc_df.loc[:, idx[indiv, bpts, x]].mean(axis=1).values
-                analysis_i_df[(indiv, y)] = dlc_df.loc[:, idx[indiv, bpts, y]].mean(axis=1).values
+                analysis_i_df[(indiv, x)] = keypoints_df.loc[:, idx[indiv, bpts, x]].mean(axis=1).values
+                analysis_i_df[(indiv, y)] = keypoints_df.loc[:, idx[indiv, bpts, y]].mean(axis=1).values
                 # Determining if the indiv body center is in the ROI
                 analysis_i_df[(indiv, roi_name)] = analysis_i_df[indiv].apply(
                     lambda pt: pt_in_roi(pt, corners_i_df), axis=1
@@ -129,7 +129,7 @@ class Analyse:
         analysis_df = pd.concat(analysis_df_ls, axis=1)
         corners_df = pd.concat(corners_df_ls, keys=roi_names_ls, names=["roi"]).reset_index(level="roi")
         # Saving analysis_df
-        fbf_fp = os.path.join(out_dir, FBF, f"{name}.{AnalyseDf.IO}")
+        fbf_fp = os.path.join(dst_subdir, FBF, f"{name}.{AnalyseDf.IO}")
         AnalyseDf.write(analysis_df, fbf_fp)
         # Generating scatterplot
         # First getting scatter_in_roi columns
@@ -143,12 +143,12 @@ class Analyse:
             #     axis=1,
             # )
         # Making and saving scatterplot
-        plot_fp = os.path.join(out_dir, "scatter_plot", f"{name}.png")
+        plot_fp = os.path.join(dst_subdir, "scatter_plot", f"{name}.png")
         AnalyseDf.make_location_scatterplot(scatter_df, corners_df, plot_fp, "roi")
         # Summarising and binning analysis_df
         AnalyseBinnedDf.summary_binned_behavs(
             analysis_df,
-            out_dir,
+            dst_subdir,
             name,
             fps,
             bins_ls,
@@ -158,17 +158,17 @@ class Analyse:
 
     @staticmethod
     def speed(
-        dlc_fp: str,
-        out_dir: str,
+        keypoints_fp: str,
+        dst_dir: str,
         configs_fp: str,
     ) -> str:
         """
         Determines the speed of the subject in each frame.
         """
         logger, io_obj = init_logger_with_io_obj(get_current_func_name())
-        name = get_name(dlc_fp)
-        f_name = Analyse.speed.__name__
-        out_dir = os.path.join(out_dir, f_name)
+        f_name = get_current_func_name()
+        name = get_name(keypoints_fp)
+        dst_subdir = os.path.join(dst_dir, f_name)
         # Calculating the deltas (changes in body position) between each frame for the subject
         configs = ExperimentConfigs.read_json(configs_fp)
         fps, _, _, px_per_mm, bins_ls, cbins_ls = configs.get_analyse_configs()
@@ -179,21 +179,21 @@ class Analyse:
         smoothing_frames = int(smoothing_sec * fps)
 
         # Loading in dataframe
-        dlc_df = KeypointsDf.clean_headings(KeypointsDf.read(dlc_fp))
+        keypoints_df = KeypointsDf.clean_headings(KeypointsDf.read(keypoints_fp))
         # Checking body-centre bodypart exists
-        KeypointsDf.check_bpts_exist(dlc_df, bpts)
+        KeypointsDf.check_bpts_exist(keypoints_df, bpts)
         # Getting indivs and bpts list
-        indivs, _ = KeypointsDf.get_headings(dlc_df)
+        indivs, _ = KeypointsDf.get_headings(keypoints_df)
 
         # Calculating speed of subject for each frame
-        analysis_df = AnalyseDf.init_df(dlc_df.index)
-        dlc_df.index = analysis_df.index
+        analysis_df = AnalyseDf.init_df(keypoints_df.index)
+        keypoints_df.index = analysis_df.index
         idx = pd.IndexSlice
         for indiv in indivs:
             # Making a rolling window of 3 frames for average body-centre
             # Otherwise jitter contributes to movement
             jitter_frames = 3
-            smoothed_xy_df = dlc_df.rolling(window=jitter_frames, min_periods=1, center=True).agg(np.nanmean)
+            smoothed_xy_df = keypoints_df.rolling(window=jitter_frames, min_periods=1, center=True).agg(np.nanmean)
             # Getting changes in x-y values between frames (deltas)
             delta_x = smoothed_xy_df.loc[:, idx[indiv, bpts, "x"]].mean(axis=1).diff()
             delta_y = smoothed_xy_df.loc[:, idx[indiv, bpts, "y"]].mean(axis=1).diff()
@@ -208,13 +208,13 @@ class Analyse:
         # Backfilling the analysis_df so no nan's
         analysis_df = analysis_df.bfill()
         # Saving analysis_df
-        fbf_fp = os.path.join(out_dir, FBF, f"{name}.{AnalyseDf.IO}")
+        fbf_fp = os.path.join(dst_subdir, FBF, f"{name}.{AnalyseDf.IO}")
         AnalyseDf.write(analysis_df, fbf_fp)
 
         # Summarising and binning analysis_df
         AnalyseBinnedDf.summary_binned_quantitative(
             analysis_df,
-            out_dir,
+            dst_subdir,
             name,
             fps,
             bins_ls,
@@ -224,17 +224,17 @@ class Analyse:
 
     @staticmethod
     def social_distance(
-        dlc_fp: str,
-        out_dir: str,
+        keypoints_fp: str,
+        dst_dir: str,
         configs_fp: str,
     ) -> str:
         """
         Determines the speed of the subject in each frame.
         """
         logger, io_obj = init_logger_with_io_obj(get_current_func_name())
-        name = get_name(dlc_fp)
-        f_name = Analyse.social_distance.__name__
-        out_dir = os.path.join(out_dir, f_name)
+        f_name = get_current_func_name()
+        name = get_name(keypoints_fp)
+        dst_subdir = os.path.join(dst_dir, f_name)
         # Calculating the deltas (changes in body position) between each frame for the subject
         configs = ExperimentConfigs.read_json(configs_fp)
         fps, _, _, px_per_mm, bins_ls, cbins_ls = configs.get_analyse_configs()
@@ -245,24 +245,24 @@ class Analyse:
         smoothing_frames = int(smoothing_sec * fps)
 
         # Loading in dataframe
-        dlc_df = KeypointsDf.clean_headings(KeypointsDf.read(dlc_fp))
+        keypoints_df = KeypointsDf.clean_headings(KeypointsDf.read(keypoints_fp))
         # Checking body-centre bodypart exists
-        KeypointsDf.check_bpts_exist(dlc_df, bpts)
+        KeypointsDf.check_bpts_exist(keypoints_df, bpts)
         # Getting indivs and bpts list
-        indivs, _ = KeypointsDf.get_headings(dlc_df)
+        indivs, _ = KeypointsDf.get_headings(keypoints_df)
 
         # Calculating speed of subject for each frame
-        analysis_df = AnalyseDf.init_df(dlc_df.index)
-        dlc_df.index = analysis_df.index
+        analysis_df = AnalyseDf.init_df(keypoints_df.index)
+        keypoints_df.index = analysis_df.index
         idx = pd.IndexSlice
         # Assumes there are only two individuals
         indiv_a = indivs[0]
         indiv_b = indivs[1]
         # Getting distances between each individual
         idx_a = idx[indiv_b, bpts, "x"]
-        dist_x = (dlc_df.loc[:, idx_a] - dlc_df.loc[:, idx_a]).mean(axis=1)
+        dist_x = (keypoints_df.loc[:, idx_a] - keypoints_df.loc[:, idx_a]).mean(axis=1)
         idx_b = idx[indiv_a, bpts, "y"]
-        dist_y = (dlc_df.loc[:, idx_b] - dlc_df.loc[:, idx_b]).mean(axis=1)
+        dist_y = (keypoints_df.loc[:, idx_b] - keypoints_df.loc[:, idx_b]).mean(axis=1)
         dist = np.sqrt(np.power(dist_x, 2) + np.power(dist_y, 2))
         # Adding mm distance to saved analysis_df table
         analysis_df[(f"{indiv_a}_{indiv_b}", "DistMM")] = dist / px_per_mm
@@ -272,13 +272,13 @@ class Analyse:
             .agg(np.nanmean)
         )
         # Saving analysis_df
-        fbf_fp = os.path.join(out_dir, FBF, f"{name}.{AnalyseDf.IO}")
+        fbf_fp = os.path.join(dst_subdir, FBF, f"{name}.{AnalyseDf.IO}")
         AnalyseDf.write(analysis_df, fbf_fp)
 
         # Summarising and binning analysis_df
         AnalyseBinnedDf.summary_binned_quantitative(
             analysis_df,
-            out_dir,
+            dst_subdir,
             name,
             fps,
             bins_ls,
@@ -288,8 +288,8 @@ class Analyse:
 
     @staticmethod
     def freezing(
-        dlc_fp: str,
-        out_dir: str,
+        keypoints_fp: str,
+        dst_dir: str,
         configs_fp: str,
     ) -> str:
         """
@@ -301,9 +301,9 @@ class Analyse:
         NOTE: method is "greedy" because it looks at a freezing bout from earliest possible frame.
         """
         logger, io_obj = init_logger_with_io_obj(get_current_func_name())
-        name = get_name(dlc_fp)
-        f_name = Analyse.freezing.__name__
-        out_dir = os.path.join(out_dir, f_name)
+        f_name = get_current_func_name()
+        name = get_name(keypoints_fp)
+        dst_subdir = os.path.join(dst_dir, f_name)
         # Calculating the deltas (changes in body position) between each frame for the subject
         configs = ExperimentConfigs.read_json(configs_fp)
         fps, _, _, px_per_mm, bins_ls, cbins_ls = configs.get_analyse_configs()
@@ -318,22 +318,22 @@ class Analyse:
         window_frames = int(np.round(fps * window_sec, 0))
 
         # Loading in dataframe
-        dlc_df = KeypointsDf.clean_headings(KeypointsDf.read(dlc_fp))
+        keypoints_df = KeypointsDf.clean_headings(KeypointsDf.read(keypoints_fp))
         # Checking body-centre bodypart exists
-        KeypointsDf.check_bpts_exist(dlc_df, bpts)
+        KeypointsDf.check_bpts_exist(keypoints_df, bpts)
         # Getting indivs and bpts list
-        indivs, _ = KeypointsDf.get_headings(dlc_df)
+        indivs, _ = KeypointsDf.get_headings(keypoints_df)
 
         # Calculating speed of subject for each frame
-        analysis_df = AnalyseDf.init_df(dlc_df.index)
-        dlc_df.index = analysis_df.index
+        analysis_df = AnalyseDf.init_df(keypoints_df.index)
+        keypoints_df.index = analysis_df.index
         for indiv in indivs:
             temp_df = pd.DataFrame(index=analysis_df.index)
             # Calculating frame-by-frame delta distances for current bpt
             for bpt in bpts:
                 # Getting x and y changes
-                delta_x = dlc_df[(indiv, bpt, "x")].diff()
-                delta_y = dlc_df[(indiv, bpt, "y")].diff()
+                delta_x = keypoints_df[(indiv, bpt, "x")].diff()
+                delta_y = keypoints_df[(indiv, bpt, "y")].diff()
                 # Getting Euclidean distance between frames for bpt
                 delta = np.sqrt(np.power(delta_x, 2) + np.power(delta_y, 2))
                 # Converting from px to mm
@@ -355,13 +355,13 @@ class Analyse:
                 if row["dur"] < window_frames:
                     analysis_df.loc[row["start"] : row["stop"], (indiv, f_name)] = 0
         # Saving analysis_df
-        fbf_fp = os.path.join(out_dir, FBF, f"{name}.{AnalyseDf.IO}")
+        fbf_fp = os.path.join(dst_subdir, FBF, f"{name}.{AnalyseDf.IO}")
         AnalyseDf.write(analysis_df, fbf_fp)
 
         # Summarising and binning analysis_df
         AnalyseBinnedDf.summary_binned_behavs(
             analysis_df,
-            out_dir,
+            dst_subdir,
             name,
             fps,
             bins_ls,

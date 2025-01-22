@@ -89,9 +89,9 @@ class Export:
                 )
             )
         # Getting scored behavs df from predicted behavs df and bouts_struct
-        src_df = BehavPredictedDf.read(src_fp)
-        dst_df = BehavScoredDf.predicted2scored(src_df, bouts_struct)
-        BehavScoredDf.write(dst_df, dst_fp)
+        behavs_predicted_df = BehavPredictedDf.read(src_fp)
+        behavs_scored_df = BehavScoredDf.predicted2scored(behavs_predicted_df, bouts_struct)
+        BehavScoredDf.write(behavs_scored_df, dst_fp)
         logger.info("predicted_behavs to scored_behavs.")
         return get_io_obj_content(io_obj)
 

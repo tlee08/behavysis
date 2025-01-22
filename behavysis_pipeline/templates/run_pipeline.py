@@ -68,10 +68,10 @@ if __name__ == "__main__":
     )
 
     proj.extract_features(overwrite)
-    proj.classify_behaviours(overwrite)
-    proj.export_behaviours(overwrite)
+    proj.classify_behavs(overwrite)
+    proj.export_behavs(overwrite)
 
-    proj.analyse_behaviours()
+    proj.analyse_behavs()
 
     proj.combine_analysis(overwrite)
 

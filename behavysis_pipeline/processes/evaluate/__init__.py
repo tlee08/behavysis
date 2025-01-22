@@ -9,7 +9,7 @@ dlc_fp : str
     _description_
 behavs_fp : str
     _description_
-out_dir : str
+dst_dir : str
     _description_
 configs_fp : str
     _description_
@@ -23,7 +23,7 @@ str
 
 Notes
 -----
-Given the `out_dir`, we save the files to `out_dir/<func_name>/<exp_name>.<ext>`
+Given the `dst_dir`, we save the files to `dst_dir/<func_name>/<exp_name>.<ext>`
 """
 
 import os
@@ -50,7 +50,7 @@ class Evaluate:
         vid_fp: str,
         dlc_fp: str,
         behavs_fp: str,
-        out_dir: str,
+        dst_dir: str,
         configs_fp: str,
         overwrite: bool,
     ) -> str:
@@ -58,9 +58,9 @@ class Evaluate:
         Make keypoints evaluation plot of likelihood of each bodypart through time.
         """
         name = get_name(dlc_fp)
-        out_dir = os.path.join(out_dir, Evaluate.keypoints_plot.__name__)
-        out_fp = os.path.join(out_dir, f"{name}.png")
-        os.makedirs(out_dir, exist_ok=True)
+        dst_dir = os.path.join(dst_dir, Evaluate.keypoints_plot.__name__)
+        dst_fp = os.path.join(dst_dir, f"{name}.png")
+        os.makedirs(dst_dir, exist_ok=True)
 
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
@@ -97,7 +97,7 @@ class Evaluate:
         )
         g.add_legend()
         # Saving plot
-        g.savefig(out_fp)
+        g.savefig(dst_fp)
         g.figure.clf()
         return ""
 
@@ -110,7 +110,7 @@ class Evaluate:
         vid_fp: str,
         dlc_fp: str,
         behavs_fp: str,
-        out_dir: str,
+        dst_dir: str,
         configs_fp: str,
         overwrite: bool,
     ) -> str:
@@ -118,11 +118,11 @@ class Evaluate:
         Make behaviour evaluation plot of the predicted and actual behaviours through time.
         """
         name = get_name(behavs_fp)
-        out_dir = os.path.join(out_dir, Evaluate.behav_plot.__name__)
-        out_fp = os.path.join(out_dir, f"{name}.png")
-        os.makedirs(out_dir, exist_ok=True)
+        dst_dir = os.path.join(dst_dir, Evaluate.behav_plot.__name__)
+        dst_fp = os.path.join(dst_dir, f"{name}.png")
+        os.makedirs(dst_dir, exist_ok=True)
         # If overwrite is False, checking if we should skip processing
-        if not overwrite and os.path.exists(out_fp):
+        if not overwrite and os.path.exists(dst_fp):
             return file_exists_msg()
 
         # Getting necessary config parameters
@@ -156,6 +156,6 @@ class Evaluate:
         )
         g.add_legend()
         # Saving plot
-        g.savefig(out_fp)
+        g.savefig(dst_fp)
         g.figure.clf()
         return ""

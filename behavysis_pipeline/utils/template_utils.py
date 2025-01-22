@@ -28,7 +28,7 @@ def render_template(tmpl_name: str, pkg_name: str, pkg_subdir: str, **kwargs: An
 
 def save_template(tmpl_name: str, pkg_name: str, pkg_subdir: str, dst_fp: str, **kwargs: Any) -> None:
     """
-    Renders the given template with the given arguments and saves it to the out_fp.
+    Renders the given template with the given arguments and saves it to the dst_fp.
     """
     # Rendering the template
     rendered = render_template(tmpl_name, pkg_name, pkg_subdir, **kwargs)

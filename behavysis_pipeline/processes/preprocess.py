@@ -5,7 +5,7 @@ Parameters
 ----------
 dlc_fp : str
     The input video filepath.
-out_fp : str
+dst_fp : str
     The output video filepath.
 configs_fp : str
     The JSON configs filepath.
@@ -39,7 +39,7 @@ class Preprocess:
     """_summary_"""
 
     @classmethod
-    def start_stop_trim(cls, dlc_fp: str, out_fp: str, configs_fp: str, overwrite: bool) -> str:
+    def start_stop_trim(cls, src_fp: str, dst_fp: str, configs_fp: str, overwrite: bool) -> str:
         """
         Filters the rows of a DLC formatted dataframe to include only rows within the start
         and end time of the experiment, given a corresponding configs dict.
@@ -48,7 +48,7 @@ class Preprocess:
         ----------
         dlc_fp : str
             The file path of the input DLC formatted dataframe.
-        out_fp : str
+        dst_fp : str
             The file path of the output trimmed dataframe.
         configs_fp : str
             The file path of the configs dict.
@@ -73,22 +73,22 @@ class Preprocess:
         ```
         """
         logger, io_obj = init_logger_with_io_obj(get_current_func_name())
-        if not overwrite and os.path.exists(out_fp):
-            logger.warning(file_exists_msg(out_fp))
+        if not overwrite and os.path.exists(dst_fp):
+            logger.warning(file_exists_msg(dst_fp))
             return get_io_obj_content(io_obj)
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
         start_frame = configs.auto.start_frame
         stop_frame = configs.auto.stop_frame
         # Reading file
-        df = KeypointsDf.read(dlc_fp)
+        keypoints_df = KeypointsDf.read(src_fp)
         # Trimming dataframe between start and stop frames
-        df = df.loc[start_frame:stop_frame, :]
-        KeypointsDf.write(df, out_fp)
+        keypoints_df = keypoints_df.loc[start_frame:stop_frame, :]
+        KeypointsDf.write(keypoints_df, dst_fp)
         return get_io_obj_content(io_obj)
 
     @classmethod
-    def interpolate_stationary(cls, dlc_fp: str, out_fp: str, configs_fp: str, overwrite: bool) -> str:
+    def interpolate_stationary(cls, src_fp: str, dst_fp: str, configs_fp: str, overwrite: bool) -> str:
         """
         If the point detection (above a certain threshold) is below a certain proportion, then the x and y coordinates are set to the given values (usually corners).
         Otherwise, does nothing (encouraged to run Preprocess.interpolate afterwards).
@@ -110,8 +110,8 @@ class Preprocess:
         ```
         """
         logger, io_obj = init_logger_with_io_obj(get_current_func_name())
-        if not overwrite and os.path.exists(out_fp):
-            logger.warning(file_exists_msg(out_fp))
+        if not overwrite and os.path.exists(dst_fp):
+            logger.warning(file_exists_msg(dst_fp))
             return get_io_obj_content(io_obj)
         # Getting necessary config parameters list
         configs = ExperimentConfigs.read_json(configs_fp)
@@ -124,9 +124,9 @@ class Preprocess:
                 "Width and height must be provided in the formatted video. Try running FormatVid.format_vid."
             )
         # Reading file
-        df = KeypointsDf.read(dlc_fp)
+        keypoints_df = KeypointsDf.read(src_fp)
         # Getting the scorer name
-        scorer = df.columns.unique(KeypointsDf.CN.SCORER.value)[0]
+        scorer = keypoints_df.columns.unique(KeypointsDf.CN.SCORER.value)[0]
         # For each bodypart, filling in the given point
         for configs_filt in configs_filt_ls:
             # Getting config parameters
@@ -139,12 +139,12 @@ class Preprocess:
             x = x * width_px
             y = y * height_px
             # Getting "is_detected" for each frame for the bodypart
-            is_detected = df[(scorer, "single", bodypart, CoordsCols.LIKELIHOOD.value)] >= pcutoff
+            is_detected = keypoints_df[(scorer, "single", bodypart, CoordsCols.LIKELIHOOD.value)] >= pcutoff
             # If the bodypart is detected in less than the given proportion of the video, then set the x and y coordinates to the given values
             if is_detected.mean() < pcutoff_all:
-                df[(scorer, "single", bodypart, CoordsCols.X.value)] = x
-                df[(scorer, "single", bodypart, CoordsCols.Y.value)] = y
-                df[(scorer, "single", bodypart, CoordsCols.LIKELIHOOD.value)] = pcutoff
+                keypoints_df[(scorer, "single", bodypart, CoordsCols.X.value)] = x
+                keypoints_df[(scorer, "single", bodypart, CoordsCols.Y.value)] = y
+                keypoints_df[(scorer, "single", bodypart, CoordsCols.LIKELIHOOD.value)] = pcutoff
                 logger.info(
                     f"{bodypart} is detected in less than {pcutoff_all} of the video."
                     " Setting x and y coordinates to ({x}, {y})."
@@ -155,11 +155,11 @@ class Preprocess:
                     " No need for stationary interpolation."
                 )
         # Saving
-        KeypointsDf.write(df, out_fp)
+        KeypointsDf.write(keypoints_df, dst_fp)
         return get_io_obj_content(io_obj)
 
     @classmethod
-    def interpolate(cls, dlc_fp: str, out_fp: str, configs_fp: str, overwrite: bool) -> str:
+    def interpolate(cls, src_fp: str, dst_fp: str, configs_fp: str, overwrite: bool) -> str:
         """
         "Smooths" out noticeable jitter of points, where the likelihood (and accuracy) of
         a point's coordinates are low (e.g., when the subject's head goes out of view). It
@@ -177,36 +177,36 @@ class Preprocess:
         ```
         """
         logger, io_obj = init_logger_with_io_obj(get_current_func_name())
-        if not overwrite and os.path.exists(out_fp):
-            logger.warning(file_exists_msg(out_fp))
+        if not overwrite and os.path.exists(dst_fp):
+            logger.warning(file_exists_msg(dst_fp))
             return get_io_obj_content(io_obj)
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
         configs_filt = configs.user.preprocess.interpolate
         # Reading file
-        df = KeypointsDf.read(dlc_fp)
+        keypoints_df = KeypointsDf.read(src_fp)
         # Gettings the unique groups of (individual, bodypart) groups.
-        unique_cols = df.columns.droplevel(["coords"]).unique()
+        unique_cols = keypoints_df.columns.droplevel(["coords"]).unique()
         # Setting low-likelihood points to Nan to later interpolate
         for scorer, indiv, bp in unique_cols:
             # Imputing Nan likelihood points with 0
-            df[(scorer, indiv, bp, CoordsCols.LIKELIHOOD.value)].fillna(value=0, inplace=True)
+            keypoints_df[(scorer, indiv, bp, CoordsCols.LIKELIHOOD.value)].fillna(value=0, inplace=True)
             # Setting x and y coordinates of points that have low likelihood to Nan
-            to_remove = df[(scorer, indiv, bp, CoordsCols.LIKELIHOOD.value)] < configs_filt.pcutoff
-            df.loc[to_remove, (scorer, indiv, bp, CoordsCols.X.value)] = np.nan
-            df.loc[to_remove, (scorer, indiv, bp, CoordsCols.Y.value)] = np.nan
+            to_remove = keypoints_df[(scorer, indiv, bp, CoordsCols.LIKELIHOOD.value)] < configs_filt.pcutoff
+            keypoints_df.loc[to_remove, (scorer, indiv, bp, CoordsCols.X.value)] = np.nan
+            keypoints_df.loc[to_remove, (scorer, indiv, bp, CoordsCols.Y.value)] = np.nan
         # linearly interpolating Nan x and y points.
         # Also backfilling points at the start.
         # Also forward filling points at the end.
         # Also imputing nan points with 0 (if the ENTIRE column is nan, then it's imputed)
-        df = df.interpolate(method="linear").bfill().ffill()
+        keypoints_df = keypoints_df.interpolate(method="linear").bfill().ffill()
         # if df.isnull().values.any() then the entire column is nan (log warning)
-        df = df.fillna(0)
-        KeypointsDf.write(df, out_fp)
+        keypoints_df = keypoints_df.fillna(0)
+        KeypointsDf.write(keypoints_df, dst_fp)
         return get_io_obj_content(io_obj)
 
     @classmethod
-    def refine_ids(cls, dlc_fp: str, out_fp: str, configs_fp: str, overwrite: bool) -> str:
+    def refine_ids(cls, src_fp: str, dst_fp: str, configs_fp: str, overwrite: bool) -> str:
         """
         Ensures that the identity is correctly tracked for maDLC.
         Assumes interpolate_points has already been run.
@@ -226,11 +226,11 @@ class Preprocess:
         ```
         """
         logger, io_obj = init_logger_with_io_obj(get_current_func_name())
-        if not overwrite and os.path.exists(out_fp):
-            logger.warning(file_exists_msg(out_fp))
+        if not overwrite and os.path.exists(dst_fp):
+            logger.warning(file_exists_msg(dst_fp))
             return get_io_obj_content(io_obj)
         # Reading file
-        df = KeypointsDf.read(dlc_fp)
+        keypoints_df = KeypointsDf.read(src_fp)
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
         configs_filt = configs.user.preprocess.refine_ids
@@ -249,26 +249,27 @@ class Preprocess:
             (unmarked, "individuals"),
             (marking, "bodyparts"),
         ]:
-            if column not in df.columns.unique(level):
+            if column not in keypoints_df.columns.unique(level):
                 raise ValueError(
                     f'The marking value in the config file, "{column}",' " is not a column name in the DLC file."
                 )
         # Checking that bodyparts are all valid
-        KeypointsDf.check_bpts_exist(df, bpts)
+        KeypointsDf.check_bpts_exist(keypoints_df, bpts)
         # Calculating the distances between the averaged bodycentres and the marking
-        df_aggr = aggregate_df(df, marking, [marked, unmarked], bpts)
+        mark_dists_df = get_mark_dists_df(keypoints_df, marked, unmarked, [marking], bpts)
         # Getting "to_switch" decision series for each frame
-        df_switch = decice_switch(df_aggr, window_frames, marked, unmarked)
+        switch_df = get_id_switch_df(mark_dists_df, window_frames, marked, unmarked)
         # Updating df with the switched values
-        df_switched = switch_identities(df, df_switch[metric], marked, unmarked)
-        KeypointsDf.write(df_switched, out_fp)
+        switched_keypoints_df = switch_identities(keypoints_df, switch_df[metric], marked, unmarked)
+        KeypointsDf.write(switched_keypoints_df, dst_fp)
         return get_io_obj_content(io_obj)
 
 
-def aggregate_df(
-    df: pd.DataFrame,
-    marking: str,
-    indivs: list[str],
+def get_mark_dists_df(
+    keypoints_df: pd.DataFrame,
+    marked_indiv: str,
+    unmarked_indiv: str,
+    mark_pts: list[str],
     bpts: list[str],
 ) -> pd.DataFrame:
     """
@@ -288,28 +289,31 @@ def aggregate_df(
     pd.DataFrame
         _description_
     """
-    l0 = df.columns.unique(0)[0]
-    df_aggr = pd.DataFrame(index=df.index)
+    l0 = keypoints_df.columns.unique(0)[0]
+    mark_dists_df = pd.DataFrame(index=keypoints_df.index)
+    indivs = [marked_indiv, unmarked_indiv]
     for coord in [CoordsCols.X.value, CoordsCols.Y.value]:
-        # Getting the coordinates of the colour marking in each frame
-        df_aggr[("mark", coord)] = df[l0, IndivCols.SINGLE.value, marking, coord]
         idx = pd.IndexSlice
+        # Getting the coordinates of the colour marking in each frame
+        mark_dists_df[("mark", coord)] = keypoints_df.loc[:, idx[l0, IndivCols.SINGLE.value, mark_pts, coord]].mean(
+            axis=1
+        )
         for indiv in indivs:
             # Getting the coordinates of each individual (average of the given bodyparts list)
-            df_aggr[(indiv, coord)] = df.loc[:, idx[l0, indiv, bpts, coord]].mean(axis=1)
+            mark_dists_df[(indiv, coord)] = keypoints_df.loc[:, idx[l0, indiv, bpts, coord]].mean(axis=1)
     # Getting the Euclidean distance between each mouse and the colour marking in each frame
     for indiv in indivs:
-        df_aggr[(indiv, "dist")] = np.sqrt(
-            np.square(df_aggr[(indiv, CoordsCols.X.value)] - df_aggr[("mark", CoordsCols.X.value)])
-            + np.square(df_aggr[(indiv, CoordsCols.Y.value)] - df_aggr[("mark", CoordsCols.Y.value)])
+        mark_dists_df[(indiv, "dist")] = np.sqrt(
+            np.square(mark_dists_df[(indiv, CoordsCols.X.value)] - mark_dists_df[("mark", CoordsCols.X.value)])
+            + np.square(mark_dists_df[(indiv, CoordsCols.Y.value)] - mark_dists_df[("mark", CoordsCols.Y.value)])
         )
     # Formatting columns as a MultiIndex
-    df_aggr.columns = pd.MultiIndex.from_tuples(df_aggr.columns)
-    return df_aggr
+    mark_dists_df.columns = pd.MultiIndex.from_tuples(mark_dists_df.columns)
+    return mark_dists_df
 
 
-def decice_switch(
-    df_aggr: pd.DataFrame,
+def get_id_switch_df(
+    mark_dists_df: pd.DataFrame,
     window_frames: int,
     marked: str,
     unmarked: str,
@@ -334,27 +338,27 @@ def decice_switch(
     pd.DataFrame
         _description_
     """
-    df_switch = pd.DataFrame(index=df_aggr.index)
+    switch_df = pd.DataFrame(index=mark_dists_df.index)
     #   - Current decision
-    df_switch["current"] = df_aggr[(marked, "dist")] > df_aggr[(unmarked, "dist")]
+    switch_df["current"] = mark_dists_df[(marked, "dist")] > mark_dists_df[(unmarked, "dist")]
     #   - Decision rolling
-    df_switch["rolling"] = (
-        df_switch["current"].rolling(window_frames, min_periods=1).apply(lambda x: x.mode()[0]).map({1: True, 0: False})
+    switch_df["rolling"] = (
+        switch_df["current"].rolling(window_frames, min_periods=1).apply(lambda x: x.mode()[0]).map({1: True, 0: False})
     )
     #   - Decision binned
-    bins = np.arange(df_switch.index.min(), df_switch.index.max() + window_frames, window_frames)
+    bins = np.arange(switch_df.index.min(), switch_df.index.max() + window_frames, window_frames)
     df_switch_x = pd.DataFrame()
-    df_switch_x["bins"] = pd.Series(pd.cut(df_switch.index, bins=bins, labels=bins[1:], include_lowest=True))
-    df_switch_x["current"] = df_switch["current"]
-    df_switch["binned"] = df_switch_x.groupby("bins")["current"].transform(lambda x: x.mode())
-    return df_switch
+    df_switch_x["bins"] = pd.Series(pd.cut(switch_df.index, bins=bins, labels=bins[1:], include_lowest=True))
+    df_switch_x["current"] = switch_df["current"]
+    switch_df["binned"] = df_switch_x.groupby("bins")["current"].transform(lambda x: x.mode())
+    return switch_df
 
 
 def switch_identities(
-    df: pd.DataFrame,
+    keypoints_df: pd.DataFrame,
     is_switch: pd.Series,
-    marked: str,
-    unmarked: str,
+    marked_indiv: str,
+    unmarked_indiv: str,
 ) -> pd.DataFrame:
     """
     _summary_
@@ -375,9 +379,9 @@ def switch_identities(
     pd.DataFrame
         _description_
     """
-    df = df.copy()
-    header = df.columns.unique(0)[0]
-    df["isSwitch"] = is_switch
+    keypoints_df = keypoints_df.copy()
+    header = keypoints_df.columns.unique(0)[0]
+    keypoints_df["isSwitch"] = is_switch
 
     def _f(row: pd.Series, marked: str, unmarked: str) -> pd.Series:
         if row["isSwitch"][0]:
@@ -386,6 +390,6 @@ def switch_identities(
             row[header, marked] = temp
         return row
 
-    df = df.apply(lambda row: _f(row, marked, unmarked), axis=1)
-    df = df.drop(columns="isSwitch")
-    return df
+    keypoints_df = keypoints_df.apply(lambda row: _f(row, marked_indiv, unmarked_indiv), axis=1)
+    keypoints_df = keypoints_df.drop(columns="isSwitch")
+    return keypoints_df

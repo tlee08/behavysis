@@ -20,18 +20,18 @@ if __name__ == "__main__":
     # Paths
     configs_dir = os.path.join(root_dir, "0_configs")
     boris_dir = os.path.join(root_dir, "boris")
-    out_dir = os.path.join(root_dir, "7_scored_behavs")
+    dst_dir = os.path.join(root_dir, "7_scored_behavs")
     # Getting names of all files
     names = [os.path.splitext(i)[0] for i in os.listdir(boris_dir)]
     for name in names:
         # Paths
         boris_fp = os.path.join(boris_dir, f"{name}.tsv")
         configs_fp = os.path.join(configs_dir, f"{name}.json")
-        out_fp = os.path.join(out_dir, f"{name}.feather")
+        dst_fp = os.path.join(dst_dir, f"{name}.feather")
         # Making df from BORIS
         df = BehavMixin.import_boris_tsv(boris_fp, configs_fp, behavs_ls)
         # Saving df
-        df.to_feather(out_fp)
+        df.to_feather(dst_fp)
     # Making BehavClassifier objects
     for behav in behavs_ls:
         BehavClassifier.create_new_model(os.path.join(root_dir, "behav_models"), behav)

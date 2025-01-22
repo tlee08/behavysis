@@ -216,6 +216,7 @@ class TimeSeriesDataset(Dataset):
             assert x.shape[0] == y.shape[0]
         # Removing the x-y-l columns (only derived features kept)
         # 2 (indivs) * 8 (bpts) * 3 (coords) = 48 (columns)
+        # TODO do the removing in preprocessing in behav_classifier pipeline, NOT in base torch model
         x = x[:, 48:]
         # Padding x (for frames on either side)
         x = self.pad_arr(x, window_frames)

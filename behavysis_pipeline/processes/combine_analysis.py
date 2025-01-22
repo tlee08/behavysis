@@ -21,7 +21,7 @@ import os
 import pandas as pd
 
 from behavysis_pipeline.df_classes.analyse_combined_df import AnalyseCombinedDf
-from behavysis_pipeline.df_classes.analyse_df import AnalyseDf
+from behavysis_pipeline.df_classes.analyse_df import FBF, AnalyseDf
 from behavysis_pipeline.utils.diagnostics_utils import file_exists_msg
 from behavysis_pipeline.utils.io_utils import get_name
 from behavysis_pipeline.utils.logging_utils import get_io_obj_content, init_logger_with_io_obj
@@ -38,8 +38,8 @@ class CombineAnalysis:
     @classmethod
     def combine_analysis(
         cls,
-        analyse_dir: str,
-        out_fp: str,
+        analysis_dir: str,
+        analysis_combined_fp: str,
         configs_fp: str,
         overwrite: bool,
     ) -> str:
@@ -48,19 +48,19 @@ class CombineAnalysis:
         and saves this in a single dataframe.
         """
         logger, io_obj = init_logger_with_io_obj(get_current_func_name())
-        if not overwrite and os.path.exists(out_fp):
-            logger.warning(file_exists_msg(out_fp))
+        if not overwrite and os.path.exists(analysis_combined_fp):
+            logger.warning(file_exists_msg(analysis_combined_fp))
             return get_io_obj_content(io_obj)
         name = get_name(configs_fp)
         # For each analysis subdir, combining fbf files
-        analysis_subdir_ls = [i for i in os.listdir(analyse_dir) if os.path.isdir(os.path.join(analyse_dir, i))]
+        analysis_subdir_ls = [i for i in os.listdir(analysis_dir) if os.path.isdir(os.path.join(analysis_dir, i))]
         # If no analysis files, then return warning and don't make df
         if len(analysis_subdir_ls) == 0:
             logger.warning("no analysis fbf files made. Run `exp.analyse` first")
             return get_io_obj_content(io_obj)
         # Reading in each fbf analysis df
         comb_df_ls = [
-            AnalyseDf.read(os.path.join(analyse_dir, analysis_subdir, "fbf", f"{name}.{AnalyseDf.IO}"))
+            AnalyseDf.read(os.path.join(analysis_dir, analysis_subdir, FBF, f"{name}.{AnalyseDf.IO}"))
             for analysis_subdir in analysis_subdir_ls
         ]
         # Making combined df from list of dfs
@@ -71,5 +71,5 @@ class CombineAnalysis:
             names=[AnalyseCombinedDf.CN.ANALYSIS.value],
         )
         # Writing to file
-        AnalyseCombinedDf.write(comb_df, out_fp)
+        AnalyseCombinedDf.write(comb_df, analysis_combined_fp)
         return get_io_obj_content(io_obj)

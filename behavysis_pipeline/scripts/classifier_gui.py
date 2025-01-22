@@ -294,13 +294,13 @@ def main_old():
         # Input fields for the user to fill in the required parameters
         model_fp = st.text_input("Model File Path", "")
         in_fp_ls = st.text_area("Input File Paths (comma-separated)", "").split(",")
-        dlc_out_dir = st.text_input("DLC Output Directory", "")
+        temp_dlc_dir = st.text_input("DLC Output Directory", "")
         temp_dir = st.text_input("Temporary Directory", "")
         gputouse = st.number_input("GPU to Use", min_value=0, value=0, step=1)
 
         if st.button("Run DLC Subprocess"):
             # Assuming run_dlc_subproc function handles execution and error logging
-            run_dlc_subproc(model_fp, in_fp_ls, dlc_out_dir, temp_dir, gputouse)
+            run_dlc_subproc(model_fp, in_fp_ls, temp_dlc_dir, temp_dir, gputouse)
             st.success("DLC Subprocess Completed Successfully")
 
     elif app_mode == "Run SimBA Subprocess":

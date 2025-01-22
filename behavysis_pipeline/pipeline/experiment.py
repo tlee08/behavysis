@@ -13,7 +13,7 @@ from behavysis_pipeline.constants import (
     FileExts,
     Folders,
 )
-from behavysis_pipeline.processes.analyse_behavs import AnalyseBehaviours
+from behavysis_pipeline.processes.analyse_behavs import AnalyseBehavs
 from behavysis_pipeline.processes.classify_behavs import ClassifyBehavs
 from behavysis_pipeline.processes.combine_analysis import CombineAnalysis
 from behavysis_pipeline.processes.evaluate_vid import EvaluateVid
@@ -233,14 +233,14 @@ class Experiment:
         """
         return self._process_scaffold(
             funcs,
-            raw_fp=self.get_fp(Folders.RAW_VID),
-            formatted_fp=self.get_fp(Folders.FORMATTED_VID),
+            raw_vid_fp=self.get_fp(Folders.RAW_VID),
+            formatted_vid_fp=self.get_fp(Folders.FORMATTED_VID),
             configs_fp=self.get_fp(Folders.CONFIGS),
             overwrite=overwrite,
         )
 
     #####################################################################
-    #                        DLC METHODS
+    #                      DLC KEYPOINTS METHODS
     #####################################################################
 
     def run_dlc(self, gputouse: int | None, overwrite: bool) -> dict:
@@ -266,8 +266,8 @@ class Experiment:
         """
         return self._process_scaffold(
             (RunDLC.ma_dlc_analyse_single,),
-            vid_fp=self.get_fp(Folders.FORMATTED_VID),
-            out_fp=self.get_fp(Folders.DLC),
+            formatted_vid_fp=self.get_fp(Folders.FORMATTED_VID),
+            keypoints_fp=self.get_fp(Folders.KEYPOINTS),
             configs_fp=self.get_fp(Folders.CONFIGS),
             gputouse=gputouse,
             overwrite=overwrite,
@@ -275,8 +275,8 @@ class Experiment:
 
     def calculate_parameters(self, funcs: tuple[Callable, ...]) -> dict:
         """
-        A pipeline to calculate the parameters of the raw DLC file, which will
-        assist in preprocessing the DLC data.
+        A pipeline to calculate the parameters of the keypoints file, which will
+        assist in preprocessing the keypoints data.
 
         Parameters
         ----------
@@ -294,7 +294,7 @@ class Experiment:
         """
         return self._process_scaffold(
             funcs,
-            dlc_fp=self.get_fp(Folders.DLC),
+            keypoints_fp=self.get_fp(Folders.KEYPOINTS),
             configs_fp=self.get_fp(Folders.CONFIGS),
         )
 
@@ -325,8 +325,8 @@ class Experiment:
 
     def preprocess(self, funcs: tuple[Callable, ...], overwrite: bool) -> dict:
         """
-        A preprocessing pipeline method to convert raw DLC data into preprocessed
-        DLC data that is ready for ML analysis.
+        A preprocessing pipeline method to convert raw keypoints data into preprocessed
+        keypoints data that is ready for ML analysis.
         All functs passed in must have the format func(df, dict) -> df. Possible funcs
         are given in preprocessing.py
         The preprocessed data is saved to the project's preprocessed folder.
@@ -347,11 +347,11 @@ class Experiment:
         -----
         Can call any methods from `Preprocess`.
         """
-        # Exporting 3_dlc df to 4_preprocessed folder
+        # Exporting keypoints df to preprocessed folder
         dd = self._process_scaffold(
             (Export.df2df,),
-            src_fp=self.get_fp(Folders.DLC),
-            out_fp=self.get_fp(Folders.PREPROCESSED),
+            src_fp=self.get_fp(Folders.KEYPOINTS),
+            dst_fp=self.get_fp(Folders.PREPROCESSED),
             overwrite=overwrite,
         )
         # If there is an error, OR warning (indicates not to ovewrite), then return early
@@ -361,8 +361,8 @@ class Experiment:
         # Feeding through preprocessing functions
         return self._process_scaffold(
             funcs,
-            dlc_fp=self.get_fp(Folders.PREPROCESSED),
-            out_fp=self.get_fp(Folders.PREPROCESSED),
+            src_fp=self.get_fp(Folders.PREPROCESSED),
+            dst_fp=self.get_fp(Folders.PREPROCESSED),
             configs_fp=self.get_fp(Folders.CONFIGS),
             overwrite=True,
         )
@@ -389,13 +389,13 @@ class Experiment:
         """
         return self._process_scaffold(
             (ExtractFeatures.extract_features,),
-            dlc_fp=self.get_fp(Folders.PREPROCESSED),
-            out_fp=self.get_fp(Folders.FEATURES_EXTRACTED),
+            keypoints_fp=self.get_fp(Folders.PREPROCESSED),
+            features_fp=self.get_fp(Folders.FEATURES_EXTRACTED),
             configs_fp=self.get_fp(Folders.CONFIGS),
             overwrite=overwrite,
         )
 
-    def classify_behaviours(self, overwrite: bool) -> dict:
+    def classify_behavs(self, overwrite: bool) -> dict:
         """
         Given model config files in the BehavClassifier format, generates beahviour predidctions
         on the given extracted features dataframe.
@@ -413,12 +413,12 @@ class Experiment:
         return self._process_scaffold(
             (ClassifyBehavs.classify_behavs,),
             features_fp=self.get_fp(Folders.FEATURES_EXTRACTED),
-            out_fp=self.get_fp(Folders.PREDICTED_BEHAVS),
+            behavs_fp=self.get_fp(Folders.PREDICTED_BEHAVS),
             configs_fp=self.get_fp(Folders.CONFIGS),
             overwrite=overwrite,
         )
 
-    def export_behaviours(self, overwrite: bool) -> dict:
+    def export_behavs(self, overwrite: bool) -> dict:
         """
         _summary_
 
@@ -436,7 +436,7 @@ class Experiment:
         return self._process_scaffold(
             (Export.predictedbehavs2scoredbehavs,),
             src_fp=self.get_fp(Folders.PREDICTED_BEHAVS),
-            out_fp=self.get_fp(Folders.SCORED_BEHAVS),
+            dst_fp=self.get_fp(Folders.SCORED_BEHAVS),
             configs_fp=self.get_fp(Folders.CONFIGS),
             overwrite=overwrite,
         )
@@ -467,12 +467,12 @@ class Experiment:
         """
         return self._process_scaffold(
             funcs,
-            dlc_fp=self.get_fp(Folders.PREPROCESSED),
-            out_dir=os.path.join(self.root_dir, ANALYSIS_DIR),
+            keypoints_fp=self.get_fp(Folders.PREPROCESSED),
+            dst_dir=os.path.join(self.root_dir, ANALYSIS_DIR),
             configs_fp=self.get_fp(Folders.CONFIGS),
         )
 
-    def analyse_behaviours(self) -> dict:
+    def analyse_behavs(self) -> dict:
         """
         An ML pipeline method to analyse the preprocessed DLC data.
         Possible funcs are given in analysis.py.
@@ -488,9 +488,9 @@ class Experiment:
         Can call any methods from `Analyse`.
         """
         return self._process_scaffold(
-            (AnalyseBehaviours.analyse_behaviours,),
+            (AnalyseBehavs.analyse_behavs,),
             behavs_fp=self.get_fp(Folders.SCORED_BEHAVS),
-            out_dir=os.path.join(self.root_dir, ANALYSIS_DIR),
+            dst_dir=os.path.join(self.root_dir, ANALYSIS_DIR),
             configs_fp=self.get_fp(Folders.CONFIGS),
         )
 
@@ -501,8 +501,8 @@ class Experiment:
         # TODO: make new subfolder called combined_analysis and make ONLY(??) fbf analysis.
         return self._process_scaffold(
             (CombineAnalysis.combine_analysis,),
-            analyse_dir=os.path.join(self.root_dir, ANALYSIS_DIR),
-            out_fp=self.get_fp(Folders.ANALYSE_COMBINED),
+            analysis_dir=os.path.join(self.root_dir, ANALYSIS_DIR),
+            analysis_combined_fp=self.get_fp(Folders.ANALYSIS_COMBINED),
             configs_fp=self.get_fp(Folders.CONFIGS),
             overwrite=overwrite,
         )
@@ -529,15 +529,15 @@ class Experiment:
         """
         return self._process_scaffold(
             (EvaluateVid.evaluate_vid,),
-            vid_fp=self.get_fp(Folders.FORMATTED_VID),
-            dlc_fp=self.get_fp(Folders.PREPROCESSED),
-            analyse_combined_fp=self.get_fp(Folders.ANALYSE_COMBINED),
-            out_fp=self.get_fp(Folders.EVALUATE_VID),
+            formatted_vid_fp=self.get_fp(Folders.FORMATTED_VID),
+            keypoints_fp=self.get_fp(Folders.PREPROCESSED),
+            analysis_combined_fp=self.get_fp(Folders.ANALYSIS_COMBINED),
+            eval_vid_fp=self.get_fp(Folders.EVALUATE_VID),
             configs_fp=self.get_fp(Folders.CONFIGS),
             overwrite=overwrite,
         )
 
-    def export2csv(self, in_dir: str, out_dir: str, overwrite: bool) -> dict:
+    def export2csv(self, in_dir: str, dst_dir: str, overwrite: bool) -> dict:
         """
         _summary_
 
@@ -545,7 +545,7 @@ class Experiment:
         ----------
         in_dir : str
             _description_
-        out_dir : str
+        dst_dir : str
             _description_
 
         Returns
@@ -555,7 +555,7 @@ class Experiment:
         """
         return self._process_scaffold(
             (Export.df2csv,),
-            in_fp=self.get_fp(in_dir),
-            out_fp=os.path.join(out_dir, f"{self.name}.csv"),
+            src_fp=self.get_fp(in_dir),
+            dst_fp=os.path.join(dst_dir, f"{self.name}.csv"),
             overwrite=overwrite,
         )

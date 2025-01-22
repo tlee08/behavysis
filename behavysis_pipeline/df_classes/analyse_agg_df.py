@@ -1,21 +1,3 @@
-"""
-Functions have the following format:
-
-Parameters
-----------
-dlc_fp : str
-    The DLC dataframe filepath of the experiment to analyse.
-ANALYSE_DIR : str
-    The analysis directory path.
-configs_fp : str
-    the experiment's JSON configs file.
-
-Returns
--------
-str
-    The outcome of the process.
-"""
-
 import os
 from enum import Enum
 from typing import Callable
@@ -206,7 +188,7 @@ class AnalyseBinnedDf(DFMixin):
     def make_binned_plot(
         cls,
         binned_df: pd.DataFrame,
-        out_fp: str,
+        dst_fp: str,
         agg_column: str,
     ):
         """
@@ -234,15 +216,15 @@ class AnalyseBinnedDf(DFMixin):
         g.figure.subplots_adjust(top=0.85)
         g.figure.suptitle("Binned data", fontsize=12)
         # Saving fig
-        os.makedirs(os.path.dirname(out_fp), exist_ok=True)
-        g.savefig(out_fp)
+        os.makedirs(os.path.dirname(dst_fp), exist_ok=True)
+        g.savefig(dst_fp)
         g.figure.clf()
 
     @classmethod
     def summary_binned_quantitative(
         cls,
         analysis_df: pd.DataFrame,
-        out_dir: str,
+        dst_dir: str,
         name: str,
         fps: float,
         bins_ls: list,
@@ -253,7 +235,7 @@ class AnalyseBinnedDf(DFMixin):
         """
         return cls.summary_binned(
             analysis_df=analysis_df,
-            out_dir=out_dir,
+            dst_dir=dst_dir,
             name=name,
             fps=fps,
             summary_func=AnalyseSummaryDf.agg_quantitative,
@@ -266,7 +248,7 @@ class AnalyseBinnedDf(DFMixin):
     def summary_binned_behavs(
         cls,
         analysis_df: pd.DataFrame,
-        out_dir: str,
+        dst_dir: str,
         name: str,
         fps: float,
         bins_ls: list,
@@ -277,7 +259,7 @@ class AnalyseBinnedDf(DFMixin):
         """
         return cls.summary_binned(
             analysis_df=analysis_df,
-            out_dir=out_dir,
+            dst_dir=dst_dir,
             name=name,
             fps=fps,
             summary_func=AnalyseSummaryDf.agg_behavs,
@@ -290,7 +272,7 @@ class AnalyseBinnedDf(DFMixin):
     def summary_binned(
         cls,
         analysis_df: pd.DataFrame,
-        out_dir: str,
+        dst_dir: str,
         name: str,
         fps: float,
         summary_func: Callable[[pd.DataFrame, float], pd.DataFrame],
@@ -306,7 +288,7 @@ class AnalyseBinnedDf(DFMixin):
         # started, rather than when the recording started)
         analysis_df.index = analysis_df.index - analysis_df.index[0]
         # Summarising analysis_df
-        summary_fp = os.path.join(out_dir, SUMMARY, f"{name}.{cls.IO}")
+        summary_fp = os.path.join(dst_dir, SUMMARY, f"{name}.{cls.IO}")
         summary_df = summary_func(analysis_df, fps)
         AnalyseSummaryDf.write(summary_df, summary_fp)
         # Getting timestamps index
@@ -314,8 +296,8 @@ class AnalyseBinnedDf(DFMixin):
         # Binning analysis_df
         for bin_sec in bins_ls:
             # Making filepaths
-            binned_fp = os.path.join(out_dir, f"{BINNED}_{bin_sec}", f"{name}.{cls.IO}")
-            binned_plot_fp = os.path.join(out_dir, f"{BINNED}_{bin_sec}_{PLOT}", f"{name}.png")
+            binned_fp = os.path.join(dst_dir, f"{BINNED}_{bin_sec}", f"{name}.{cls.IO}")
+            binned_plot_fp = os.path.join(dst_dir, f"{BINNED}_{bin_sec}_{PLOT}", f"{name}.png")
             # Making binned df
             bins = np.arange(0, np.max(timestamps) + bin_sec, bin_sec)
             binned_df = cls.make_binned(analysis_df, fps, bins, summary_func)
@@ -325,8 +307,8 @@ class AnalyseBinnedDf(DFMixin):
         # Custom binning analysis_df
         if cbins_ls:
             # Making filepaths
-            binned_fp = os.path.join(out_dir, f"{BINNED}_{CUSTOM}", f"{name}.{cls.IO}")
-            binned_plot_fp = os.path.join(out_dir, f"{BINNED}_{CUSTOM}_{PLOT}", f"{name}.png")
+            binned_fp = os.path.join(dst_dir, f"{BINNED}_{CUSTOM}", f"{name}.{cls.IO}")
+            binned_plot_fp = os.path.join(dst_dir, f"{BINNED}_{CUSTOM}_{PLOT}", f"{name}.png")
             # Making binned df
             binned_df = cls.make_binned(analysis_df, fps, cbins_ls, summary_func)
             cls.write(binned_df, binned_fp)

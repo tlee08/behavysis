@@ -3,8 +3,8 @@ Functions have the following format:
 
 Parameters
 ----------
-dlc_fp : str
-    The experiment's dlc file.
+keypoints_fp : str
+    The experiment's keypoints file.
 configs_fp : str
     The experiment's JSON configs file.
 
@@ -30,13 +30,13 @@ from behavysis_pipeline.utils.misc_utils import get_current_func_name
 
 class CalculateParams:
     @staticmethod
-    def dlc_scorer_name(dlc_fp: str, configs_fp: str) -> str:
+    def dlc_scorer_name(keypoints_fp: str, configs_fp: str) -> str:
         """
         Get the name of the scorer used in the DLC analysis.
 
         Parameters
         ----------
-        dlc_fp : str
+        keypoints_fp : str
             The filepath to the DLC file.
 
         Returns
@@ -46,9 +46,9 @@ class CalculateParams:
         """
         logger, io_obj = init_logger_with_io_obj(get_current_func_name())
         # Reading dataframe
-        dlc_df = KeypointsDf.read(dlc_fp)
+        keypoints_df = KeypointsDf.read(keypoints_fp)
         # Getting scorer name
-        scorer_name = dlc_df.columns.get_level_values(0)[0]
+        scorer_name = keypoints_df.columns.get_level_values(0)[0]
         # Writing to configs
         configs = ExperimentConfigs.read_json(configs_fp)
         configs.auto.scorer_name = scorer_name
@@ -57,7 +57,7 @@ class CalculateParams:
 
     @staticmethod
     def start_frame(
-        dlc_fp: str,
+        keypoints_fp: str,
         configs_fp: str,
     ) -> str:
         """
@@ -92,20 +92,20 @@ class CalculateParams:
         # Deriving more parameters
         window_frames = int(np.round(fps * window_sec, 0))
         # Loading dataframe
-        dlc_df = KeypointsDf.clean_headings(KeypointsDf.read(dlc_fp))
+        keypoints_df = KeypointsDf.clean_headings(KeypointsDf.read(keypoints_fp))
         # Getting likehoods of subject (given bpts) existing in each frame
-        df_lhoods = calc_likelihoods(dlc_df, bpts, window_frames)
+        lhoods_df = calc_likelihoods(keypoints_df, bpts, window_frames)
         # Determining start time. Start frame is the first frame of the rolling window's range
-        df_lhoods["exists"] = df_lhoods["rolling"] > pcutoff
+        lhoods_df["exists"] = lhoods_df["rolling"] > pcutoff
         # Getting when subject first and last exists in video
         start_frame = 0
-        if np.all(df_lhoods["exists"] == 0):
+        if np.all(lhoods_df["exists"] == 0):
             # If subject never exists (i.e. no True values in exist column), then raise warning
             logger.warning(
                 "The subject was not detected in any frames - using the first frame. " "Please check the video."
             )
         else:
-            start_frame = df_lhoods[df_lhoods["exists"]].index[0]
+            start_frame = lhoods_df[lhoods_df["exists"]].index[0]
         # Writing to configs
         configs = ExperimentConfigs.read_json(configs_fp)
         configs.auto.start_frame = start_frame
@@ -114,7 +114,7 @@ class CalculateParams:
         return get_io_obj_content(io_obj)
 
     @staticmethod
-    def start_frame_from_csv(dlc_fp: str, configs_fp: str) -> str:
+    def start_frame_from_csv(keypoints_fp: str, configs_fp: str) -> str:
         """
         Reads the start time of the experiment from a given CSV file
         (filepath specified in config file).
@@ -143,17 +143,19 @@ class CalculateParams:
         csv_fp = configs.get_ref(configs_filt.csv_fp)
         name = configs.get_ref(configs_filt.name)
         # Assert fps should not be negative (-1 is a special value for None)
-        assert fps > 0, "fps should not be negative. Run FormatVid.get_vid_metadata() beforehand."
+        assert fps > 0, "fps value in configs should not be negative.\n" "Run FormatVid.get_vid_metadata() beforehand."
         # Using the name of the video as the name of the experiment if not specified
         if name is None:
-            name = get_name(dlc_fp)
+            name = get_name(keypoints_fp)
         # Reading csv_fp
-        df = pd.read_csv(csv_fp, index_col=0)
-        df.index = df.index.astype(str)
+        keypoints_df = pd.read_csv(csv_fp, index_col=0)
+        keypoints_df.index = keypoints_df.index.astype(str)
         # Asserting that the name and col_name is in the df
-        assert name in df.index.values, f"{name} not in {csv_fp}. Update the `name` parameter in the configs file."
+        assert (
+            name in keypoints_df.index.values
+        ), f"{name} not in {csv_fp}. Update the `name` parameter in the configs file."
         # Getting start time in seconds
-        start_sec = df.loc[name][0]
+        start_sec = keypoints_df.loc[name][0]
         # Converting to start frame
         start_frame = int(np.round(start_sec * fps, 0))
         # Writing to configs
@@ -164,7 +166,7 @@ class CalculateParams:
         return get_io_obj_content(io_obj)
 
     @staticmethod
-    def stop_frame(dlc_fp: str, configs_fp: str) -> str:
+    def stop_frame(keypoints_fp: str, configs_fp: str) -> str:
         """
         Calculates the end time according to the following equation:
 
@@ -210,7 +212,7 @@ class CalculateParams:
         return get_io_obj_content(io_obj)
 
     @staticmethod
-    def exp_dur(dlc_fp: str, configs_fp: str) -> str:
+    def exp_dur(keypoints_fp: str, configs_fp: str) -> str:
         """
         Calculates the duration in seconds, from the time the specified bodyparts appeared
         to the time they disappeared.
@@ -229,21 +231,21 @@ class CalculateParams:
         # Deriving more parameters
         window_frames = int(np.round(fps * window_sec, 0))
         # Loading dataframe
-        dlc_df = KeypointsDf.clean_headings(KeypointsDf.read(dlc_fp))
+        keypoints_df = KeypointsDf.clean_headings(KeypointsDf.read(keypoints_fp))
         # Getting likehoods of subject (given bpts) existing in each frame
-        df_lhoods = calc_likelihoods(dlc_df, bpts, window_frames)
+        lhoods_df = calc_likelihoods(keypoints_df, bpts, window_frames)
         # Determining exist times from rolling average windows
-        df_lhoods["exists"] = df_lhoods["rolling"] > pcutoff
+        lhoods_df["exists"] = lhoods_df["rolling"] > pcutoff
         # Getting when subject first and last exists in video
         exp_dur_frames = 0
-        if np.all(df_lhoods["exists"] == 0):
+        if np.all(lhoods_df["exists"] == 0):
             # If subject never exists (i.e. no True values in exist column), then raise warning
             logger.warning(
                 "The subject was not detected in any frames - using the first frame. " "Please check the video."
             )
         else:
-            start_frame = df_lhoods[df_lhoods["exists"]].index[0]
-            stop_frame = df_lhoods[df_lhoods["exists"]].index[-1]
+            start_frame = lhoods_df[lhoods_df["exists"]].index[0]
+            stop_frame = lhoods_df[lhoods_df["exists"]].index[-1]
             exp_dur_frames = stop_frame - start_frame
         # Writing to configs
         configs = ExperimentConfigs.read_json(configs_fp)
@@ -253,7 +255,7 @@ class CalculateParams:
         return get_io_obj_content(io_obj)
 
     @staticmethod
-    def px_per_mm(dlc_fp: str, configs_fp: str) -> str:
+    def px_per_mm(keypoints_fp: str, configs_fp: str) -> str:
         """
         Calculates the pixels per mm conversion for the video.
 
@@ -287,14 +289,14 @@ class CalculateParams:
         pcutoff = configs.get_ref(configs_filt.pcutoff)
         dist_mm = configs.get_ref(configs_filt.dist_mm)
         # Loading dataframe
-        dlc_df = KeypointsDf.clean_headings(KeypointsDf.read(dlc_fp))
+        keypoints_df = KeypointsDf.clean_headings(KeypointsDf.read(keypoints_fp))
         # Imputing missing values with 0 (only really relevant for `likelihood` columns)
-        dlc_df = dlc_df.fillna(0)
+        keypoints_df = keypoints_df.fillna(0)
         # Checking that the two reference points are valid
-        KeypointsDf.check_bpts_exist(dlc_df, [pt_a, pt_b])
+        KeypointsDf.check_bpts_exist(keypoints_df, [pt_a, pt_b])
         # Getting calibration points (x, y, likelihood) values
-        pt_a_df = dlc_df[IndivCols.SINGLE.value, pt_a]
-        pt_b_df = dlc_df[IndivCols.SINGLE.value, pt_b]
+        pt_a_df = keypoints_df[IndivCols.SINGLE.value, pt_a]
+        pt_b_df = keypoints_df[IndivCols.SINGLE.value, pt_b]
         # Interpolating points which are below a likelihood threshold (linear)
         pt_a_df.loc[pt_a_df[CoordsCols.LIKELIHOOD.value] < pcutoff] = np.nan
         pt_a_df = pt_a_df.interpolate(method="linear", axis=0).bfill()
@@ -312,19 +314,19 @@ class CalculateParams:
 
 
 def calc_likelihoods(
-    df: pd.DataFrame,
+    keypoints_df: pd.DataFrame,
     bpts: list,
     window_frames: int,
 ):
     # Imputing missing values with 0 (only really relevant for `likelihood` columns)
-    df = df.fillna(0)
+    keypoints_df = keypoints_df.fillna(0)
     # Checking that the two reference points are valid
-    KeypointsDf.check_bpts_exist(df, bpts)
-    # Calculating likelihood of subject (given bpts) existing.
+    KeypointsDf.check_bpts_exist(keypoints_df, bpts)
+    # Calculating likelihood of subject (given bpts) existing. Taking mean likelihood across bpts
     idx = pd.IndexSlice
-    df_lhoods = pd.DataFrame(index=df.index)
-    df_bpts_lhoods = df.loc[:, idx[:, bpts, CoordsCols.LIKELIHOOD.value]]
-    df_lhoods["current"] = df_bpts_lhoods.apply(np.nanmedian, axis=1)
+    lhoods_df = pd.DataFrame(index=keypoints_df.index)
+    bpts_lhoods_df = keypoints_df.loc[:, idx[:, bpts, CoordsCols.LIKELIHOOD.value]]
+    lhoods_df["current"] = bpts_lhoods_df.apply(np.nanmean, axis=1)
     # Calculating likelihood of subject existing over time window
-    df_lhoods["rolling"] = df_lhoods["current"].rolling(window_frames, center=True).agg(np.nanmean)
-    return df_lhoods
+    lhoods_df["rolling"] = lhoods_df["current"].rolling(window_frames, center=True).agg(np.nanmean)
+    return lhoods_df

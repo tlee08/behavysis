@@ -26,7 +26,7 @@ class ClassifyBehavs:
     def classify_behavs(
         cls,
         features_fp: str,
-        out_fp: str,
+        behavs_fp: str,
         configs_fp: str,
         overwrite: bool,
     ) -> str:
@@ -38,7 +38,7 @@ class ClassifyBehavs:
         ----------
         features_fp : str
             _description_
-        out_fp : str
+        dst_fp : str
             _description_
         configs_fp : str
             _description_
@@ -61,8 +61,8 @@ class ClassifyBehavs:
         Where the `models` list is a list of `model_config.json` filepaths.
         """
         logger, io_obj = init_logger_with_io_obj(get_current_func_name())
-        if not overwrite and os.path.exists(out_fp):
-            logger.warning(file_exists_msg(out_fp))
+        if not overwrite and os.path.exists(behavs_fp):
+            logger.warning(file_exists_msg(behavs_fp))
             return get_io_obj_content(io_obj)
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
@@ -72,7 +72,7 @@ class ClassifyBehavs:
         # Initialising y_preds df
         # Getting predictions for each classifier model and saving
         # in a list of pd.DataFrames
-        df_ls = []
+        behavs_df_ls = []
         for model_config in model_configs_ls:
             proj_dir = configs.get_ref(model_config.proj_dir)
             behav_name = configs.get_ref(model_config.behav_name)
@@ -80,25 +80,25 @@ class ClassifyBehavs:
             pcutoff = cls._get_pcutoff(configs.get_ref(model_config.pcutoff), behav_model.configs.pcutoff)
             min_window_frames = configs.get_ref(model_config.min_window_frames)
             # Running the clf pipeline
-            df_i = behav_model.pipeline_run(features_df)
+            behav_df_i = behav_model.pipeline_run(features_df)
             # Getting prob and pred column names
             prob_col = (behav_name, OutcomesPredictedCols.PROB.value)
             pred_col = (behav_name, OutcomesPredictedCols.PRED.value)
             # Using pcutoff to get binary predictions
-            df_i[pred_col] = (df_i[prob_col] > pcutoff).astype(int)
+            behav_df_i[pred_col] = (behav_df_i[prob_col] > pcutoff).astype(int)
             # Filling in small non-behav bouts
-            df_i[pred_col] = cls._merge_bouts(df_i[pred_col], min_window_frames)
+            behav_df_i[pred_col] = cls._merge_bouts(behav_df_i[pred_col], min_window_frames)
             # Adding model predictions df to list
-            df_ls.append(df_i)
+            behavs_df_ls.append(behav_df_i)
             # Logging outcome
             logger.info(f"Completed {behav_name} classification.")
         # If no models were run, then return outcome
-        if len(df_ls) == 0:
+        if len(behavs_df_ls) == 0:
             return get_io_obj_content(io_obj)
         # Concatenating predictions to a single dataframe
-        behavs_df = pd.concat(df_ls, axis=1)
+        behavs_df = pd.concat(behavs_df_ls, axis=1)
         # Saving behav_preds df
-        BehavPredictedDf.write(behavs_df, out_fp)
+        BehavPredictedDf.write(behavs_df, behavs_fp)
         return get_io_obj_content(io_obj)
 
     @staticmethod
@@ -135,8 +135,8 @@ class ClassifyBehavs:
 
         Parameters
         ----------
-        df : pd.DataFrame
-            A scored_behavs dataframe.
+        vect : pd.Series
+            A scored_behavs pd.Series.
         min_window_frames : int
             _description_
 
@@ -145,7 +145,6 @@ class ClassifyBehavs:
         pd.DataFrame
             A scored_behavs dataframe, with the merged bouts.
         """
-        # TODO: check this func
         vect = vect.copy()
         # Getting start, stop, and duration of each non-behav bout
         nonbouts_df = BehavScoredDf.vect2bouts(vect == 0)

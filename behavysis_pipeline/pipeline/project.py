@@ -286,7 +286,7 @@ class Project:
         exp_ls = self.get_experiments()
         # If overwrite is False, filtering for only experiments that need processing
         if not overwrite:
-            exp_ls = [exp for exp in exp_ls if not os.path.isfile(exp.get_fp(Folders.DLC.value))]
+            exp_ls = [exp for exp in exp_ls if not os.path.isfile(exp.get_fp(Folders.KEYPOINTS.value))]
         # Running DLC on each batch of experiments with each GPU (given allocated GPU ID)
         exp_batches_ls = np.array_split(np.array(exp_ls), nprocs)
         # Starting a dask cluster
@@ -294,11 +294,11 @@ class Project:
             # Preparing all experiments for execution
             f_d_ls = [
                 dask.delayed(RunDLC.ma_dlc_analyse_batch)(
-                    [exp.get_fp(Folders.FORMATTED_VID.value) for exp in exp_batch],
-                    os.path.join(self.root_dir, Folders.DLC.value),
-                    os.path.join(self.root_dir, Folders.CONFIGS.value),
-                    gputouse,
-                    overwrite,
+                    vid_fp_ls=[exp.get_fp(Folders.FORMATTED_VID.value) for exp in exp_batch],
+                    keypoints_dir=os.path.join(self.root_dir, Folders.KEYPOINTS.value),
+                    configs_dir=os.path.join(self.root_dir, Folders.CONFIGS.value),
+                    gputouse=gputouse,
+                    overwrite=overwrite,
                 )
                 for gputouse, exp_batch in zip(gputouse_ls, exp_batches_ls)
             ]
@@ -337,26 +337,26 @@ class Project:
     def extract_features(self, *args, **kwargs):
         self._proc_scaff(Experiment.extract_features, *args, **kwargs)
 
-    @functools.wraps(Experiment.classify_behaviours)
-    def classify_behaviours(self, *args, **kwargs):
+    @functools.wraps(Experiment.classify_behavs)
+    def classify_behavs(self, *args, **kwargs):
         # TODO: handle reading the model file whilst in multiprocessing.
         # Current fix is single processing.
         nprocs = self.nprocs
         self.nprocs = 1
-        self._proc_scaff(Experiment.classify_behaviours, *args, **kwargs)
+        self._proc_scaff(Experiment.classify_behavs, *args, **kwargs)
         self.nprocs = nprocs
 
-    @functools.wraps(Experiment.export_behaviours)
-    def export_behaviours(self, *args, **kwargs):
-        self._proc_scaff(Experiment.export_behaviours, *args, **kwargs)
+    @functools.wraps(Experiment.export_behavs)
+    def export_behavs(self, *args, **kwargs):
+        self._proc_scaff(Experiment.export_behavs, *args, **kwargs)
 
     @functools.wraps(Experiment.analyse)
     def analyse(self, *args, **kwargs):
         self._proc_scaff(Experiment.analyse, *args, **kwargs)
 
-    @functools.wraps(Experiment.analyse_behaviours)
-    def analyse_behaviours(self, *args, **kwargs):
-        self._proc_scaff(Experiment.analyse_behaviours, *args, **kwargs)
+    @functools.wraps(Experiment.analyse_behavs)
+    def analyse_behavs(self, *args, **kwargs):
+        self._proc_scaff(Experiment.analyse_behavs, *args, **kwargs)
 
     @functools.wraps(Experiment.combine_analysis)
     def combine_analysis(self, *args, **kwargs):
@@ -419,12 +419,12 @@ class Project:
                 # Concatenating total_df with df across columns, with experiment name to column MultiIndex
                 if len(df_ls) > 0:
                     df = pd.concat(df_ls, keys=names_ls, names=["experiment"], axis=1)
-                    out_fp = os.path.join(
+                    dst_fp = os.path.join(
                         proj_analyse_dir,
                         analyse_subdir,
                         f"__ALL_binned_{bin_i}.{AnalyseBinnedDf.IO}",
                     )
-                    AnalyseBinnedDf.write(df, out_fp)
+                    AnalyseBinnedDf.write(df, dst_fp)
 
     def _analyse_collate_summary(self) -> None:
         """
@@ -447,8 +447,8 @@ class Project:
                     # Reading exp summary df
                     df_ls.append(AnalyseSummaryDf.read(in_fp))
                     names_ls.append(exp.name)
-            out_fp = os.path.join(proj_analyse_dir, analyse_subdir, f"__ALL_summary.{AnalyseSummaryDf.IO}")
+            dst_fp = os.path.join(proj_analyse_dir, analyse_subdir, f"__ALL_summary.{AnalyseSummaryDf.IO}")
             # Concatenating total_df with df across columns, with experiment name to column MultiIndex
             if len(df_ls) > 0:
                 total_df = pd.concat(df_ls, keys=names_ls, names=["experiment"], axis=0)
-                AnalyseSummaryDf.write(total_df, out_fp)
+                AnalyseSummaryDf.write(total_df, dst_fp)

@@ -32,7 +32,7 @@ class DFMixin:
 
     @classmethod
     def read_csv(cls, fp: str) -> pd.DataFrame:
-        """Reading DLC dataframe csv file."""
+        """Reading dataframe csv file."""
         df = pd.read_csv(
             fp,
             index_col=list(range(len(enum2tuple(cls.IN) if cls.IN else (None,)))),
@@ -85,7 +85,7 @@ class DFMixin:
 
     @classmethod
     def write_csv(cls, df: pd.DataFrame, fp: str) -> None:
-        """Writing DLC dataframe to csv file."""
+        """Writing dataframe to csv file."""
         df = cls.basic_clean(df)
         os.makedirs(os.path.dirname(fp), exist_ok=True)
         df.to_csv(fp)

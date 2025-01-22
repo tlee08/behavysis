@@ -63,19 +63,19 @@ class FeatureExtractor:
     #################################################
 
     @staticmethod
-    def simba_import_files(simba_dir, dlc_dir):
+    def simba_import_files(simba_dir, keypoints_dir):
         """
-        DLC csv must already be in simba csv readable format.
+        Keypoints csv must already be in simba csv readable format.
         Similar to simba.import_multiple_dlc_tracking_csv_file()
         """
-        for fp in os.listdir(dlc_dir):
+        for fp in os.listdir(keypoints_dir):
             name = FeatureExtractor.get_name(fp)
-            src_fp = os.path.join(dlc_dir, f"{name}.csv")
+            src_fp = os.path.join(keypoints_dir, f"{name}.csv")
             dst_fp = os.path.join(
                 simba_dir, "project_folder", "csv", "input_csv", f"{name}.csv"
             )
             os.makedirs(os.path.dirname(dst_fp), exist_ok=True)
-            # Copying video mp4 and dlc csv to simba project dir
+            # Copying video mp4 and keypoints csv to simba project dir
             shutil.copyfile(src_fp, dst_fp)
 
     #################################################
@@ -220,13 +220,13 @@ def main() -> None:
     """
     # Getting directories from cmd args
     simba_dir = r"{{ simba_dir }}"
-    dlc_dir = r"{{ dlc_dir }}"
+    keypoints_dir = r"{{ keypoints_dir }}"
     configs_dir = r"{{ configs_dir }}"
     # Making SimBA project
     if not os.path.exists(simba_dir):
         FeatureExtractor.simba_make_proj(simba_dir, ["placeholder"])
-    # Importing DLC dfs to SimBA project
-    FeatureExtractor.simba_import_files(simba_dir, dlc_dir)
+    # Importing keypoints dataframes to SimBA project
+    FeatureExtractor.simba_import_files(simba_dir, keypoints_dir)
     # Setting video px per mm
     FeatureExtractor.simba_set_dims(simba_dir, configs_dir)
     # Outlier correction (skipping)

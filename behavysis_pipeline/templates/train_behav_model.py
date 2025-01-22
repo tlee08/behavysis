@@ -23,7 +23,7 @@ if __name__ == "__main__":
         print(name)
         outcome = Export.boris2behav(
             src_fp=os.path.join(boris_dir, f"{name}.tsv"),
-            out_fp=os.path.join(behav_dir, f"{name}.parquet"),
+            dst_fp=os.path.join(behav_dir, f"{name}.parquet"),
             configs_fp=os.path.join(config_dir, f"{name}.json"),
             behavs_ls=behavs_ls,
             overwrite=overwrite,

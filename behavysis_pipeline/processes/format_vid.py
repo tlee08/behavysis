@@ -36,7 +36,7 @@ class FormatVid:
     """
 
     @classmethod
-    def format_vid(cls, raw_fp: str, formatted_fp: str, configs_fp: str, overwrite: bool) -> str:
+    def format_vid(cls, raw_vid_fp: str, formatted_vid_fp: str, configs_fp: str, overwrite: bool) -> str:
         """
         Formats the input video with the given parameters.
 
@@ -57,8 +57,8 @@ class FormatVid:
             Description of the function's outcome.
         """
         logger, io_obj = init_logger_with_io_obj(get_current_func_name())
-        if not overwrite and os.path.exists(formatted_fp):
-            logger.warning(file_exists_msg(formatted_fp))
+        if not overwrite and os.path.exists(formatted_vid_fp):
+            logger.warning(file_exists_msg(formatted_vid_fp))
             return get_io_obj_content(io_obj)
         # Finding all necessary config parameters for video formatting
         configs = ExperimentConfigs.read_json(configs_fp)
@@ -67,8 +67,8 @@ class FormatVid:
         # Processing the video
         logger.info(
             ProcessVidMixin.process_vid(
-                in_fp=raw_fp,
-                out_fp=formatted_fp,
+                in_fp=raw_vid_fp,
+                dst_fp=formatted_vid_fp,
                 height_px=configs.get_ref(configs_filt.height_px),
                 width_px=configs.get_ref(configs_filt.width_px),
                 fps=configs.get_ref(configs_filt.fps),
@@ -78,11 +78,11 @@ class FormatVid:
         )
 
         # Saving video metadata to configs dict
-        logger.info(FormatVid.get_vid_metadata(raw_fp, formatted_fp, configs_fp, overwrite))
+        logger.info(FormatVid.get_vid_metadata(raw_vid_fp, formatted_vid_fp, configs_fp, overwrite))
         return get_io_obj_content(io_obj)
 
     @classmethod
-    def get_vid_metadata(cls, raw_fp: str, formatted_fp: str, configs_fp: str, overwrite: bool) -> str:
+    def get_vid_metadata(cls, raw_vid_fp: str, formatted_vid_fp: str, configs_fp: str, overwrite: bool) -> str:
         """
         Finds the video metadata/parameters for either the raw or formatted video,
         and stores this data in the experiment's config file.
@@ -106,7 +106,7 @@ class FormatVid:
         logger, io_obj = init_logger_with_io_obj(get_current_func_name())
         # Saving video metadata to configs dict
         configs = ExperimentConfigs.read_json(configs_fp)
-        for config_attr, fp in (("raw_vid", raw_fp), ("formatted_vid", formatted_fp)):
+        for config_attr, fp in (("raw_vid", raw_vid_fp), ("formatted_vid", formatted_vid_fp)):
             try:
                 setattr(configs.auto, config_attr, ProcessVidMixin.get_vid_metadata(fp))
             except ValueError as e:
@@ -123,7 +123,7 @@ class ProcessVidMixin:
     def process_vid(
         cls,
         in_fp: str,
-        out_fp: str,
+        dst_fp: str,
         height_px: None | int = None,
         width_px: None | int = None,
         fps: None | int = None,
@@ -181,10 +181,10 @@ class ProcessVidMixin:
             "-y",
             # "-loglevel",
             # "quiet",
-            out_fp,
+            dst_fp,
         ]
         # Making the output directory
-        os.makedirs(os.path.dirname(out_fp), exist_ok=True)
+        os.makedirs(os.path.dirname(dst_fp), exist_ok=True)
         # Running ffmpeg command
         # run_subproc_fstream(cmd)
         run_subproc_console(cmd)

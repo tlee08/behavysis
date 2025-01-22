@@ -227,17 +227,17 @@ class BehavClassifier:
     #         _description_
     #     """
     #     # For each x and y directory
-    #     for in_dir, out_dir in ((x_dir, self.x_dir), (y_dir, self.y_dir)):
-    #         os.makedirs(out_dir, exist_ok=True)
+    #     for in_dir, dst_dir in ((x_dir, self.x_dir), (y_dir, self.y_dir)):
+    #         os.makedirs(dst_dir, exist_ok=True)
     #         # Copying each file to model root directory
     #         for fp in os.listdir(in_dir):
     #             in_fp = os.path.join(in_dir, fp)
-    #             out_fp = os.path.join(out_dir, fp)
+    #             dst_fp = os.path.join(dst_dir, fp)
     #             # If not overwriting and out file already exists, then skip
-    #             if not overwrite and os.path.exists(out_fp):
+    #             if not overwrite and os.path.exists(dst_fp):
     #                 continue
     #             # Copying file
-    #             shutil.copyfile(in_fp, out_fp)
+    #             shutil.copyfile(in_fp, dst_fp)
 
     #################################################
     #            COMBINING DFS TO SINGLE DF

@@ -1,21 +1,3 @@
-"""
-Functions have the following format:
-
-Parameters
-----------
-dlc_fp : str
-    The DLC dataframe filepath of the experiment to analyse.
-ANALYSE_DIR : str
-    The analysis directory path.
-configs_fp : str
-    the experiment's JSON configs file.
-
-Returns
--------
-str
-    The outcome of the process.
-"""
-
 import os
 from enum import Enum
 
@@ -45,7 +27,7 @@ class AnalyseDf(DFMixin):
         cls,
         scatter_df: pd.DataFrame,
         corners_df: pd.DataFrame,
-        out_fp,
+        dst_fp,
         measure: str,
     ):
         """
@@ -99,6 +81,6 @@ class AnalyseDf(DFMixin):
         g.figure.subplots_adjust(top=0.85)
         g.figure.suptitle("Spatial position", fontsize=12)
         # Saving fig
-        os.makedirs(os.path.dirname(out_fp), exist_ok=True)
-        g.savefig(out_fp)
+        os.makedirs(os.path.dirname(dst_fp), exist_ok=True)
+        g.savefig(dst_fp)
         g.figure.clf()

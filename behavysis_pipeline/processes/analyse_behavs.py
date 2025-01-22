@@ -21,7 +21,7 @@ import os
 import numpy as np
 
 from behavysis_pipeline.df_classes.analyse_agg_df import AnalyseBinnedDf
-from behavysis_pipeline.df_classes.analyse_df import AnalyseDf
+from behavysis_pipeline.df_classes.analyse_df import FBF, AnalyseDf
 from behavysis_pipeline.df_classes.behav_df import BehavScoredDf, BehavValues
 from behavysis_pipeline.pydantic_models.configs import ExperimentConfigs
 from behavysis_pipeline.utils.io_utils import get_name
@@ -33,12 +33,11 @@ from behavysis_pipeline.utils.misc_utils import get_current_func_name
 ###################################################################################################
 
 
-class AnalyseBehaviours:
-    @classmethod
-    def analyse_behaviours(
-        cls,
+class AnalyseBehavs:
+    @staticmethod
+    def analyse_behavs(
         behavs_fp: str,
-        out_dir: str,
+        dst_dir: str,
         configs_fp: str,
         # bins: list,
         # summary_func: Callable[[pd.DataFrame], pd.DataFrame],
@@ -47,8 +46,9 @@ class AnalyseBehaviours:
         Takes a behavs dataframe and generates a summary and binned version of the data.
         """
         logger, io_obj = init_logger_with_io_obj(get_current_func_name())
+        f_name = get_current_func_name()
         name = get_name(behavs_fp)
-        out_dir = os.path.join(out_dir, AnalyseBehaviours.analyse_behaviours.__name__)
+        dst_subdir = os.path.join(dst_dir, f_name)
         # Calculating the deltas (changes in body position) between each frame for the subject
         configs = ExperimentConfigs.read_json(configs_fp)
         fps, _, _, _, bins_ls, cbins_ls = configs.get_analyse_configs()
@@ -66,12 +66,12 @@ class AnalyseBehaviours:
         behavs_df = behavs_df.loc[:, columns]
         behavs_df = AnalyseDf.basic_clean(behavs_df)
         # Writing the behavs_df to the fbf file
-        fbf_fp = os.path.join(out_dir, "fbf", f"{name}.{AnalyseDf.IO}")
+        fbf_fp = os.path.join(dst_subdir, FBF, f"{name}.{AnalyseDf.IO}")
         AnalyseDf.write(behavs_df, fbf_fp)
         # Making the summary and binned dataframes
         AnalyseBinnedDf.summary_binned_behavs(
             behavs_df,
-            out_dir,
+            dst_subdir,
             name,
             fps,
             bins_ls,
