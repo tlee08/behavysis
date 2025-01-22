@@ -186,7 +186,6 @@ class Project:
             DiagnosticsDf.write(df, os.path.join(self.root_dir, DIAGNOSTICS_DIR, f"{method.__name__}.csv"))
             # Finishing
             self.logger.info(f"Finished running {method.__name__} for all experiments")
-            print(df)
 
     #####################################################################
     #               IMPORT EXPERIMENTS METHODS
@@ -319,7 +318,12 @@ class Project:
         # Making and saving histogram plots of the numerical auto fields
         # NOTE: NOT including string frequencies, only numerical
         auto_configs_df = auto_configs_df.loc[:, auto_configs_df.apply(pd.api.types.is_numeric_dtype)]
-        g = sns.FacetGrid(data=auto_configs_df.fillna(-1).melt(), col="variable", sharex=False, col_wrap=4)
+        g = sns.FacetGrid(
+            data=auto_configs_df.fillna(-1).melt(var_name="measure", value_name="value"),
+            col="measure",
+            sharex=False,
+            col_wrap=4,
+        )
         g.map(sns.histplot, "value", bins=10)
         g.set_titles("{col_name}")
         g.savefig(os.path.join(self.root_dir, DIAGNOSTICS_DIR, "collate_auto_configs.png"))
