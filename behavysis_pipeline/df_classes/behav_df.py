@@ -93,11 +93,10 @@ class BehavDf(DFMixin):
         """Asserting that, for each behaviour, the outcomes columns are present."""
         if cls.OutcomesCols:
             columns = df.columns
-            outcomes_cols_ls = enum2tuple(cls.OutcomesCols)
             # For each behaviour
             for behav in columns.unique(cls.CN.BEHAVS.value):
                 # For each outcome
-                for outcome in outcomes_cols_ls:
+                for outcome in enum2tuple(cls.OutcomesCols):
                     # Assert the (behav, outcome) column is present
                     assert (behav, outcome) in columns, (
                         f"Expected {outcome} column for {behav}.\n" f"Only columns are: {columns}"

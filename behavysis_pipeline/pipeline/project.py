@@ -240,9 +240,10 @@ class Project:
                 except ValueError as e:  # do not add invalid files
                     self.logger.info(f"failed: {f.value}    --    {fp_name}: {e}")
         # Logging outcome of imported and failed experiments
-        self.logger.info("Experiments imported successfully:")
+        msg = "Experiments imported successfully:"
         for exp in self.experiments:
-            self.logger.info(f"    - {exp}")
+            msg += f"\n    - {exp}"
+        self.logger.info(msg)
         # Constructing dd_df from dd_dict
         dd_df = DiagnosticsDf.init_df(pd.Series(np.unique(np.concatenate(list(dd_dict.values())))))
         # Setting each (experiment, folder) pair to True if the file exists

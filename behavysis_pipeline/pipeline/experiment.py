@@ -69,13 +69,12 @@ class Experiment:
         # Assertion: name must correspond to at least one file in root_dir
         file_exists_ls = [os.path.isfile(self.get_fp(f)) for f in Folders]
         if not np.any(file_exists_ls):
-            raise ValueError(
-                f'No files named "{name}" exist in "{root_dir}".\n'
-                f'Please specify a file that exists in "{root_dir}", in one of the'
-                " following folder WITH the correct file extension name:\n"
-                "    - "
-                "\n    - ".join(enum2tuple(Folders))
-            )
+            msg = f'No files named "{name}" exist in "{root_dir}".\n'
+            msg += f'Please specify a file that exists in "{root_dir}",'
+            msg += "in one of the following folder WITH the correct file extension name:"
+            for f in enum2tuple(Folders):
+                msg += f"\n    - {f}"
+            raise ValueError(msg)
 
     #####################################################################
     #               GET/CHECK FILEPATH METHODS
@@ -106,12 +105,11 @@ class Experiment:
                 folder = Folders(_folder)
             except ValueError:
                 # if folder_str not in Folders enum
-                raise ValueError(
-                    f'"{_folder}" is not a valid experiment folder name.\n'
-                    "Please only specify one of the following folders:\n"
-                    "    - "
-                    "\n    - ".join([f.value for f in Folders])
-                )
+                msg = f'"{_folder}" is not a valid experiment folder name.\n'
+                msg += "Please only specify one of the following folders:"
+                for f in Folders:
+                    msg += f"\n    - {f.value}"
+                raise ValueError(msg)
         else:
             # Otherwise, using given Enum
             folder = _folder
