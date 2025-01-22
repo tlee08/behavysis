@@ -34,7 +34,6 @@ class DFMixin:
     IN = None
     CN = None
     IO = DF_IO_FORMAT
-    sorting_key = None
 
     ###############################################################################################
     # DF Read Functions
@@ -96,28 +95,28 @@ class DFMixin:
     @classmethod
     def write_csv(cls, df: pd.DataFrame, fp: str) -> None:
         """Writing DLC dataframe to csv file."""
-        cls.basic_clean(df)
+        df = cls.basic_clean(df)
         os.makedirs(os.path.dirname(fp), exist_ok=True)
         df.to_csv(fp)
 
     @classmethod
     def write_h5(cls, df: pd.DataFrame, fp: str) -> None:
         """Writing dataframe h5 file."""
-        cls.basic_clean(df)
+        df = cls.basic_clean(df)
         os.makedirs(os.path.dirname(fp), exist_ok=True)
         df.to_hdf(fp, key="data", mode="w")
 
     @classmethod
     def write_feather(cls, df: pd.DataFrame, fp: str) -> None:
         """Writing dataframe feather file."""
-        cls.basic_clean(df)
+        df = cls.basic_clean(df)
         os.makedirs(os.path.dirname(fp), exist_ok=True)
         df.to_feather(fp)
 
     @classmethod
     def write_parquet(cls, df: pd.DataFrame, fp: str) -> None:
         """Writing dataframe parquet file."""
-        cls.basic_clean(df)
+        df = cls.basic_clean(df)
         os.makedirs(os.path.dirname(fp), exist_ok=True)
         df.to_parquet(fp)
 
@@ -179,7 +178,8 @@ class DFMixin:
         """
         df.index.set_names(enum2tuple(cls.IN) if cls.IN else (None,))
         df.columns.set_names(enum2tuple(cls.CN) if cls.CN else (None,))
-        df = df.sort_index(key=cls.sorting_key)
+        df = df.sort_index()
+        df = df.sort_index(axis=1)
         cls.check_df(df)
         return df
 

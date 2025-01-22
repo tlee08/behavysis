@@ -194,10 +194,7 @@ class BehavScoredDf(BehavDf):
             # Adding user_defined columns and setting values to 0
             for user_defined_i in user_defined:
                 scored_df[(behav, user_defined_i)] = 0
-        # Ordering by BEHAVS level
-        scored_df = scored_df.sort_index(axis=1, level=cls.CN.BEHAVS.value)
-        # Checking
-        cls.check_df(scored_df)
+        scored_df = cls.basic_clean(scored_df)
         return scored_df
 
     ###############################################################################################
@@ -290,8 +287,6 @@ class BehavScoredDf(BehavDf):
             df[(behav, cls.OutcomesCols.ACTUAL.value)] = 0
             for user_defined_i in bout_struct.user_defined:
                 df[(behav, user_defined_i)] = 0
-        # Sorting columns
-        df = df.sort_index(axis=1)
         # Filling in all user_defined columns for each behaviour
         for bout in bouts.bouts:
             bout_ret_df = df.loc[bout.start : bout.stop]
@@ -302,4 +297,5 @@ class BehavScoredDf(BehavDf):
             # Filling in user_defined columns
             for k, v in bout.user_defined.items():
                 bout_ret_df.loc[:, (bout.behav, k)] = v
+        df = cls.basic_clean(df)
         return df

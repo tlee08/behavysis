@@ -24,7 +24,6 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 
-from behavysis_pipeline.df_classes.analyse_df import AnalyseDf
 from behavysis_pipeline.df_classes.behav_df import BehavScoredDf, BoutCols
 from behavysis_pipeline.df_classes.df_mixin import DFMixin
 from behavysis_pipeline.utils.misc_utils import enum2tuple
@@ -113,7 +112,7 @@ class AnalyseSummaryDf(DFMixin):
         # Concatenating summary_df_ls, setting index, and cleaning
         summary_df = pd.concat(summary_df_ls, axis=0)
         summary_df.index = analysis_df.columns
-        cls.basic_clean(summary_df)
+        summary_df = cls.basic_clean(summary_df)
         return summary_df
 
     @classmethod
@@ -169,7 +168,7 @@ class AnalyseSummaryDf(DFMixin):
         # Concatenating summary_df_ls, setting index, and cleaning
         summary_df = pd.concat(summary_df_ls, axis=0)
         summary_df.index = analysis_df.columns
-        cls.basic_clean(summary_df)
+        summary_df = cls.basic_clean(summary_df)
         return summary_df
 
 
@@ -204,12 +203,12 @@ class AnalyseBinnedDf(DFMixin):
         grouped_df = analysis_df.groupby(bin_sec)
         binned_df = grouped_df.apply(
             lambda x: summary_func(x, fps)
-            .unstack(enum2tuple(AnalyseDf.CN))
+            .unstack(enum2tuple(AnalyseSummaryDf.IN))
             .reorder_levels(list(enum2tuple(cls.CN)))
-            .sort_index(level=enum2tuple(AnalyseDf.CN))
+            .sort_index(level=enum2tuple(AnalyseSummaryDf.IN))
         )
         # Cleaning (sets index and column names) and checking
-        cls.basic_clean(binned_df)
+        binned_df = cls.basic_clean(binned_df)
         return binned_df
 
     @classmethod
@@ -223,7 +222,7 @@ class AnalyseBinnedDf(DFMixin):
         _summary_
         """
         # Making binned_df long
-        binned_stacked_df = binned_df.stack(enum2tuple(AnalyseDf.CN))[agg_column].rename("value").reset_index()
+        binned_stacked_df = binned_df.stack(enum2tuple(AnalyseSummaryDf.IN))[agg_column].rename("value").reset_index()
         # Plotting line graph
         g = sns.relplot(
             data=binned_stacked_df,
