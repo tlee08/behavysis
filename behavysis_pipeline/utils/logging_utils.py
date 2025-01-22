@@ -97,9 +97,11 @@ def io_obj_to_msg(io_obj: io.StringIO) -> str:
     Converts the io object logger stream to a string message
     (can be multi-line).
     """
+    cursor = io_obj.tell()
     io_obj.seek(0)
     msg = ""
     for line in io_obj.readline():
         datetime, name, level, message = split_log_line(line)
         msg += f"{level} - {message}"
+    io_obj.seek(cursor)
     return msg
