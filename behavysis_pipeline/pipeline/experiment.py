@@ -4,7 +4,7 @@ _summary_
 
 import os
 import traceback
-from typing import Any, Callable
+from typing import Any, Callable, Dict
 
 import numpy as np
 
@@ -24,7 +24,7 @@ from behavysis_pipeline.processes.update_configs import UpdateConfigs
 from behavysis_pipeline.pydantic_models.configs import AutoConfigs, ExperimentConfigs
 from behavysis_pipeline.utils.diagnostics_utils import success_msg
 from behavysis_pipeline.utils.logging_utils import get_io_obj_content, init_logger, init_logger_with_io_obj
-from behavysis_pipeline.utils.misc_utils import enum2tuple
+from behavysis_pipeline.utils.misc_utils import enum2tuple, get_current_func_name
 
 
 class Experiment:
@@ -298,27 +298,30 @@ class Experiment:
             configs_fp=self.get_fp(Folders.CONFIGS),
         )
 
-    def collate_auto_configs(self) -> dict:
+    def collate_auto_configs(self) -> Dict:
         """
         Collates the auto-configs of the experiment into the main configs file.
         """
-        configs_auto_dict = {"experiment": self.name, "outcome": ""}
+        dd = {"experiment": self.name, "outcome": ""}
         # Reading the experiment's configs file
+        f_logger, f_io_obj = init_logger_with_io_obj(get_current_func_name())
         try:
             configs = ExperimentConfigs.read_json(self.get_fp(Folders.CONFIGS))
-            configs_auto_dict["outcome"] += "Read configs file.\n"
+            f_logger.info("Read configs file.")
+            f_logger.info(success_msg())
+            dd["reading_configs"] += get_io_obj_content(f_io_obj)
         except FileNotFoundError:
-            configs_auto_dict["outcome"] += "ERROR: no configs file found."
-            return configs_auto_dict
+            f_logger.error("no configs file found.")
+            dd["reading_configs"] += get_io_obj_content(f_io_obj)
+            return dd
         # Getting all the auto fields from the configs file
         configs_auto_field_keys = AutoConfigs.get_field_names()
         for field_key_ls in configs_auto_field_keys:
             value = configs.auto
             for key in field_key_ls:
                 value = getattr(value, key)
-            configs_auto_dict["_".join(field_key_ls)] = value
-        configs_auto_dict["outcome"] += success_msg()
-        return configs_auto_dict
+            dd["_".join(field_key_ls)] = value  # type: ignore
+        return dd
 
     def preprocess(self, funcs: tuple[Callable, ...], overwrite: bool) -> dict:
         """
