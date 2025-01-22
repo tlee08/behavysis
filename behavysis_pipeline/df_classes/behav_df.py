@@ -195,7 +195,7 @@ class BehavScoredDf(BehavDf):
     @classmethod
     def vect2bouts(
         cls,
-        vect: np.ndarray | pd.Series,
+        vect: pd.Series,
     ) -> pd.DataFrame:
         """
         Will return a dataframe with the start and stop indexes of each contiguous set of
@@ -203,7 +203,7 @@ class BehavScoredDf(BehavDf):
 
         Parameters
         ----------
-        vect : np.ndarray | pd.Series
+        vect : pd.Series
             Expects a vector of booleans
 
         Returns
@@ -212,11 +212,10 @@ class BehavScoredDf(BehavDf):
             _description_
         """
         offset = 0
-        if isinstance(vect, pd.Series):
-            if vect.shape[0] > 0:
-                # NOTE: gets the offset from the first index (because vect is converted to np with relative index)
-                # NOTE: Also safe for multi-index. Assumes level 0 is the frame index.
-                offset = vect.index.get_level_values(0)[0]
+        if vect.shape[0] > 0:
+            # NOTE: gets offset from first index (as vect is converted to np with relative index)
+            # NOTE: Also safe for multi-index. Assumes using "frame" level
+            offset = vect.index.get_level_values(cls.IN.FRAME.value)[0]
         # Getting stop and start indexes of each bout
         z = np.concatenate(([0], vect, [0]))
         start = np.flatnonzero(~z[:-1] & z[1:])

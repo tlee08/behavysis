@@ -284,9 +284,9 @@ class AnalysisBinnedDf(DFMixin):
         _summary_
         """
         outcome = ""
-        # Offsetting the frames index to start from 0 (i.e. when the experiment
-        # started, rather than when the recording started)
-        analysis_df.index = analysis_df.index - analysis_df.index[0]
+        # Offsetting the frames index to start from 0
+        # (i.e. when the experiment commenced, rather than when the recording started)
+        analysis_df.index = analysis_df.index - analysis_df.index.get_level_values(AnalysisDf.IN.FRAME.value)[0]
         # Summarising analysis_df
         summary_fp = os.path.join(dst_dir, SUMMARY, f"{name}.{cls.IO}")
         summary_df = summary_func(analysis_df, fps)
