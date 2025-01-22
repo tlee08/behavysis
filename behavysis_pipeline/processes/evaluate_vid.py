@@ -13,7 +13,7 @@ from pyqtgraph.exporters import ImageExporter
 from PySide6 import QtGui
 from tqdm import trange
 
-from behavysis_pipeline.df_classes.analyse_combined_df import AnalyseCombinedDf
+from behavysis_pipeline.df_classes.analysis_combined_df import AnalysisCombinedDf
 from behavysis_pipeline.df_classes.keypoints_df import IndivCols, KeypointsDf
 from behavysis_pipeline.pydantic_models.configs import ExperimentConfigs
 from behavysis_pipeline.utils.diagnostics_utils import file_exists_msg
@@ -71,10 +71,10 @@ class EvaluateVid:
         keypoints_df = KeypointsDf.clean_headings(KeypointsDf.read(keypoints_fp))
         # Getting analysis combined df
         try:
-            analysis_df = AnalyseCombinedDf.read(analysis_combined_fp)
+            analysis_df = AnalysisCombinedDf.read(analysis_combined_fp)
         except FileNotFoundError:
             logger.warning("Analysis combined file not found or could not be loaded." "Disregarding analysis.")
-            analysis_df = AnalyseCombinedDf.init_df(keypoints_df.index)
+            analysis_df = AnalysisCombinedDf.init_df(keypoints_df.index)
 
         # MAKING ANNOTATED VIDEO
         # Making VidFuncsRunner object to annotate each frame with.
@@ -291,7 +291,7 @@ class Analysis(EvalVidFuncBase):
         self.plots_layout = pg.GraphicsLayoutWidget()
         # Getting the uniques analysis group names
         # And calculating each plot's height
-        analysis_ls = self.analysis_df.columns.unique(AnalyseCombinedDf.CN.ANALYSIS.value)
+        analysis_ls = self.analysis_df.columns.unique(AnalysisCombinedDf.CN.ANALYSIS.value)
         height_plot = int(np.round(self.height_output / len(analysis_ls)))
         # Making list of lists to store each plot (for "analysis")
         self.plot_arr = []
@@ -299,7 +299,7 @@ class Analysis(EvalVidFuncBase):
         for i, analysis_i in enumerate(analysis_ls):
             # Getting the uniques individual names in the analysis group
             # And calculating the width of each plot in the current row
-            indivs_ls = self.analysis_df[(analysis_i,)].columns.unique(AnalyseCombinedDf.CN.INDIVIDUALS.value)
+            indivs_ls = self.analysis_df[(analysis_i,)].columns.unique(AnalysisCombinedDf.CN.INDIVIDUALS.value)
             width_plot = int(np.round(self.width_output / len(indivs_ls)))
             # Making list to store each plot (for "individuals")
             plot_arr_i = []
@@ -307,7 +307,7 @@ class Analysis(EvalVidFuncBase):
             for j, indivs_j in enumerate(indivs_ls):
                 # Getting measures_ls, based on current analysis_i and indivs_j
                 measures_ls = self.analysis_df[(analysis_i, indivs_j)].columns.unique(
-                    AnalyseCombinedDf.CN.MEASURES.value
+                    AnalysisCombinedDf.CN.MEASURES.value
                 )
                 # Making plot
                 plot_arr_ij = self.plots_layout.addPlot(

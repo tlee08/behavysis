@@ -19,7 +19,7 @@ from behavysis_pipeline.constants import (
     DIAGNOSTICS_DIR,
     Folders,
 )
-from behavysis_pipeline.df_classes.analyse_agg_df import AnalyseBinnedDf, AnalyseSummaryDf
+from behavysis_pipeline.df_classes.analysis_agg_df import AnalysisBinnedDf, AnalysisSummaryDf
 from behavysis_pipeline.df_classes.diagnostics_df import DiagnosticsDf
 from behavysis_pipeline.pipeline.experiment import Experiment
 from behavysis_pipeline.processes.run_dlc import RunDLC
@@ -293,7 +293,7 @@ class Project:
         with cluster_proc_contxt(LocalCluster(n_workers=nprocs, threads_per_worker=1)):
             # Preparing all experiments for execution
             f_d_ls = [
-                dask.delayed(RunDLC.ma_dlc_analyse_batch)(
+                dask.delayed(RunDLC.ma_dlc_run_batch)(
                     vid_fp_ls=[exp.get_fp(Folders.FORMATTED_VID.value) for exp in exp_batch],
                     keypoints_dir=os.path.join(self.root_dir, Folders.KEYPOINTS.value),
                     configs_dir=os.path.join(self.root_dir, Folders.CONFIGS.value),
@@ -411,10 +411,10 @@ class Project:
                 names_ls = []
                 for exp in self.get_experiments():
                     in_fp = os.path.join(
-                        proj_analyse_dir, analyse_subdir, f"binned_{bin_i}", f"{exp.name}.{AnalyseBinnedDf.IO}"
+                        proj_analyse_dir, analyse_subdir, f"binned_{bin_i}", f"{exp.name}.{AnalysisBinnedDf.IO}"
                     )
                     if os.path.isfile(in_fp):
-                        df_ls.append(AnalyseBinnedDf.read(in_fp))
+                        df_ls.append(AnalysisBinnedDf.read(in_fp))
                         names_ls.append(exp.name)
                 # Concatenating total_df with df across columns, with experiment name to column MultiIndex
                 if len(df_ls) > 0:
@@ -422,9 +422,9 @@ class Project:
                     dst_fp = os.path.join(
                         proj_analyse_dir,
                         analyse_subdir,
-                        f"__ALL_binned_{bin_i}.{AnalyseBinnedDf.IO}",
+                        f"__ALL_binned_{bin_i}.{AnalysisBinnedDf.IO}",
                     )
-                    AnalyseBinnedDf.write(df, dst_fp)
+                    AnalysisBinnedDf.write(df, dst_fp)
 
     def _analyse_collate_summary(self) -> None:
         """
@@ -442,13 +442,13 @@ class Project:
             df_ls = []
             names_ls = []
             for exp in self.get_experiments():
-                in_fp = os.path.join(proj_analyse_dir, analyse_subdir, "summary", f"{exp.name}.{AnalyseSummaryDf.IO}")
+                in_fp = os.path.join(proj_analyse_dir, analyse_subdir, "summary", f"{exp.name}.{AnalysisSummaryDf.IO}")
                 if os.path.isfile(in_fp):
                     # Reading exp summary df
-                    df_ls.append(AnalyseSummaryDf.read(in_fp))
+                    df_ls.append(AnalysisSummaryDf.read(in_fp))
                     names_ls.append(exp.name)
-            dst_fp = os.path.join(proj_analyse_dir, analyse_subdir, f"__ALL_summary.{AnalyseSummaryDf.IO}")
+            dst_fp = os.path.join(proj_analyse_dir, analyse_subdir, f"__ALL_summary.{AnalysisSummaryDf.IO}")
             # Concatenating total_df with df across columns, with experiment name to column MultiIndex
             if len(df_ls) > 0:
                 total_df = pd.concat(df_ls, keys=names_ls, names=["experiment"], axis=0)
-                AnalyseSummaryDf.write(total_df, dst_fp)
+                AnalysisSummaryDf.write(total_df, dst_fp)

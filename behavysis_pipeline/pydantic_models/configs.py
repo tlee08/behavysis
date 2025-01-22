@@ -71,7 +71,7 @@ class ExperimentConfigs(PydanticBaseModel):
             return getattr(self.ref, val)
         return val
 
-    def get_analyse_configs(self) -> tuple[float, float, float, float, list, list]:
+    def get_analysis_configs(self) -> tuple[float, float, float, float, list, list]:
         """
         _summary_
 

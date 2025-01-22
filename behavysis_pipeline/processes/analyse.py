@@ -21,10 +21,10 @@ import os
 import numpy as np
 import pandas as pd
 
-from behavysis_pipeline.df_classes.analyse_agg_df import AnalyseBinnedDf
-from behavysis_pipeline.df_classes.analyse_df import (
+from behavysis_pipeline.df_classes.analysis_agg_df import AnalysisBinnedDf
+from behavysis_pipeline.df_classes.analysis_df import (
     FBF,
-    AnalyseDf,
+    AnalysisDf,
 )
 from behavysis_pipeline.df_classes.behav_df import BehavScoredDf
 from behavysis_pipeline.df_classes.keypoints_df import (
@@ -61,7 +61,7 @@ class Analyse:
         dst_subdir = os.path.join(dst_dir, f_name)
         # Calculating the deltas (changes in body position) between each frame for the subject
         configs = ExperimentConfigs.read_json(configs_fp)
-        fps, _, _, px_per_mm, bins_ls, cbins_ls = configs.get_analyse_configs()
+        fps, _, _, px_per_mm, bins_ls, cbins_ls = configs.get_analysis_configs()
         configs_filt_ls = configs.user.analyse.in_roi
         # Loading in dataframe
         keypoints_df = KeypointsDf.clean_headings(KeypointsDf.read(keypoints_fp))
@@ -108,7 +108,7 @@ class Analyse:
             # Saving corners_df to list
             corners_df_ls.append(corners_i_df)
             # Making the res_df
-            analysis_i_df = AnalyseDf.init_df(keypoints_df.index)
+            analysis_i_df = AnalysisDf.init_df(keypoints_df.index)
             # For each individual, getting the in-roi status
             for indiv in indivs:
                 # Getting average body center (x, y) for each individual
@@ -129,8 +129,8 @@ class Analyse:
         analysis_df = pd.concat(analysis_df_ls, axis=1)
         corners_df = pd.concat(corners_df_ls, keys=roi_names_ls, names=["roi"]).reset_index(level="roi")
         # Saving analysis_df
-        fbf_fp = os.path.join(dst_subdir, FBF, f"{name}.{AnalyseDf.IO}")
-        AnalyseDf.write(analysis_df, fbf_fp)
+        fbf_fp = os.path.join(dst_subdir, FBF, f"{name}.{AnalysisDf.IO}")
+        AnalysisDf.write(analysis_df, fbf_fp)
         # Generating scatterplot
         # First getting scatter_in_roi columns
         # TODO: any way to include all different "x", "y" to use, rather
@@ -144,9 +144,9 @@ class Analyse:
             # )
         # Making and saving scatterplot
         plot_fp = os.path.join(dst_subdir, "scatter_plot", f"{name}.png")
-        AnalyseDf.make_location_scatterplot(scatter_df, corners_df, plot_fp, "roi")
+        AnalysisDf.make_location_scatterplot(scatter_df, corners_df, plot_fp, "roi")
         # Summarising and binning analysis_df
-        AnalyseBinnedDf.summary_binned_behavs(
+        AnalysisBinnedDf.summary_binned_behavs(
             analysis_df,
             dst_subdir,
             name,
@@ -171,7 +171,7 @@ class Analyse:
         dst_subdir = os.path.join(dst_dir, f_name)
         # Calculating the deltas (changes in body position) between each frame for the subject
         configs = ExperimentConfigs.read_json(configs_fp)
-        fps, _, _, px_per_mm, bins_ls, cbins_ls = configs.get_analyse_configs()
+        fps, _, _, px_per_mm, bins_ls, cbins_ls = configs.get_analysis_configs()
         configs_filt = configs.user.analyse.speed
         bpts = configs.get_ref(configs_filt.bodyparts)
         smoothing_sec = configs.get_ref(configs_filt.smoothing_sec)
@@ -186,7 +186,7 @@ class Analyse:
         indivs, _ = KeypointsDf.get_headings(keypoints_df)
 
         # Calculating speed of subject for each frame
-        analysis_df = AnalyseDf.init_df(keypoints_df.index)
+        analysis_df = AnalysisDf.init_df(keypoints_df.index)
         keypoints_df.index = analysis_df.index
         idx = pd.IndexSlice
         for indiv in indivs:
@@ -208,11 +208,11 @@ class Analyse:
         # Backfilling the analysis_df so no nan's
         analysis_df = analysis_df.bfill()
         # Saving analysis_df
-        fbf_fp = os.path.join(dst_subdir, FBF, f"{name}.{AnalyseDf.IO}")
-        AnalyseDf.write(analysis_df, fbf_fp)
+        fbf_fp = os.path.join(dst_subdir, FBF, f"{name}.{AnalysisDf.IO}")
+        AnalysisDf.write(analysis_df, fbf_fp)
 
         # Summarising and binning analysis_df
-        AnalyseBinnedDf.summary_binned_quantitative(
+        AnalysisBinnedDf.summary_binned_quantitative(
             analysis_df,
             dst_subdir,
             name,
@@ -237,7 +237,7 @@ class Analyse:
         dst_subdir = os.path.join(dst_dir, f_name)
         # Calculating the deltas (changes in body position) between each frame for the subject
         configs = ExperimentConfigs.read_json(configs_fp)
-        fps, _, _, px_per_mm, bins_ls, cbins_ls = configs.get_analyse_configs()
+        fps, _, _, px_per_mm, bins_ls, cbins_ls = configs.get_analysis_configs()
         configs_filt = configs.user.analyse.social_distance
         bpts = configs.get_ref(configs_filt.bodyparts)
         smoothing_sec = configs.get_ref(configs_filt.smoothing_sec)
@@ -252,7 +252,7 @@ class Analyse:
         indivs, _ = KeypointsDf.get_headings(keypoints_df)
 
         # Calculating speed of subject for each frame
-        analysis_df = AnalyseDf.init_df(keypoints_df.index)
+        analysis_df = AnalysisDf.init_df(keypoints_df.index)
         keypoints_df.index = analysis_df.index
         idx = pd.IndexSlice
         # Assumes there are only two individuals
@@ -272,11 +272,11 @@ class Analyse:
             .agg(np.nanmean)
         )
         # Saving analysis_df
-        fbf_fp = os.path.join(dst_subdir, FBF, f"{name}.{AnalyseDf.IO}")
-        AnalyseDf.write(analysis_df, fbf_fp)
+        fbf_fp = os.path.join(dst_subdir, FBF, f"{name}.{AnalysisDf.IO}")
+        AnalysisDf.write(analysis_df, fbf_fp)
 
         # Summarising and binning analysis_df
-        AnalyseBinnedDf.summary_binned_quantitative(
+        AnalysisBinnedDf.summary_binned_quantitative(
             analysis_df,
             dst_subdir,
             name,
@@ -306,7 +306,7 @@ class Analyse:
         dst_subdir = os.path.join(dst_dir, f_name)
         # Calculating the deltas (changes in body position) between each frame for the subject
         configs = ExperimentConfigs.read_json(configs_fp)
-        fps, _, _, px_per_mm, bins_ls, cbins_ls = configs.get_analyse_configs()
+        fps, _, _, px_per_mm, bins_ls, cbins_ls = configs.get_analysis_configs()
         configs_filt = configs.user.analyse.freezing
         bpts = configs.get_ref(configs_filt.bodyparts)
         thresh_mm = configs.get_ref(configs_filt.thresh_mm)
@@ -325,7 +325,7 @@ class Analyse:
         indivs, _ = KeypointsDf.get_headings(keypoints_df)
 
         # Calculating speed of subject for each frame
-        analysis_df = AnalyseDf.init_df(keypoints_df.index)
+        analysis_df = AnalysisDf.init_df(keypoints_df.index)
         keypoints_df.index = analysis_df.index
         for indiv in indivs:
             temp_df = pd.DataFrame(index=analysis_df.index)
@@ -355,11 +355,11 @@ class Analyse:
                 if row["dur"] < window_frames:
                     analysis_df.loc[row["start"] : row["stop"], (indiv, f_name)] = 0
         # Saving analysis_df
-        fbf_fp = os.path.join(dst_subdir, FBF, f"{name}.{AnalyseDf.IO}")
-        AnalyseDf.write(analysis_df, fbf_fp)
+        fbf_fp = os.path.join(dst_subdir, FBF, f"{name}.{AnalysisDf.IO}")
+        AnalysisDf.write(analysis_df, fbf_fp)
 
         # Summarising and binning analysis_df
-        AnalyseBinnedDf.summary_binned_behavs(
+        AnalysisBinnedDf.summary_binned_behavs(
             analysis_df,
             dst_subdir,
             name,

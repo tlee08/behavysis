@@ -265,7 +265,7 @@ class Experiment:
         Can call any methods from `RunDLC`.
         """
         return self._process_scaffold(
-            (RunDLC.ma_dlc_analyse_single,),
+            (RunDLC.ma_dlc_run_single,),
             formatted_vid_fp=self.get_fp(Folders.FORMATTED_VID),
             keypoints_fp=self.get_fp(Folders.KEYPOINTS),
             configs_fp=self.get_fp(Folders.CONFIGS),

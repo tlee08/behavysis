@@ -10,17 +10,17 @@ from behavysis_pipeline.df_classes.keypoints_df import CoordsCols
 FBF = "fbf"
 
 
-class AnalyseCN(Enum):
+class AnalysisCN(Enum):
     INDIVIDUALS = "individuals"
     MEASURES = "measures"
 
 
-class AnalyseDf(DFMixin):
+class AnalysisDf(DFMixin):
     """__summary__"""
 
     NULLABLE = False
     IN = FramesIN
-    CN = AnalyseCN
+    CN = AnalysisCN
 
     @classmethod
     def make_location_scatterplot(

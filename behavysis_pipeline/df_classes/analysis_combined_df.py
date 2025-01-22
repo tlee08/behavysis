@@ -3,15 +3,15 @@ from enum import Enum
 from behavysis_pipeline.df_classes.df_mixin import DFMixin, FramesIN
 
 
-class AnalyseCombinedCN(Enum):
+class AnalysisCombinedCN(Enum):
     ANALYSIS = "analysis"
     INDIVIDUALS = "individuals"
     MEASURES = "measures"
 
 
-class AnalyseCombinedDf(DFMixin):
+class AnalysisCombinedDf(DFMixin):
     """__summary__"""
 
     NULLABLE = False
     IN = FramesIN
-    CN = AnalyseCombinedCN
+    CN = AnalysisCombinedCN

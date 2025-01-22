@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 
-from behavysis_pipeline.df_classes.analyse_df import AnalyseDf
+from behavysis_pipeline.df_classes.analysis_df import AnalysisDf
 from behavysis_pipeline.df_classes.behav_df import BehavScoredDf, BoutCols
 from behavysis_pipeline.df_classes.df_mixin import DFMixin
 from behavysis_pipeline.utils.misc_utils import enum2tuple
@@ -17,29 +17,29 @@ PLOT = "plot"
 CUSTOM = "custom"
 
 
-class AnalyseSummaryIN(Enum):
+class AnalysisSummaryIN(Enum):
     INDIVIDUALS = "individuals"
     MEASURES = "measures"
 
 
-class AnalyseSummaryCN(Enum):
+class AnalysisSummaryCN(Enum):
     AGGS = "aggs"
 
 
-class AnalyseBinnedIN(Enum):
+class AnalysisBinnedIN(Enum):
     BIN_SEC = "bin_sec"
 
 
-class AnalyseBinnedCN(Enum):
+class AnalysisBinnedCN(Enum):
     INDIVIDUALS = "individuals"
     MEASURES = "measures"
     AGGS = "aggs"
 
 
-class AnalyseSummaryDf(DFMixin):
+class AnalysisSummaryDf(DFMixin):
     NULLABLE = False
-    IN = AnalyseSummaryIN
-    CN = AnalyseSummaryCN
+    IN = AnalysisSummaryIN
+    CN = AnalysisSummaryCN
 
     @classmethod
     def agg_quantitative(cls, analysis_df: pd.DataFrame, fps: float) -> pd.DataFrame:
@@ -145,12 +145,12 @@ class AnalyseSummaryDf(DFMixin):
         return summary_df
 
 
-class AnalyseBinnedDf(DFMixin):
+class AnalysisBinnedDf(DFMixin):
     """__summary__"""
 
     NULLABLE = False
-    IN = AnalyseBinnedIN
-    CN = AnalyseBinnedCN
+    IN = AnalysisBinnedIN
+    CN = AnalysisBinnedCN
 
     @classmethod
     def make_binned(
@@ -176,9 +176,9 @@ class AnalyseBinnedDf(DFMixin):
         grouped_df = analysis_df.groupby(bin_sec)
         binned_df = grouped_df.apply(
             lambda x: summary_func(x, fps)
-            .unstack(enum2tuple(AnalyseSummaryDf.IN))
+            .unstack(enum2tuple(AnalysisSummaryDf.IN))
             .reorder_levels(list(enum2tuple(cls.CN)))
-            .sort_index(level=enum2tuple(AnalyseSummaryDf.IN))
+            .sort_index(level=enum2tuple(AnalysisSummaryDf.IN))
         )
         # Cleaning (sets index and column names) and checking
         binned_df = cls.basic_clean(binned_df)
@@ -195,7 +195,7 @@ class AnalyseBinnedDf(DFMixin):
         _summary_
         """
         # Making binned_df long
-        binned_stacked_df = binned_df.stack(enum2tuple(AnalyseSummaryDf.IN))[agg_column].rename("value").reset_index()
+        binned_stacked_df = binned_df.stack(enum2tuple(AnalysisSummaryDf.IN))[agg_column].rename("value").reset_index()
         # Plotting line graph
         g = sns.relplot(
             data=binned_stacked_df,
@@ -238,7 +238,7 @@ class AnalyseBinnedDf(DFMixin):
             dst_dir=dst_dir,
             name=name,
             fps=fps,
-            summary_func=AnalyseSummaryDf.agg_quantitative,
+            summary_func=AnalysisSummaryDf.agg_quantitative,
             agg_column="mean",
             bins_ls=bins_ls,
             cbins_ls=cbins_ls,
@@ -262,7 +262,7 @@ class AnalyseBinnedDf(DFMixin):
             dst_dir=dst_dir,
             name=name,
             fps=fps,
-            summary_func=AnalyseSummaryDf.agg_behavs,
+            summary_func=AnalysisSummaryDf.agg_behavs,
             agg_column="bout_dur_total",
             bins_ls=bins_ls,
             cbins_ls=cbins_ls,
@@ -290,9 +290,9 @@ class AnalyseBinnedDf(DFMixin):
         # Summarising analysis_df
         summary_fp = os.path.join(dst_dir, SUMMARY, f"{name}.{cls.IO}")
         summary_df = summary_func(analysis_df, fps)
-        AnalyseSummaryDf.write(summary_df, summary_fp)
+        AnalysisSummaryDf.write(summary_df, summary_fp)
         # Getting timestamps index
-        timestamps = analysis_df.index.get_level_values(AnalyseDf.IN.FRAME.value) / fps
+        timestamps = analysis_df.index.get_level_values(AnalysisDf.IN.FRAME.value) / fps
         # Binning analysis_df
         for bin_sec in bins_ls:
             # Making filepaths

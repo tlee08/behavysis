@@ -1,27 +1,9 @@
-"""
-Functions have the following format:
-
-Parameters
-----------
-dlc_fp : str
-    The DLC dataframe filepath of the experiment to analyse.
-ANALYSE_DIR : str
-    The analysis directory path.
-configs_fp : str
-    the experiment's JSON configs file.
-
-Returns
--------
-str
-    The outcome of the process.
-"""
-
 import os
 
 import numpy as np
 
-from behavysis_pipeline.df_classes.analyse_agg_df import AnalyseBinnedDf
-from behavysis_pipeline.df_classes.analyse_df import FBF, AnalyseDf
+from behavysis_pipeline.df_classes.analysis_agg_df import AnalysisBinnedDf
+from behavysis_pipeline.df_classes.analysis_df import FBF, AnalysisDf
 from behavysis_pipeline.df_classes.behav_df import BehavScoredDf, BehavValues
 from behavysis_pipeline.pydantic_models.configs import ExperimentConfigs
 from behavysis_pipeline.utils.io_utils import get_name
@@ -51,7 +33,7 @@ class AnalyseBehavs:
         dst_subdir = os.path.join(dst_dir, f_name)
         # Calculating the deltas (changes in body position) between each frame for the subject
         configs = ExperimentConfigs.read_json(configs_fp)
-        fps, _, _, _, bins_ls, cbins_ls = configs.get_analyse_configs()
+        fps, _, _, _, bins_ls, cbins_ls = configs.get_analysis_configs()
         # Loading in dataframe
         behavs_df = BehavScoredDf.read(behavs_fp)
         # Setting all na and -1 values to 0 (to make any undecided behav to non-behav)
@@ -64,12 +46,12 @@ class AnalyseBehavs:
             invert=True,
         )
         behavs_df = behavs_df.loc[:, columns]
-        behavs_df = AnalyseDf.basic_clean(behavs_df)
+        behavs_df = AnalysisDf.basic_clean(behavs_df)
         # Writing the behavs_df to the fbf file
-        fbf_fp = os.path.join(dst_subdir, FBF, f"{name}.{AnalyseDf.IO}")
-        AnalyseDf.write(behavs_df, fbf_fp)
+        fbf_fp = os.path.join(dst_subdir, FBF, f"{name}.{AnalysisDf.IO}")
+        AnalysisDf.write(behavs_df, fbf_fp)
         # Making the summary and binned dataframes
-        AnalyseBinnedDf.summary_binned_behavs(
+        AnalysisBinnedDf.summary_binned_behavs(
             behavs_df,
             dst_subdir,
             name,

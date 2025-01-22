@@ -43,7 +43,7 @@ class RunDLC:
     """_summary_"""
 
     @classmethod
-    def ma_dlc_analyse_single(
+    def ma_dlc_run_single(
         cls,
         formatted_vid_fp: str,
         keypoints_fp: str,
@@ -84,7 +84,7 @@ class RunDLC:
         return get_io_obj_content(io_obj)
 
     @staticmethod
-    def ma_dlc_analyse_batch(
+    def ma_dlc_run_batch(
         vid_fp_ls: list[str],
         keypoints_dir: str,
         configs_dir: str,
