@@ -214,16 +214,15 @@ class BehavScoredDf(BehavDf):
         offset = 0
         if isinstance(vect, pd.Series):
             if vect.shape[0] > 0:
-                offset = vect.index[0]
+                # NOTE: gets the offset from the first index (because vect is converted to np with relative index)
+                # NOTE: Also safe for multi-index. Assumes level 0 is the frame index.
+                offset = vect.index.get_level_values(0)[0]
         # Getting stop and start indexes of each bout
         z = np.concatenate(([0], vect, [0]))
         start = np.flatnonzero(~z[:-1] & z[1:])
         stop = np.flatnonzero(z[:-1] & ~z[1:]) - 1
         # Making dataframe
-        bouts_df = pd.DataFrame({cls.BoutCols.START.value: start, cls.BoutCols.STOP.value: stop})
-        print(bouts_df)
-        print(offset)
-        bouts_df = bouts_df + offset
+        bouts_df = pd.DataFrame({cls.BoutCols.START.value: start, cls.BoutCols.STOP.value: stop}) + offset
         bouts_df[cls.BoutCols.DUR.value] = bouts_df[cls.BoutCols.STOP.value] - bouts_df[cls.BoutCols.START.value] + 1
         return bouts_df
 
