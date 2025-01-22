@@ -32,7 +32,7 @@ from behavysis_pipeline.pydantic_models.configs import ExperimentConfigs
 from behavysis_pipeline.utils.diagnostics_utils import file_exists_msg
 from behavysis_pipeline.utils.io_utils import get_name, silent_remove
 from behavysis_pipeline.utils.logging_utils import get_io_obj_content, init_logger_with_io_obj
-from behavysis_pipeline.utils.misc_utils import enum2tuple, get_current_funct_name
+from behavysis_pipeline.utils.misc_utils import enum2tuple, get_current_func_name
 from behavysis_pipeline.utils.subproc_utils import run_subproc_console
 from behavysis_pipeline.utils.template_utils import save_template
 
@@ -54,7 +54,7 @@ class RunDLC:
         """
         Running custom DLC script to generate a DLC keypoints dataframe from a single video.
         """
-        logger, io_obj = init_logger_with_io_obj(get_current_funct_name())
+        logger, io_obj = init_logger_with_io_obj(get_current_func_name())
         if not overwrite and os.path.exists(out_fp):
             logger.warning(file_exists_msg(out_fp))
             return get_io_obj_content(io_obj)
@@ -94,7 +94,7 @@ class RunDLC:
         """
         Running custom DLC script to generate a DLC keypoints dataframe from a single video.
         """
-        logger, io_obj = init_logger_with_io_obj(get_current_funct_name())
+        logger, io_obj = init_logger_with_io_obj(get_current_func_name())
 
         # Specifying the GPU to use and making the output directory
         # Making output directories

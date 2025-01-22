@@ -26,7 +26,7 @@ from behavysis_pipeline.df_classes.behav_df import BehavScoredDf
 from behavysis_pipeline.pydantic_models.configs import ExperimentConfigs
 from behavysis_pipeline.utils.io_utils import get_name
 from behavysis_pipeline.utils.logging_utils import get_io_obj_content, init_logger_with_io_obj
-from behavysis_pipeline.utils.misc_utils import enum2tuple, get_current_funct_name
+from behavysis_pipeline.utils.misc_utils import enum2tuple, get_current_func_name
 
 ###################################################################################################
 #               ANALYSIS API FUNCS
@@ -46,7 +46,7 @@ class AnalyseBehaviours:
         """
         Takes a behavs dataframe and generates a summary and binned version of the data.
         """
-        logger, io_obj = init_logger_with_io_obj(get_current_funct_name())
+        logger, io_obj = init_logger_with_io_obj(get_current_func_name())
         name = get_name(behavs_fp)
         out_dir = os.path.join(out_dir, AnalyseBehaviours.analyse_behaviours.__name__)
         # Calculating the deltas (changes in body position) between each frame for the subject

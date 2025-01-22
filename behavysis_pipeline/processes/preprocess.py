@@ -32,7 +32,7 @@ from behavysis_pipeline.df_classes.keypoints_df import (
 from behavysis_pipeline.pydantic_models.configs import ExperimentConfigs
 from behavysis_pipeline.utils.diagnostics_utils import file_exists_msg
 from behavysis_pipeline.utils.logging_utils import get_io_obj_content, init_logger_with_io_obj
-from behavysis_pipeline.utils.misc_utils import get_current_funct_name
+from behavysis_pipeline.utils.misc_utils import get_current_func_name
 
 
 class Preprocess:
@@ -72,7 +72,7 @@ class Preprocess:
                     - stop_frame: int
         ```
         """
-        logger, io_obj = init_logger_with_io_obj(get_current_funct_name())
+        logger, io_obj = init_logger_with_io_obj(get_current_func_name())
         if not overwrite and os.path.exists(out_fp):
             logger.warning(file_exists_msg(out_fp))
             return get_io_obj_content(io_obj)
@@ -109,7 +109,7 @@ class Preprocess:
                     ]
         ```
         """
-        logger, io_obj = init_logger_with_io_obj(get_current_funct_name())
+        logger, io_obj = init_logger_with_io_obj(get_current_func_name())
         if not overwrite and os.path.exists(out_fp):
             logger.warning(file_exists_msg(out_fp))
             return get_io_obj_content(io_obj)
@@ -176,7 +176,7 @@ class Preprocess:
                     - pcutoff: float
         ```
         """
-        logger, io_obj = init_logger_with_io_obj(get_current_funct_name())
+        logger, io_obj = init_logger_with_io_obj(get_current_func_name())
         if not overwrite and os.path.exists(out_fp):
             logger.warning(file_exists_msg(out_fp))
             return get_io_obj_content(io_obj)
@@ -225,7 +225,7 @@ class Preprocess:
                     - metric: ["current", "rolling", "binned"]
         ```
         """
-        logger, io_obj = init_logger_with_io_obj(get_current_funct_name())
+        logger, io_obj = init_logger_with_io_obj(get_current_func_name())
         if not overwrite and os.path.exists(out_fp):
             logger.warning(file_exists_msg(out_fp))
             return get_io_obj_content(io_obj)

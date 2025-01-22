@@ -60,7 +60,7 @@ def listdicts2dictlists(my_list):
     return {k: [v[k] for v in my_list] for k in keys}
 
 
-def get_current_funct_name() -> str:
+def get_current_func_name() -> str:
     """
     Returns the name of the function that called this function.
     This is useful for debugging and dynamically changing function behavior

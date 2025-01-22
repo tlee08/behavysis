@@ -3,9 +3,9 @@ Functions have the following format:
 
 Parameters
 ----------
-in_fp : str
+raw_fp : str
     The input video filepath.
-out_fp : str
+formatted_fp : str
     The output video filepath.
 configs_fp : str
     The JSON configs filepath.
@@ -26,7 +26,7 @@ from behavysis_pipeline.pydantic_models.configs import ExperimentConfigs
 from behavysis_pipeline.pydantic_models.vid_metadata import VidMetadata
 from behavysis_pipeline.utils.diagnostics_utils import file_exists_msg
 from behavysis_pipeline.utils.logging_utils import get_io_obj_content, init_logger_with_io_obj
-from behavysis_pipeline.utils.misc_utils import get_current_funct_name
+from behavysis_pipeline.utils.misc_utils import get_current_func_name
 from behavysis_pipeline.utils.subproc_utils import run_subproc_console
 
 
@@ -36,15 +36,15 @@ class FormatVid:
     """
 
     @classmethod
-    def format_vid(cls, in_fp: str, out_fp: str, configs_fp: str, overwrite: bool) -> str:
+    def format_vid(cls, raw_fp: str, formatted_fp: str, configs_fp: str, overwrite: bool) -> str:
         """
         Formats the input video with the given parameters.
 
         Parameters
         ----------
-        in_fp : str
+        raw_fp : str
             The input video filepath.
-        out_fp : str
+        formatted_fp : str
             The output video filepath.
         configs_fp : str
             The JSON configs filepath.
@@ -56,9 +56,9 @@ class FormatVid:
         str
             Description of the function's outcome.
         """
-        logger, io_obj = init_logger_with_io_obj(get_current_funct_name())
-        if not overwrite and os.path.exists(out_fp):
-            logger.warning(file_exists_msg(out_fp))
+        logger, io_obj = init_logger_with_io_obj(get_current_func_name())
+        if not overwrite and os.path.exists(formatted_fp):
+            logger.warning(file_exists_msg(formatted_fp))
             return get_io_obj_content(io_obj)
         # Finding all necessary config parameters for video formatting
         configs = ExperimentConfigs.read_json(configs_fp)
@@ -67,8 +67,8 @@ class FormatVid:
         # Processing the video
         logger.info(
             ProcessVidMixin.process_vid(
-                in_fp=in_fp,
-                out_fp=out_fp,
+                in_fp=raw_fp,
+                out_fp=formatted_fp,
                 height_px=configs.get_ref(configs_filt.height_px),
                 width_px=configs.get_ref(configs_filt.width_px),
                 fps=configs.get_ref(configs_filt.fps),
@@ -78,20 +78,20 @@ class FormatVid:
         )
 
         # Saving video metadata to configs dict
-        logger.info(FormatVid.get_vid_metadata(in_fp, out_fp, configs_fp, overwrite))
+        logger.info(FormatVid.get_vid_metadata(raw_fp, formatted_fp, configs_fp, overwrite))
         return get_io_obj_content(io_obj)
 
     @classmethod
-    def get_vid_metadata(cls, in_fp: str, out_fp: str, configs_fp: str, overwrite: bool) -> str:
+    def get_vid_metadata(cls, raw_fp: str, formatted_fp: str, configs_fp: str, overwrite: bool) -> str:
         """
         Finds the video metadata/parameters for either the raw or formatted video,
         and stores this data in the experiment's config file.
 
         Parameters
         ----------
-        in_fp : str
+        raw_fp : str
             The input video filepath.
-        out_fp : str
+        formatted_fp : str
             The output video filepath.
         configs_fp : str
             The JSON configs filepath.
@@ -103,12 +103,12 @@ class FormatVid:
         str
             Description of the function's outcome.
         """
-        logger, io_obj = init_logger_with_io_obj(get_current_funct_name())
+        logger, io_obj = init_logger_with_io_obj(get_current_func_name())
         # Saving video metadata to configs dict
         configs = ExperimentConfigs.read_json(configs_fp)
-        for ftype, fp in (("raw_vid", in_fp), ("formatted_vid", out_fp)):
+        for config_attr, fp in (("raw_vid", raw_fp), ("formatted_vid", formatted_fp)):
             try:
-                setattr(configs.auto, ftype, ProcessVidMixin.get_vid_metadata(fp))
+                setattr(configs.auto, config_attr, ProcessVidMixin.get_vid_metadata(fp))
             except ValueError as e:
                 logger.warning(str(e))
         logger.info("Video metadata stored in config file.")
@@ -131,7 +131,7 @@ class ProcessVidMixin:
         stop_sec: None | float = None,
     ) -> str:
         """__summary__"""
-        logger, io_obj = init_logger_with_io_obj(get_current_funct_name())
+        logger, io_obj = init_logger_with_io_obj(get_current_func_name())
         # Constructing ffmpeg command
         cmd = ["ffmpeg"]
 

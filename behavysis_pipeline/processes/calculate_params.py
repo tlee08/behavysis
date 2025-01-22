@@ -25,7 +25,7 @@ from behavysis_pipeline.df_classes.keypoints_df import (
 from behavysis_pipeline.pydantic_models.configs import ExperimentConfigs
 from behavysis_pipeline.utils.io_utils import get_name
 from behavysis_pipeline.utils.logging_utils import get_io_obj_content, init_logger_with_io_obj
-from behavysis_pipeline.utils.misc_utils import get_current_funct_name
+from behavysis_pipeline.utils.misc_utils import get_current_func_name
 
 
 class CalculateParams:
@@ -44,7 +44,7 @@ class CalculateParams:
         str
             The name of the scorer.
         """
-        logger, io_obj = init_logger_with_io_obj(get_current_funct_name())
+        logger, io_obj = init_logger_with_io_obj(get_current_func_name())
         # Reading dataframe
         dlc_df = KeypointsDf.read(dlc_fp)
         # Getting scorer name
@@ -79,7 +79,7 @@ class CalculateParams:
                     - pcutoff: float
         ```
         """
-        logger, io_obj = init_logger_with_io_obj(get_current_funct_name())
+        logger, io_obj = init_logger_with_io_obj(get_current_func_name())
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
         configs_filt = configs.user.calculate_params.start_frame
@@ -135,7 +135,7 @@ class CalculateParams:
                     - name: None | str
         ```
         """
-        logger, io_obj = init_logger_with_io_obj(get_current_funct_name())
+        logger, io_obj = init_logger_with_io_obj(get_current_func_name())
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
         configs_filt = configs.user.calculate_params.start_frame_from_csv
@@ -179,7 +179,7 @@ class CalculateParams:
         TODO
         ```
         """
-        logger, io_obj = init_logger_with_io_obj(get_current_funct_name())
+        logger, io_obj = init_logger_with_io_obj(get_current_func_name())
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
         configs_filt = configs.user.calculate_params.stop_frame
@@ -216,7 +216,7 @@ class CalculateParams:
         to the time they disappeared.
         Appear/disappear is calculated from likelihood.
         """
-        logger, io_obj = init_logger_with_io_obj(get_current_funct_name())
+        logger, io_obj = init_logger_with_io_obj(get_current_func_name())
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
         configs_filt = configs.user.calculate_params.exp_dur
@@ -278,7 +278,7 @@ class CalculateParams:
                     - dist_mm: float
         ```
         """
-        logger, io_obj = init_logger_with_io_obj(get_current_funct_name())
+        logger, io_obj = init_logger_with_io_obj(get_current_func_name())
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
         configs_filt = configs.user.calculate_params.px_per_mm

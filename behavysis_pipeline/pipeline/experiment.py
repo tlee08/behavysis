@@ -233,8 +233,8 @@ class Experiment:
         """
         return self._process_scaffold(
             funcs,
-            in_fp=self.get_fp(Folders.RAW_VID),
-            out_fp=self.get_fp(Folders.FORMATTED_VID),
+            raw_fp=self.get_fp(Folders.RAW_VID),
+            formatted_fp=self.get_fp(Folders.FORMATTED_VID),
             configs_fp=self.get_fp(Folders.CONFIGS),
             overwrite=overwrite,
         )
