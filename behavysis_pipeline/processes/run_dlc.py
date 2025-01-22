@@ -156,7 +156,7 @@ def run_dlc_subproc(
     Running the DLC subprocess in a separate process (i.e. separate conda env).
 
     NOTE: any dlc processing error for each video that occur during the subprocess
-    will be printed to the console and the process will continue to the next video.
+    will be logged to the console and the process will continue to the next video.
     """
     # TODO: implement for and try for each video and get errors?? Maybe save a log to a file
     # Saving the script to a file
