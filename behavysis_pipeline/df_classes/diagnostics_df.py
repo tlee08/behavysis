@@ -5,6 +5,7 @@ Utility functions.
 from enum import Enum
 
 import pandas as pd
+from natsort import natsorted
 
 from behavysis_pipeline.df_classes.df_mixin import DFMixin
 
@@ -46,4 +47,13 @@ class DiagnosticsDf(DFMixin):
         assert all("experiment" in dd for dd in dd_ls), "All dictionaries must have the 'experiment' key."
         df = pd.DataFrame(dd_ls).set_index("experiment")
         df = cls.basic_clean(df)
+        return df
+
+    @classmethod
+    def basic_clean(cls, df: pd.DataFrame) -> pd.DataFrame:
+        df = super().basic_clean(df)
+        # Natural sort the index
+        index = df.index.get_level_values(cls.IN.EXPERIMENT.value)
+        assert index == index.unique()
+        df = df.loc[natsorted(index)]
         return df

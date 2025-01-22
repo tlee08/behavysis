@@ -103,7 +103,7 @@ class Project:
 
     def get_experiments(self) -> list[Experiment]:
         """
-        Gets the ordered (natsorted) list of Experiment instances in the Project.
+        Gets the ordered list of Experiment instances in the Project.
 
         Returns
         -------
