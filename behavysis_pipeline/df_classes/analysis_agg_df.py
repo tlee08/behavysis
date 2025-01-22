@@ -286,7 +286,10 @@ class AnalysisBinnedDf(DFMixin):
         outcome = ""
         # Offsetting the frames index to start from 0
         # (i.e. when the experiment commenced, rather than when the recording started)
-        analysis_df.index = analysis_df.index - analysis_df.index.get_level_values(AnalysisDf.IN.FRAME.value)[0]
+        index_df = analysis_df.index.to_frame(index=False)
+        frame_name = AnalysisDf.IN.FRAME.value
+        index_df[frame_name] = index_df[frame_name] - index_df[frame_name].iloc[0]
+        analysis_df.index = pd.MultiIndex.from_frame(index_df)
         # Summarising analysis_df
         summary_fp = os.path.join(dst_dir, SUMMARY, f"{name}.{cls.IO}")
         summary_df = summary_func(analysis_df, fps)

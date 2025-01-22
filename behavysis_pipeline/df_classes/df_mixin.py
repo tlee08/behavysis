@@ -152,9 +152,8 @@ class DFMixin:
         """
         IN = enum2tuple(cls.IN) if cls.IN else None
         CN = enum2tuple(cls.CN) if cls.CN else None
-        index_df = index.to_frame()
         return pd.DataFrame(
-            index=pd.MultiIndex.from_frame(index_df, names=IN),
+            index=pd.MultiIndex.from_frame(index.to_frame(), names=IN),
             columns=pd.MultiIndex.from_tuples((), names=CN),
         )
 

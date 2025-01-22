@@ -187,7 +187,6 @@ class Analyse:
 
         # Calculating speed of subject for each frame
         analysis_df = AnalysisDf.init_df(keypoints_df.index)
-        keypoints_df.index = analysis_df.index
         idx = pd.IndexSlice
         for indiv in indivs:
             # Making a rolling window of 3 frames for average body-centre
@@ -253,7 +252,6 @@ class Analyse:
 
         # Calculating speed of subject for each frame
         analysis_df = AnalysisDf.init_df(keypoints_df.index)
-        keypoints_df.index = analysis_df.index
         idx = pd.IndexSlice
         # Assumes there are only two individuals
         indiv_a = indivs[0]

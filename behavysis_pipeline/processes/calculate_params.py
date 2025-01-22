@@ -148,14 +148,15 @@ class CalculateParams:
         if name is None:
             name = get_name(keypoints_fp)
         # Reading csv_fp
-        keypoints_df = pd.read_csv(csv_fp, index_col=0)
-        keypoints_df.index = keypoints_df.index.astype(str)
+        start_times_df = pd.read_csv(csv_fp, index_col=0)
+        start_times_df.index = start_times_df.index.astype(str)
         # Asserting that the name and col_name is in the df
-        assert (
-            name in keypoints_df.index.values
-        ), f"{name} not in {csv_fp}. Update the `name` parameter in the configs file."
+        assert name in start_times_df.index.values, (
+            f"{name} not in {csv_fp}.\n"
+            "Update the `name` parameter in the configs file or check the start_frames csv file."
+        )
         # Getting start time in seconds
-        start_sec = keypoints_df.loc[name][0]
+        start_sec = start_times_df.loc[name][0]
         # Converting to start frame
         start_frame = int(np.round(start_sec * fps, 0))
         # Writing to configs
