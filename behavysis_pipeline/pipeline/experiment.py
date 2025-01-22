@@ -348,24 +348,24 @@ class Experiment:
         Can call any methods from `Preprocess`.
         """
         # Exporting keypoints df to preprocessed folder
-        dd = self._process_scaffold(
+        dd0 = self._process_scaffold(
             (Export.df2df,),
             src_fp=self.get_fp(Folders.KEYPOINTS),
             dst_fp=self.get_fp(Folders.PREPROCESSED),
             overwrite=overwrite,
         )
-        # If there is an error, OR warning (indicates not to ovewrite), then return early
-        res = dd[Export.df2df.__name__]
-        if res.startswith("ERROR") or res.startswith("WARNING"):
-            return dd
+        # If there is an error or warning (indicates not to ovewrite) in logger, return early
+        if "error" in dd0[Export.df2df.__name__] or "warning" in dd0[Export.df2df.__name__]:
+            return dd0
         # Feeding through preprocessing functions
-        return self._process_scaffold(
+        dd1 = self._process_scaffold(
             funcs,
             src_fp=self.get_fp(Folders.PREPROCESSED),
             dst_fp=self.get_fp(Folders.PREPROCESSED),
             configs_fp=self.get_fp(Folders.CONFIGS),
             overwrite=True,
         )
+        return {**dd0, **dd1}
 
     #####################################################################
     #                 SIMBA BEHAVIOUR CLASSIFICATION METHODS
