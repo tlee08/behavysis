@@ -25,8 +25,8 @@ import numpy as np
 import pandas as pd
 
 from behavysis_pipeline.df_classes.keypoints_df import (
-    Coords,
-    IndivColumns,
+    CoordsCols,
+    IndivCols,
     KeypointsDf,
 )
 from behavysis_pipeline.pydantic_models.configs import ExperimentConfigs
@@ -139,12 +139,12 @@ class Preprocess:
             x = x * width_px
             y = y * height_px
             # Getting "is_detected" for each frame for the bodypart
-            is_detected = df[(scorer, "single", bodypart, Coords.LIKELIHOOD.value)] >= pcutoff
+            is_detected = df[(scorer, "single", bodypart, CoordsCols.LIKELIHOOD.value)] >= pcutoff
             # If the bodypart is detected in less than the given proportion of the video, then set the x and y coordinates to the given values
             if is_detected.mean() < pcutoff_all:
-                df[(scorer, "single", bodypart, Coords.X.value)] = x
-                df[(scorer, "single", bodypart, Coords.Y.value)] = y
-                df[(scorer, "single", bodypart, Coords.LIKELIHOOD.value)] = pcutoff
+                df[(scorer, "single", bodypart, CoordsCols.X.value)] = x
+                df[(scorer, "single", bodypart, CoordsCols.Y.value)] = y
+                df[(scorer, "single", bodypart, CoordsCols.LIKELIHOOD.value)] = pcutoff
                 logger.info(
                     f"{bodypart} is detected in less than {pcutoff_all} of the video."
                     " Setting x and y coordinates to ({x}, {y})."
@@ -190,11 +190,11 @@ class Preprocess:
         # Setting low-likelihood points to Nan to later interpolate
         for scorer, indiv, bp in unique_cols:
             # Imputing Nan likelihood points with 0
-            df[(scorer, indiv, bp, Coords.LIKELIHOOD.value)].fillna(value=0, inplace=True)
+            df[(scorer, indiv, bp, CoordsCols.LIKELIHOOD.value)].fillna(value=0, inplace=True)
             # Setting x and y coordinates of points that have low likelihood to Nan
-            to_remove = df[(scorer, indiv, bp, Coords.LIKELIHOOD.value)] < configs_filt.pcutoff
-            df.loc[to_remove, (scorer, indiv, bp, Coords.X.value)] = np.nan
-            df.loc[to_remove, (scorer, indiv, bp, Coords.Y.value)] = np.nan
+            to_remove = df[(scorer, indiv, bp, CoordsCols.LIKELIHOOD.value)] < configs_filt.pcutoff
+            df.loc[to_remove, (scorer, indiv, bp, CoordsCols.X.value)] = np.nan
+            df.loc[to_remove, (scorer, indiv, bp, CoordsCols.Y.value)] = np.nan
         # linearly interpolating Nan x and y points.
         # Also backfilling points at the start.
         # Also forward filling points at the end.
@@ -290,9 +290,9 @@ def aggregate_df(
     """
     l0 = df.columns.unique(0)[0]
     df_aggr = pd.DataFrame(index=df.index)
-    for coord in [Coords.X.value, Coords.Y.value]:
+    for coord in [CoordsCols.X.value, CoordsCols.Y.value]:
         # Getting the coordinates of the colour marking in each frame
-        df_aggr[("mark", coord)] = df[l0, IndivColumns.SINGLE.value, marking, coord]
+        df_aggr[("mark", coord)] = df[l0, IndivCols.SINGLE.value, marking, coord]
         idx = pd.IndexSlice
         for indiv in indivs:
             # Getting the coordinates of each individual (average of the given bodyparts list)
@@ -300,8 +300,8 @@ def aggregate_df(
     # Getting the Euclidean distance between each mouse and the colour marking in each frame
     for indiv in indivs:
         df_aggr[(indiv, "dist")] = np.sqrt(
-            np.square(df_aggr[(indiv, Coords.X.value)] - df_aggr[("mark", Coords.X.value)])
-            + np.square(df_aggr[(indiv, Coords.Y.value)] - df_aggr[("mark", Coords.Y.value)])
+            np.square(df_aggr[(indiv, CoordsCols.X.value)] - df_aggr[("mark", CoordsCols.X.value)])
+            + np.square(df_aggr[(indiv, CoordsCols.Y.value)] - df_aggr[("mark", CoordsCols.Y.value)])
         )
     # Formatting columns as a MultiIndex
     df_aggr.columns = pd.MultiIndex.from_tuples(df_aggr.columns)

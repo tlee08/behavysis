@@ -13,10 +13,6 @@ from behavysis_pipeline.df_classes.df_mixin import DFMixin, FramesIN
 from behavysis_pipeline.pydantic_models.bouts import Bout, Bouts, BoutStruct
 from behavysis_pipeline.utils.misc_utils import enum2tuple
 
-####################################################################################################
-# DF CONSTANTS
-####################################################################################################
-
 
 class OutcomesPredictedCols(Enum):
     PROB = "prob"
@@ -47,11 +43,6 @@ class BoutCols(Enum):
 class BehavCN(Enum):
     BEHAVS = "behavs"
     OUTCOMES = "outcomes"
-
-
-####################################################################################################
-# DF CLASS
-####################################################################################################
 
 
 class BehavDf(DFMixin):

@@ -18,8 +18,8 @@ import numpy as np
 import pandas as pd
 
 from behavysis_pipeline.df_classes.keypoints_df import (
-    Coords,
-    IndivColumns,
+    CoordsCols,
+    IndivCols,
     KeypointsDf,
 )
 from behavysis_pipeline.pydantic_models.configs import ExperimentConfigs
@@ -293,12 +293,12 @@ class CalculateParams:
         # Checking that the two reference points are valid
         KeypointsDf.check_bpts_exist(dlc_df, [pt_a, pt_b])
         # Getting calibration points (x, y, likelihood) values
-        pt_a_df = dlc_df[IndivColumns.SINGLE.value, pt_a]
-        pt_b_df = dlc_df[IndivColumns.SINGLE.value, pt_b]
+        pt_a_df = dlc_df[IndivCols.SINGLE.value, pt_a]
+        pt_b_df = dlc_df[IndivCols.SINGLE.value, pt_b]
         # Interpolating points which are below a likelihood threshold (linear)
-        pt_a_df.loc[pt_a_df[Coords.LIKELIHOOD.value] < pcutoff] = np.nan
+        pt_a_df.loc[pt_a_df[CoordsCols.LIKELIHOOD.value] < pcutoff] = np.nan
         pt_a_df = pt_a_df.interpolate(method="linear", axis=0).bfill()
-        pt_b_df.loc[pt_b_df[Coords.LIKELIHOOD.value] < pcutoff] = np.nan
+        pt_b_df.loc[pt_b_df[CoordsCols.LIKELIHOOD.value] < pcutoff] = np.nan
         pt_b_df = pt_b_df.interpolate(method="linear", axis=0).bfill()
         # Getting distance between calibration points
         dist_px = np.nanmean(np.sqrt(np.square(pt_a_df["x"] - pt_b_df["x"]) + np.square(pt_a_df["y"] - pt_b_df["y"])))
@@ -323,7 +323,7 @@ def calc_likelihoods(
     # Calculating likelihood of subject (given bpts) existing.
     idx = pd.IndexSlice
     df_lhoods = pd.DataFrame(index=df.index)
-    df_bpts_lhoods = df.loc[:, idx[:, bpts, Coords.LIKELIHOOD.value]]
+    df_bpts_lhoods = df.loc[:, idx[:, bpts, CoordsCols.LIKELIHOOD.value]]
     df_lhoods["current"] = df_bpts_lhoods.apply(np.nanmedian, axis=1)
     # Calculating likelihood of subject existing over time window
     df_lhoods["rolling"] = df_lhoods["current"].rolling(window_frames, center=True).agg(np.nanmean)

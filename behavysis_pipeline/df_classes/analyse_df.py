@@ -23,27 +23,14 @@ import pandas as pd
 import seaborn as sns
 
 from behavysis_pipeline.df_classes.df_mixin import DFMixin, FramesIN
-from behavysis_pipeline.df_classes.keypoints_df import Coords
-
-####################################################################################################
-# DF CONSTANTS
-####################################################################################################
-
+from behavysis_pipeline.df_classes.keypoints_df import CoordsCols
 
 FBF = "fbf"
-SUMMARY = "summary"
-BINNED = "binned"
-CUSTOM = "custom"
 
 
 class AnalyseCN(Enum):
     INDIVIDUALS = "individuals"
     MEASURES = "measures"
-
-
-####################################################################################################
-# DF CLASS
-####################################################################################################
 
 
 class AnalyseDf(DFMixin):
@@ -68,8 +55,8 @@ class AnalyseDf(DFMixin):
         scatter_stacked_df = scatter_df.stack(level="individuals").reset_index("individuals")
         g = sns.relplot(
             data=scatter_stacked_df,
-            x=Coords.X.value,
-            y=Coords.Y.value,
+            x=CoordsCols.X.value,
+            y=CoordsCols.Y.value,
             hue=measure,
             col="individuals",
             kind="scatter",
@@ -92,8 +79,8 @@ class AnalyseDf(DFMixin):
         for ax in g.axes:
             sns.lineplot(
                 data=corners_df,
-                x=Coords.X.value,
-                y=Coords.Y.value,
+                x=CoordsCols.X.value,
+                y=CoordsCols.Y.value,
                 hue="roi",
                 # color=(1, 0, 0),
                 linewidth=1,

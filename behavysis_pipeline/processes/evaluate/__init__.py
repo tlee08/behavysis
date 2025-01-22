@@ -32,7 +32,7 @@ import pandas as pd
 import seaborn as sns
 
 from behavysis_pipeline.df_classes.behav_df import BehavScoredDf
-from behavysis_pipeline.df_classes.keypoints_df import Coords, KeypointsDf
+from behavysis_pipeline.df_classes.keypoints_df import CoordsCols, KeypointsDf
 from behavysis_pipeline.pydantic_models.configs import ExperimentConfigs
 from behavysis_pipeline.utils.diagnostics_utils import file_exists_msg
 from behavysis_pipeline.utils.io_utils import get_name
@@ -91,7 +91,7 @@ class Evaluate:
         g.map_dataframe(
             sns.lineplot,
             x="timestamp",
-            y=Coords.LIKELIHOOD.value,
+            y=CoordsCols.LIKELIHOOD.value,
             hue=KeypointsDf.CN.BODYPARTS.value,
             alpha=0.4,
         )

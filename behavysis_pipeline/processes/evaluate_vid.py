@@ -14,7 +14,7 @@ from PySide6 import QtGui
 from tqdm import trange
 
 from behavysis_pipeline.df_classes.analyse_combined_df import AnalyseCombinedDf
-from behavysis_pipeline.df_classes.keypoints_df import IndivColumns, KeypointsDf
+from behavysis_pipeline.df_classes.keypoints_df import IndivCols, KeypointsDf
 from behavysis_pipeline.pydantic_models.configs import ExperimentConfigs
 from behavysis_pipeline.utils.diagnostics_utils import file_exists_msg
 from behavysis_pipeline.utils.logging_utils import get_io_obj_content, init_logger_with_io_obj
@@ -206,9 +206,9 @@ class Keypoints(EvalVidFuncBase):
         - Making the corresponding colours list for each bodypart instance (colours depend on indiv/bpt)
         """
         # Filtering out IndivColumns.PROCESS.value columns
-        if IndivColumns.PROCESS.value in self.dlc_df.columns.unique(KeypointsDf.CN.INDIVIDUALS.value):
+        if IndivCols.PROCESS.value in self.dlc_df.columns.unique(KeypointsDf.CN.INDIVIDUALS.value):
             self.dlc_df.drop(
-                columns=IndivColumns.PROCESS.value,
+                columns=IndivCols.PROCESS.value,
                 level=KeypointsDf.CN.INDIVIDUALS.value,
             )
         # Getting (indivs, bpts) MultiIndex

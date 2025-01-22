@@ -11,18 +11,9 @@ from behavysis_pipeline.constants import DF_IO_FORMAT
 from behavysis_pipeline.utils.logging_utils import init_logger
 from behavysis_pipeline.utils.misc_utils import enum2tuple
 
-####################################################################################################
-# DF CONSTANTS
-####################################################################################################
-
 
 class FramesIN(Enum):
     FRAME = "frame"
-
-
-####################################################################################################
-# DF CLASS
-####################################################################################################
 
 
 class DFMixin:

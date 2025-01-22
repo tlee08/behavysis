@@ -10,10 +10,6 @@ from natsort import natsorted
 
 from behavysis_pipeline.df_classes.df_mixin import DFMixin
 
-####################################################################################################
-# DF CONSTANTS
-####################################################################################################
-
 
 class DiagnosticsIN(Enum):
     EXPERIMENT = "experiment"
@@ -21,11 +17,6 @@ class DiagnosticsIN(Enum):
 
 class DiagnosticsCN(Enum):
     FEATURES = "functions"
-
-
-####################################################################################################
-# DF CLASS
-####################################################################################################
 
 
 class DiagnosticsDf(DFMixin):

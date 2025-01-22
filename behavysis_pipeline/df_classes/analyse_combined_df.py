@@ -20,20 +20,11 @@ from enum import Enum
 
 from behavysis_pipeline.df_classes.df_mixin import DFMixin, FramesIN
 
-####################################################################################################
-# DF CONSTANTS
-####################################################################################################
-
 
 class AnalyseCombinedCN(Enum):
     ANALYSIS = "analysis"
     INDIVIDUALS = "individuals"
     MEASURES = "measures"
-
-
-####################################################################################################
-# DF CLASS
-####################################################################################################
 
 
 class AnalyseCombinedDf(DFMixin):

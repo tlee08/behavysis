@@ -9,18 +9,14 @@ import pandas as pd
 
 from behavysis_pipeline.df_classes.df_mixin import DFMixin, FramesIN
 
-####################################################################################################
-# DF CONSTANTS
-####################################################################################################
 
-
-class Coords(Enum):
+class CoordsCols(Enum):
     X = "x"
     Y = "y"
     LIKELIHOOD = "likelihood"
 
 
-class IndivColumns(Enum):
+class IndivCols(Enum):
     SINGLE = "single"
     PROCESS = "processed"  # TODO: remove this
 
@@ -30,11 +26,6 @@ class KeypointsCN(Enum):
     INDIVIDUALS = "individuals"
     BODYPARTS = "bodyparts"
     COORDS = "coords"
-
-
-####################################################################################################
-# DF CLASS
-####################################################################################################
 
 
 class KeypointsDf(DFMixin):
@@ -95,7 +86,7 @@ class KeypointsDf(DFMixin):
         # Not incl. the `single` or `process`columns
         columns_filt = np.isin(
             df.columns.get_level_values(cls.CN.INDIVIDUALS.value),
-            [IndivColumns.PROCESS.value, IndivColumns.SINGLE.value],
+            [IndivCols.PROCESS.value, IndivCols.SINGLE.value],
             invert=True,
         )
         columns = df.columns[columns_filt]

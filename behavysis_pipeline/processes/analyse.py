@@ -23,12 +23,13 @@ import pandas as pd
 
 from behavysis_pipeline.df_classes.analyse_agg_df import AnalyseBinnedDf
 from behavysis_pipeline.df_classes.analyse_df import (
+    FBF,
     AnalyseDf,
 )
 from behavysis_pipeline.df_classes.behav_df import BehavScoredDf
 from behavysis_pipeline.df_classes.keypoints_df import (
-    Coords,
-    IndivColumns,
+    CoordsCols,
+    IndivCols,
     KeypointsDf,
 )
 from behavysis_pipeline.pydantic_models.configs import ExperimentConfigs
@@ -72,8 +73,8 @@ class Analyse:
         corners_df_ls = []
         roi_names_ls = []
         # For each roi, calculate the in-roi status of the subject
-        x = Coords.X.value
-        y = Coords.Y.value
+        x = CoordsCols.X.value
+        y = CoordsCols.Y.value
         idx = pd.IndexSlice
         for configs_filt in configs_filt_ls:
             # Getting necessary config parameters
@@ -90,7 +91,7 @@ class Analyse:
             KeypointsDf.check_bpts_exist(dlc_df, bpts)
             KeypointsDf.check_bpts_exist(dlc_df, roi_corners)
             # Getting average corner coordinates. Assumes arena does not move.
-            corners_i_df = pd.DataFrame([dlc_df[(IndivColumns.SINGLE.value, pt)].mean() for pt in roi_corners]).drop(
+            corners_i_df = pd.DataFrame([dlc_df[(IndivCols.SINGLE.value, pt)].mean() for pt in roi_corners]).drop(
                 columns=["likelihood"]
             )
             # Adjusting x-y to have `thresh_px` dilation/erosion from the points themselves
@@ -128,7 +129,7 @@ class Analyse:
         analysis_df = pd.concat(analysis_df_ls, axis=1)
         corners_df = pd.concat(corners_df_ls, keys=roi_names_ls, names=["roi"]).reset_index(level="roi")
         # Saving analysis_df
-        fbf_fp = os.path.join(out_dir, "fbf", f"{name}.{AnalyseDf.IO}")
+        fbf_fp = os.path.join(out_dir, FBF, f"{name}.{AnalyseDf.IO}")
         AnalyseDf.write(analysis_df, fbf_fp)
         # Generating scatterplot
         # First getting scatter_in_roi columns
@@ -207,7 +208,7 @@ class Analyse:
         # Backfilling the analysis_df so no nan's
         analysis_df = analysis_df.bfill()
         # Saving analysis_df
-        fbf_fp = os.path.join(out_dir, "fbf", f"{name}.{AnalyseDf.IO}")
+        fbf_fp = os.path.join(out_dir, FBF, f"{name}.{AnalyseDf.IO}")
         AnalyseDf.write(analysis_df, fbf_fp)
 
         # Summarising and binning analysis_df
@@ -271,7 +272,7 @@ class Analyse:
             .agg(np.nanmean)
         )
         # Saving analysis_df
-        fbf_fp = os.path.join(out_dir, "fbf", f"{name}.{AnalyseDf.IO}")
+        fbf_fp = os.path.join(out_dir, FBF, f"{name}.{AnalyseDf.IO}")
         AnalyseDf.write(analysis_df, fbf_fp)
 
         # Summarising and binning analysis_df
@@ -354,7 +355,7 @@ class Analyse:
                 if row["dur"] < window_frames:
                     analysis_df.loc[row["start"] : row["stop"], (indiv, f_name)] = 0
         # Saving analysis_df
-        fbf_fp = os.path.join(out_dir, "fbf", f"{name}.{AnalyseDf.IO}")
+        fbf_fp = os.path.join(out_dir, FBF, f"{name}.{AnalyseDf.IO}")
         AnalyseDf.write(analysis_df, fbf_fp)
 
         # Summarising and binning analysis_df
@@ -377,8 +378,8 @@ def pt_in_roi(pt: pd.Series, corners_df: pd.DataFrame) -> bool:
     first_corner = pd.DataFrame(corners_df.iloc[0]).T
     corners_df = pd.concat((corners_df, first_corner), axis=0, ignore_index=True)
     # Making x and y aliases
-    x = Coords.X.value
-    y = Coords.Y.value
+    x = CoordsCols.X.value
+    y = CoordsCols.Y.value
     # For each edge
     for i in range(corners_df.shape[0] - 1):
         # Getting corner points of edge
