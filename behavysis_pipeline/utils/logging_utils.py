@@ -102,7 +102,10 @@ def io_obj_to_msg(io_obj: io.StringIO) -> str:
     io_obj.seek(0)
     msg = ""
     for line in io_obj.readlines():
+        line = line.strip()
+        if not line:  # Skip empty lines
+            continue
         datetime, name, level, message = split_log_line(line)
-        msg += f"{level} - {message}"
+        msg += f"{level} - {message}\n"
     io_obj.seek(cursor)
     return msg
