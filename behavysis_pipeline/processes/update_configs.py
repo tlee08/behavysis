@@ -21,6 +21,8 @@ from typing import Literal
 from pydantic import ValidationError
 
 from behavysis_pipeline.pydantic_models.configs import ExperimentConfigs
+from behavysis_pipeline.utils.logging_utils import init_logger_with_io_obj, io_obj_to_msg
+from behavysis_pipeline.utils.misc_utils import get_current_funct_name
 
 
 class UpdateConfigs:
@@ -52,7 +54,7 @@ class UpdateConfigs:
         str
             Description of the function's outcome.
         """
-        outcome = ""
+        logger, io_obj = init_logger_with_io_obj(get_current_funct_name())
         # Parsing in the experiment's existing JSON configs
         try:
             configs = ExperimentConfigs.read_json(configs_fp)
@@ -64,14 +66,14 @@ class UpdateConfigs:
         if overwrite == "user":
             configs.user = default_configs.user
             configs.ref = default_configs.ref
-            outcome += "Updating user and ref configs.\n"
+            logger.info("Updating user and ref configs.")
         elif overwrite == "all":
             configs = default_configs
-            outcome += "Updating all configs.\n"
+            logger.info("Updating all configs.")
         else:
             raise ValueError(
-                f'Invalid value "{overwrite}" passed to function. ' + 'The value must be either "user", or "all".'
+                f'Invalid value "{overwrite}" passed to function. ' 'The value must be either "user", or "all".'
             )
         # Writing new configs to JSON file
         configs.write_json(configs_fp)
-        return outcome
+        return io_obj_to_msg(io_obj)

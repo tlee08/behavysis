@@ -8,7 +8,6 @@ import numpy as np
 import pandas as pd
 
 from behavysis_pipeline.df_classes.df_mixin import DFMixin, FramesIN
-from behavysis_pipeline.utils.logging_utils import init_logger
 
 ####################################################################################################
 # DF CONSTANTS
@@ -44,8 +43,6 @@ class KeypointsDf(DFMixin):
     (generated from maDLC keypoint detection)
     functions.
     """
-
-    logger = init_logger(__name__)
 
     NULLABLE = False
     IN = FramesIN

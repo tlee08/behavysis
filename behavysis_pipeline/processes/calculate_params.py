@@ -14,8 +14,6 @@ str
     The outcome of the process.
 """
 
-import io
-
 import numpy as np
 import pandas as pd
 
@@ -26,13 +24,13 @@ from behavysis_pipeline.df_classes.keypoints_df import (
 )
 from behavysis_pipeline.pydantic_models.configs import ExperimentConfigs
 from behavysis_pipeline.utils.io_utils import get_name
-from behavysis_pipeline.utils.logging_utils import init_logger_with_io_obj
+from behavysis_pipeline.utils.logging_utils import init_logger_with_io_obj, io_obj_to_msg
 from behavysis_pipeline.utils.misc_utils import get_current_funct_name
 
 
 class CalculateParams:
     @staticmethod
-    def dlc_scorer_name(dlc_fp: str, configs_fp: str) -> io.StringIO:
+    def dlc_scorer_name(dlc_fp: str, configs_fp: str) -> str:
         """
         Get the name of the scorer used in the DLC analysis.
 
@@ -55,14 +53,13 @@ class CalculateParams:
         configs = ExperimentConfigs.read_json(configs_fp)
         configs.auto.scorer_name = scorer_name
         configs.write_json(configs_fp)
-        # Returning outcome
-        return io_obj
+        return io_obj_to_msg(io_obj)
 
     @staticmethod
     def start_frame(
         dlc_fp: str,
         configs_fp: str,
-    ) -> io.StringIO:
+    ) -> str:
         """
         Determine the starting frame of the experiment based on when the subject "likely" entered
         the footage.
@@ -114,11 +111,10 @@ class CalculateParams:
         configs.auto.start_frame = start_frame
         # configs.auto.start_sec = start_frame / fps
         configs.write_json(configs_fp)
-        # Returning outcome
-        return io_obj
+        return io_obj_to_msg(io_obj)
 
     @staticmethod
-    def start_frame_from_csv(dlc_fp: str, configs_fp: str) -> io.StringIO:
+    def start_frame_from_csv(dlc_fp: str, configs_fp: str) -> str:
         """
         Reads the start time of the experiment from a given CSV file
         (filepath specified in config file).
@@ -165,11 +161,10 @@ class CalculateParams:
         configs.auto.start_frame = start_frame
         # configs.auto.start_sec = start_frame / fps
         configs.write_json(configs_fp)
-        # Returning outcome
-        return io_obj
+        return io_obj_to_msg(io_obj)
 
     @staticmethod
-    def stop_frame(dlc_fp: str, configs_fp: str) -> io.StringIO:
+    def stop_frame(dlc_fp: str, configs_fp: str) -> str:
         """
         Calculates the end time according to the following equation:
 
@@ -212,11 +207,10 @@ class CalculateParams:
         configs.auto.stop_frame = stop_frame
         # configs.auto.stop_sec = stop_frame / fps
         configs.write_json(configs_fp)
-        # Returning outcome
-        return io_obj
+        return io_obj_to_msg(io_obj)
 
     @staticmethod
-    def exp_dur(dlc_fp: str, configs_fp: str) -> io.StringIO:
+    def exp_dur(dlc_fp: str, configs_fp: str) -> str:
         """
         Calculates the duration in seconds, from the time the specified bodyparts appeared
         to the time they disappeared.
@@ -256,11 +250,10 @@ class CalculateParams:
         configs.auto.exp_dur_frames = exp_dur_frames
         # configs.auto.exp_dur_secs = exp_dur_frames / fps
         configs.write_json(configs_fp)
-        # Returning outcome
-        return io_obj
+        return io_obj_to_msg(io_obj)
 
     @staticmethod
-    def px_per_mm(dlc_fp: str, configs_fp: str) -> io.StringIO:
+    def px_per_mm(dlc_fp: str, configs_fp: str) -> str:
         """
         Calculates the pixels per mm conversion for the video.
 
@@ -315,8 +308,7 @@ class CalculateParams:
         configs = ExperimentConfigs.read_json(configs_fp)
         configs.auto.px_per_mm = px_per_mm
         configs.write_json(configs_fp)
-        # Returning outcome
-        return io_obj
+        return io_obj_to_msg(io_obj)
 
 
 def calc_likelihoods(
@@ -335,5 +327,4 @@ def calc_likelihoods(
     df_lhoods["current"] = df_bpts_lhoods.apply(np.nanmedian, axis=1)
     # Calculating likelihood of subject existing over time window
     df_lhoods["rolling"] = df_lhoods["current"].rolling(window_frames, center=True).agg(np.nanmean)
-    # Returning df_lhoods
     return df_lhoods

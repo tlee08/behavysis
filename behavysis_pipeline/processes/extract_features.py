@@ -12,8 +12,8 @@ from behavysis_pipeline.df_classes.keypoints_df import KeypointsDf
 from behavysis_pipeline.pydantic_models.configs import ExperimentConfigs
 from behavysis_pipeline.utils.diagnostics_utils import file_exists_msg
 from behavysis_pipeline.utils.io_utils import get_name, silent_remove
-from behavysis_pipeline.utils.logging_utils import init_logger
-from behavysis_pipeline.utils.misc_utils import enum2tuple
+from behavysis_pipeline.utils.logging_utils import init_logger_with_io_obj, io_obj_to_msg
+from behavysis_pipeline.utils.misc_utils import enum2tuple, get_current_funct_name
 from behavysis_pipeline.utils.multiproc_utils import get_cpid
 from behavysis_pipeline.utils.subproc_utils import run_subproc_console
 from behavysis_pipeline.utils.template_utils import save_template
@@ -32,8 +32,6 @@ from behavysis_pipeline.utils.template_utils import save_template
 
 class ExtractFeatures:
     """__summary__"""
-
-    logger = init_logger(__name__)
 
     @staticmethod
     def extract_features(
@@ -62,9 +60,10 @@ class ExtractFeatures:
         str
             The outcome of the process.
         """
+        logger, io_obj = init_logger_with_io_obj(get_current_funct_name())
         if not overwrite and os.path.exists(out_fp):
-            return file_exists_msg(out_fp)
-        outcome = ""
+            logger.warning(file_exists_msg(out_fp))
+            return io_obj_to_msg(io_obj)
         # Getting directory and file paths
         name = get_name(dlc_fp)
         cpid = get_cpid()
@@ -87,15 +86,14 @@ class ExtractFeatures:
         # Removing simba folder (if it exists)
         silent_remove(simba_dir)
         # Running SimBA env and script to run SimBA feature extraction
-        outcome += run_simba_subproc(simba_dir, simba_in_dir, configs_dir, CACHE_DIR, cpid)
+        logger.info(run_simba_subproc(simba_dir, simba_in_dir, configs_dir, CACHE_DIR, cpid))
         # Exporting SimBA feature extraction csv to df on disk
         simba_out_fp = os.path.join(features_from_dir, f"{name}.csv")
         export2df(simba_out_fp, out_fp, index)
         # Removing temp folders (simba_in_dir, simba_dir)
         silent_remove(simba_in_dir)
         silent_remove(simba_dir)
-        # Returning outcome
-        return outcome
+        return io_obj_to_msg(io_obj)
 
 
 #####################################################################
@@ -132,7 +130,6 @@ def select_cols(
     # Selecting given columns
     idx = pd.IndexSlice
     df = df.loc[:, idx[:, indivs, bpts]]
-    # returning df
     return df
 
 
@@ -226,5 +223,4 @@ def export2df(in_fp: str, out_fp: str, index: pd.Index) -> str:
     df.columns.names = list(enum2tuple(FeaturesDf.CN))
     # Saving SimBA extracted features df as df on disk
     FeaturesDf.write(df, out_fp)
-    # Returning outcome
     return "Exported SimBA features to df on disk.\n"

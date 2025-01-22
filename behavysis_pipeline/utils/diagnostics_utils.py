@@ -36,9 +36,4 @@ def file_exists_msg(fp: Optional[str] = None) -> str:
     Return a warning message.
     """
     fp_str = f", {fp}, " if fp else " "
-    return (
-        f"WARNING: Output file"
-        f"{fp_str}"
-        "already exists - not overwriting file.\n"
-        "To overwrite, specify overwrite=True`.\n"
-    )
+    return f"Output file{fp_str}already exists - not overwriting file.\n" "To overwrite, specify `overwrite=True`.\n"

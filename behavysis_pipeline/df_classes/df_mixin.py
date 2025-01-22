@@ -44,13 +44,9 @@ class DFMixin:
         """
         Reading DLC dataframe csv file.
         """
-        # Reading the file
         df = pd.read_csv(fp, index_col=0)
-        # Sorting by index
         df = df.sort_index()
-        # Checking after reading
         cls.check_df(df)
-        # Returning
         return df
 
     @classmethod
@@ -59,11 +55,8 @@ class DFMixin:
         Reading dataframe h5 file.
         """
         df = pd.DataFrame(pd.read_hdf(fp, mode="r"))
-        # Sorting by index
         df = df.sort_index()
-        # Checking after reading
         cls.check_df(df)
-        # Returning
         return df
 
     @classmethod
@@ -72,11 +65,8 @@ class DFMixin:
         Reading dataframe feather file.
         """
         df = pd.read_feather(fp)
-        # Sorting by index
         df = df.sort_index()
-        # Checking after reading
         cls.check_df(df)
-        # Returning
         return df
 
     @classmethod
@@ -85,11 +75,8 @@ class DFMixin:
         Reading dataframe parquet file.
         """
         df = pd.read_parquet(fp)
-        # Sorting by index
         df = df.sort_index()
-        # Checking after reading
         cls.check_df(df)
-        # Returning
         return df
 
     @classmethod
@@ -97,18 +84,15 @@ class DFMixin:
         """
         Default dataframe read method.
         """
-        # Methods mapping
         methods = {
             "csv": cls.read_csv,
             "h5": cls.read_h5,
             "feather": cls.read_feather,
             "parquet": cls.read_parquet,
         }
-        # Asserting IO value is supported
         assert cls.IO in methods, (
             f"File type, {cls.IO}, not supported.\n" f"Supported IO types are: {list(methods.keys())}."
         )
-        # Writing the file with corresponding method
         return methods[cls.IO](fp)
 
     ###############################################################################################
@@ -120,11 +104,8 @@ class DFMixin:
         """
         Writing DLC dataframe to csv file.
         """
-        # Checking before writing
         cls.check_df(df)
-        # Making the directory if it doesn't exist
         os.makedirs(os.path.dirname(fp), exist_ok=True)
-        # Writing the file
         df.to_csv(fp)
 
     @classmethod
@@ -132,11 +113,8 @@ class DFMixin:
         """
         Writing dataframe h5 file.
         """
-        # Checking before writing
         cls.check_df(df)
-        # Making the directory if it doesn't exist
         os.makedirs(os.path.dirname(fp), exist_ok=True)
-        # Writing the file
         DLC_HDF_KEY = "data"
         df.to_hdf(fp, key=DLC_HDF_KEY, mode="w")
 
@@ -145,11 +123,8 @@ class DFMixin:
         """
         Writing dataframe feather file.
         """
-        # Checking before writing
         cls.check_df(df)
-        # Making the directory if it doesn't exist
         os.makedirs(os.path.dirname(fp), exist_ok=True)
-        # Writing the file
         df.to_feather(fp)
 
     @classmethod
@@ -157,11 +132,8 @@ class DFMixin:
         """
         Writing dataframe parquet file.
         """
-        # Checking before writing
         cls.check_df(df)
-        # Making the directory if it doesn't exist
         os.makedirs(os.path.dirname(fp), exist_ok=True)
-        # Writing the file
         df.to_parquet(fp)
 
     @classmethod
@@ -169,18 +141,15 @@ class DFMixin:
         """
         Default dataframe read method based on IO attribute.
         """
-        # Methods mapping
         methods = {
             "csv": cls.write_csv,
             "h5": cls.write_h5,
             "feather": cls.write_feather,
             "parquet": cls.write_parquet,
         }
-        # Asserting IO value is supported
         assert cls.IO in methods, (
             f"File type, {cls.IO}, not supported.\n" f"Supported IO types are: {list(methods.keys())}."
         )
-        # Writing the file with corresponding method
         return methods[cls.IO](df, fp)
 
     ###############################################################################################

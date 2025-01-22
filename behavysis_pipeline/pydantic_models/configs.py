@@ -68,9 +68,7 @@ class ExperimentConfigs(PydanticBaseModel):
             val = val[2:]
             # Check if the value exists in the reference store
             assert hasattr(self.ref, val), f"Value '{val}' can't be found in the configs reference section."
-            # Return the reference value
             return getattr(self.ref, val)
-        # Return the value itself
         return val
 
     def get_analyse_configs(self) -> tuple[float, float, float, float, list, list]:

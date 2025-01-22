@@ -16,7 +16,6 @@ str
     The outcome of the process.
 """
 
-import io
 import os
 
 import numpy as np
@@ -34,7 +33,7 @@ from behavysis_pipeline.df_classes.keypoints_df import (
 )
 from behavysis_pipeline.pydantic_models.configs import ExperimentConfigs
 from behavysis_pipeline.utils.io_utils import get_name
-from behavysis_pipeline.utils.logging_utils import init_logger_with_io_obj
+from behavysis_pipeline.utils.logging_utils import init_logger_with_io_obj, io_obj_to_msg
 from behavysis_pipeline.utils.misc_utils import get_current_funct_name
 
 ###################################################################################################
@@ -48,7 +47,7 @@ class Analyse:
         dlc_fp: str,
         out_dir: str,
         configs_fp: str,
-    ) -> io.StringIO:
+    ) -> str:
         """
         Determines the frames in which the subject is inside the cage (from average
         of given bodypoints).
@@ -154,15 +153,14 @@ class Analyse:
             bins_ls,
             cbins_ls,
         )
-        # Returning outcome
-        return io_obj
+        return io_obj_to_msg(io_obj)
 
     @staticmethod
     def speed(
         dlc_fp: str,
         out_dir: str,
         configs_fp: str,
-    ) -> io.StringIO:
+    ) -> str:
         """
         Determines the speed of the subject in each frame.
         """
@@ -221,14 +219,14 @@ class Analyse:
             bins_ls,
             cbins_ls,
         )
-        return io_obj
+        return io_obj_to_msg(io_obj)
 
     @staticmethod
     def social_distance(
         dlc_fp: str,
         out_dir: str,
         configs_fp: str,
-    ) -> io.StringIO:
+    ) -> str:
         """
         Determines the speed of the subject in each frame.
         """
@@ -285,14 +283,14 @@ class Analyse:
             bins_ls,
             cbins_ls,
         )
-        return io_obj
+        return io_obj_to_msg(io_obj)
 
     @staticmethod
     def freezing(
         dlc_fp: str,
         out_dir: str,
         configs_fp: str,
-    ) -> io.StringIO:
+    ) -> str:
         """
         Determines the frames in which the subject is frozen.
 
@@ -368,7 +366,7 @@ class Analyse:
             bins_ls,
             cbins_ls,
         )
-        return io_obj
+        return io_obj_to_msg(io_obj)
 
 
 def pt_in_roi(pt: pd.Series, corners_df: pd.DataFrame) -> bool:

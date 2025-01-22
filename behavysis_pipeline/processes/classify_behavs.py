@@ -13,16 +13,14 @@ from behavysis_pipeline.df_classes.behav_df import BehavPredictedDf, BehavScored
 from behavysis_pipeline.df_classes.features_df import FeaturesDf
 from behavysis_pipeline.pydantic_models.configs import ExperimentConfigs
 from behavysis_pipeline.utils.diagnostics_utils import file_exists_msg
-from behavysis_pipeline.utils.logging_utils import init_logger
-from behavysis_pipeline.utils.misc_utils import enum2tuple
+from behavysis_pipeline.utils.logging_utils import init_logger_with_io_obj, io_obj_to_msg
+from behavysis_pipeline.utils.misc_utils import enum2tuple, get_current_funct_name
 
 # TODO: handle reading the model file whilst in multiprocessing
 
 
 class ClassifyBehavs:
     """__summary__"""
-
-    logger = init_logger(__name__)
 
     @classmethod
     def classify_behavs(
@@ -62,9 +60,10 @@ class ClassifyBehavs:
         ```
         Where the `models` list is a list of `model_config.json` filepaths.
         """
+        logger, io_obj = init_logger_with_io_obj(get_current_funct_name())
         if not overwrite and os.path.exists(out_fp):
-            return file_exists_msg(out_fp)
-        outcome = ""
+            logger.warning(file_exists_msg(out_fp))
+            return io_obj_to_msg(io_obj)
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
         model_configs_ls = configs.user.classify_behavs
@@ -92,10 +91,10 @@ class ClassifyBehavs:
             # Adding model predictions df to list
             df_ls.append(df_i)
             # Logging outcome
-            outcome += f"Completed {behav_name} classification.\n"
+            logger.info(f"Completed {behav_name} classification.\n")
         # If no models were run, then return outcome
         if len(df_ls) == 0:
-            return outcome
+            return io_obj_to_msg(io_obj)
         # Concatenating predictions to a single dataframe
         behavs_df = pd.concat(df_ls, axis=1)
         # Setting the index and column names
@@ -103,8 +102,7 @@ class ClassifyBehavs:
         behavs_df.columns.names = list(enum2tuple(BehavPredictedDf.CN))
         # Saving behav_preds df
         BehavPredictedDf.write(behavs_df, out_fp)
-        # Returning outcome
-        return outcome
+        return io_obj_to_msg(io_obj)
 
     @staticmethod
     def _get_pcutoff(pcutoff: float, model_pcutoff: float) -> float:
@@ -158,5 +156,4 @@ class ClassifyBehavs:
         for _, row in nonbouts_df.iterrows():
             if row[BoutCols.DUR.value] < min_window_frames:
                 vect.loc[row[BoutCols.START.value] : row[BoutCols.STOP.value]] = 1
-        # Returning df
         return vect

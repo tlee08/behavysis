@@ -3,7 +3,6 @@ Utility functions.
 """
 
 import os
-import re
 import shutil
 
 from behavysis_pipeline.utils.logging_utils import init_logger
@@ -11,16 +10,16 @@ from behavysis_pipeline.utils.logging_utils import init_logger
 logger = init_logger(__name__)
 
 
-def clear_dir_junk(my_dir: str) -> None:
-    """
-    Removes all hidden junk files in given directory.
-    Hidden files begin with ".".
-    """
-    for i in os.listdir(dir):
-        path = os.path.join(my_dir, i)
-        # If the file has a "." at the start, remove it
-        if re.search(r"^\.", i):
-            silent_remove(path)
+# def clear_dir_junk(my_dir: str) -> None:
+#     """
+#     Removes all hidden junk files in given directory.
+#     Hidden files begin with ".".
+#     """
+#     for i in os.listdir(my_dir):
+#         path = os.path.join(my_dir, i)
+#         # If the file has a "." at the start, remove it
+#         if re.search(r"^\.", i):
+#             silent_remove(path)
 
 
 def silent_remove(fp: str) -> None:
@@ -49,7 +48,7 @@ def get_name(fp: str) -> str:
     return os.path.splitext(os.path.basename(fp))[0]
 
 
-def check_files_exist(*args: tuple[str, ...]):
+def check_files_exist(*args: str):
     """
     args is dst_fp_ls
     """

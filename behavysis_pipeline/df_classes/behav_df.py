@@ -78,7 +78,6 @@ class BehavDf(DFMixin):
         columns[cls.CN.BEHAVS.value] = columns[cls.CN.OUTCOMES.value].map(lambda x: behav_dst if x == behav_src else x)
         # Setting the new columns
         df.columns = pd.MultiIndex.from_frame(columns)
-        # Returning
         return df
 
     @classmethod
@@ -201,7 +200,6 @@ class BehavScoredDf(BehavDf):
         scored_df = scored_df.sort_index(axis=1, level=cls.CN.BEHAVS.value)
         # Checking
         cls.check_df(scored_df)
-        # Returning
         return scored_df
 
     ###############################################################################################
@@ -306,5 +304,4 @@ class BehavScoredDf(BehavDf):
             # Filling in user_defined columns
             for k, v in bout.user_defined.items():
                 bout_ret_df.loc[:, (bout.behav, k)] = v
-        # Returning frames df
         return df

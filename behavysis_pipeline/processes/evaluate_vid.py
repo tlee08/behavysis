@@ -17,7 +17,8 @@ from behavysis_pipeline.df_classes.analyse_combined_df import AnalyseCombinedDf
 from behavysis_pipeline.df_classes.keypoints_df import IndivColumns, KeypointsDf
 from behavysis_pipeline.pydantic_models.configs import ExperimentConfigs
 from behavysis_pipeline.utils.diagnostics_utils import file_exists_msg
-from behavysis_pipeline.utils.logging_utils import init_logger
+from behavysis_pipeline.utils.logging_utils import init_logger_with_io_obj, io_obj_to_msg
+from behavysis_pipeline.utils.misc_utils import get_current_funct_name
 from behavysis_pipeline.utils.plotting_utils import make_colours
 
 ###################################################################################################
@@ -27,8 +28,6 @@ from behavysis_pipeline.utils.plotting_utils import make_colours
 
 class EvaluateVid:
     """__summary__"""
-
-    logger = init_logger(__name__)
 
     @classmethod
     def evaluate_vid(
@@ -45,9 +44,10 @@ class EvaluateVid:
         all experiments. The DLC model's config.yaml filepath must be specified in the `config_path`
         parameter in the `user` section of the config file.
         """
+        logger, io_obj = init_logger_with_io_obj(get_current_funct_name())
         if not overwrite and os.path.exists(out_fp):
-            return file_exists_msg(out_fp)
-        outcome = ""
+            logger.warning(file_exists_msg(out_fp))
+            return io_obj_to_msg(io_obj)
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
         configs_filt = configs.user.evaluate_vid
@@ -75,7 +75,7 @@ class EvaluateVid:
         try:
             analysis_df = AnalyseCombinedDf.read(analyse_combined_fp)
         except FileNotFoundError:
-            outcome += "WARNING: analysis combined file not found or could not be loaded." "Disregarding analysis."
+            logger.warning("Analysis combined file not found or could not be loaded." "Disregarding analysis.")
             analysis_df = AnalyseCombinedDf.init_df(dlc_df.index)
 
         # MAKING ANNOTATED VIDEO
@@ -118,8 +118,7 @@ class EvaluateVid:
         # Release video objects
         in_cap.release()
         out_cap.release()
-        # Returning outcome string
-        return outcome
+        return io_obj_to_msg(io_obj)
 
 
 ###################################################################################################
@@ -286,7 +285,7 @@ class Analysis(EvalVidFuncBase):
         """
         Modifying analysis_df to optimise processing
         Specifically:
-        - Making sure all relevant behaviour outcome columns exist by imputing
+        - Making sure all relevant behaviour outcomes columns exist by imputing
         - Changing the columns MultiIndex to a single-level index. For speedup
         Getting behavs df
         """
@@ -377,7 +376,6 @@ class Analysis(EvalVidFuncBase):
                 width_plot_start += plot_frame_ij.shape[1]
             # Updating rows start
             height_plot_start += plot_frame_ij.shape[0]
-        # Returning
         return plot_frame
 
     def update_plot(self, idx: int, i: int, j: int):
@@ -412,7 +410,6 @@ class Analysis(EvalVidFuncBase):
         img_cv = img_cv[:, : w * 3]
         # Reshaping to cv2 format
         img_cv = img_cv.reshape(h, w, 3)
-        # Return cv2 image
         return img_cv
 
     @classmethod
@@ -430,7 +427,6 @@ class Analysis(EvalVidFuncBase):
         # Resize to widget size
         # w, h = self.width(), self.height()
         # img_cv = cv2.resize(img_cv, (w, h), interpolation=cv2.INTER_AREA)
-        # Return cv2 image
         return img_cv
 
     @classmethod
@@ -449,7 +445,6 @@ class Analysis(EvalVidFuncBase):
         # Resize to widget size
         # w, h = self.width(), self.height()
         # img_cv = cv2.resize(img_cv, (w, h), interpolation=cv2.INTER_AREA)
-        # Return cv2 image
         return img_cv
 
 
@@ -538,5 +533,4 @@ class VidFuncsRunner:
                 : self.analysis.height_output,
                 self.width_input : self.width_input + self.analysis.width_output,
             ] = arr_analysis
-        # Returning output arr
         return arr_out

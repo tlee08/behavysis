@@ -11,7 +11,7 @@ LOG_FILE_FORMAT = "%Y-%m-$d_%H-%M-%S"
 LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 
 
-def init_logger(name: str = __name__) -> logging.Logger:
+def init_logger(name: str = __name__, level: int = logging.DEBUG) -> logging.Logger:
     """
     Setup logging configuration.
 
@@ -23,40 +23,45 @@ def init_logger(name: str = __name__) -> logging.Logger:
     os.makedirs(CACHE_DIR, exist_ok=True)
     # Initialising/getting logger and its configuration
     logger = logging.getLogger(name)
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(level)
     # If logger does not have handlers, add them
     if not logger.hasHandlers():
         # Formatter
         formatter = logging.Formatter(LOG_FORMAT)
         # Console handler
         console_handler = logging.StreamHandler()
-        console_handler.setLevel(logging.DEBUG)
+        console_handler.setLevel(level)
         console_handler.setFormatter(formatter)
         logger.addHandler(console_handler)
         # File handler
         log_fp = os.path.join(CACHE_DIR, "debug.log")
         file_handler = logging.FileHandler(log_fp, mode="a")
-        file_handler.setLevel(logging.DEBUG)
+        file_handler.setLevel(level)
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)
-    # Returning logger
     return logger
 
 
-def init_logger_with_io_obj(name: str = __name__) -> tuple[logging.Logger, io.StringIO]:
+def init_logger_with_io_obj(name: str = __name__, level: int = logging.DEBUG) -> tuple[logging.Logger, io.StringIO]:
     # Making logger
-    logger = init_logger(name)
-    # Adding io object to logger
-    if len(logger.handlers) == 2:
+    logger = init_logger(name, level)
+    # Getting io_obj
+    io_obj = None
+    # Getting the io obj attached to one of the handlers
+    for handler in logger.handlers:
+        if isinstance(handler.stream, io.StringIO):  # type: ignore
+            io_obj = handler.stream  # type: ignore
+    # Adding io object to logger no io object handler is found
+    if io_obj is None:
         # Formatter
         formatter = logging.Formatter(LOG_FORMAT)
-        # StringIO object handler
+        # Making io object
         io_obj = io.StringIO()
-        console_handler = logging.StreamHandler(io_obj)
-        console_handler.setLevel(logging.DEBUG)
-        console_handler.setFormatter(formatter)
-        logger.addHandler(console_handler)
-    # Returning logger
+        # StringIO object handler
+        io_handler = logging.StreamHandler(io_obj)
+        io_handler.setLevel(level)
+        io_handler.setFormatter(formatter)
+        logger.addHandler(io_handler)
     return logger, io_obj
 
 
@@ -85,3 +90,16 @@ def split_log_line(log_line: str) -> tuple[str, str, str, str]:
     """
     datetime, name, level, message = log_line.split(" - ", 3)
     return datetime, name, level, message
+
+
+def io_obj_to_msg(io_obj: io.StringIO) -> str:
+    """
+    Converts the io object logger stream to a string message
+    (can be multi-line).
+    """
+    io_obj.seek(0)
+    msg = ""
+    for line in io_obj.readline():
+        datetime, name, level, message = split_log_line(line)
+        msg += f"{level} - {message}"
+    return msg

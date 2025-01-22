@@ -76,7 +76,6 @@ class BaseTorchModel(nn.Module):
             # Storing loss
             history.loc[epoch, "loss"] = loss
             history.loc[epoch, "vloss"] = vloss
-        # Return history
         return history
 
     def _train_epoch(
@@ -115,7 +114,6 @@ class BaseTorchModel(nn.Module):
         loss /= len(ld)
         # Converting loss to float
         loss = loss.cpu().detach().numpy().item()
-        # Returning loss
         return loss
 
     def _validate(self, ld: DataLoader, criterion: nn.Module) -> float:
@@ -130,7 +128,6 @@ class BaseTorchModel(nn.Module):
         loss /= len(ld)
         # Converting loss to float
         loss = loss.cpu().numpy().item()
-        # Returning loss
         return loss
 
     def predict(
@@ -145,7 +142,6 @@ class BaseTorchModel(nn.Module):
         probs = self._inference(loader, verbose=True)
         # Converting probabilities to numpy array
         probs = probs.cpu().numpy()
-        # Returning the probabilities vector
         return probs
 
     def _inference(self, ld: DataLoader, verbose: bool = False) -> torch.Tensor:
@@ -255,7 +251,6 @@ class TimeSeriesDataset(Dataset):
         # Extract the window and label and convert to torch tensors
         x_i = torch.tensor(self.x[start:end], dtype=torch.float).transpose(1, 0)
         y_i = torch.tensor(self.y[i], dtype=torch.float).reshape(1)
-        # Return
         return x_i, y_i
 
 
@@ -266,7 +261,6 @@ class MemoizedTimeSeriesDataset(TimeSeriesDataset):
         self.memo = {}
 
     def __getitem__(self, index: int):
-        # Return memoized result
         if index in self.memo:
             return self.memo[index]
         else:
@@ -274,5 +268,4 @@ class MemoizedTimeSeriesDataset(TimeSeriesDataset):
             window, label = super().__getitem__(index)
             # Memoize the result
             self.memo[index] = window, label
-            # Return
             return window, label

@@ -9,13 +9,12 @@ from behavysis_pipeline.df_classes.df_mixin import DFMixin
 from behavysis_pipeline.pydantic_models.bouts import BoutStruct
 from behavysis_pipeline.pydantic_models.configs import ExperimentConfigs
 from behavysis_pipeline.utils.diagnostics_utils import file_exists_msg
-from behavysis_pipeline.utils.logging_utils import init_logger
+from behavysis_pipeline.utils.logging_utils import init_logger_with_io_obj, io_obj_to_msg
+from behavysis_pipeline.utils.misc_utils import get_current_funct_name
 
 
 class Export:
     """__summary__"""
-
-    logger = init_logger(__name__)
 
     @classmethod
     def df2df(
@@ -25,14 +24,14 @@ class Export:
         overwrite: bool,
     ) -> str:
         """__summary__"""
+        logger, io_obj = init_logger_with_io_obj(get_current_funct_name())
         if not overwrite and os.path.exists(dst_fp):
-            return file_exists_msg(dst_fp)
-        # Reading file
+            logger.warning(file_exists_msg(dst_fp))
+            return io_obj_to_msg(io_obj)
         df = DFMixin.read(src_fp)
-        # Writing file
         DFMixin.write(df, dst_fp)
-        # Returning outcome
-        return "df to df\n"
+        logger.info("df to df")
+        return io_obj_to_msg(io_obj)
 
     @classmethod
     def df2csv(
@@ -42,14 +41,14 @@ class Export:
         overwrite: bool,
     ) -> str:
         """__summary__"""
+        logger, io_obj = init_logger_with_io_obj(get_current_funct_name())
         if not overwrite and os.path.exists(dst_fp):
-            return file_exists_msg(dst_fp)
-        # Reading file
+            logger.warning(file_exists_msg(dst_fp))
+            return io_obj_to_msg(io_obj)
         df = DFMixin.read(src_fp)
-        # Writing file
         DFMixin.write_csv(df, dst_fp)
-        # Returning outcome
-        return "exported df to csv\n"
+        logger.info("exported df to csv")
+        return io_obj_to_msg(io_obj)
 
     @classmethod
     def predictedbehavs2scoredbehavs(
@@ -65,9 +64,10 @@ class Export:
         - Adds an "actual" column to the df. All predicted positive BEHAV frames are set to UNDETERMINED.
         - Adds user_defined columns to the df and sets all values to 0 (NON_BEHAV).
         """
+        logger, io_obj = init_logger_with_io_obj(get_current_funct_name())
         if not overwrite and os.path.exists(dst_fp):
-            return file_exists_msg(dst_fp)
-        outcome = ""
+            logger.warning(file_exists_msg(dst_fp))
+            return io_obj_to_msg(io_obj)
         # Reading the configs file
         configs = ExperimentConfigs.read_json(configs_fp)
         models_ls = configs.user.classify_behavs
@@ -91,11 +91,9 @@ class Export:
         # Getting scored behavs df from predicted behavs df and bouts_struct
         src_df = BehavPredictedDf.read(src_fp)
         dst_df = BehavScoredDf.predicted2scored(src_df, bouts_struct)
-        # Writing file
         BehavScoredDf.write(dst_df, dst_fp)
-        # Returning outcome
-        outcome += "predicted_behavs to scored_behavs.\n"
-        return outcome
+        logger.info("predicted_behavs to scored_behavs.")
+        return io_obj_to_msg(io_obj)
 
     @classmethod
     def boris2behav(
@@ -106,15 +104,16 @@ class Export:
         behavs_ls: list[str],
         overwrite: bool,
     ) -> str:
+        logger, io_obj = init_logger_with_io_obj(get_current_funct_name())
         if not overwrite and os.path.exists(dst_fp):
-            return file_exists_msg(dst_fp)
+            logger.warning(file_exists_msg(dst_fp))
+            return io_obj_to_msg(io_obj)
         # Reading the configs file
         configs = ExperimentConfigs.read_json(configs_fp)
         start_frame = configs.get_ref(configs.auto.start_frame)
         stop_frame = configs.get_ref(configs.auto.stop_frame) + 1
         # Importing the boris file to the Behav df format
         df = BehavScoredDf.import_boris_tsv(src_fp, behavs_ls, start_frame, stop_frame)
-        # Writing file
         BehavScoredDf.write(df, dst_fp)
-        # Returning outcome
-        return "boris tsv to behav\n"
+        logger.info("boris tsv to behav")
+        return io_obj_to_msg(io_obj)

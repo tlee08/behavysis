@@ -31,8 +31,8 @@ from behavysis_pipeline.df_classes.keypoints_df import KeypointsDf
 from behavysis_pipeline.pydantic_models.configs import ExperimentConfigs
 from behavysis_pipeline.utils.diagnostics_utils import file_exists_msg
 from behavysis_pipeline.utils.io_utils import get_name, silent_remove
-from behavysis_pipeline.utils.logging_utils import init_logger
-from behavysis_pipeline.utils.misc_utils import enum2tuple
+from behavysis_pipeline.utils.logging_utils import init_logger_with_io_obj, io_obj_to_msg
+from behavysis_pipeline.utils.misc_utils import enum2tuple, get_current_funct_name
 from behavysis_pipeline.utils.subproc_utils import run_subproc_console
 from behavysis_pipeline.utils.template_utils import save_template
 
@@ -41,8 +41,6 @@ DLC_HDF_KEY = "data"
 
 class RunDLC:
     """_summary_"""
-
-    logger = init_logger(__name__)
 
     @classmethod
     def ma_dlc_analyse_single(
@@ -56,9 +54,10 @@ class RunDLC:
         """
         Running custom DLC script to generate a DLC keypoints dataframe from a single video.
         """
+        logger, io_obj = init_logger_with_io_obj(get_current_funct_name())
         if not overwrite and os.path.exists(out_fp):
-            return file_exists_msg(out_fp)
-        outcome = ""
+            logger.warning(file_exists_msg(out_fp))
+            return io_obj_to_msg(io_obj)
         # Getting model_fp
         configs = ExperimentConfigs.read_json(configs_fp)
         model_fp = configs.get_ref(configs.user.run_dlc.model_fp)
@@ -79,10 +78,10 @@ class RunDLC:
         run_dlc_subproc(model_fp, [vid_fp], dlc_out_dir, CACHE_DIR, gputouse)
 
         # Exporting the h5 to chosen file format in the out_dir
-        export2df(vid_fp, dlc_out_dir, out_dir)
+        logger.info(export2df(vid_fp, dlc_out_dir, out_dir))
         # silent_remove(dlc_out_dir)
 
-        return outcome
+        return io_obj_to_msg(io_obj)
 
     @staticmethod
     def ma_dlc_analyse_batch(
@@ -95,7 +94,7 @@ class RunDLC:
         """
         Running custom DLC script to generate a DLC keypoints dataframe from a single video.
         """
-        outcome = ""
+        logger, io_obj = init_logger_with_io_obj(get_current_funct_name())
 
         # Specifying the GPU to use and making the output directory
         # Making output directories
@@ -113,7 +112,7 @@ class RunDLC:
 
         # If there are no videos to process, return
         if len(vid_fp_ls) == 0:
-            return outcome
+            return io_obj_to_msg(io_obj)
 
         # Getting the DLC model config path
         # Getting the names of the files that need processing
@@ -141,10 +140,9 @@ class RunDLC:
 
         # Exporting the h5 to chosen file format in the out_dir
         for vid_fp in vid_fp_ls:
-            outcome += export2df(vid_fp, dlc_out_dir, out_dir)
+            logger.info(export2df(vid_fp, dlc_out_dir, out_dir))
         silent_remove(dlc_out_dir)
-        # Returning outcome
-        return outcome
+        return io_obj_to_msg(io_obj)
 
 
 def run_dlc_subproc(

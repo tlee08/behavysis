@@ -25,7 +25,8 @@ import cv2
 from behavysis_pipeline.pydantic_models.configs import ExperimentConfigs
 from behavysis_pipeline.pydantic_models.vid_metadata import VidMetadata
 from behavysis_pipeline.utils.diagnostics_utils import file_exists_msg
-from behavysis_pipeline.utils.logging_utils import init_logger
+from behavysis_pipeline.utils.logging_utils import init_logger_with_io_obj, io_obj_to_msg
+from behavysis_pipeline.utils.misc_utils import get_current_funct_name
 from behavysis_pipeline.utils.subproc_utils import run_subproc_console
 
 
@@ -33,8 +34,6 @@ class FormatVid:
     """
     Class for formatting videos based on given parameters.
     """
-
-    logger = init_logger(__name__)
 
     @classmethod
     def format_vid(cls, in_fp: str, out_fp: str, configs_fp: str, overwrite: bool) -> str:
@@ -57,27 +56,30 @@ class FormatVid:
         str
             Description of the function's outcome.
         """
+        logger, io_obj = init_logger_with_io_obj(get_current_funct_name())
         if not overwrite and os.path.exists(out_fp):
-            return file_exists_msg(out_fp)
-        outcome = ""
+            logger.warning(file_exists_msg(out_fp))
+            return io_obj_to_msg(io_obj)
         # Finding all necessary config parameters for video formatting
         configs = ExperimentConfigs.read_json(configs_fp)
         configs_filt = configs.user.format_vid
 
         # Processing the video
-        outcome += ProcessVidMixin.process_vid(
-            in_fp=in_fp,
-            out_fp=out_fp,
-            height_px=configs.get_ref(configs_filt.height_px),
-            width_px=configs.get_ref(configs_filt.width_px),
-            fps=configs.get_ref(configs_filt.fps),
-            start_sec=configs.get_ref(configs_filt.start_sec),
-            stop_sec=configs.get_ref(configs_filt.stop_sec),
+        logger.info(
+            ProcessVidMixin.process_vid(
+                in_fp=in_fp,
+                out_fp=out_fp,
+                height_px=configs.get_ref(configs_filt.height_px),
+                width_px=configs.get_ref(configs_filt.width_px),
+                fps=configs.get_ref(configs_filt.fps),
+                start_sec=configs.get_ref(configs_filt.start_sec),
+                stop_sec=configs.get_ref(configs_filt.stop_sec),
+            )
         )
 
         # Saving video metadata to configs dict
-        outcome += FormatVid.get_vid_metadata(in_fp, out_fp, configs_fp, overwrite)
-        return outcome
+        logger.info(FormatVid.get_vid_metadata(in_fp, out_fp, configs_fp, overwrite))
+        return io_obj_to_msg(io_obj)
 
     @classmethod
     def get_vid_metadata(cls, in_fp: str, out_fp: str, configs_fp: str, overwrite: bool) -> str:
@@ -101,24 +103,21 @@ class FormatVid:
         str
             Description of the function's outcome.
         """
-        outcome = ""
-
+        logger, io_obj = init_logger_with_io_obj(get_current_funct_name())
         # Saving video metadata to configs dict
         configs = ExperimentConfigs.read_json(configs_fp)
         for ftype, fp in (("raw_vid", in_fp), ("formatted_vid", out_fp)):
             try:
                 setattr(configs.auto, ftype, ProcessVidMixin.get_vid_metadata(fp))
             except ValueError as e:
-                outcome += f"WARNING: {str(e)}\n"
-        outcome += "Video metadata stored in config file.\n"
+                logger.warning(str(e))
+        logger.info("Video metadata stored in config file.")
         configs.write_json(configs_fp)
-        return outcome
+        return io_obj_to_msg(io_obj)
 
 
 class ProcessVidMixin:
     """__summary__"""
-
-    logger = init_logger(__name__)
 
     @classmethod
     def process_vid(
@@ -132,7 +131,7 @@ class ProcessVidMixin:
         stop_sec: None | float = None,
     ) -> str:
         """__summary__"""
-        outcome = ""
+        logger, io_obj = init_logger_with_io_obj(get_current_funct_name())
         # Constructing ffmpeg command
         cmd = ["ffmpeg"]
 
@@ -140,7 +139,7 @@ class ProcessVidMixin:
         if start_sec:
             # Setting start trim filter in cmd
             cmd += ["-ss", str(start_sec)]
-            outcome += f"Trimming video from {start_sec} seconds.\n"
+            logger.debug(f"Trimming video from {start_sec} seconds.")
 
         # Opening video
         cmd += ["-i", in_fp]
@@ -153,8 +152,7 @@ class ProcessVidMixin:
             height_px = height_px if height_px else -1
             # Constructing downsample filter in cmd
             filters.append(f"scale={width_px}:{height_px}")
-            # Adding to outcome
-            outcome += f"Downsampling to {width_px} x {height_px}.\n"
+            logger.debug(f"Downsampling to {width_px} x {height_px}.")
         # if start_sec or stop_sec:
         #     # Preparing start-stop filter in cmd
         #     filters.append("setpts=PTS-STARTPTS")
@@ -164,13 +162,13 @@ class ProcessVidMixin:
         # CHANGING FPS
         if fps:
             cmd += ["-r", str(fps)]
-            outcome += f"Changing fps to {fps}.\n"
+            logger.debug(f"Changing fps to {fps}.")
         # TRIMMING
         if stop_sec:
             # Setting stop trim filter in cmd
             duration = stop_sec - (start_sec or 0)
             cmd += ["-t", str(duration)]
-            outcome += f"Trimming video to {stop_sec} seconds.\n"
+            logger.debug(f"Trimming video to {stop_sec} seconds.")
 
         # Adding output parameters to ffmpeg command
         cmd += [
@@ -190,8 +188,7 @@ class ProcessVidMixin:
         # Running ffmpeg command
         # run_subproc_fstream(cmd)
         run_subproc_console(cmd)
-        # Returning outcome
-        return outcome
+        return io_obj_to_msg(io_obj)
 
     @classmethod
     def get_vid_metadata(cls, fp: str) -> VidMetadata:

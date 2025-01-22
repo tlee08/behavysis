@@ -76,5 +76,4 @@ def get_current_funct_name() -> str:
     # If this function is called from the main script, return empty string
     if c_frame.f_back is None:
         return ""
-    # Returning the name of the function that called this function
     return c_frame.f_back.f_code.co_name

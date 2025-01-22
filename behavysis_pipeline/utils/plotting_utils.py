@@ -33,5 +33,4 @@ def make_colours(vals, cmap: str) -> np.ndarray:
     colours_ls = colours_ls[:, [2, 1, 0, 3]]
     # Converting to (0, 255) range
     colours_ls = colours_ls * 255
-    # Returning
     return colours_ls

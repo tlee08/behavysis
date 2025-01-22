@@ -2,7 +2,6 @@
 _summary_
 """
 
-import io
 import os
 import traceback
 from typing import Any, Callable
@@ -24,7 +23,7 @@ from behavysis_pipeline.processes.run_dlc import RunDLC
 from behavysis_pipeline.processes.update_configs import UpdateConfigs
 from behavysis_pipeline.pydantic_models.configs import AutoConfigs, ExperimentConfigs
 from behavysis_pipeline.utils.diagnostics_utils import success_msg
-from behavysis_pipeline.utils.logging_utils import init_logger, split_log_line
+from behavysis_pipeline.utils.logging_utils import init_logger, init_logger_with_io_obj, io_obj_to_msg
 from behavysis_pipeline.utils.misc_utils import enum2tuple
 
 
@@ -120,7 +119,6 @@ class Experiment:
         file_ext: FileExts = getattr(FileExts, folder.name)
         # Getting experiment filepath for given folder
         fp = os.path.join(self.root_dir, folder.value, f"{self.name}.{file_ext.value}")
-        # Returning filepath
         return fp
 
     #####################################################################
@@ -162,29 +160,21 @@ class Experiment:
         # Running functions and saving outcome to diagnostics dict
         for f in funcs:
             func_name = f.__name__
+            # Getting logger and corresponding io object
+            func_logger, func_io_obj = init_logger_with_io_obj(func_name)
             # Running each func and saving outcome
             try:
-                io_obj = f(*args, **kwargs)
-                msg = self._extract_io_obj_to_msg(io_obj)
-                dd[func_name] = msg
-                dd[func_name] += success_msg()
+                f(*args, **kwargs)
+                func_logger.info(success_msg())
             except Exception as e:
-                self.logger.error(e)
-                dd[func_name] = f"error - {e}"
+                func_logger.error(e)
                 self.logger.debug(traceback.format_exc())
-        # self.logger.info(STR_DIV)
+            # Adding to diagnostics dict
+            dd[func_name] = io_obj_to_msg(func_io_obj)
+            # Clearing io object
+            func_io_obj.truncate(0)
+        self.logger.info(f"Finished processing experiment: {self.name}")
         return dd
-
-    def _extract_io_obj_to_msg(self, io_obj: io.StringIO) -> str:
-        """
-        Converts the io object logger stream to a string message.
-        """
-        io_obj.seek(0)
-        msg = ""
-        for line in io_obj.readline():
-            datetime, name, level, message = split_log_line(line)
-            msg += f"{level} - {message}"
-        return msg
 
     #####################################################################
     #                        CONFIG FILE METHODS

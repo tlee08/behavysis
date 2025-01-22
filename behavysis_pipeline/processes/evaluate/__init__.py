@@ -57,7 +57,6 @@ class Evaluate:
         """
         Make keypoints evaluation plot of likelihood of each bodypart through time.
         """
-        outcome = ""
         name = get_name(dlc_fp)
         out_dir = os.path.join(out_dir, Evaluate.keypoints_plot.__name__)
         out_fp = os.path.join(out_dir, f"{name}.png")
@@ -100,8 +99,7 @@ class Evaluate:
         # Saving plot
         g.savefig(out_fp)
         g.figure.clf()
-        # Returning outcome string
-        return outcome
+        return ""
 
     ###############################################################################################
     # MAKE BEHAVIOUR PLOTS
@@ -119,7 +117,6 @@ class Evaluate:
         """
         Make behaviour evaluation plot of the predicted and actual behaviours through time.
         """
-        outcome = ""
         name = get_name(behavs_fp)
         out_dir = os.path.join(out_dir, Evaluate.behav_plot.__name__)
         out_fp = os.path.join(out_dir, f"{name}.png")
@@ -161,5 +158,4 @@ class Evaluate:
         # Saving plot
         g.savefig(out_fp)
         g.figure.clf()
-        # Returning outcome string
-        return outcome
+        return ""

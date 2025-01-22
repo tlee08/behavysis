@@ -16,7 +16,6 @@ str
     The outcome of the process.
 """
 
-import io
 import os
 
 import numpy as np
@@ -26,7 +25,7 @@ from behavysis_pipeline.df_classes.analyse_df import AnalyseDf
 from behavysis_pipeline.df_classes.behav_df import BehavScoredDf
 from behavysis_pipeline.pydantic_models.configs import ExperimentConfigs
 from behavysis_pipeline.utils.io_utils import get_name
-from behavysis_pipeline.utils.logging_utils import init_logger_with_io_obj
+from behavysis_pipeline.utils.logging_utils import init_logger_with_io_obj, io_obj_to_msg
 from behavysis_pipeline.utils.misc_utils import enum2tuple, get_current_funct_name
 
 ###################################################################################################
@@ -43,7 +42,7 @@ class AnalyseBehaviours:
         configs_fp: str,
         # bins: list,
         # summary_func: Callable[[pd.DataFrame], pd.DataFrame],
-    ) -> io.StringIO:
+    ) -> str:
         """
         Takes a behavs dataframe and generates a summary and binned version of the data.
         """
@@ -79,5 +78,4 @@ class AnalyseBehaviours:
             bins_ls,
             cbins_ls,
         )
-        # Returning outcome
-        return io_obj
+        return io_obj_to_msg(io_obj)

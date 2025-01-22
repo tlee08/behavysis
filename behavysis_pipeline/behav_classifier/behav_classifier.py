@@ -180,7 +180,6 @@ class BehavClassifier:
         behavs_ls = y_df.columns.to_list()
         # For each behaviour, making a new BehavClassifier instance
         models_ls = [cls(proj_dir, behav) for behav in behavs_ls]
-        # Returning list of models
         return models_ls
 
     @classmethod
@@ -274,7 +273,6 @@ class BehavClassifier:
         y = y.loc[index]
         # Assert that x and y are the same length
         assert x.shape[0] == y.shape[0]
-        # Returning the x and y dfs
         return x, y
 
     #################################################
@@ -303,7 +301,6 @@ class BehavClassifier:
         preproc_pipe = joblib.load(preproc_fp)
         # Uses trained fit for preprocessing new data
         x_preproc = preproc_pipe.transform(x)
-        # Returning df
         return x_preproc
 
     @classmethod
@@ -351,7 +348,6 @@ class BehavClassifier:
         y = np.nan_to_num(y, nan=0)
         # Setting -1 to 0 (i.e. "undecided" to "no behaviour")
         y = np.maximum(y, 0)
-        # Returning arr
         return y
 
     @classmethod
@@ -366,7 +362,6 @@ class BehavClassifier:
         f = np.random.choice(f, size=int(t.shape[0] / ratio), replace=False)
         # Combining the True and False indices
         uindex = np.union1d(t, f)
-        # Returning the undersampled index
         return uindex
 
     #################################################
@@ -402,7 +397,6 @@ class BehavClassifier:
         y = self.wrangle_columns_y(y)[self.configs.behav_name].values
         # TODO: why is this linting error?
         y = self.preproc_y(y)
-        # Returning x, y, and index to use
         return x, y
 
     def prepare_data_training_pipeline(
@@ -435,7 +429,6 @@ class BehavClassifier:
         )
         # Undersampling training index
         ind_train = self.undersample(ind_train, y[ind_train], self.configs.undersample_ratio)
-        # Return
         return x, y, ind_train, ind_test
 
     def prepare_data(self, x: pd.DataFrame) -> np.ndarray:
@@ -453,7 +446,6 @@ class BehavClassifier:
         """
         # Preprocessing x df
         x_preproc = self.preproc_x(x, self.preproc_fp)
-        # Returning x
         return x_preproc
 
     #################################################
@@ -515,7 +507,6 @@ class BehavClassifier:
         y_eval = self.clf_predict(x_preproc, self.configs.batch_size)
         # Settings the index
         y_eval.index = index
-        # Returning predictions
         return y_eval
 
     #################################################
@@ -571,7 +562,6 @@ class BehavClassifier:
         pred_df = BehavDf.init_df(pd.Series(index))
         pred_df[(self.configs.behav_name, BehavScoredDf.OutcomesCols.PROB.value)] = y_probs
         pred_df[(self.configs.behav_name, BehavScoredDf.OutcomesCols.PRED.value)] = y_preds
-        # Returning predicted behavs
         return pred_df
 
     #################################################
@@ -634,7 +624,6 @@ class BehavClassifier:
         logc_fig.savefig(os.path.join(self.eval_dir, f"{name}_logc.png"))
         # Print classification report
         print(json.dumps(report_dict, indent=4))
-        # Return evaluations
         return y_eval, report_dict, metrics_fig, pcutoffs_fig, logc_fig
 
     def clf_eval_all(self):
@@ -750,7 +739,6 @@ class BehavClassifier:
         pcutoffs = np.linspace(0, 1, 101)
         ratios = np.vectorize(lambda i: np.mean(i > y_eval["y_prob"]))(pcutoffs)
         sns.lineplot(x=pcutoffs, y=ratios, ax=ax)
-        # Returning figure
         return fig
 
     @classmethod

@@ -31,13 +31,12 @@ from behavysis_pipeline.df_classes.keypoints_df import (
 )
 from behavysis_pipeline.pydantic_models.configs import ExperimentConfigs
 from behavysis_pipeline.utils.diagnostics_utils import file_exists_msg
-from behavysis_pipeline.utils.logging_utils import init_logger
+from behavysis_pipeline.utils.logging_utils import init_logger_with_io_obj, io_obj_to_msg
+from behavysis_pipeline.utils.misc_utils import get_current_funct_name
 
 
 class Preprocess:
     """_summary_"""
-
-    logger = init_logger(__name__)
 
     @classmethod
     def start_stop_trim(cls, dlc_fp: str, out_fp: str, configs_fp: str, overwrite: bool) -> str:
@@ -73,21 +72,20 @@ class Preprocess:
                     - stop_frame: int
         ```
         """
+        logger, io_obj = init_logger_with_io_obj(get_current_funct_name())
         if not overwrite and os.path.exists(out_fp):
-            return file_exists_msg(out_fp)
-        outcome = ""
+            logger.warning(file_exists_msg(out_fp))
+            return io_obj_to_msg(io_obj)
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
         start_frame = configs.auto.start_frame
         stop_frame = configs.auto.stop_frame
         # Reading file
         df = KeypointsDf.read(dlc_fp)
-        # Trimming dataframe
+        # Trimming dataframe between start and stop frames
         df = df.loc[start_frame:stop_frame, :]
-        # Writing file
         KeypointsDf.write(df, out_fp)
-        # Returning outcome
-        return outcome
+        return io_obj_to_msg(io_obj)
 
     @classmethod
     def interpolate_stationary(cls, dlc_fp: str, out_fp: str, configs_fp: str, overwrite: bool) -> str:
@@ -111,12 +109,13 @@ class Preprocess:
                     ]
         ```
         """
+        logger, io_obj = init_logger_with_io_obj(get_current_funct_name())
         if not overwrite and os.path.exists(out_fp):
-            return file_exists_msg(out_fp)
-        outcome = ""
+            logger.warning(file_exists_msg(out_fp))
+            return io_obj_to_msg(io_obj)
         # Getting necessary config parameters list
         configs = ExperimentConfigs.read_json(configs_fp)
-        configs_filt_ls = list(configs.user.preprocess.interpolate_stationary)
+        configs_filt_ls = configs.user.preprocess.interpolate_stationary
         # scorer = configs.auto.scorer_name
         width_px = configs.auto.formatted_vid.width_px
         height_px = configs.auto.formatted_vid.height_px
@@ -131,7 +130,6 @@ class Preprocess:
         # For each bodypart, filling in the given point
         for configs_filt in configs_filt_ls:
             # Getting config parameters
-            configs_filt = Model_el_interpolate_stationary(**configs_filt)
             bodypart = configs_filt.bodypart
             pcutoff = configs_filt.pcutoff
             pcutoff_all = configs_filt.pcutoff_all
@@ -147,13 +145,18 @@ class Preprocess:
                 df[(scorer, "single", bodypart, Coords.X.value)] = x
                 df[(scorer, "single", bodypart, Coords.Y.value)] = y
                 df[(scorer, "single", bodypart, Coords.LIKELIHOOD.value)] = pcutoff
-                outcome += f"{bodypart} is detected in less than {pcutoff_all} of the video. Setting x and y coordinates to ({x}, {y}).\n"
+                logger.info(
+                    f"{bodypart} is detected in less than {pcutoff_all} of the video."
+                    " Setting x and y coordinates to ({x}, {y})."
+                )
             else:
-                outcome += f"{bodypart} is detected in more than {pcutoff_all} of the video. No need for stationary interpolation.\n"
+                logger.info(
+                    f"{bodypart} is detected in more than {pcutoff_all} of the video."
+                    " No need for stationary interpolation."
+                )
         # Saving
         KeypointsDf.write(df, out_fp)
-        # Returning outcome
-        return outcome
+        return io_obj_to_msg(io_obj)
 
     @classmethod
     def interpolate(cls, dlc_fp: str, out_fp: str, configs_fp: str, overwrite: bool) -> str:
@@ -173,12 +176,13 @@ class Preprocess:
                     - pcutoff: float
         ```
         """
+        logger, io_obj = init_logger_with_io_obj(get_current_funct_name())
         if not overwrite and os.path.exists(out_fp):
-            return file_exists_msg(out_fp)
-        outcome = ""
+            logger.warning(file_exists_msg(out_fp))
+            return io_obj_to_msg(io_obj)
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
-        configs_filt = Model_interpolate(**configs.user.preprocess.interpolate)
+        configs_filt = configs.user.preprocess.interpolate
         # Reading file
         df = KeypointsDf.read(dlc_fp)
         # Gettings the unique groups of (individual, bodypart) groups.
@@ -198,9 +202,8 @@ class Preprocess:
         df = df.interpolate(method="linear").bfill().ffill()
         # if df.isnull().values.any() then the entire column is nan (print warning)
         df = df.fillna(0)
-        # Writing file
         KeypointsDf.write(df, out_fp)
-        return outcome
+        return io_obj_to_msg(io_obj)
 
     @classmethod
     def refine_ids(cls, dlc_fp: str, out_fp: str, configs_fp: str, overwrite: bool) -> str:
@@ -222,14 +225,15 @@ class Preprocess:
                     - metric: ["current", "rolling", "binned"]
         ```
         """
+        logger, io_obj = init_logger_with_io_obj(get_current_funct_name())
         if not overwrite and os.path.exists(out_fp):
-            return file_exists_msg(out_fp)
-        outcome = ""
+            logger.warning(file_exists_msg(out_fp))
+            return io_obj_to_msg(io_obj)
         # Reading file
         df = KeypointsDf.read(dlc_fp)
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
-        configs_filt = Model_refine_ids(**configs.user.preprocess.refine_ids)
+        configs_filt = configs.user.preprocess.refine_ids
         marked = configs.get_ref(configs_filt.marked)
         unmarked = configs.get_ref(configs_filt.unmarked)
         marking = configs.get_ref(configs_filt.marking)
@@ -257,9 +261,8 @@ class Preprocess:
         df_switch = decice_switch(df_aggr, window_frames, marked, unmarked)
         # Updating df with the switched values
         df_switched = switch_identities(df, df_switch[metric], marked, unmarked)
-        # Writing to file
         KeypointsDf.write(df_switched, out_fp)
-        return outcome
+        return io_obj_to_msg(io_obj)
 
 
 def aggregate_df(
@@ -293,8 +296,7 @@ def aggregate_df(
         idx = pd.IndexSlice
         for indiv in indivs:
             # Getting the coordinates of each individual (average of the given bodyparts list)
-            idx_a = idx[l0, indiv, bpts, coord]
-            df_aggr[(indiv, coord)] = df.loc[:, idx_a].mean(axis=1)
+            df_aggr[(indiv, coord)] = df.loc[:, idx[l0, indiv, bpts, coord]].mean(axis=1)
     # Getting the distance between each mouse and the colour marking in each frame
     for indiv in indivs:
         df_aggr[(indiv, "dist")] = np.sqrt(

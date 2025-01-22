@@ -117,7 +117,6 @@ class AnalyseSummaryDf(DFMixin):
         summary_df.columns.name = cls.CN.AGGS.value
         # Checking
         cls.check_df(summary_df)
-        # Returning summary_df
         return summary_df
 
     @classmethod
@@ -177,7 +176,6 @@ class AnalyseSummaryDf(DFMixin):
         summary_df.columns.name = cls.CN.AGGS.value
         # Checking
         cls.check_df(summary_df)
-        # Returning summary_df
         return summary_df
 
 
@@ -221,7 +219,6 @@ class AnalyseBinnedDf(DFMixin):
         binned_df.columns.names = enum2tuple(cls.CN)
         # Checking
         cls.check_df(binned_df)
-        # returning binned_df
         return binned_df
 
     @classmethod
@@ -354,5 +351,4 @@ class AnalyseBinnedDf(DFMixin):
             cls.write(binned_df, binned_fp)
             # Making binned plots
             cls.make_binned_plot(binned_df, binned_plot_fp, agg_column)
-        # Returning outcome
         return outcome
