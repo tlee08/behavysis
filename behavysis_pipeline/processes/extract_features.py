@@ -217,7 +217,7 @@ def export2df(in_fp: str, out_fp: str, index: pd.Index) -> str:
     """
     df = FeaturesDf.read_csv(in_fp)
     # Setting index to the same as the dlc preprocessed df
-    df.set_index(index)
+    df = df.set_index(index)
     # Saving SimBA extracted features df as df on disk
     FeaturesDf.write(df, out_fp)
     return "Exported SimBA features to df on disk.\n"

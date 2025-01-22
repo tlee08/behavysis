@@ -45,7 +45,7 @@ class DiagnosticsDf(DFMixin):
     def basic_clean(cls, df: pd.DataFrame) -> pd.DataFrame:
         df = super().basic_clean(df)
         # Natural sort the index
-        index = df.index.get_level_values(cls.IN.EXPERIMENT.value)
-        assert np.all(np.equal(natsorted(index), natsorted(index.unique())))
-        df = df.loc[natsorted(index), :]
+        index = natsorted(df.index.get_level_values(cls.IN.EXPERIMENT.value))
+        assert np.all(np.equal(index, np.unique(index)))
+        df = df.loc[index, :]
         return df
