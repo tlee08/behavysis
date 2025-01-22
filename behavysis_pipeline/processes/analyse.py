@@ -206,6 +206,8 @@ class Analyse:
             )
         # Backfilling the analysis_df so no nan's
         analysis_df = analysis_df.bfill()
+
+        print(analysis_df)
         # Saving analysis_df
         fbf_fp = os.path.join(dst_subdir, FBF, f"{name}.{AnalysisDf.IO}")
         AnalysisDf.write(analysis_df, fbf_fp)

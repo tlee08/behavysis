@@ -186,9 +186,7 @@ class DFMixin:
         assert isinstance(df, pd.DataFrame), "The dataframe must be a pandas DataFrame."
         # Checking there are no null values
         if not cls.NULLABLE:
-            assert (
-                not df.isnull().values.any()
-            ), "The dataframe contains null values. Be sure to run interpolate_points first."
+            assert not df.isnull().values.any(), "The dataframe contains null values but it should not."
         # Checking that the index levels are correct
         if cls.IN:
             cls.check_IN(df, cls.IN)
