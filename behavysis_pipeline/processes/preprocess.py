@@ -20,20 +20,18 @@ str
 """
 
 import os
-from typing import Literal
 
 import numpy as np
 import pandas as pd
-from pydantic import BaseModel
 
 from behavysis_pipeline.df_classes.keypoints_df import (
     Coords,
     IndivColumns,
     KeypointsDf,
 )
-from behavysis_pipeline.pydantic_models.experiment_configs import ExperimentConfigs
+from behavysis_pipeline.pydantic_models.configs import ExperimentConfigs
 from behavysis_pipeline.utils.diagnostics_utils import file_exists_msg
-from behavysis_pipeline.utils.logging_utils import init_logger, logger_func_decorator
+from behavysis_pipeline.utils.logging_utils import init_logger
 
 
 class Preprocess:
@@ -42,7 +40,6 @@ class Preprocess:
     logger = init_logger(__name__)
 
     @classmethod
-    @logger_func_decorator(logger)
     def start_stop_trim(cls, dlc_fp: str, out_fp: str, configs_fp: str, overwrite: bool) -> str:
         """
         Filters the rows of a DLC formatted dataframe to include only rows within the start
@@ -93,7 +90,6 @@ class Preprocess:
         return outcome
 
     @classmethod
-    @logger_func_decorator(logger)
     def interpolate_stationary(cls, dlc_fp: str, out_fp: str, configs_fp: str, overwrite: bool) -> str:
         """
         If the point detection (above a certain threshold) is below a certain proportion, then the x and y coordinates are set to the given values (usually corners).
@@ -160,7 +156,6 @@ class Preprocess:
         return outcome
 
     @classmethod
-    @logger_func_decorator(logger)
     def interpolate(cls, dlc_fp: str, out_fp: str, configs_fp: str, overwrite: bool) -> str:
         """
         "Smooths" out noticeable jitter of points, where the likelihood (and accuracy) of
@@ -208,7 +203,6 @@ class Preprocess:
         return outcome
 
     @classmethod
-    @logger_func_decorator(logger)
     def refine_ids(cls, dlc_fp: str, out_fp: str, configs_fp: str, overwrite: bool) -> str:
         """
         Ensures that the identity is correctly tracked for maDLC.
@@ -393,24 +387,3 @@ def switch_identities(
     df = df.apply(lambda row: _f(row, marked, unmarked), axis=1)
     df = df.drop(columns="isSwitch")
     return df
-
-
-class Model_interpolate(BaseModel):
-    pcutoff: float | str = 0
-
-
-class Model_el_interpolate_stationary(BaseModel):
-    bodypart: str = ""
-    pcutoff: float = 0.8
-    pcutoff_all: float = 0.6
-    x: float = 0
-    y: float = 0
-
-
-class Model_refine_ids(BaseModel):
-    marked: str = ""
-    unmarked: str = ""
-    marking: str = ""
-    bodyparts: list[str] | str = []
-    window_sec: float | str = 0
-    metric: Literal["current", "rolling", "binned"] | str = "current"

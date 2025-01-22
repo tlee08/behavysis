@@ -58,7 +58,7 @@ class PydanticBaseModel(BaseModel):
                 v = getattr(model, k)
                 setattr(model, k, model_cls.model_validate(v))
             except Exception as e:
-                raise ValueError(f"'{k}' is not a dict\n:" f"{k}: {v}") from e
+                raise ValueError(f"'{k}' is not a valid field name") from e
         return model
 
     @staticmethod

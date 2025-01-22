@@ -11,9 +11,9 @@ from behavysis_pipeline.df_classes.behav_df import BehavPredictedDf, BehavScored
 
 # from behavysis_pipeline.df_classes.bouts_df import BoutColumns, BoutsDf
 from behavysis_pipeline.df_classes.features_df import FeaturesDf
-from behavysis_pipeline.pydantic_models.experiment_configs import ExperimentConfigs
+from behavysis_pipeline.pydantic_models.configs import ExperimentConfigs
 from behavysis_pipeline.utils.diagnostics_utils import file_exists_msg
-from behavysis_pipeline.utils.logging_utils import init_logger, logger_func_decorator
+from behavysis_pipeline.utils.logging_utils import init_logger
 from behavysis_pipeline.utils.misc_utils import enum2tuple
 
 # TODO: handle reading the model file whilst in multiprocessing
@@ -25,7 +25,6 @@ class ClassifyBehavs:
     logger = init_logger(__name__)
 
     @classmethod
-    @logger_func_decorator(logger)
     def classify_behavs(
         cls,
         features_fp: str,
@@ -68,14 +67,14 @@ class ClassifyBehavs:
         outcome = ""
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
-        models_ls = configs.user.classify_behavs
+        model_configs_ls = configs.user.classify_behavs
         # Getting features data
         features_df = FeaturesDf.read(features_fp)
         # Initialising y_preds df
         # Getting predictions for each classifier model and saving
         # in a list of pd.DataFrames
         df_ls = []
-        for model_config in models_ls:
+        for model_config in model_configs_ls:
             proj_dir = configs.get_ref(model_config.proj_dir)
             behav_name = configs.get_ref(model_config.behav_name)
             behav_model = BehavClassifier.load(proj_dir, behav_name)

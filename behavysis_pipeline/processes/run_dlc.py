@@ -28,10 +28,10 @@ import pandas as pd
 
 from behavysis_pipeline.constants import CACHE_DIR
 from behavysis_pipeline.df_classes.keypoints_df import KeypointsDf
-from behavysis_pipeline.pydantic_models.experiment_configs import ExperimentConfigs
+from behavysis_pipeline.pydantic_models.configs import ExperimentConfigs
 from behavysis_pipeline.utils.diagnostics_utils import file_exists_msg
 from behavysis_pipeline.utils.io_utils import get_name, silent_remove
-from behavysis_pipeline.utils.logging_utils import init_logger, logger_func_decorator
+from behavysis_pipeline.utils.logging_utils import init_logger
 from behavysis_pipeline.utils.misc_utils import enum2tuple
 from behavysis_pipeline.utils.subproc_utils import run_subproc_console
 from behavysis_pipeline.utils.template_utils import save_template
@@ -45,7 +45,6 @@ class RunDLC:
     logger = init_logger(__name__)
 
     @classmethod
-    @logger_func_decorator(logger)
     def ma_dlc_analyse_single(
         cls,
         vid_fp: str,

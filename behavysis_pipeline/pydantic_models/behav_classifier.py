@@ -1,11 +1,7 @@
-from pydantic import ConfigDict
-
 from behavysis_pipeline.pydantic_models.pydantic_base_model import PydanticBaseModel
 
 
 class BehavClassifierConfigs(PydanticBaseModel):
-    model_config = ConfigDict(extra="forbid")
-
     proj_dir: str = "project_dir"
     behav_name: str = "behav_name"
     seed: int = 42

@@ -2,8 +2,6 @@
 _summary_
 """
 
-from __future__ import annotations
-
 import pandas as pd
 import torch.nn as nn
 import torch.optim as optim

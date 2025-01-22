@@ -16,8 +16,6 @@ str
     The outcome of the process.
 """
 
-from __future__ import annotations
-
 from enum import Enum
 
 from behavysis_pipeline.df_classes.df_mixin import DFMixin, FramesIN

@@ -2,8 +2,6 @@
 Utility functions.
 """
 
-from __future__ import annotations
-
 import os
 from subprocess import PIPE, Popen
 
@@ -15,7 +13,7 @@ logger = init_logger(__name__)
 def run_subproc_fstream(cmd: list[str], fp: str, **kwargs) -> None:
     """Run a subprocess and stream the output to a file."""
     # Making a file to store the output
-    os.makedirs(os.path.split(fp)[0], exist_ok=True)
+    os.makedirs(os.path.dirname(fp), exist_ok=True)
     with open(fp, "w", encoding="utf-8") as f:
         # Starting the subprocess
         with Popen(cmd, stdout=f, stderr=f, **kwargs) as p:

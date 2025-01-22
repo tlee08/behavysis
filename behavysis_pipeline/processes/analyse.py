@@ -16,13 +16,11 @@ str
     The outcome of the process.
 """
 
-from __future__ import annotations
-
+import io
 import os
 
 import numpy as np
 import pandas as pd
-from pydantic import BaseModel, ConfigDict
 
 from behavysis_pipeline.df_classes.analyse_agg_df import AnalyseBinnedDf
 from behavysis_pipeline.df_classes.analyse_df import (
@@ -34,8 +32,10 @@ from behavysis_pipeline.df_classes.keypoints_df import (
     IndivColumns,
     KeypointsDf,
 )
-from behavysis_pipeline.pydantic_models.experiment_configs import ExperimentConfigs
+from behavysis_pipeline.pydantic_models.configs import ExperimentConfigs
 from behavysis_pipeline.utils.io_utils import get_name
+from behavysis_pipeline.utils.logging_utils import init_logger_with_io_obj
+from behavysis_pipeline.utils.misc_utils import get_current_funct_name
 
 ###################################################################################################
 #               ANALYSIS API FUNCS
@@ -43,28 +43,26 @@ from behavysis_pipeline.utils.io_utils import get_name
 
 
 class Analyse:
-    """__summary__"""
-
     @staticmethod
     def in_roi(
         dlc_fp: str,
         out_dir: str,
         configs_fp: str,
-    ) -> str:
+    ) -> io.StringIO:
         """
         Determines the frames in which the subject is inside the cage (from average
         of given bodypoints).
 
         Points are `thresh_px` padded (away) from center.
         """
-        outcome = ""
+        logger, io_obj = init_logger_with_io_obj(get_current_funct_name())
         name = get_name(dlc_fp)
         f_name = Analyse.in_roi.__name__
         out_dir = os.path.join(out_dir, f_name)
         # Calculating the deltas (changes in body position) between each frame for the subject
         configs = ExperimentConfigs.read_json(configs_fp)
-        fps, _, _, px_per_mm, bins_ls, cbins_ls = AnalyseDf.get_configs(configs)
-        configs_filt_ls = list(configs.user.analyse.in_roi)
+        fps, _, _, px_per_mm, bins_ls, cbins_ls = configs.get_analyse_configs()
+        configs_filt_ls = configs.user.analyse.in_roi
         # Loading in dataframe
         dlc_df = KeypointsDf.clean_headings(KeypointsDf.read(dlc_fp))
         # Getting indivs list
@@ -80,7 +78,6 @@ class Analyse:
         idx = pd.IndexSlice
         for configs_filt in configs_filt_ls:
             # Getting necessary config parameters
-            configs_filt = Model_in_roi(**configs_filt)
             roi_name = configs.get_ref(configs_filt.roi_name)
             is_in = configs.get_ref(configs_filt.is_in)
             bpts = configs.get_ref(configs_filt.bodyparts)
@@ -158,25 +155,25 @@ class Analyse:
             cbins_ls,
         )
         # Returning outcome
-        return outcome
+        return io_obj
 
     @staticmethod
     def speed(
         dlc_fp: str,
         out_dir: str,
         configs_fp: str,
-    ) -> str:
+    ) -> io.StringIO:
         """
         Determines the speed of the subject in each frame.
         """
-        outcome = ""
+        logger, io_obj = init_logger_with_io_obj(get_current_funct_name())
         name = get_name(dlc_fp)
         f_name = Analyse.speed.__name__
         out_dir = os.path.join(out_dir, f_name)
         # Calculating the deltas (changes in body position) between each frame for the subject
         configs = ExperimentConfigs.read_json(configs_fp)
-        fps, _, _, px_per_mm, bins_ls, cbins_ls = AnalyseDf.get_configs(configs)
-        configs_filt = Model_speed(**configs.user.analyse.speed)
+        fps, _, _, px_per_mm, bins_ls, cbins_ls = configs.get_analyse_configs()
+        configs_filt = configs.user.analyse.speed
         bpts = configs.get_ref(configs_filt.bodyparts)
         smoothing_sec = configs.get_ref(configs_filt.smoothing_sec)
         # Calculating more parameters
@@ -224,25 +221,25 @@ class Analyse:
             bins_ls,
             cbins_ls,
         )
-        return outcome
+        return io_obj
 
     @staticmethod
     def social_distance(
         dlc_fp: str,
         out_dir: str,
         configs_fp: str,
-    ) -> str:
+    ) -> io.StringIO:
         """
         Determines the speed of the subject in each frame.
         """
-        outcome = ""
+        logger, io_obj = init_logger_with_io_obj(get_current_funct_name())
         name = get_name(dlc_fp)
         f_name = Analyse.social_distance.__name__
         out_dir = os.path.join(out_dir, f_name)
         # Calculating the deltas (changes in body position) between each frame for the subject
         configs = ExperimentConfigs.read_json(configs_fp)
-        fps, _, _, px_per_mm, bins_ls, cbins_ls = AnalyseDf.get_configs(configs)
-        configs_filt = Model_social_distance(**configs.user.analyse.social_distance)
+        fps, _, _, px_per_mm, bins_ls, cbins_ls = configs.get_analyse_configs()
+        configs_filt = configs.user.analyse.social_distance
         bpts = configs.get_ref(configs_filt.bodyparts)
         smoothing_sec = configs.get_ref(configs_filt.smoothing_sec)
         # Calculating more parameters
@@ -288,14 +285,14 @@ class Analyse:
             bins_ls,
             cbins_ls,
         )
-        return outcome
+        return io_obj
 
     @staticmethod
     def freezing(
         dlc_fp: str,
         out_dir: str,
         configs_fp: str,
-    ) -> str:
+    ) -> io.StringIO:
         """
         Determines the frames in which the subject is frozen.
 
@@ -304,14 +301,14 @@ class Analyse:
 
         NOTE: method is "greedy" because it looks at a freezing bout from earliest possible frame.
         """
-        outcome = ""
+        logger, io_obj = init_logger_with_io_obj(get_current_funct_name())
         name = get_name(dlc_fp)
         f_name = Analyse.freezing.__name__
         out_dir = os.path.join(out_dir, f_name)
         # Calculating the deltas (changes in body position) between each frame for the subject
         configs = ExperimentConfigs.read_json(configs_fp)
-        fps, _, _, px_per_mm, bins_ls, cbins_ls = AnalyseDf.get_configs(configs)
-        configs_filt = Model_freezing(**configs.user.analyse.freezing)
+        fps, _, _, px_per_mm, bins_ls, cbins_ls = configs.get_analyse_configs()
+        configs_filt = configs.user.analyse.freezing
         bpts = configs.get_ref(configs_filt.bodyparts)
         thresh_mm = configs.get_ref(configs_filt.thresh_mm)
         smoothing_sec = configs.get_ref(configs_filt.smoothing_sec)
@@ -371,7 +368,7 @@ class Analyse:
             bins_ls,
             cbins_ls,
         )
-        return outcome
+        return io_obj
 
 
 def pt_in_roi(pt: pd.Series, corners_df: pd.DataFrame) -> bool:
@@ -397,36 +394,3 @@ def pt_in_roi(pt: pd.Series, corners_df: pd.DataFrame) -> bool:
             crossings += 1
     # Odd number of crossings means point is in region
     return crossings % 2 == 1
-
-
-class Model_speed(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    smoothing_sec: float | str
-    bodyparts: list[str] | str
-
-
-class Model_social_distance(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    smoothing_sec: float | str
-    bodyparts: list[str] | str
-
-
-class Model_freezing(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    window_sec: float | str
-    thresh_mm: float | str
-    smoothing_sec: float | str
-    bodyparts: list[str] | str
-
-
-class Model_in_roi(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    roi_name: str
-    is_in: bool | str
-    thresh_mm: float | str
-    roi_corners: list[str] | str
-    bodyparts: list[str] | str

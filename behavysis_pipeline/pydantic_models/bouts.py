@@ -4,14 +4,10 @@ _summary_
 
 from typing import Dict, List
 
-from pydantic import BaseModel, ConfigDict
-
 from behavysis_pipeline.pydantic_models.pydantic_base_model import PydanticBaseModel
 
 
-class Bout(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
+class Bout(PydanticBaseModel):
     start: int
     stop: int
     dur: int
@@ -20,16 +16,12 @@ class Bout(BaseModel):
     user_defined: Dict[str, int]
 
 
-class BoutStruct(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
+class BoutStruct(PydanticBaseModel):
     behav: str
     user_defined: List[Bout]
 
 
 class Bouts(PydanticBaseModel):
-    model_config = ConfigDict(extra="forbid")
-
     start: int
     stop: int
     bouts: List[Bout]

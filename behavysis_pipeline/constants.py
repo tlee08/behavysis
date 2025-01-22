@@ -63,3 +63,33 @@ STR_DIV = "".ljust(50, "-")
 
 PLOT_STYLE = "whitegrid"
 PLOT_DPI = 75
+
+####################################################################################################
+# DEFAULT BODYPOINT CONSTANTS (FOR SIMBA FEATURE EXTRACTION)
+####################################################################################################
+
+SIMBA_INDIVIDUALS = [
+    "mouse1marked",
+    "mouse2unmarked",
+]
+
+SIMBA_BODYPARTS = [
+    "LeftEar",
+    "RightEar",
+    "Nose",
+    "BodyCentre",
+    "LeftFlankMid",
+    "RightFlankMid",
+    "TailBase1",
+    "TailTip4",
+]
+
+# TODO: is this necessary? Also similar variables elsewhere
+SINGLE_INDIVIDUAL = "single"
+
+ARENA_BODYPARTS = [
+    "TopLeft",
+    "TopRight",
+    "BottomRight",
+    "BottomLeft",
+]

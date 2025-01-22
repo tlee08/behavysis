@@ -15,9 +15,9 @@ from tqdm import trange
 
 from behavysis_pipeline.df_classes.analyse_combined_df import AnalyseCombinedDf
 from behavysis_pipeline.df_classes.keypoints_df import IndivColumns, KeypointsDf
-from behavysis_pipeline.pydantic_models.experiment_configs import ExperimentConfigs
+from behavysis_pipeline.pydantic_models.configs import ExperimentConfigs
 from behavysis_pipeline.utils.diagnostics_utils import file_exists_msg
-from behavysis_pipeline.utils.logging_utils import init_logger, logger_func_decorator
+from behavysis_pipeline.utils.logging_utils import init_logger
 from behavysis_pipeline.utils.plotting_utils import make_colours
 
 ###################################################################################################
@@ -31,7 +31,6 @@ class EvaluateVid:
     logger = init_logger(__name__)
 
     @classmethod
-    @logger_func_decorator(logger)
     def evaluate_vid(
         cls,
         vid_fp: str,
@@ -425,7 +424,7 @@ class Analysis(EvalVidFuncBase):
         # Exporting to QImage (bytes)
         img_qt = exporter.export(toBytes=True)
         # QImage to cv2 image (using mixin)
-        img_cv = cls.qt2cv(img_qt)
+        img_cv = cls.qt2cv(img_qt)  # type: ignore
         # cv2 BGR to RGB
         img_cv = cv2.cvtColor(img_cv, cv2.COLOR_BGR2RGB)
         # Resize to widget size
@@ -444,7 +443,7 @@ class Analysis(EvalVidFuncBase):
         # Exporting to QImage (bytes)
         img_qt = exporter.export(toBytes=True)
         # QImage to cv2 image (using mixin)
-        img_cv = cls.qt2cv(img_qt)
+        img_cv = cls.qt2cv(img_qt)  # type: ignore
         # cv2 BGR to RGB
         img_cv = cv2.cvtColor(img_cv, cv2.COLOR_BGR2RGB)
         # Resize to widget size
@@ -494,7 +493,7 @@ class VidFuncsRunner:
         self.funcs = []
         # NOTE: ORDER MATTERS so going through in predefined order
         # Concatenating Vid, Behav, and Analysis funcs together in order
-        func_check_ls: list[EvalVidFuncBase] = [Johansson, Keypoints, Analysis]
+        func_check_ls: list[type[EvalVidFuncBase]] = [Johansson, Keypoints, Analysis]
         # Creating EvalVidFuncBase instances and adding to funcs list
         for func in func_check_ls:
             if func.name in func_names:

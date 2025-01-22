@@ -2,16 +2,15 @@
 _summary_
 """
 
-from __future__ import annotations
-
+import io
 import os
+import traceback
 from typing import Any, Callable
 
 import numpy as np
 
 from behavysis_pipeline.constants import (
     ANALYSIS_DIR,
-    STR_DIV,
     FileExts,
     Folders,
 )
@@ -23,9 +22,9 @@ from behavysis_pipeline.processes.export import Export
 from behavysis_pipeline.processes.extract_features import ExtractFeatures
 from behavysis_pipeline.processes.run_dlc import RunDLC
 from behavysis_pipeline.processes.update_configs import UpdateConfigs
-from behavysis_pipeline.pydantic_models.experiment_configs import ConfigsAuto, ExperimentConfigs
+from behavysis_pipeline.pydantic_models.configs import AutoConfigs, ExperimentConfigs
 from behavysis_pipeline.utils.diagnostics_utils import success_msg
-from behavysis_pipeline.utils.logging_utils import init_logger
+from behavysis_pipeline.utils.logging_utils import init_logger, split_log_line
 from behavysis_pipeline.utils.misc_utils import enum2tuple
 
 
@@ -162,15 +161,30 @@ class Experiment:
         dd = {"experiment": self.name}
         # Running functions and saving outcome to diagnostics dict
         for f in funcs:
+            func_name = f.__name__
             # Running each func and saving outcome
             try:
-                dd[f.__name__] = f(*args, **kwargs)
-                dd[f.__name__] += f"SUCCESS: {success_msg()}\n"
+                io_obj = f(*args, **kwargs)
+                msg = self._extract_io_obj_to_msg(io_obj)
+                dd[func_name] = msg
+                dd[func_name] += success_msg()
             except Exception as e:
-                dd[f.__name__] = f"ERROR: {e}"
-            self.logger.info(f"{f.__name__}: {dd[f.__name__]}")
-        self.logger.info(STR_DIV)
+                self.logger.error(e)
+                dd[func_name] = f"error - {e}"
+                self.logger.debug(traceback.format_exc())
+        # self.logger.info(STR_DIV)
         return dd
+
+    def _extract_io_obj_to_msg(self, io_obj: io.StringIO) -> str:
+        """
+        Converts the io object logger stream to a string message.
+        """
+        io_obj.seek(0)
+        msg = ""
+        for line in io_obj.readline():
+            datetime, name, level, message = split_log_line(line)
+            msg += f"{level} - {message}"
+        return msg
 
     #####################################################################
     #                        CONFIG FILE METHODS
@@ -309,7 +323,7 @@ class Experiment:
             configs_auto_dict["outcome"] += "ERROR: no configs file found."
             return configs_auto_dict
         # Getting all the auto fields from the configs file
-        configs_auto_field_keys = ConfigsAuto.get_field_names()
+        configs_auto_field_keys = AutoConfigs.get_field_names()
         for field_key_ls in configs_auto_field_keys:
             value = configs.auto
             for key in field_key_ls:

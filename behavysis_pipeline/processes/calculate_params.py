@@ -14,24 +14,25 @@ str
     The outcome of the process.
 """
 
+import io
+
 import numpy as np
 import pandas as pd
-from pydantic import BaseModel, ConfigDict
 
 from behavysis_pipeline.df_classes.keypoints_df import (
     Coords,
     IndivColumns,
     KeypointsDf,
 )
-from behavysis_pipeline.pydantic_models.experiment_configs import ExperimentConfigs
+from behavysis_pipeline.pydantic_models.configs import ExperimentConfigs
 from behavysis_pipeline.utils.io_utils import get_name
+from behavysis_pipeline.utils.logging_utils import init_logger_with_io_obj
+from behavysis_pipeline.utils.misc_utils import get_current_funct_name
 
 
 class CalculateParams:
-    """__summary__"""
-
     @staticmethod
-    def dlc_scorer_name(dlc_fp: str, configs_fp: str) -> str:
+    def dlc_scorer_name(dlc_fp: str, configs_fp: str) -> io.StringIO:
         """
         Get the name of the scorer used in the DLC analysis.
 
@@ -45,7 +46,7 @@ class CalculateParams:
         str
             The name of the scorer.
         """
-        outcome = ""
+        logger, io_obj = init_logger_with_io_obj(get_current_funct_name())
         # Reading dataframe
         dlc_df = KeypointsDf.read(dlc_fp)
         # Getting scorer name
@@ -55,13 +56,13 @@ class CalculateParams:
         configs.auto.scorer_name = scorer_name
         configs.write_json(configs_fp)
         # Returning outcome
-        return outcome
+        return io_obj
 
     @staticmethod
     def start_frame(
         dlc_fp: str,
         configs_fp: str,
-    ) -> str:
+    ) -> io.StringIO:
         """
         Determine the starting frame of the experiment based on when the subject "likely" entered
         the footage.
@@ -81,10 +82,10 @@ class CalculateParams:
                     - pcutoff: float
         ```
         """
-        outcome = ""
+        logger, io_obj = init_logger_with_io_obj(get_current_funct_name())
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
-        configs_filt = Model_check_exists(**configs.user.calculate_params.start_frame)
+        configs_filt = configs.user.calculate_params.start_frame
         bpts = configs.get_ref(configs_filt.bodyparts)
         window_sec = configs.get_ref(configs_filt.window_sec)
         pcutoff = configs.get_ref(configs_filt.pcutoff)
@@ -103,9 +104,8 @@ class CalculateParams:
         start_frame = 0
         if np.all(df_lhoods["exists"] == 0):
             # If subject never exists (i.e. no True values in exist column), then raise warning
-            outcome += (
-                "WARNING: The subject was not detected in any frames - using the first frame."
-                "Please check the video.\n"
+            logger.warning(
+                "The subject was not detected in any frames - using the first frame. " "Please check the video."
             )
         else:
             start_frame = df_lhoods[df_lhoods["exists"]].index[0]
@@ -115,102 +115,10 @@ class CalculateParams:
         # configs.auto.start_sec = start_frame / fps
         configs.write_json(configs_fp)
         # Returning outcome
-        return outcome
+        return io_obj
 
     @staticmethod
-    def stop_frame(dlc_fp: str, configs_fp: str) -> str:
-        """
-        Calculates the end time according to the following equation:
-
-        ```
-        stop_frame = start_frame + experiment_duration
-        ```
-
-        Notes
-        -----
-        The config file must contain the following parameters:
-        ```
-        TODO
-        ```
-        """
-        outcome = ""
-        # Getting necessary config parameters
-        configs = ExperimentConfigs.read_json(configs_fp)
-        configs_filt = Model_stop_frame(**configs.user.calculate_params.stop_frame)
-        dur_sec = configs.get_ref(configs_filt.dur_sec)
-        start_frame = configs.auto.start_frame
-        fps = configs.auto.formatted_vid.fps
-        total_frames = configs.auto.formatted_vid.total_frames
-        # Asserting that the necessary auto configs are valid
-        assert start_frame is not None, "start_frame is None. Please calculate start_frame first."
-        assert fps is not None, "fps is None. Please calculate fps first."
-        # Calculating stop_frame
-        dur_frames = int(dur_sec * fps)
-        stop_frame = start_frame + dur_frames
-        # Make a warning if the use-specified dur_sec is larger than the duration of the video.
-        if total_frames is None:
-            outcome += "WARNING: The length of the video itself has not been calculated yet."
-        elif stop_frame > total_frames:
-            outcome += (
-                "WARNING: The user specified dur_sec in the configs file is greater "
-                "than the actual length of the video. Please check to see if this video is "
-                "too short or if the dur_sec value is incorrect.\n"
-            )
-        # Writing to config
-        configs = ExperimentConfigs.read_json(configs_fp)
-        configs.auto.stop_frame = stop_frame
-        # configs.auto.stop_sec = stop_frame / fps
-        configs.write_json(configs_fp)
-        # Returning outcome
-        return outcome
-
-    @staticmethod
-    def exp_dur(dlc_fp: str, configs_fp: str) -> str:
-        """
-        Calculates the duration in seconds, from the time the specified bodyparts appeared
-        to the time they disappeared.
-        Appear/disappear is calculated from likelihood.
-        """
-        outcome = ""
-        # Getting necessary config parameters
-        configs = ExperimentConfigs.read_json(configs_fp)
-        configs_filt = Model_check_exists(**configs.user.calculate_params.exp_dur)
-        bpts = configs.get_ref(configs_filt.bodyparts)
-        window_sec = configs.get_ref(configs_filt.window_sec)
-        pcutoff = configs.get_ref(configs_filt.pcutoff)
-        fps = configs.auto.formatted_vid.fps
-        # Asserting that the necessary auto configs are valid
-        assert fps is not None, "fps is None. Please calculate fps first."
-        # Deriving more parameters
-        window_frames = int(np.round(fps * window_sec, 0))
-        # Loading dataframe
-        dlc_df = KeypointsDf.clean_headings(KeypointsDf.read(dlc_fp))
-        # Getting likehoods of subject (given bpts) existing in each frame
-        df_lhoods = calc_likelihoods(dlc_df, bpts, window_frames)
-        # Determining exist times from rolling average windows
-        df_lhoods["exists"] = df_lhoods["rolling"] > pcutoff
-        # Getting when subject first and last exists in video
-        exp_dur_frames = 0
-        if np.all(df_lhoods["exists"] == 0):
-            # If subject never exists (i.e. no True values in exist column), then raise warning
-            outcome += (
-                "WARNING: The subject was not detected in any frames - using the first frame."
-                "Please check the video.\n"
-            )
-        else:
-            start_frame = df_lhoods[df_lhoods["exists"]].index[0]
-            stop_frame = df_lhoods[df_lhoods["exists"]].index[-1]
-            exp_dur_frames = stop_frame - start_frame
-        # Writing to configs
-        configs = ExperimentConfigs.read_json(configs_fp)
-        configs.auto.exp_dur_frames = exp_dur_frames
-        # configs.auto.exp_dur_secs = exp_dur_frames / fps
-        configs.write_json(configs_fp)
-        # Returning outcome
-        return outcome
-
-    @staticmethod
-    def start_frame_from_csv(dlc_fp: str, configs_fp: str) -> str:
+    def start_frame_from_csv(dlc_fp: str, configs_fp: str) -> io.StringIO:
         """
         Reads the start time of the experiment from a given CSV file
         (filepath specified in config file).
@@ -231,10 +139,10 @@ class CalculateParams:
                     - name: None | str
         ```
         """
-        outcome = ""
+        logger, io_obj = init_logger_with_io_obj(get_current_funct_name())
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
-        configs_filt = Model_start_frame_from_csv(**configs.user.calculate_params.start_frame_from_csv)
+        configs_filt = configs.user.calculate_params.start_frame_from_csv
         fps = configs.auto.formatted_vid.fps
         csv_fp = configs.get_ref(configs_filt.csv_fp)
         name = configs.get_ref(configs_filt.name)
@@ -258,10 +166,101 @@ class CalculateParams:
         # configs.auto.start_sec = start_frame / fps
         configs.write_json(configs_fp)
         # Returning outcome
-        return outcome
+        return io_obj
 
     @staticmethod
-    def px_per_mm(dlc_fp: str, configs_fp: str) -> str:
+    def stop_frame(dlc_fp: str, configs_fp: str) -> io.StringIO:
+        """
+        Calculates the end time according to the following equation:
+
+        ```
+        stop_frame = start_frame + experiment_duration
+        ```
+
+        Notes
+        -----
+        The config file must contain the following parameters:
+        ```
+        TODO
+        ```
+        """
+        logger, io_obj = init_logger_with_io_obj(get_current_funct_name())
+        # Getting necessary config parameters
+        configs = ExperimentConfigs.read_json(configs_fp)
+        configs_filt = configs.user.calculate_params.stop_frame
+        dur_sec = configs.get_ref(configs_filt.dur_sec)
+        start_frame = configs.auto.start_frame
+        fps = configs.auto.formatted_vid.fps
+        total_frames = configs.auto.formatted_vid.total_frames
+        # Asserting that the necessary auto configs are valid
+        assert start_frame is not None, "start_frame is None. Please calculate start_frame first."
+        assert fps is not None, "fps is None. Please calculate fps first."
+        # Calculating stop_frame
+        dur_frames = int(dur_sec * fps)
+        stop_frame = start_frame + dur_frames
+        # Make a warning if the use-specified dur_sec is larger than the duration of the video.
+        if total_frames is None:
+            logger.warning("The length of the video itself has not been calculated yet.")
+        elif stop_frame > total_frames:
+            logger.warning(
+                "The user specified dur_sec in the configs file is greater "
+                "than the actual length of the video. Please check to see if this video is "
+                "too short or if the dur_sec value is incorrect."
+            )
+        # Writing to config
+        configs = ExperimentConfigs.read_json(configs_fp)
+        configs.auto.stop_frame = stop_frame
+        # configs.auto.stop_sec = stop_frame / fps
+        configs.write_json(configs_fp)
+        # Returning outcome
+        return io_obj
+
+    @staticmethod
+    def exp_dur(dlc_fp: str, configs_fp: str) -> io.StringIO:
+        """
+        Calculates the duration in seconds, from the time the specified bodyparts appeared
+        to the time they disappeared.
+        Appear/disappear is calculated from likelihood.
+        """
+        logger, io_obj = init_logger_with_io_obj(get_current_funct_name())
+        # Getting necessary config parameters
+        configs = ExperimentConfigs.read_json(configs_fp)
+        configs_filt = configs.user.calculate_params.exp_dur
+        bpts = configs.get_ref(configs_filt.bodyparts)
+        window_sec = configs.get_ref(configs_filt.window_sec)
+        pcutoff = configs.get_ref(configs_filt.pcutoff)
+        fps = configs.auto.formatted_vid.fps
+        # Asserting that the necessary auto configs are valid
+        assert fps is not None, "fps is None. Please calculate fps first."
+        # Deriving more parameters
+        window_frames = int(np.round(fps * window_sec, 0))
+        # Loading dataframe
+        dlc_df = KeypointsDf.clean_headings(KeypointsDf.read(dlc_fp))
+        # Getting likehoods of subject (given bpts) existing in each frame
+        df_lhoods = calc_likelihoods(dlc_df, bpts, window_frames)
+        # Determining exist times from rolling average windows
+        df_lhoods["exists"] = df_lhoods["rolling"] > pcutoff
+        # Getting when subject first and last exists in video
+        exp_dur_frames = 0
+        if np.all(df_lhoods["exists"] == 0):
+            # If subject never exists (i.e. no True values in exist column), then raise warning
+            logger.warning(
+                "The subject was not detected in any frames - using the first frame. " "Please check the video."
+            )
+        else:
+            start_frame = df_lhoods[df_lhoods["exists"]].index[0]
+            stop_frame = df_lhoods[df_lhoods["exists"]].index[-1]
+            exp_dur_frames = stop_frame - start_frame
+        # Writing to configs
+        configs = ExperimentConfigs.read_json(configs_fp)
+        configs.auto.exp_dur_frames = exp_dur_frames
+        # configs.auto.exp_dur_secs = exp_dur_frames / fps
+        configs.write_json(configs_fp)
+        # Returning outcome
+        return io_obj
+
+    @staticmethod
+    def px_per_mm(dlc_fp: str, configs_fp: str) -> io.StringIO:
         """
         Calculates the pixels per mm conversion for the video.
 
@@ -286,10 +285,10 @@ class CalculateParams:
                     - dist_mm: float
         ```
         """
-        outcome = ""
+        logger, io_obj = init_logger_with_io_obj(get_current_funct_name())
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
-        configs_filt = Model_px_per_mm(**configs.user.calculate_params.px_per_mm)
+        configs_filt = configs.user.calculate_params.px_per_mm
         pt_a = configs.get_ref(configs_filt.pt_a)
         pt_b = configs.get_ref(configs_filt.pt_b)
         pcutoff = configs.get_ref(configs_filt.pcutoff)
@@ -317,7 +316,7 @@ class CalculateParams:
         configs.auto.px_per_mm = px_per_mm
         configs.write_json(configs_fp)
         # Returning outcome
-        return outcome
+        return io_obj
 
 
 def calc_likelihoods(
@@ -325,7 +324,6 @@ def calc_likelihoods(
     bpts: list,
     window_frames: int,
 ):
-    """__summary__"""
     # Imputing missing values with 0 (only really relevant for `likelihood` columns)
     df = df.fillna(0)
     # Checking that the two reference points are valid
@@ -339,33 +337,3 @@ def calc_likelihoods(
     df_lhoods["rolling"] = df_lhoods["current"].rolling(window_frames, center=True).agg(np.nanmean)
     # Returning df_lhoods
     return df_lhoods
-
-
-class Model_stop_frame(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    dur_sec: float | str = 0
-
-
-class Model_start_frame_from_csv(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    csv_fp: str = ""
-    name: str | None = None
-
-
-class Model_check_exists(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    bodyparts: list[str] | str = []
-    window_sec: float | str = 0
-    pcutoff: float | str = 0
-
-
-class Model_px_per_mm(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    pt_a: str = "pt_a"
-    pt_b: str = "pt_b"
-    pcutoff: int | str = 0
-    dist_mm: float | str = 0

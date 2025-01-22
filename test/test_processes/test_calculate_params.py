@@ -10,7 +10,7 @@ from behavysis_pipeline.processes.calculate_params import (
     Model_check_exists,
     Model_stop_frame,
 )
-from behavysis_pipeline.pydantic_models.experiment_configs import ExperimentConfigs
+from behavysis_pipeline.pydantic_models.configs import ExperimentConfigs
 from behavysis_pipeline.utils.misc_utils import MiscMixin
 
 

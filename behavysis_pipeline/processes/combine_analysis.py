@@ -16,8 +16,6 @@ str
     The outcome of the process.
 """
 
-from __future__ import annotations
-
 import os
 
 import pandas as pd
@@ -39,7 +37,6 @@ class CombineAnalysis:
     logger = init_logger(__name__)
 
     @classmethod
-    # @logger_func_decorator(logger)
     def combine_analysis(
         cls,
         analyse_dir: str,

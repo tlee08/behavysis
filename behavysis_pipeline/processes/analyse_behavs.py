@@ -16,8 +16,7 @@ str
     The outcome of the process.
 """
 
-from __future__ import annotations
-
+import io
 import os
 
 import numpy as np
@@ -25,10 +24,10 @@ import numpy as np
 from behavysis_pipeline.df_classes.analyse_agg_df import AnalyseBinnedDf
 from behavysis_pipeline.df_classes.analyse_df import AnalyseDf
 from behavysis_pipeline.df_classes.behav_df import BehavScoredDf
-from behavysis_pipeline.pydantic_models.experiment_configs import ExperimentConfigs
+from behavysis_pipeline.pydantic_models.configs import ExperimentConfigs
 from behavysis_pipeline.utils.io_utils import get_name
-from behavysis_pipeline.utils.logging_utils import init_logger
-from behavysis_pipeline.utils.misc_utils import enum2tuple
+from behavysis_pipeline.utils.logging_utils import init_logger_with_io_obj
+from behavysis_pipeline.utils.misc_utils import enum2tuple, get_current_funct_name
 
 ###################################################################################################
 #               ANALYSIS API FUNCS
@@ -36,10 +35,6 @@ from behavysis_pipeline.utils.misc_utils import enum2tuple
 
 
 class AnalyseBehaviours:
-    """__summary__"""
-
-    logger = init_logger(__name__)
-
     @classmethod
     def analyse_behaviours(
         cls,
@@ -48,16 +43,16 @@ class AnalyseBehaviours:
         configs_fp: str,
         # bins: list,
         # summary_func: Callable[[pd.DataFrame], pd.DataFrame],
-    ) -> str:
+    ) -> io.StringIO:
         """
         Takes a behavs dataframe and generates a summary and binned version of the data.
         """
-        outcome = ""
+        logger, io_obj = init_logger_with_io_obj(get_current_funct_name())
         name = get_name(behavs_fp)
         out_dir = os.path.join(out_dir, AnalyseBehaviours.analyse_behaviours.__name__)
         # Calculating the deltas (changes in body position) between each frame for the subject
         configs = ExperimentConfigs.read_json(configs_fp)
-        fps, _, _, _, bins_ls, cbins_ls = AnalyseDf.get_configs(configs)
+        fps, _, _, _, bins_ls, cbins_ls = configs.get_analyse_configs()
         # Loading in dataframe
         behavs_df = BehavScoredDf.read(behavs_fp)
         # Setting all na and -1 values to 0 (to make any undecided behav to non-behav)
@@ -85,4 +80,4 @@ class AnalyseBehaviours:
             cbins_ls,
         )
         # Returning outcome
-        return outcome
+        return io_obj

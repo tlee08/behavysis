@@ -28,16 +28,12 @@ Given the `out_dir`, we save the files to `out_dir/<func_name>/<exp_name>.<ext>`
 
 import os
 
-import cv2
 import pandas as pd
 import seaborn as sns
-from tqdm import trange
 
-from behavysis_pipeline.df_classes.analyse_combined_df import AnalyseCombinedDf
 from behavysis_pipeline.df_classes.behav_df import BehavScoredDf
 from behavysis_pipeline.df_classes.keypoints_df import Coords, KeypointsDf
-from behavysis_pipeline.processes.evaluate_vid import VidFuncsRunner
-from behavysis_pipeline.pydantic_models.experiment_configs import ExperimentConfigs
+from behavysis_pipeline.pydantic_models.configs import ExperimentConfigs
 from behavysis_pipeline.utils.diagnostics_utils import file_exists_msg
 from behavysis_pipeline.utils.io_utils import get_name
 

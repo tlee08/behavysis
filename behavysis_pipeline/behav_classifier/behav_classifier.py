@@ -33,7 +33,7 @@ from behavysis_pipeline.behav_classifier.clf_models.clf_templates import (
 from behavysis_pipeline.constants import Folders
 from behavysis_pipeline.df_classes.behav_df import BehavScoredDf
 from behavysis_pipeline.df_classes.df_mixin import DFMixin
-from behavysis_pipeline.pydantic_models.behav_classifier_configs import (
+from behavysis_pipeline.pydantic_models.behav_classifier import (
     BehavClassifierConfigs,
 )
 from behavysis_pipeline.utils.io_utils import get_name

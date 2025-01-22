@@ -16,8 +16,6 @@ str
     The outcome of the process.
 """
 
-from __future__ import annotations
-
 import os
 from enum import Enum
 from typing import Callable
@@ -258,7 +256,7 @@ class AnalyseBinnedDf(DFMixin):
         g.figure.subplots_adjust(top=0.85)
         g.figure.suptitle("Binned data", fontsize=12)
         # Saving fig
-        os.makedirs(os.path.split(out_fp)[0], exist_ok=True)
+        os.makedirs(os.path.dirname(out_fp), exist_ok=True)
         g.savefig(out_fp)
         g.figure.clf()
 

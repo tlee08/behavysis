@@ -7,9 +7,9 @@ from behavysis_pipeline.df_classes.behav_df import (
 )
 from behavysis_pipeline.df_classes.df_mixin import DFMixin
 from behavysis_pipeline.pydantic_models.bouts import BoutStruct
-from behavysis_pipeline.pydantic_models.experiment_configs import ExperimentConfigs
+from behavysis_pipeline.pydantic_models.configs import ExperimentConfigs
 from behavysis_pipeline.utils.diagnostics_utils import file_exists_msg
-from behavysis_pipeline.utils.logging_utils import init_logger, logger_func_decorator
+from behavysis_pipeline.utils.logging_utils import init_logger
 
 
 class Export:
@@ -35,7 +35,6 @@ class Export:
         return "df to df\n"
 
     @classmethod
-    @logger_func_decorator(logger)
     def df2csv(
         cls,
         src_fp: str,
@@ -53,7 +52,6 @@ class Export:
         return "exported df to csv\n"
 
     @classmethod
-    @logger_func_decorator(logger)
     def predictedbehavs2scoredbehavs(
         cls,
         src_fp: str,
@@ -100,7 +98,6 @@ class Export:
         return outcome
 
     @classmethod
-    @logger_func_decorator(logger)
     def boris2behav(
         cls,
         src_fp: str,

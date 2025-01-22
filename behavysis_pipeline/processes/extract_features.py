@@ -9,10 +9,10 @@ import pandas as pd
 from behavysis_pipeline.constants import CACHE_DIR
 from behavysis_pipeline.df_classes.features_df import FeaturesDf
 from behavysis_pipeline.df_classes.keypoints_df import KeypointsDf
-from behavysis_pipeline.pydantic_models.experiment_configs import ExperimentConfigs
+from behavysis_pipeline.pydantic_models.configs import ExperimentConfigs
 from behavysis_pipeline.utils.diagnostics_utils import file_exists_msg
 from behavysis_pipeline.utils.io_utils import get_name, silent_remove
-from behavysis_pipeline.utils.logging_utils import init_logger, logger_func_decorator
+from behavysis_pipeline.utils.logging_utils import init_logger
 from behavysis_pipeline.utils.misc_utils import enum2tuple
 from behavysis_pipeline.utils.multiproc_utils import get_cpid
 from behavysis_pipeline.utils.subproc_utils import run_subproc_console
@@ -36,7 +36,6 @@ class ExtractFeatures:
     logger = init_logger(__name__)
 
     @staticmethod
-    @logger_func_decorator(logger)
     def extract_features(
         dlc_fp: str,
         out_fp: str,
@@ -69,7 +68,7 @@ class ExtractFeatures:
         # Getting directory and file paths
         name = get_name(dlc_fp)
         cpid = get_cpid()
-        configs_dir = os.path.split(configs_fp)[0]
+        configs_dir = os.path.dirname(configs_fp)
         simba_in_dir = os.path.join(CACHE_DIR, f"input_{cpid}")
         simba_dir = os.path.join(CACHE_DIR, f"simba_proj_{cpid}")
         features_from_dir = os.path.join(simba_dir, "project_folder", "csv", "features_extracted")

@@ -8,6 +8,18 @@ logger = init_logger(__name__)
 
 
 def make_colours(vals, cmap: str) -> np.ndarray:
+    """
+    Given a vector of values and a colourmap,
+    returns an array of colours (as RGBA arrays) corresponding
+    to each unique value in the vals vector.
+
+    Example
+    -------
+    ```
+    [1,2,4,2,3,1,5]
+    --> [Red, Blue, Green, Blue, Yellow, Red, Purple]
+    ```
+    """
     # If vals is an empty list, return colours_ls as an empty list
     if len(vals) == 0:
         return np.array([])

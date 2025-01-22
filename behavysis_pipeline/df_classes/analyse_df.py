@@ -16,8 +16,6 @@ str
     The outcome of the process.
 """
 
-from __future__ import annotations
-
 import os
 from enum import Enum
 
@@ -26,7 +24,6 @@ import seaborn as sns
 
 from behavysis_pipeline.df_classes.df_mixin import DFMixin, FramesIN
 from behavysis_pipeline.df_classes.keypoints_df import Coords
-from behavysis_pipeline.pydantic_models.experiment_configs import ExperimentConfigs
 from behavysis_pipeline.utils.logging_utils import init_logger
 
 ####################################################################################################
@@ -58,44 +55,6 @@ class AnalyseDf(DFMixin):
     NULLABLE = False
     IN = FramesIN
     CN = AnalyseCN
-
-    @classmethod
-    def get_configs(
-        cls,
-        configs: ExperimentConfigs,
-    ) -> tuple[
-        float,
-        float,
-        float,
-        float,
-        list,
-        list,
-    ]:
-        """
-        _summary_
-
-        Parameters
-        ----------
-        configs : Configs
-            _description_
-
-        Returns
-        -------
-        tuple[ float, float, float, float, list, list, ]
-            _description_
-        """
-        assert configs.auto.formatted_vid.fps
-        assert configs.auto.formatted_vid.width_px
-        assert configs.auto.formatted_vid.height_px
-        assert configs.auto.px_per_mm
-        return (
-            float(configs.auto.formatted_vid.fps),
-            float(configs.auto.formatted_vid.width_px),
-            float(configs.auto.formatted_vid.height_px),
-            float(configs.auto.px_per_mm),
-            list(configs.get_ref(configs.user.analyse.bins_sec)),
-            list(configs.get_ref(configs.user.analyse.custom_bins_sec)),
-        )
 
     @classmethod
     def make_location_scatterplot(
@@ -156,6 +115,6 @@ class AnalyseDf(DFMixin):
         g.figure.subplots_adjust(top=0.85)
         g.figure.suptitle("Spatial position", fontsize=12)
         # Saving fig
-        os.makedirs(os.path.split(out_fp)[0], exist_ok=True)
+        os.makedirs(os.path.dirname(out_fp), exist_ok=True)
         g.savefig(out_fp)
         g.figure.clf()

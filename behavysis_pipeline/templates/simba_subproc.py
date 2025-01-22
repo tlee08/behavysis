@@ -49,8 +49,8 @@ class FeatureExtractor:
         2 animals; 16 body-parts
         """
         ProjectConfigCreator(
-            project_path=os.path.split(proj_dir)[0],
-            project_name=os.path.split(proj_dir)[1],
+            project_path=os.path.dirname(proj_dir),
+            project_name=os.path.basename(proj_dir),
             target_list=behavs_ls,
             pose_estimation_bp_cnt="16",
             body_part_config_idx=6,  # bp_names.csv or pose_config_names.csv row minus 1
@@ -74,7 +74,7 @@ class FeatureExtractor:
             dst_fp = os.path.join(
                 simba_dir, "project_folder", "csv", "input_csv", f"{name}.csv"
             )
-            os.makedirs(os.path.split(dst_fp)[0], exist_ok=True)
+            os.makedirs(os.path.dirname(dst_fp), exist_ok=True)
             # Copying video mp4 and dlc csv to simba project dir
             shutil.copyfile(src_fp, dst_fp)
 
@@ -131,7 +131,7 @@ class FeatureExtractor:
             df = pd.concat([df, row], axis=0, ignore_index=True)
         # Storing the df in the simba project
         logs_fp = os.path.join(simba_dir, "project_folder", "logs", "video_info.csv")
-        os.makedirs(os.path.split(logs_fp)[0], exist_ok=True)
+        os.makedirs(os.path.dirname(logs_fp), exist_ok=True)
         df.to_csv(logs_fp, index=None)
         return df
 
