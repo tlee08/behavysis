@@ -18,7 +18,7 @@ def import_extra_error_func(extra_dep_name: str):
 
 
 def enum2tuple(my_enum: EnumType) -> tuple[Any]:
-    return tuple(i.value for i in my_enum)
+    return tuple(i.value for i in my_enum)  # type: ignore
 
 
 def const2iter(x: Any, n: int) -> Iterable[Any]:
@@ -74,6 +74,8 @@ def get_current_funct_name() -> str:
     # Getting the current frame
     c_frame = inspect.currentframe()
     # If this function is called from the main script, return empty string
+    if c_frame is None:
+        return ""
     if c_frame.f_back is None:
         return ""
     return c_frame.f_back.f_code.co_name

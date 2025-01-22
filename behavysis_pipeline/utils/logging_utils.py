@@ -101,7 +101,7 @@ def io_obj_to_msg(io_obj: io.StringIO) -> str:
     cursor = io_obj.tell()
     io_obj.seek(0)
     msg = ""
-    for line in io_obj.readline():
+    for line in io_obj.readlines():
         datetime, name, level, message = split_log_line(line)
         msg += f"{level} - {message}"
     io_obj.seek(cursor)
