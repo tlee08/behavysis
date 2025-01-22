@@ -197,7 +197,7 @@ class Analyse:
             # Getting changes in x-y values between frames (deltas)
             delta_x = smoothed_xy_df.loc[:, idx[indiv, bpts, "x"]].mean(axis=1).diff()
             delta_y = smoothed_xy_df.loc[:, idx[indiv, bpts, "y"]].mean(axis=1).diff()
-            delta = np.sqrt(np.power(delta_x, 2) + np.power(delta_y, 2))
+            delta = np.array(np.sqrt(np.power(delta_x, 2) + np.power(delta_y, 2)))
 
             print(smoothed_xy_df)
             print(delta)
@@ -268,7 +268,7 @@ class Analyse:
         dist_x = (keypoints_df.loc[:, idx_a] - keypoints_df.loc[:, idx_a]).mean(axis=1)
         idx_b = idx[indiv_a, bpts, "y"]
         dist_y = (keypoints_df.loc[:, idx_b] - keypoints_df.loc[:, idx_b]).mean(axis=1)
-        dist = np.sqrt(np.power(dist_x, 2) + np.power(dist_y, 2))
+        dist = np.array(np.sqrt(np.power(dist_x, 2) + np.power(dist_y, 2)))
         # Adding mm distance to saved analysis_df table
         analysis_df[(f"{indiv_a}_{indiv_b}", "DistMM")] = dist / px_per_mm
         analysis_df[(f"{indiv_a}_{indiv_b}", "DistMMSmoothed")] = (
