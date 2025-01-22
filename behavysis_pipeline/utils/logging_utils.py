@@ -11,7 +11,9 @@ LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 LOG_IO_OBJ_FORMAT = "%(levelname)s - %(message)s"
 
 
-def init_logger(name: str = __name__, level: int = logging.DEBUG) -> logging.Logger:
+def init_logger(
+    name: str = __name__, console_level: int = logging.INFO, file_level: int = logging.DEBUG
+) -> logging.Logger:
     """
     Setup logging configuration.
 
@@ -23,28 +25,33 @@ def init_logger(name: str = __name__, level: int = logging.DEBUG) -> logging.Log
     os.makedirs(CACHE_DIR, exist_ok=True)
     # Initialising/getting logger and its configuration
     logger = logging.getLogger(name)
-    logger.setLevel(level)
+    logger.setLevel(logging.DEBUG)
     # If logger does not have handlers, add them
     if not logger.hasHandlers():
         # Formatter
         formatter = logging.Formatter(LOG_FORMAT)
         # Console handler
         console_handler = logging.StreamHandler()
-        console_handler.setLevel(level)
+        console_handler.setLevel(console_level)
         console_handler.setFormatter(formatter)
         logger.addHandler(console_handler)
         # File handler
         log_fp = os.path.join(CACHE_DIR, "debug.log")
         file_handler = logging.FileHandler(log_fp, mode="a")
-        file_handler.setLevel(level)
+        file_handler.setLevel(file_level)
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)
     return logger
 
 
-def init_logger_with_io_obj(name: str = __name__, level: int = logging.DEBUG) -> tuple[logging.Logger, io.StringIO]:
+def init_logger_with_io_obj(
+    name: str = __name__,
+    console_level: int = logging.DEBUG,
+    file_level: int = logging.DEBUG,
+    io_obj_level: int = logging.INFO,
+) -> tuple[logging.Logger, io.StringIO]:
     # Making logger
-    logger = init_logger(name, level)
+    logger = init_logger(name, console_level=console_level, file_level=file_level)
     # Getting io_obj
     io_obj = None
     # Getting the io obj attached to one of the handlers
@@ -59,7 +66,7 @@ def init_logger_with_io_obj(name: str = __name__, level: int = logging.DEBUG) ->
         io_obj = io.StringIO()
         # StringIO object handler
         io_handler = logging.StreamHandler(io_obj)
-        io_handler.setLevel(level)
+        io_handler.setLevel(io_obj_level)
         io_handler.setFormatter(formatter)
         logger.addHandler(io_handler)
     return logger, io_obj
