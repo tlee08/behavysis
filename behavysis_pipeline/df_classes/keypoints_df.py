@@ -18,7 +18,7 @@ class CoordsCols(Enum):
 
 class IndivCols(Enum):
     SINGLE = "single"
-    PROCESS = "processed"  # TODO: remove this
+    PROCESSED = "processed"  # TODO: remove this
 
 
 class KeypointsCN(Enum):
@@ -65,9 +65,9 @@ class KeypointsDf(DFMixin):
             raise ValueError(msg)
 
     @classmethod
-    def get_headings(cls, df: pd.DataFrame) -> tuple[list[str], list[str]]:
+    def get_indivs_bpts(cls, df: pd.DataFrame) -> tuple[list[str], list[str]]:
         """
-        Returns a tuple of the individuals (only animals, not "single"), and tuple of
+        Returns a tuple of the individuals (only animals, not "single" or "processed"), and tuple of
         the multi-animal bodyparts.
 
         Parameters
@@ -86,7 +86,7 @@ class KeypointsDf(DFMixin):
         # Not incl. the `single` or `process`columns
         columns_filt = np.isin(
             df.columns.get_level_values(cls.CN.INDIVIDUALS.value),
-            [IndivCols.PROCESS.value, IndivCols.SINGLE.value],
+            [IndivCols.PROCESSED.value, IndivCols.SINGLE.value],
             invert=True,
         )
         columns = df.columns[columns_filt]

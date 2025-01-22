@@ -204,9 +204,9 @@ class Keypoints(EvalVidFuncBase):
         - Making the corresponding colours list for each bodypart instance (colours depend on indiv/bpt)
         """
         # Filtering out IndivColumns.PROCESS.value columns
-        if IndivCols.PROCESS.value in self.keypoints_df.columns.unique(KeypointsDf.CN.INDIVIDUALS.value):
+        if IndivCols.PROCESSED.value in self.keypoints_df.columns.unique(KeypointsDf.CN.INDIVIDUALS.value):
             self.keypoints_df.drop(
-                columns=IndivCols.PROCESS.value,
+                columns=IndivCols.PROCESSED.value,
                 level=KeypointsDf.CN.INDIVIDUALS.value,
             )
         # Getting (indivs, bpts) MultiIndex

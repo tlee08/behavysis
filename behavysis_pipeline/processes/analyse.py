@@ -66,7 +66,7 @@ class Analyse:
         # Loading in dataframe
         keypoints_df = KeypointsDf.clean_headings(KeypointsDf.read(keypoints_fp))
         # Getting indivs list
-        indivs, _ = KeypointsDf.get_headings(keypoints_df)
+        indivs, _ = KeypointsDf.get_indivs_bpts(keypoints_df)
         # Making analysis_df
         analysis_df_ls = []
         scatter_df_ls = []
@@ -183,7 +183,7 @@ class Analyse:
         # Checking body-centre bodypart exists
         KeypointsDf.check_bpts_exist(keypoints_df, bpts)
         # Getting indivs and bpts list
-        indivs, _ = KeypointsDf.get_headings(keypoints_df)
+        indivs, _ = KeypointsDf.get_indivs_bpts(keypoints_df)
 
         # Calculating speed of subject for each frame
         analysis_df = AnalysisDf.init_df(keypoints_df.index)
@@ -249,7 +249,7 @@ class Analyse:
         # Checking body-centre bodypart exists
         KeypointsDf.check_bpts_exist(keypoints_df, bpts)
         # Getting indivs and bpts list
-        indivs, _ = KeypointsDf.get_headings(keypoints_df)
+        indivs, _ = KeypointsDf.get_indivs_bpts(keypoints_df)
 
         # Calculating speed of subject for each frame
         analysis_df = AnalysisDf.init_df(keypoints_df.index)
@@ -321,7 +321,7 @@ class Analyse:
         # Checking body-centre bodypart exists
         KeypointsDf.check_bpts_exist(keypoints_df, bpts)
         # Getting indivs and bpts list
-        indivs, _ = KeypointsDf.get_headings(keypoints_df)
+        indivs, _ = KeypointsDf.get_indivs_bpts(keypoints_df)
 
         # Calculating speed of subject for each frame
         analysis_df = AnalysisDf.init_df(keypoints_df.index)

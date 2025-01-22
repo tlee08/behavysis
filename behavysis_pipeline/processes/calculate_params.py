@@ -326,7 +326,8 @@ def calc_exists_from_likelihood(
     idx = pd.IndexSlice
     lhood_name = CoordsCols.LIKELIHOOD.value
     lhood_df = pd.DataFrame(index=keypoints_df.index)
-    for indiv in keypoints_df.columns.unique(KeypointsDf.CN.INDIVIDUALS.value):
+    indivs, _ = KeypointsDf.get_indivs_bpts(keypoints_df)
+    for indiv in indivs:
         # Calculating likelihood of subject existing at each frame from median
         lhood_df[(indiv, "current")] = keypoints_df.loc[:, idx[indiv, bpts, lhood_name]].apply(np.nanmedian, axis=1)
         # Calculating likelihood of subject existing over time window
