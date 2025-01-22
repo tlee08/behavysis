@@ -302,17 +302,17 @@ class Experiment:
         """
         Collates the auto-configs of the experiment into the main configs file.
         """
-        dd = {"experiment": self.name, "outcome": ""}
+        dd = {"experiment": self.name}
         # Reading the experiment's configs file
         f_logger, f_io_obj = init_logger_with_io_obj(get_current_func_name())
         try:
             configs = ExperimentConfigs.read_json(self.get_fp(Folders.CONFIGS))
             f_logger.info("Read configs file.")
             f_logger.info(success_msg())
-            dd["reading_configs"] += get_io_obj_content(f_io_obj)
+            dd["reading_configs"] = get_io_obj_content(f_io_obj)
         except FileNotFoundError:
             f_logger.error("no configs file found.")
-            dd["reading_configs"] += get_io_obj_content(f_io_obj)
+            dd["reading_configs"] = get_io_obj_content(f_io_obj)
             return dd
         # Getting all the auto fields from the configs file
         configs_auto_field_keys = AutoConfigs.get_field_names()
