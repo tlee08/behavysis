@@ -19,6 +19,8 @@ from behavysis_pipeline.pydantic_models.pydantic_base_model import PydanticBaseM
 # class EvalKeypointsPlotConfigs(PydanticBaseModel):
 #     bodyparts: list[str] | str = SIMBA_BODYPARTS
 
+# TODO: make the default configs here (incl RefConfigs). I think use a function to get the default configs
+
 
 class UserConfigs(PydanticBaseModel):
     format_vid: FormatVidConfigs = FormatVidConfigs()

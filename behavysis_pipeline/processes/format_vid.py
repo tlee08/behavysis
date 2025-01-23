@@ -29,6 +29,8 @@ from behavysis_pipeline.utils.diagnostics_utils import file_exists_msg
 from behavysis_pipeline.utils.logging_utils import get_io_obj_content, init_logger_io_obj
 from behavysis_pipeline.utils.subproc_utils import run_subproc_console
 
+# TODO: Maybe separate format_vid and get_vids_metadata into separate classes and processes
+
 
 class FormatVid:
     """
