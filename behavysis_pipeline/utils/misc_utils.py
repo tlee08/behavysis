@@ -17,7 +17,7 @@ def enum2tuple(my_enum: EnumType) -> tuple[Any]:
     return tuple(i.value for i in my_enum)  # type: ignore
 
 
-def enum2list(my_enum: EnumType) -> tuple[Any]:
+def enum2list(my_enum: EnumType) -> list[Any]:
     return [i.value for i in my_enum]  # type: ignore
 
 

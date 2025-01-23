@@ -1,5 +1,3 @@
-from typing import List
-
 from behavysis_pipeline.constants import ARENA_BODYPARTS, SIMBA_BODYPARTS
 from behavysis_pipeline.pydantic_models.pydantic_base_model import PydanticBaseModel
 
@@ -36,4 +34,4 @@ class AnalyseConfigs(PydanticBaseModel):
     speed: SpeedConfigs = SpeedConfigs()
     social_distance: SocialDistanceConfigs = SocialDistanceConfigs()
     freezing: FreezingConfigs = FreezingConfigs()
-    in_roi: List[InRoiConfigs] = list()
+    in_roi: list[InRoiConfigs] = list()

@@ -3,7 +3,6 @@ Utility functions.
 """
 
 from enum import Enum
-from typing import List
 
 import numpy as np
 import pandas as pd
@@ -141,7 +140,7 @@ class BehavScoredDf(BehavDf):
     ###############################################################################################
 
     @classmethod
-    def get_bouts_struct_from_df(cls, df: pd.DataFrame) -> List[BoutStruct]:
+    def get_bouts_struct_from_df(cls, df: pd.DataFrame) -> list[BoutStruct]:
         """
         Returns the list BoutStruct objects from the given BehavDf's columns.
         """
@@ -160,7 +159,7 @@ class BehavScoredDf(BehavDf):
         return bouts_struct
 
     @classmethod
-    def predicted2scored(cls, df: pd.DataFrame, bouts_struct: List[BoutStruct] | None = None) -> pd.DataFrame:
+    def predicted2scored(cls, df: pd.DataFrame, bouts_struct: list[BoutStruct] | None = None) -> pd.DataFrame:
         """
         Convert a predicted behaviours dataframe to a scored behaviours dataframe.
         """

@@ -281,7 +281,7 @@ class Experiment:
 
         Parameters
         ----------
-        funcs : Tuple[Callable, ...]
+        funcs : tuple[Callable, ...]
             _description_
 
         Returns

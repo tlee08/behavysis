@@ -2,7 +2,7 @@
 _summary_
 """
 
-from typing import Dict, List
+from typing import Dict
 
 from behavysis_pipeline.pydantic_models.pydantic_base_model import PydanticBaseModel
 
@@ -18,11 +18,11 @@ class Bout(PydanticBaseModel):
 
 class BoutStruct(PydanticBaseModel):
     behav: str
-    user_defined: List[Bout]
+    user_defined: list[Bout]
 
 
 class Bouts(PydanticBaseModel):
     start: int
     stop: int
-    bouts: List[Bout]
-    bouts_struct: List[BoutStruct]
+    bouts: list[Bout]
+    bouts_struct: list[BoutStruct]

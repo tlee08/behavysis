@@ -1,4 +1,4 @@
-from typing import List, Literal
+from typing import Literal
 
 from behavysis_pipeline.constants import SIMBA_BODYPARTS
 from behavysis_pipeline.pydantic_models.pydantic_base_model import PydanticBaseModel
@@ -27,5 +27,5 @@ class RefineIdsConfigs(PydanticBaseModel):
 
 class PreprocessConfigs(PydanticBaseModel):
     interpolate: InterpolateConfigs = InterpolateConfigs()
-    interpolate_stationary: List[InterpolateStationaryConfigs] = list()
+    interpolate_stationary: list[InterpolateStationaryConfigs] = list()
     refine_ids: RefineIdsConfigs = RefineIdsConfigs()

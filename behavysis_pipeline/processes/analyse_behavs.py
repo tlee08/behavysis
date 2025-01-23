@@ -40,7 +40,7 @@ class AnalyseBehavs:
         # Not incl. the `pred` or `prob` (`prob` shouldn't be here anyway) columns
         columns = np.isin(
             behavs_df.columns.get_level_values(BehavScoredDf.CN.OUTCOMES.value),
-            [BehavScoredDf.OutcomesCols.PROB.value, BehavScoredDf.OutcomesCols.PRED.value],
+            [BehavScoredDf.OutcomesCols.PRED.value],
             invert=True,
         )
         behavs_df = behavs_df.loc[:, columns]
