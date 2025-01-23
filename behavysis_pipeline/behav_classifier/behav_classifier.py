@@ -31,7 +31,7 @@ from behavysis_pipeline.behav_classifier.clf_models.clf_templates import (
     CNN1,
 )
 from behavysis_pipeline.constants import Folders
-from behavysis_pipeline.df_classes.behav_df import BehavScoredDf
+from behavysis_pipeline.df_classes.behav_df import BehavScoredDf, BehavValues
 from behavysis_pipeline.df_classes.df_mixin import DFMixin
 from behavysis_pipeline.pydantic_models.behav_classifier import (
     BehavClassifierConfigs,
@@ -355,9 +355,9 @@ class BehavClassifier:
         # Assert that index and y are the same length
         assert index.shape[0] == y.shape[0]
         # Getting array of True indices
-        t = index[y == 1]
+        t = index[y == BehavValues.BEHAV.value]
         # Getting array of False indices
-        f = index[y == 0]
+        f = index[y == BehavValues.NON_BEHAV.value]
         # Undersampling the False indices
         f = np.random.choice(f, size=int(t.shape[0] / ratio), replace=False)
         # Combining the True and False indices

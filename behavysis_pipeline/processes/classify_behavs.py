@@ -8,7 +8,13 @@ import os
 import pandas as pd
 
 from behavysis_pipeline.behav_classifier.behav_classifier import BehavClassifier
-from behavysis_pipeline.df_classes.behav_df import BehavPredictedDf, BehavScoredDf, BoutCols, OutcomesPredictedCols
+from behavysis_pipeline.df_classes.behav_df import (
+    BehavPredictedDf,
+    BehavScoredDf,
+    BehavValues,
+    BoutCols,
+    OutcomesPredictedCols,
+)
 
 # from behavysis_pipeline.df_classes.bouts_df import BoutColumns, BoutsDf
 from behavysis_pipeline.df_classes.features_df import FeaturesDf
@@ -142,9 +148,9 @@ def merge_bouts(vect: pd.Series, min_window_frames: int, logger: logging.Logger)
     """
     vect = vect.copy()
     # Getting start, stop, and duration of each non-behav bout
-    nonbouts_df = BehavScoredDf.vect2bouts(vect == 0)
+    nonbouts_df = BehavScoredDf.vect2bouts_df(vect == BehavValues.NON_BEHAV.value)
     # For each non-behav bout, if less than min_window_frames, then call it a behav
     for _, row in nonbouts_df.iterrows():
         if row[BoutCols.DUR.value] < min_window_frames:
-            vect.loc[row[BoutCols.START.value] : row[BoutCols.STOP.value]] = 1
+            vect.loc[row[BoutCols.START.value] : row[BoutCols.STOP.value]] = BehavValues.BEHAV.value
     return vect

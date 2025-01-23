@@ -348,7 +348,7 @@ class Analyse:
             )
 
             # Getting start, stop, and duration of each freezing behav bout
-            freezingbouts_df = BehavScoredDf.vect2bouts(analysis_df[(indiv, f_name)] == 1)
+            freezingbouts_df = BehavScoredDf.vect2bouts_df(analysis_df[(indiv, f_name)] == 1)
             # For each freezing bout, if there is less than window_frames, tehn
             # it is not actually freezing
             for _, row in freezingbouts_df.iterrows():

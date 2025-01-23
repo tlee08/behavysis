@@ -20,7 +20,6 @@ class OutcomesPredictedCols(Enum):
 
 
 class OutcomesScoredCols(Enum):
-    PROB = "prob"
     PRED = "pred"
     ACTUAL = "actual"
 
@@ -35,9 +34,6 @@ class BoutCols(Enum):
     START = "start"
     STOP = "stop"
     DUR = "dur"
-    BEHAV = "behav"
-    ACTUAL = "actual"
-    USER_DEFINED = "user_defined"
 
 
 class BehavCN(Enum):
@@ -59,19 +55,6 @@ class BehavDf(DFMixin):
     OutcomesCols = None
 
     @classmethod
-    def update_behav(cls, df: pd.DataFrame, behav_src: str, behav_dst: str) -> pd.DataFrame:
-        """
-        Update the given behaviour name (behav_src) with a new name (behav_dst).
-        """
-        # Getting columns
-        columns = df.columns.to_frame(index=False)
-        # Updating the behaviour column
-        columns[cls.CN.BEHAVS.value] = columns[cls.CN.BEHAVS.value].replace(behav_src, behav_dst)
-        # Setting the new columns
-        df.columns = pd.MultiIndex.from_frame(columns)
-        return df
-
-    @classmethod
     def check_df(cls, df: pd.DataFrame) -> None:
         """
         Checking the dataframe.
@@ -90,7 +73,7 @@ class BehavDf(DFMixin):
                 for outcome in enum2tuple(cls.OutcomesCols):
                     # Assert the (behav, outcome) column is present
                     assert (behav, outcome) in columns, (
-                        f"Expected {outcome} column for {behav}.\n" f"Only columns are: {columns}"
+                        f"Expected {outcome} column for {behav}.\n" f"The columns in the df are: {columns}"
                     )
 
 
@@ -108,7 +91,6 @@ class BehavScoredDf(BehavDf):
     """
 
     OutcomesCols = OutcomesScoredCols
-    BoutCols = BoutCols
 
     @classmethod
     def import_boris_tsv(cls, fp: str, behavs_ls: list[str], start_frame: int, stop_frame: int) -> pd.DataFrame:
@@ -123,22 +105,35 @@ class BehavScoredDf(BehavDf):
         # BORIS behavs and given `behavs_ls`
         # TODO: how to reconcile this with the behavs_ls?
         for behav in df_boris["Behavior"].unique():
-            df[(behav, cls.OutcomesCols.ACTUAL.value)] = 0
-            df[(behav, cls.OutcomesCols.PRED.value)] = 0
+            df[(behav, cls.OutcomesCols.ACTUAL.value)] = BehavValues.NON_BEHAV.value
+            df[(behav, cls.OutcomesCols.PRED.value)] = BehavValues.NON_BEHAV.value
         for behav in behavs_ls:
-            df[(behav, cls.OutcomesCols.ACTUAL.value)] = 0
-            df[(behav, cls.OutcomesCols.PRED.value)] = 0
+            df[(behav, cls.OutcomesCols.ACTUAL.value)] = BehavValues.NON_BEHAV.value
+            df[(behav, cls.OutcomesCols.PRED.value)] = BehavValues.NON_BEHAV.value
         # Setting the classification values from the BORIS file
         for ind, row in df_boris.iterrows():
             # Getting corresponding frame of this event point
             behav = row["Behavior"]
             frame = row["Image index"]
             status = row["Behavior type"]
+            # Status is either "START" (of behaviour) or "STOP"
+            val = BehavValues.BEHAV.value if status == "START" else BehavValues.NON_BEHAV.value
             # Updating the classification in the scored df
-            df.loc[frame:, (behav, cls.OutcomesCols.ACTUAL.value)] = status == "START"
-            df.loc[frame:, (behav, cls.OutcomesCols.PRED.value)] = status == "START"
-        # Setting dtype to int8
-        df = df.astype(np.int8)
+            df.loc[frame:, (behav, cls.OutcomesCols.ACTUAL.value)] = val
+            df.loc[frame:, (behav, cls.OutcomesCols.PRED.value)] = val
+        return df
+
+    @classmethod
+    def update_behav(cls, df: pd.DataFrame, old_behav: str, new_behav: str) -> pd.DataFrame:
+        """
+        Update the given behaviour name (old_behav) with a new name (new_behav).
+        """
+        # Getting columns
+        columns = df.columns.to_frame(index=False)
+        # Updating the behaviour column
+        columns[cls.CN.BEHAVS.value] = columns[cls.CN.BEHAVS.value].replace(old_behav, new_behav)
+        # Setting the new columns
+        df.columns = pd.MultiIndex.from_frame(columns)
         return df
 
     ###############################################################################################
@@ -153,11 +148,13 @@ class BehavScoredDf(BehavDf):
         bouts_struct = []
         for behav in df.columns.unique(cls.CN.BEHAVS.value):
             bouts_struct.append(
-                BoutStruct.model_validate(
-                    {
-                        cls.BoutCols.BEHAV.value: behav,
-                        cls.BoutCols.USER_DEFINED.value: list(df[behav].columns.unique(cls.CN.OUTCOMES.value)),
-                    }
+                BoutStruct(
+                    behav=behav,
+                    user_defined=[
+                        i
+                        for i in df[behav].columns.unique(cls.CN.OUTCOMES.value)
+                        if i not in enum2tuple(cls.OutcomesCols)
+                    ],
                 )
             )
         return bouts_struct
@@ -167,6 +164,7 @@ class BehavScoredDf(BehavDf):
         """
         Convert a predicted behaviours dataframe to a scored behaviours dataframe.
         """
+        # TODO: bouts struct need to include user_defined as well
         # If behav_outcomes_ls is None, then initialising it from df
         bouts_struct = bouts_struct or cls.get_bouts_struct_from_df(df)
         # Making a new df
@@ -177,14 +175,13 @@ class BehavScoredDf(BehavDf):
             user_defined = bout_struct.user_defined
             # Adding pred column
             scored_df[(behav, cls.OutcomesCols.PRED.value)] = df[(behav, cls.OutcomesCols.PRED.value)].values
-            # Adding actual column
-            # NOTE: all predicted behav is set as undetermined in "actual" column
+            # Adding actual column and behav is set to undetermined
             scored_df[(behav, cls.OutcomesCols.ACTUAL.value)] = scored_df[(behav, cls.OutcomesCols.PRED.value)].replace(
                 BehavValues.BEHAV.value, BehavValues.UNDETERMINED.value
             )
             # Adding user_defined columns and setting values to 0
             for user_defined_i in user_defined:
-                scored_df[(behav, user_defined_i)] = 0
+                scored_df[(behav, user_defined_i)] = BehavValues.NON_BEHAV.value
         scored_df = cls.basic_clean(scored_df)
         return scored_df
 
@@ -193,7 +190,7 @@ class BehavScoredDf(BehavDf):
     ###############################################################################################
 
     @classmethod
-    def vect2bouts(
+    def vect2bouts_df(
         cls,
         vect: pd.Series,
     ) -> pd.DataFrame:
@@ -213,7 +210,7 @@ class BehavScoredDf(BehavDf):
         """
         offset = 0
         if vect.shape[0] > 0:
-            # NOTE: gets offset from first index (as vect is converted to np with relative index)
+            # Gets offset from first index
             # NOTE: Also safe for multi-index. Assumes using "frame" level
             offset = vect.index.get_level_values(cls.IN.FRAME.value)[0]
         # Getting stop and start indexes of each bout
@@ -221,8 +218,8 @@ class BehavScoredDf(BehavDf):
         start = np.flatnonzero(~z[:-1] & z[1:])
         stop = np.flatnonzero(z[:-1] & ~z[1:]) - 1
         # Making dataframe
-        bouts_df = pd.DataFrame({cls.BoutCols.START.value: start, cls.BoutCols.STOP.value: stop}) + offset
-        bouts_df[cls.BoutCols.DUR.value] = bouts_df[cls.BoutCols.STOP.value] - bouts_df[cls.BoutCols.START.value] + 1
+        bouts_df = pd.DataFrame({BoutCols.START.value: start, BoutCols.STOP.value: stop}) + offset
+        bouts_df[BoutCols.DUR.value] = bouts_df[BoutCols.STOP.value] - bouts_df[BoutCols.START.value] + 1
         return bouts_df
 
     @classmethod
@@ -236,31 +233,29 @@ class BehavScoredDf(BehavDf):
         for behav in df.columns.unique(cls.CN.BEHAVS.value):
             behav_df = df[behav]
             # Getting start-stop of each bout
-            bouts_df = cls.vect2bouts(behav_df[cls.OutcomesCols.PRED.value] == 1)
+            bouts_df = cls.vect2bouts_df(behav_df[cls.OutcomesCols.PRED.value] == BehavValues.BEHAV.value)
             # For each bout (i.e. start-stop pair)
             for _, row in bouts_df.iterrows():
                 # Getting only the frames in the current bout
-                bout_frames_df = behav_df.loc[row[cls.BoutCols.START.value] : row[cls.BoutCols.STOP.value]]
-                # Preparing to make Bout model object
-                bout_dict = {
-                    cls.BoutCols.START.value: row[cls.BoutCols.START.value],
-                    cls.BoutCols.STOP.value: row[cls.BoutCols.STOP.value],
-                    cls.BoutCols.DUR.value: row[cls.BoutCols.DUR.value],
-                    cls.BoutCols.BEHAV.value: behav,
-                    cls.BoutCols.ACTUAL.value: int(mode(bout_frames_df[cls.OutcomesCols.ACTUAL.value]).mode),
-                    cls.BoutCols.USER_DEFINED.value: {},
-                }
-                # Getting the value for the bout (for user_defined behavs only (i.e. columns not in BehavColumns))
+                bout_frames_df = behav_df.loc[row[BoutCols.START.value] : row[BoutCols.STOP.value]]
+                # Making bout object
+                bout = Bout(
+                    start=row[BoutCols.START.value],
+                    stop=row[BoutCols.STOP.value],
+                    dur=row[BoutCols.DUR.value],
+                    behav=behav,
+                    actual=int(mode(bout_frames_df[cls.OutcomesCols.ACTUAL.value]).mode),
+                    user_defined={},
+                )
+                # Storing user_defined column names in bout object
                 for outcome, values in bout_frames_df.items():
                     if outcome not in enum2tuple(cls.OutcomesCols):
                         # Using mode as proxy for the entire bout's user_defined value
-                        bout_dict[cls.BoutCols.USER_DEFINED.value][str(outcome)] = int(mode(values).mode)
-                # Making the Bout model object and appending to bouts_ls
-                bouts_ls.append(Bout.model_validate(bout_dict))
-        # Making and return the Bouts model object
+                        bout.user_defined[str(outcome)] = int(mode(values).mode)
+                bouts_ls.append(bout)
         return Bouts(
-            start=df.index[0],
-            stop=df.index[-1] + 1,
+            start=df.index.get_level_values(cls.IN.FRAME.value)[0],
+            stop=df.index.get_level_values(cls.IN.FRAME.value)[-1] + 1,
             bouts=bouts_ls,
             bouts_struct=cls.get_bouts_struct_from_df(df),
         )
@@ -275,19 +270,34 @@ class BehavScoredDf(BehavDf):
         # Making columns (for each behaviour, and for pred, actual, and user_defined)
         for bout_struct in bouts.bouts_struct:
             behav = bout_struct.behav
-            df[(behav, cls.OutcomesCols.PRED.value)] = 0
-            df[(behav, cls.OutcomesCols.ACTUAL.value)] = 0
+            df[(behav, cls.OutcomesCols.PRED.value)] = BehavValues.NON_BEHAV.value
+            df[(behav, cls.OutcomesCols.ACTUAL.value)] = BehavValues.NON_BEHAV.value
             for user_defined_i in bout_struct.user_defined:
-                df[(behav, user_defined_i)] = 0
+                df[(behav, user_defined_i)] = BehavValues.NON_BEHAV.value
         # Filling in all user_defined columns for each behaviour
         for bout in bouts.bouts:
-            bout_ret_df = df.loc[bout.start : bout.stop]
-            # Filling in predicted behaviour column
-            bout_ret_df.loc[:, (bout.behav, cls.OutcomesCols.PRED.value)] = 1
-            # Filling in actual behaviour column
-            bout_ret_df.loc[:, (bout.behav, cls.OutcomesCols.ACTUAL.value)] = bout.actual
+            df.loc[bout.start : bout.stop, (bout.behav, cls.OutcomesCols.PRED.value)] = BehavValues.BEHAV.value
+            df.loc[bout.start : bout.stop, (bout.behav, cls.OutcomesCols.ACTUAL.value)] = bout.actual
             # Filling in user_defined columns
             for k, v in bout.user_defined.items():
-                bout_ret_df.loc[:, (bout.behav, k)] = v
+                df.loc[bout.start : bout.stop, (bout.behav, k)] = v
         df = cls.basic_clean(df)
         return df
+
+
+if __name__ == "__main__":
+    # Making test df
+    v = np.array([0, 0, 1, 1, 1, 0, 1, 1, 0, 0, 1, 0, 1])
+    df0 = BehavScoredDf.init_df(pd.Series(np.arange(v.shape[0])))
+    df0[("behav", OutcomesScoredCols.PRED.value)] = v
+    df0[("behav", OutcomesScoredCols.ACTUAL.value)] = v
+    df0 = BehavScoredDf.basic_clean(df0)
+    # Round 1
+    b1 = BehavScoredDf.frames2bouts(df0)
+    df1 = BehavScoredDf.bouts2frames(b1)
+    # Round 2
+    b2 = BehavScoredDf.frames2bouts(df1)
+    df2 = BehavScoredDf.bouts2frames(b2)
+    # Asserting that the dfs and bouts are the same
+    assert df1.equals(df2)
+    assert b1 == b2

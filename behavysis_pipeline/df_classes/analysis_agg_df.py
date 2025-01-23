@@ -7,7 +7,7 @@ import pandas as pd
 import seaborn as sns
 
 from behavysis_pipeline.df_classes.analysis_df import AnalysisDf
-from behavysis_pipeline.df_classes.behav_df import BehavScoredDf, BoutCols
+from behavysis_pipeline.df_classes.behav_df import BehavScoredDf
 from behavysis_pipeline.df_classes.df_mixin import DFMixin
 from behavysis_pipeline.utils.misc_utils import enum2list, enum2tuple
 
@@ -110,7 +110,7 @@ class AnalysisSummaryDf(DFMixin):
             # Getting column vector of individual-measure
             vect = analysis_df[col]
             # Getting duration of each behav bout
-            bouts = BehavScoredDf.vect2bouts(vect == 1)[BoutCols.DUR.value]
+            bouts = BehavScoredDf.vect2bouts_df(vect == 1)["dur"]
             # Converting bouts duration from frames to seconds
             bouts = bouts / fps
             # Getting bout frequency (before it is overwritten if empty)

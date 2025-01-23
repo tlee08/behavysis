@@ -34,7 +34,7 @@ class AnalyseBehavs:
         fps, _, _, _, bins_ls, cbins_ls = configs.get_analysis_configs()
         # Loading in dataframe
         behavs_df = BehavScoredDf.read(behavs_fp)
-        # Setting all na and -1 values to 0 (to make any undecided behav to non-behav)
+        # Setting all na and undetermined behav to non-behav
         behavs_df = behavs_df.fillna(0).replace(BehavValues.UNDETERMINED.value, BehavValues.NON_BEHAV.value)
         # Getting the behaviour names and each user_defined for the behaviour
         # Not incl. the `pred` or `prob` (`prob` shouldn't be here anyway) columns
