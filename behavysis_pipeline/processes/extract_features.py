@@ -2,6 +2,7 @@
 _summary_
 """
 
+import logging
 import os
 
 import pandas as pd
@@ -30,8 +31,6 @@ from behavysis_pipeline.utils.template_utils import save_template
 
 
 class ExtractFeatures:
-    """__summary__"""
-
     @staticmethod
     def extract_features(
         keypoints_fp: str,
@@ -75,7 +74,7 @@ class ExtractFeatures:
         simba_in_fp = os.path.join(simba_in_dir, f"{name}.csv")
         # Selecting bodyparts for SimBA (8 bpts, 2 indivs)
         keypoints_df = KeypointsDf.read(keypoints_fp)
-        keypoints_df = select_cols(keypoints_df, configs_fp)
+        keypoints_df = select_cols(keypoints_df, configs_fp, logger)
         # Saving keypoints index to use in the SimBA features extraction df
         index = keypoints_df.index
         # Need to remove index name for SimBA to import correctly
@@ -85,10 +84,10 @@ class ExtractFeatures:
         # Removing simba folder (if it exists)
         silent_remove(simba_dir)
         # Running SimBA env and script to run SimBA feature extraction
-        logger.info(run_simba_subproc(simba_dir, simba_in_dir, configs_dir, CACHE_DIR, cpid))
+        run_simba_subproc(simba_dir, simba_in_dir, configs_dir, CACHE_DIR, cpid, logger)
         # Exporting SimBA feature extraction csv to disk
         simba_dst_fp = os.path.join(features_from_dir, f"{name}.csv")
-        export2df(simba_dst_fp, features_fp, index)
+        export2df(simba_dst_fp, features_fp, index, logger)
         # Removing temp folders (simba_in_dir, simba_dir)
         silent_remove(simba_in_dir)
         silent_remove(simba_dir)
@@ -100,10 +99,7 @@ class ExtractFeatures:
 #####################################################################
 
 
-def select_cols(
-    keypoints_df: pd.DataFrame,
-    configs_fp: str,
-) -> pd.DataFrame:
+def select_cols(keypoints_df: pd.DataFrame, configs_fp: str, logger: logging.Logger) -> pd.DataFrame:
     """
     Selecting given keypoints columns to input to SimBA.
 
@@ -128,7 +124,7 @@ def select_cols(
     KeypointsDf.check_bpts_exist(keypoints_df, bpts)
     # Selecting given columns
     idx = pd.IndexSlice
-    keypoints_df = keypoints_df.loc[:, idx[:, indivs, bpts]]
+    keypoints_df = keypoints_df.loc[:, idx[:, indivs, bpts]]  # type: ignore
     return keypoints_df
 
 
@@ -138,7 +134,8 @@ def run_simba_subproc(
     configs_dir: str,
     temp_dir: str,
     cpid: int,
-) -> str:
+    logger: logging.Logger,
+) -> None:
     """
     Running the custom SimBA script to take the prepared keypoints dataframe as input and
     create the features extracted dataframe.
@@ -183,40 +180,37 @@ def run_simba_subproc(
     run_subproc_console(cmd)
     # Removing the script file
     silent_remove(script_fp)
-    return "Ran SimBA feature extraction script.\n"
+    logger.info("Ran SimBA feature extraction script.")
 
 
-def remove_bpts_cols(
-    keypoints_df: pd.DataFrame,
-) -> pd.DataFrame:
-    """
-    Drops the bodyparts columns from the SimBA features extractions dataframes.
-    Because bodypart coordinates should not be a factor in behaviour classification.
+# TODO: mode/integrate with base_torch_model
+# def remove_bpts_cols(keypoints_df: pd.DataFrame, logger: logging.Logger) -> pd.DataFrame:
+#     """
+#     Drops the bodyparts columns from the SimBA features extractions dataframes.
+#     Because bodypart coordinates should not be a factor in behaviour classification.
 
-    Parameters
-    ----------
-    keypoints_df : pd.DataFrame
-        Features extracted dataframe
+#     Parameters
+#     ----------
+#     keypoints_df : pd.DataFrame
+#         Features extracted dataframe
 
-    Returns
-    -------
-    pd.DataFrame
-        Features extracted dataframe with the bodyparts columns dropped.
-    """
-    indivs_n = 2
-    bpts_n = 8
-    coords_n = 3
-    n = indivs_n * bpts_n * coords_n
-    return keypoints_df.iloc[:, n:]
+#     Returns
+#     -------
+#     pd.DataFrame
+#         Features extracted dataframe with the bodyparts columns dropped.
+#     """
+#     indivs_n = 2
+#     bpts_n = 8
+#     coords_n = 3
+#     n = indivs_n * bpts_n * coords_n
+#     return keypoints_df.iloc[:, n:]
 
 
-def export2df(in_fp: str, dst_fp: str, index: pd.Index) -> str:
-    """
-    __summary__
-    """
+def export2df(in_fp: str, dst_fp: str, index: pd.Index, logger: logging.Logger) -> None:
+    """__summary__"""
     features_df = FeaturesDf.read_csv(in_fp)
     # Setting index to the same as the preprocessed preprocessed df
     features_df = features_df.set_index(index)
     # Saving SimBA extracted features df on disk
     FeaturesDf.write(features_df, dst_fp)
-    return "Exported SimBA features to disk.\n"
+    logger.info("Exported SimBA features to disk.")

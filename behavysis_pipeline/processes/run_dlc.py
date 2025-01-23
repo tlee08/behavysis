@@ -21,6 +21,7 @@ str
     The outcome of the process.
 """
 
+import logging
 import os
 import re
 
@@ -74,10 +75,10 @@ class RunDLC:
             )
 
         # Running the DLC subprocess (in a separate conda env)
-        run_dlc_subproc(model_fp, [formatted_vid_fp], temp_dlc_dir, CACHE_DIR, gputouse)
+        run_dlc_subproc(model_fp, [formatted_vid_fp], temp_dlc_dir, CACHE_DIR, gputouse, logger)
 
         # Exporting the h5 to chosen file format
-        logger.info(export2df(formatted_vid_fp, temp_dlc_dir, keypoints_dir))
+        export2df(formatted_vid_fp, temp_dlc_dir, keypoints_dir, logger)
         silent_remove(temp_dlc_dir)
 
         return get_io_obj_content(io_obj)
@@ -135,11 +136,11 @@ class RunDLC:
         )
 
         # Running the DLC subprocess (in a separate conda env)
-        run_dlc_subproc(model_fp, vid_fp_ls, temp_dlc_dir, CACHE_DIR, gputouse)
+        run_dlc_subproc(model_fp, vid_fp_ls, temp_dlc_dir, CACHE_DIR, gputouse, logger)
 
         # Exporting the h5 to chosen file format
         for vid_fp in vid_fp_ls:
-            logger.info(export2df(vid_fp, temp_dlc_dir, keypoints_dir))
+            export2df(vid_fp, temp_dlc_dir, keypoints_dir, logger)
         silent_remove(temp_dlc_dir)
         return get_io_obj_content(io_obj)
 
@@ -150,7 +151,8 @@ def run_dlc_subproc(
     temp_dlc_dir: str,
     temp_dir: str,
     gputouse: int | None,
-):
+    logger: logging.Logger,
+) -> None:
     """
     Running the DLC subprocess in a separate process (i.e. separate conda env).
 
@@ -186,16 +188,16 @@ def run_dlc_subproc(
     silent_remove(script_fp)
 
 
-def export2df(name: str, src_dir: str, dst_dir: str) -> str:
+def export2df(name: str, src_dir: str, dst_dir: str, logger: logging.Logger) -> None:
     """
     __summary__
     """
-    # Get name
     name = get_name(name)
     # Get the corresponding .h5 filename
     name_fp_ls = [i for i in os.listdir(src_dir) if re.search(rf"^{name}DLC.*\.h5$", i)]
     if len(name_fp_ls) == 0:
-        return f"WARNING: No .h5 file found for {name}."
+        logger.warning(f"No .h5 file found for {name}.")
+        return
     elif len(name_fp_ls) == 1:
         name_fp = os.path.join(src_dir, name_fp_ls[0])
         # Reading the .h5 file
@@ -205,6 +207,7 @@ def export2df(name: str, src_dir: str, dst_dir: str) -> str:
         df = df.fillna(0)
         # Writing the file
         KeypointsDf.write(df, os.path.join(dst_dir, f"{name}.{KeypointsDf.IO}"))
-        return "Outputted DLC file successfully."
+        logger.info("Outputted DLC file successfully.")
+
     else:
-        raise ValueError(f"Multiple .h5 files found for {name}.")
+        logger.warning(f"Multiple .h5 files found for {name}. Expected only 1.")

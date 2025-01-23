@@ -19,6 +19,7 @@ str
 
 """
 
+import logging
 import os
 
 import numpy as np
@@ -255,11 +256,11 @@ class Preprocess:
         # Checking that bodyparts are all valid
         KeypointsDf.check_bpts_exist(keypoints_df, bpts)
         # Calculating the distances between the averaged bodycentres and the marking
-        mark_dists_df = get_mark_dists_df(keypoints_df, marked, unmarked, [marking], bpts)
+        mark_dists_df = get_mark_dists_df(keypoints_df, marked, unmarked, [marking], bpts, logger)
         # Getting "to_switch" decision series for each frame
-        switch_df = get_id_switch_df(mark_dists_df, window_frames, marked, unmarked)
+        switch_df = get_id_switch_df(mark_dists_df, window_frames, marked, unmarked, logger)
         # Updating df with the switched values
-        switched_keypoints_df = switch_identities(keypoints_df, switch_df[metric], marked, unmarked)
+        switched_keypoints_df = switch_identities(keypoints_df, switch_df[metric], marked, unmarked, logger)
         KeypointsDf.write(switched_keypoints_df, dst_fp)
         return get_io_obj_content(io_obj)
 
@@ -270,6 +271,7 @@ def get_mark_dists_df(
     unmarked_indiv: str,
     mark_pts: list[str],
     bpts: list[str],
+    logger: logging.Logger,
 ) -> pd.DataFrame:
     """
     _summary_
@@ -294,12 +296,12 @@ def get_mark_dists_df(
     for coord in [CoordsCols.X.value, CoordsCols.Y.value]:
         idx = pd.IndexSlice
         # Getting the coordinates of the colour marking in each frame
-        mark_dists_df[("mark", coord)] = keypoints_df.loc[:, idx[l0, IndivCols.SINGLE.value, mark_pts, coord]].mean(
+        mark_dists_df[("mark", coord)] = keypoints_df.loc[:, idx[l0, IndivCols.SINGLE.value, mark_pts, coord]].mean(  # type: ignore
             axis=1
         )
         for indiv in indivs:
             # Getting the coordinates of each individual (average of the given bodyparts list)
-            mark_dists_df[(indiv, coord)] = keypoints_df.loc[:, idx[l0, indiv, bpts, coord]].mean(axis=1)
+            mark_dists_df[(indiv, coord)] = keypoints_df.loc[:, idx[l0, indiv, bpts, coord]].mean(axis=1)  # type: ignore
     # Getting the Euclidean distance between each mouse and the colour marking in each frame
     for indiv in indivs:
         mark_dists_df[(indiv, "dist")] = np.sqrt(
@@ -316,6 +318,7 @@ def get_id_switch_df(
     window_frames: int,
     marked: str,
     unmarked: str,
+    logger: logging.Logger,
 ) -> pd.DataFrame:
     """
     Calculating different metrics for whether to swap the mice identities, depending
@@ -354,10 +357,7 @@ def get_id_switch_df(
 
 
 def switch_identities(
-    keypoints_df: pd.DataFrame,
-    is_switch: pd.Series,
-    marked_indiv: str,
-    unmarked_indiv: str,
+    keypoints_df: pd.DataFrame, is_switch: pd.Series, marked_indiv: str, unmarked_indiv: str, logger: logging.Logger
 ) -> pd.DataFrame:
     """
     _summary_

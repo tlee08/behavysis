@@ -11,11 +11,10 @@ from behavysis_pipeline.pydantic_models.processes.calculate_params import Calcul
 from behavysis_pipeline.pydantic_models.processes.classify_behavs import ClassifyBehavConfigs
 from behavysis_pipeline.pydantic_models.processes.evaluate_vid import EvaluateVidConfigs
 from behavysis_pipeline.pydantic_models.processes.extract_features import ExtractFeaturesConfigs
-from behavysis_pipeline.pydantic_models.processes.format_vid import FormatVidConfigs
+from behavysis_pipeline.pydantic_models.processes.format_vid import FormatVidConfigs, VidMetadata
 from behavysis_pipeline.pydantic_models.processes.preprocess import PreprocessConfigs
 from behavysis_pipeline.pydantic_models.processes.run_dlc import RunDlcConfigs
 from behavysis_pipeline.pydantic_models.pydantic_base_model import PydanticBaseModel
-from behavysis_pipeline.pydantic_models.vid_metadata import VidMetadata
 
 # class EvalKeypointsPlotConfigs(PydanticBaseModel):
 #     bodyparts: list[str] | str = SIMBA_BODYPARTS

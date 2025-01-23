@@ -24,10 +24,10 @@ from behavysis_pipeline.utils.plotting_utils import make_colours
 # EVALUATE VID FUNC, WHICH FACES OUT
 ###################################################################################################
 
+# TODO: revamp logging
+
 
 class EvaluateVid:
-    """__summary__"""
-
     @classmethod
     def evaluate_vid(
         cls,
@@ -98,7 +98,7 @@ class EvaluateVid:
         # Define the codec and create VideoWriter object
         eval_vid_cap = cv2.VideoWriter(
             eval_vid_fp,
-            cv2.VideoWriter_fourcc(*"mp4v"),
+            cv2.VideoWriter_fourcc(*"mp4v"),  # type: ignore
             fps,
             (vid_funcs_runner.width_out, vid_funcs_runner.height_out),
         )
@@ -236,7 +236,7 @@ class Keypoints(EvalVidFuncBase):
             if row[f"{indiv}_{bpt}_likelihood"] >= self.pcutoff:
                 cv2.circle(
                     img=frame,
-                    center=(int(row[f"{indiv}_{bpt}_x"]), int(row[f"{indiv}_{bpt}_y"])),
+                    center=(int(row[f"{indiv}_{bpt}_x"]), int(row[f"{indiv}_{bpt}_y"])),  # type: ignore
                     radius=self.radius,
                     color=self.colours[i],
                     thickness=-1,

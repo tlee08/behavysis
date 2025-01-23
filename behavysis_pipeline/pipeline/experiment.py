@@ -52,7 +52,7 @@ class Experiment:
         ValueError: `root_dir` does not exist or `name` does not exist in the `root_dir` folder.
     """
 
-    logger = init_logger_file(__name__)
+    logger = init_logger_file()
 
     def __init__(self, name: str, root_dir: str) -> None:
         """
@@ -123,7 +123,7 @@ class Experiment:
     #               EXPERIMENT PROCESSING SCAFFOLD METHODS
     #####################################################################
 
-    def _process_scaffold(
+    def _proc_scaff(
         self,
         funcs: tuple[Callable, ...],
         *args: Any,
@@ -199,7 +199,7 @@ class Experiment:
         dict
             Diagnostics dictionary, with description of each function's outcome.
         """
-        return self._process_scaffold(
+        return self._proc_scaff(
             (UpdateConfigs.update_configs,),
             configs_fp=self.get_fp(Folders.CONFIGS),
             default_configs_fp=default_configs_fp,
@@ -232,7 +232,7 @@ class Experiment:
         -----
         Can call any methods from `FormatVid`.
         """
-        return self._process_scaffold(
+        return self._proc_scaff(
             funcs,
             raw_vid_fp=self.get_fp(Folders.RAW_VID),
             formatted_vid_fp=self.get_fp(Folders.FORMATTED_VID),
@@ -265,7 +265,7 @@ class Experiment:
         -----
         Can call any methods from `RunDLC`.
         """
-        return self._process_scaffold(
+        return self._proc_scaff(
             (RunDLC.ma_dlc_run_single,),
             formatted_vid_fp=self.get_fp(Folders.FORMATTED_VID),
             keypoints_fp=self.get_fp(Folders.KEYPOINTS),
@@ -293,7 +293,7 @@ class Experiment:
         -----
         Can call any methods from `CalculateParams`.
         """
-        return self._process_scaffold(
+        return self._proc_scaff(
             funcs,
             keypoints_fp=self.get_fp(Folders.KEYPOINTS),
             configs_fp=self.get_fp(Folders.CONFIGS),
@@ -349,7 +349,7 @@ class Experiment:
         Can call any methods from `Preprocess`.
         """
         # Exporting keypoints df to preprocessed folder
-        dd0 = self._process_scaffold(
+        dd0 = self._proc_scaff(
             (Export.df2df,),
             src_fp=self.get_fp(Folders.KEYPOINTS),
             dst_fp=self.get_fp(Folders.PREPROCESSED),
@@ -359,7 +359,7 @@ class Experiment:
         if "ERROR" in dd0[Export.df2df.__name__] or "WARNING" in dd0[Export.df2df.__name__]:
             return dd0
         # Feeding through preprocessing functions
-        dd1 = self._process_scaffold(
+        dd1 = self._proc_scaff(
             funcs,
             src_fp=self.get_fp(Folders.PREPROCESSED),
             dst_fp=self.get_fp(Folders.PREPROCESSED),
@@ -388,7 +388,7 @@ class Experiment:
         dict
             Diagnostics dictionary, with description of each function's outcome.
         """
-        return self._process_scaffold(
+        return self._proc_scaff(
             (ExtractFeatures.extract_features,),
             keypoints_fp=self.get_fp(Folders.PREPROCESSED),
             features_fp=self.get_fp(Folders.FEATURES_EXTRACTED),
@@ -411,7 +411,7 @@ class Experiment:
         dict
             Diagnostics dictionary, with description of each function's outcome.
         """
-        return self._process_scaffold(
+        return self._proc_scaff(
             (ClassifyBehavs.classify_behavs,),
             features_fp=self.get_fp(Folders.FEATURES_EXTRACTED),
             behavs_fp=self.get_fp(Folders.PREDICTED_BEHAVS),
@@ -434,7 +434,7 @@ class Experiment:
             _description_
         """
         # Exporting 6_predicted_behavs df to 7_scored_behavs folder
-        return self._process_scaffold(
+        return self._proc_scaff(
             (Export.predictedbehavs2scoredbehavs,),
             src_fp=self.get_fp(Folders.PREDICTED_BEHAVS),
             dst_fp=self.get_fp(Folders.SCORED_BEHAVS),
@@ -466,7 +466,7 @@ class Experiment:
         -----
         Can call any methods from `Analyse`.
         """
-        return self._process_scaffold(
+        return self._proc_scaff(
             funcs,
             keypoints_fp=self.get_fp(Folders.PREPROCESSED),
             dst_dir=os.path.join(self.root_dir, ANALYSIS_DIR),
@@ -488,7 +488,7 @@ class Experiment:
         -----
         Can call any methods from `Analyse`.
         """
-        return self._process_scaffold(
+        return self._proc_scaff(
             (AnalyseBehavs.analyse_behavs,),
             behavs_fp=self.get_fp(Folders.SCORED_BEHAVS),
             dst_dir=os.path.join(self.root_dir, ANALYSIS_DIR),
@@ -500,7 +500,7 @@ class Experiment:
         Combine the experiment's analysis in each fbf into a single df
         """
         # TODO: make new subfolder called combined_analysis and make ONLY(??) fbf analysis.
-        return self._process_scaffold(
+        return self._proc_scaff(
             (CombineAnalysis.combine_analysis,),
             analysis_dir=os.path.join(self.root_dir, ANALYSIS_DIR),
             analysis_combined_fp=self.get_fp(Folders.ANALYSIS_COMBINED),
@@ -528,7 +528,7 @@ class Experiment:
         dict
             Diagnostics dictionary, with description of each function's outcome.
         """
-        return self._process_scaffold(
+        return self._proc_scaff(
             (EvaluateVid.evaluate_vid,),
             formatted_vid_fp=self.get_fp(Folders.FORMATTED_VID),
             keypoints_fp=self.get_fp(Folders.PREPROCESSED),
@@ -554,7 +554,7 @@ class Experiment:
         dict
             _description_
         """
-        return self._process_scaffold(
+        return self._proc_scaff(
             (Export.df2csv,),
             src_fp=self.get_fp(src_dir),
             dst_fp=os.path.join(dst_dir, f"{self.name}.csv"),

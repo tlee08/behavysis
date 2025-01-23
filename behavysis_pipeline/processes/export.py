@@ -13,8 +13,6 @@ from behavysis_pipeline.utils.logging_utils import get_io_obj_content, init_logg
 
 
 class Export:
-    """__summary__"""
-
     @classmethod
     def df2df(
         cls,

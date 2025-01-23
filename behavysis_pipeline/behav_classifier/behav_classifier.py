@@ -61,7 +61,7 @@ class BehavClassifier:
     evaluation, and inference.
     """
 
-    logger = init_logger_file(__name__)
+    logger = init_logger_file()
 
     _proj_dir: str
     _behav_name: str

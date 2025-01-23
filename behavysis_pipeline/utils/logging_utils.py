@@ -10,7 +10,7 @@ LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 LOG_IO_OBJ_FORMAT = "%(levelname)s - %(message)s"
 
 
-def _add_console_handler(logger: logging.Logger, level: int = logging.DEBUG) -> None:
+def add_console_handler(logger: logging.Logger, level: int = logging.DEBUG) -> None:
     """
     If logger does not have a console handler,
     create a console handler and add it to the logger.
@@ -29,7 +29,7 @@ def _add_console_handler(logger: logging.Logger, level: int = logging.DEBUG) -> 
     logger.addHandler(console_handler)
 
 
-def _add_log_file_handler(logger: logging.Logger, level: int = logging.DEBUG) -> str:
+def add_log_file_handler(logger: logging.Logger, level: int = logging.DEBUG) -> str:
     """
     If logger does not have a file handler,
     create a file handler and add it to the logger.
@@ -51,7 +51,7 @@ def _add_log_file_handler(logger: logging.Logger, level: int = logging.DEBUG) ->
     return file_handler.baseFilename
 
 
-def _add_io_obj_handler(logger: logging.Logger, level: int = logging.INFO) -> io.StringIO:
+def add_io_obj_handler(logger: logging.Logger, level: int = logging.INFO) -> io.StringIO:
     """
     If logger does not have a StringIO handler,
     create a StringIO handler and add it to the logger.
@@ -93,11 +93,11 @@ def init_logger(
     logger.setLevel(logging.DEBUG)
     # Adding handlers
     if console_level is not None:
-        _add_console_handler(logger, console_level)
+        add_console_handler(logger, console_level)
     if file_level is not None:
-        _add_log_file_handler(logger, file_level)
+        add_log_file_handler(logger, file_level)
     if io_obj_level is not None:
-        _add_io_obj_handler(logger, io_obj_level)
+        add_io_obj_handler(logger, io_obj_level)
     return logger
 
 
@@ -150,7 +150,7 @@ def init_logger_io_obj(
         file_level=file_level,
         io_obj_level=io_obj_level,
     )
-    io_obj = _add_io_obj_handler(logger)
+    io_obj = add_io_obj_handler(logger)
     return logger, io_obj
 
 

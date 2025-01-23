@@ -47,7 +47,7 @@ class Project:
             The number of processes to use for multiprocessing.
     """
 
-    logger = init_logger_file(__name__)
+    logger = init_logger_file()
 
     root_dir: str
     experiments: dict[str, Experiment]
@@ -176,7 +176,7 @@ class Project:
             scaffold_func = self._proc_scaff_mp
         # Running the scaffold function
         # Starting
-        self.logger.info("Running %s", method.__name__)
+        self.logger.info(f"Running {method.__name__} for all experiments.")
         # Running
         dd_ls = scaffold_func(method, *args, **kwargs)
         if len(dd_ls) > 0:

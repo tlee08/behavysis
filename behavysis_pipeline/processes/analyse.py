@@ -16,6 +16,7 @@ str
     The outcome of the process.
 """
 
+import logging
 import os
 
 import numpy as np
@@ -116,7 +117,7 @@ class Analyse:
                 analysis_i_df[(indiv, y)] = keypoints_df.loc[:, idx[indiv, bpts, y]].mean(axis=1).values  # type: ignore
                 # Determining if the indiv body center is in the ROI
                 analysis_i_df[(indiv, roi_name)] = analysis_i_df[indiv].apply(
-                    lambda pt: pt_in_roi(pt, corners_i_df), axis=1
+                    lambda pt: pt_in_roi(pt, corners_i_df, logger), axis=1
                 )
             # Inverting in_roi status if is_in is False
             if not is_in:
@@ -369,7 +370,7 @@ class Analyse:
         return get_io_obj_content(io_obj)
 
 
-def pt_in_roi(pt: pd.Series, corners_df: pd.DataFrame) -> bool:
+def pt_in_roi(pt: pd.Series, corners_df: pd.DataFrame, logger: logging.Logger) -> bool:
     """__summary__"""
     # Counting crossings over edge in region when point is translated to the right
     crossings = 0

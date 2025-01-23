@@ -26,7 +26,7 @@ from behavysis_pipeline.df_classes.keypoints_df import (
 )
 from behavysis_pipeline.pydantic_models.configs import ExperimentConfigs
 from behavysis_pipeline.utils.io_utils import get_name
-from behavysis_pipeline.utils.logging_utils import get_io_obj_content, init_logger_file, init_logger_io_obj
+from behavysis_pipeline.utils.logging_utils import get_io_obj_content, init_logger_io_obj
 
 
 class CalculateParams:
@@ -282,9 +282,7 @@ class CalculateParams:
         return get_io_obj_content(io_obj)
 
 
-def calc_exists_from_likelihood(
-    keypoints_fp: str, configs_fp: str, logger: logging.Logger | None = None
-) -> tuple[int, int]:
+def calc_exists_from_likelihood(keypoints_fp: str, configs_fp: str, logger: logging.Logger) -> tuple[int, int]:
     """
     Determines the start and stop frames of the experiment based on
     when the subject "likely" entered and exited the frame of view.
@@ -305,8 +303,6 @@ def calc_exists_from_likelihood(
                 - pcutoff: float
     ```
     """
-    # TODO: implement similar logger functionality/paradigm elsewhere
-    logger = logger or init_logger_file()
     # Getting necessary config parameters
     configs = ExperimentConfigs.read_json(configs_fp)
     configs_filt = configs.user.calculate_params.from_likelihood

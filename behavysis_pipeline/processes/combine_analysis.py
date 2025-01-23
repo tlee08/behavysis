@@ -14,8 +14,6 @@ from behavysis_pipeline.utils.logging_utils import get_io_obj_content, init_logg
 
 
 class CombineAnalysis:
-    """__summary__"""
-
     @classmethod
     def combine_analysis(
         cls,

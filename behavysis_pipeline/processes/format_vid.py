@@ -24,9 +24,9 @@ import os
 import cv2
 
 from behavysis_pipeline.pydantic_models.configs import ExperimentConfigs
-from behavysis_pipeline.pydantic_models.vid_metadata import VidMetadata
+from behavysis_pipeline.pydantic_models.processes.format_vid import VidMetadata
 from behavysis_pipeline.utils.diagnostics_utils import file_exists_msg
-from behavysis_pipeline.utils.logging_utils import get_io_obj_content, init_logger_file, init_logger_io_obj
+from behavysis_pipeline.utils.logging_utils import get_io_obj_content, init_logger_io_obj
 from behavysis_pipeline.utils.subproc_utils import run_subproc_console
 
 
@@ -67,12 +67,12 @@ class FormatVid:
         process_vid(
             in_fp=raw_vid_fp,
             dst_fp=formatted_vid_fp,
-            height_px=configs.get_ref(configs_filt.height_px),
+            logger=logger,
             width_px=configs.get_ref(configs_filt.width_px),
+            height_px=configs.get_ref(configs_filt.height_px),
             fps=configs.get_ref(configs_filt.fps),
             start_sec=configs.get_ref(configs_filt.start_sec),
             stop_sec=configs.get_ref(configs_filt.stop_sec),
-            logger=logger,
         )
 
         # Saving video metadata to configs dict
@@ -117,16 +117,15 @@ class FormatVid:
 def process_vid(
     in_fp: str,
     dst_fp: str,
+    logger: logging.Logger,
     width_px: None | int = None,
     height_px: None | int = None,
     fps: None | int = None,
     start_sec: None | float = None,
     stop_sec: None | float = None,
     overwrite: bool = False,
-    logger: None | logging.Logger = None,
 ) -> None:
     """__summary__"""
-    logger = logger or init_logger_file()
     if not overwrite and os.path.exists(dst_fp):
         logger.warning(file_exists_msg(dst_fp))
         return
@@ -188,7 +187,7 @@ def process_vid(
     run_subproc_console(cmd)
 
 
-def get_vid_metadata(vid_fp: str, logger: None | logging.Logger = None) -> VidMetadata:
+def get_vid_metadata(vid_fp: str, logger: logging.Logger) -> VidMetadata:
     """
     Finds the video metadata/parameters for either the raw or formatted video.
 
@@ -202,7 +201,6 @@ def get_vid_metadata(vid_fp: str, logger: None | logging.Logger = None) -> VidMe
     VidMetadata
         Object containing video metadata.
     """
-    logger = logger or init_logger_file()
     configs_meta = VidMetadata()
     cap = cv2.VideoCapture(vid_fp)
     if not cap.isOpened():

@@ -2,6 +2,7 @@
 Classify Behaviours
 """
 
+import logging
 import os
 
 import pandas as pd
@@ -19,8 +20,6 @@ from behavysis_pipeline.utils.logging_utils import get_io_obj_content, init_logg
 
 
 class ClassifyBehavs:
-    """__summary__"""
-
     @classmethod
     def classify_behavs(
         cls,
@@ -76,7 +75,7 @@ class ClassifyBehavs:
             proj_dir = configs.get_ref(model_config.proj_dir)
             behav_name = configs.get_ref(model_config.behav_name)
             behav_model = BehavClassifier.load(proj_dir, behav_name)
-            pcutoff = cls._get_pcutoff(configs.get_ref(model_config.pcutoff), behav_model.configs.pcutoff)
+            pcutoff = get_pcutoff(configs.get_ref(model_config.pcutoff), behav_model.configs.pcutoff, logger)
             min_window_frames = configs.get_ref(model_config.min_window_frames)
             # Running the clf pipeline
             behav_df_i = behav_model.pipeline_run(features_df)
@@ -86,7 +85,7 @@ class ClassifyBehavs:
             # Using pcutoff to get binary predictions
             behav_df_i[pred_col] = (behav_df_i[prob_col] > pcutoff).astype(int)
             # Filling in small non-behav bouts
-            behav_df_i[pred_col] = cls._merge_bouts(behav_df_i[pred_col], min_window_frames)
+            behav_df_i[pred_col] = merge_bouts(behav_df_i[pred_col], min_window_frames, logger)
             # Adding model predictions df to list
             behavs_df_ls.append(behav_df_i)
             # Logging outcome
@@ -100,55 +99,52 @@ class ClassifyBehavs:
         BehavPredictedDf.write(behavs_df, behavs_fp)
         return get_io_obj_content(io_obj)
 
-    @staticmethod
-    def _get_pcutoff(pcutoff: float, model_pcutoff: float) -> float:
-        """
-        Check if the pcutoff is valid.
 
-        Also check if the pcutoff is the special value `-1`, in which case
-        `model_pcutoff` is used.
-        """
-        # Checking if pcutoff is -1, then using model_pcutoff
-        if pcutoff == -1:
-            # Checking if model_pcutoff is valid
-            assert 0 <= model_pcutoff <= 1, (
-                "pcutoff is relying on the model's pcutoff.\n"
-                f"But the model's pcutoff is invalid: {model_pcutoff}.\n"
-                "Must be between 0 and 1."
-            )
-            return model_pcutoff
-        assert 0 <= pcutoff <= 1, (
-            "pcutoff in configs must be between 0 and 1, or the special value -1.\n" f"Instead it has value: {pcutoff}"
+def get_pcutoff(pcutoff: float, model_pcutoff: float, logger: logging.Logger) -> float:
+    """
+    Check if the pcutoff is valid.
+
+    Also check if the pcutoff is the special value `-1`, in which case
+    `model_pcutoff` is used.
+    """
+    # Checking if pcutoff is -1, then using model_pcutoff
+    if pcutoff == -1:
+        # Checking if model_pcutoff is valid
+        assert 0 <= model_pcutoff <= 1, (
+            "pcutoff is relying on the model's pcutoff.\n"
+            f"But the model's pcutoff is invalid: {model_pcutoff}.\n"
+            "Must be between 0 and 1."
         )
-        return pcutoff
+        return model_pcutoff
+    assert 0 <= pcutoff <= 1, (
+        "pcutoff in configs must be between 0 and 1, or the special value -1.\n" f"Instead it has value: {pcutoff}"
+    )
+    return pcutoff
 
-    @staticmethod
-    def _merge_bouts(
-        vect: pd.Series,
-        min_window_frames: int,
-    ) -> pd.Series:
-        """
-        For a given pd.Series, `vect`,
-        if the time between two bouts is less than `min_window_frames`, then merging
-        the two bouts together by filling in the short `non-behav` period with `is-behav`.
 
-        Parameters
-        ----------
-        vect : pd.Series
-            A scored_behavs pd.Series.
-        min_window_frames : int
-            _description_
+def merge_bouts(vect: pd.Series, min_window_frames: int, logger: logging.Logger) -> pd.Series:
+    """
+    For a given pd.Series, `vect`,
+    if the time between two bouts is less than `min_window_frames`, then merging
+    the two bouts together by filling in the short `non-behav` period with `is-behav`.
 
-        Returns
-        -------
-        pd.DataFrame
-            A scored_behavs dataframe, with the merged bouts.
-        """
-        vect = vect.copy()
-        # Getting start, stop, and duration of each non-behav bout
-        nonbouts_df = BehavScoredDf.vect2bouts(vect == 0)
-        # For each non-behav bout, if less than min_window_frames, then call it a behav
-        for _, row in nonbouts_df.iterrows():
-            if row[BoutCols.DUR.value] < min_window_frames:
-                vect.loc[row[BoutCols.START.value] : row[BoutCols.STOP.value]] = 1
-        return vect
+    Parameters
+    ----------
+    vect : pd.Series
+        A scored_behavs pd.Series.
+    min_window_frames : int
+        _description_
+
+    Returns
+    -------
+    pd.DataFrame
+        A scored_behavs dataframe, with the merged bouts.
+    """
+    vect = vect.copy()
+    # Getting start, stop, and duration of each non-behav bout
+    nonbouts_df = BehavScoredDf.vect2bouts(vect == 0)
+    # For each non-behav bout, if less than min_window_frames, then call it a behav
+    for _, row in nonbouts_df.iterrows():
+        if row[BoutCols.DUR.value] < min_window_frames:
+            vect.loc[row[BoutCols.START.value] : row[BoutCols.STOP.value]] = 1
+    return vect
