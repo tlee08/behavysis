@@ -24,7 +24,6 @@ from behavysis_pipeline.processes.update_configs import UpdateConfigs
 from behavysis_pipeline.pydantic_models.configs import AutoConfigs, ExperimentConfigs
 from behavysis_pipeline.utils.diagnostics_utils import success_msg
 from behavysis_pipeline.utils.logging_utils import get_io_obj_content, init_logger_file, init_logger_io_obj
-from behavysis_pipeline.utils.misc_utils import enum2tuple
 
 
 class Experiment:
@@ -69,12 +68,11 @@ class Experiment:
         # Assertion: name must correspond to at least one file in root_dir
         file_exists_ls = [os.path.isfile(self.get_fp(f)) for f in Folders]
         if not np.any(file_exists_ls):
-            msg = f'No files named "{name}" exist in "{root_dir}".\n'
-            msg += f'Please specify a file that exists in "{root_dir}",'
-            msg += "in one of the following folder WITH the correct file extension name:"
-            for f in enum2tuple(Folders):
-                msg += f"\n    - {f}"
-            raise ValueError(msg)
+            raise ValueError(
+                f'No files named "{name}" exist in "{root_dir}".\n'
+                f'Please specify a file that exists in "{root_dir}", in one of the following folder WITH the correct file extension name:'
+                "".join([f"\n    - {f.value}" for f in Folders])
+            )
 
     #####################################################################
     #               GET/CHECK FILEPATH METHODS
@@ -104,14 +102,12 @@ class Experiment:
             try:
                 folder = Folders(_folder)
             except ValueError:
-                # if folder_str not in Folders enum
-                msg = f'"{_folder}" is not a valid experiment folder name.\n'
-                msg += "Please only specify one of the following folders:"
-                for f in Folders:
-                    msg += f"\n    - {f.value}"
-                raise ValueError(msg)
+                raise ValueError(
+                    f"{_folder} is not a valid experiment folder name.\n"
+                    "Please only specify one of the following folders:"
+                    "".join([f"\n    - {f.value}" for f in Folders])
+                )
         else:
-            # Otherwise, using given Enum
             folder = _folder
         # Getting file extension from enum
         file_ext: FileExts = getattr(FileExts, folder.name)
@@ -150,8 +146,8 @@ class Experiment:
         func(*args, **kwargs)
         ```
         """
-        f_names_ls = [f.__name__ for f in funcs]
-        self.logger.info(f"Processing experiment, {self.name}, with {f_names_ls}")
+        f_names_ls_msg = "".join([f"\n    - {f.__name__}" for f in funcs])
+        self.logger.info(f"Processing experiment, {self.name}, with: {f_names_ls_msg}")
         # Setting up diagnostics dict
         # TODO: Make custom logger that records the success/error to log
         # AND diagnostics dict (maybe in an IOStream object)
@@ -172,7 +168,7 @@ class Experiment:
             dd[f_name] = get_io_obj_content(f_io_obj)
             # Clearing io object
             f_io_obj.truncate(0)
-        self.logger.info(f"Finished processing experiment, {self.name}, with {f_names_ls}")
+        self.logger.info(f"Finished processing experiment, {self.name}, with: {f_names_ls_msg}")
         return dd
 
     #####################################################################

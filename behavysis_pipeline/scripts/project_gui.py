@@ -52,7 +52,7 @@ def init_project(proj_dir: str):
 def import_experiments(proj: Project):
     proj.import_experiments()
     st.success("Experiments imported")
-    st.success(f"Experiments: \n\n{"\n".join(proj.experiments)}")
+    st.success(f"Experiments: \n\n{"\n".join(proj._experiments)}")
 
 
 def upload_configs(configs_f):
@@ -115,7 +115,7 @@ def page_header(title):
         if proj is not None:
             st.dataframe(
                 pd.DataFrame(
-                    proj.experiments.keys(),
+                    proj._experiments.keys(),
                     columns=["Experiments"],
                 )
             )

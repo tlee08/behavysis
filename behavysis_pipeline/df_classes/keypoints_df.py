@@ -56,13 +56,14 @@ class KeypointsDf(DFMixin):
         ValueError
             _description_
         """
-        # Checking that the bodyparts are all valid:
-        bodyparts_exist = np.isin(bodyparts, df.columns.unique("bodyparts"))
-        if not bodyparts_exist.all():
-            msg = "Some bodyparts in the config file are missing from the csv file. They are:"
-            for bp in np.array(bodyparts)[~bodyparts_exist]:
-                msg += f"\n    - {bp}"
-            raise ValueError(msg)
+        # Checking that the bodyparts are all valid (i.e. there are no missing bodyparts)
+        bpts_not_exist = np.isin(bodyparts, df.columns.unique("bodyparts"), invert=True)
+        if bpts_not_exist.any():
+            raise ValueError(
+                "Some bodyparts in the config file are missing from the dataframe. They are:" "".join(
+                    [f"\n    - {bpt}" for bpt in np.array(bodyparts)[bpts_not_exist]]
+                )
+            )
 
     @classmethod
     def get_indivs_bpts(cls, df: pd.DataFrame) -> tuple[list[str], list[str]]:

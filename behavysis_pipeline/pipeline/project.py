@@ -50,7 +50,7 @@ class Project:
     logger = init_logger_file()
 
     root_dir: str
-    experiments: dict[str, Experiment]
+    _experiments: dict[str, Experiment]
     nprocs: int
 
     def __init__(self, root_dir: str) -> None:
@@ -71,7 +71,7 @@ class Project:
                 "forward-slashes or back-slashes for the path name."
             )
         self.root_dir = os.path.abspath(root_dir)
-        self.experiments = {}
+        self._experiments = {}
         self.nprocs = 4
 
     #####################################################################
@@ -97,11 +97,11 @@ class Project:
         ValueError
             Experiment with the given name does not exist.
         """
-        if name in self.experiments:
-            return self.experiments[name]
+        if name in self._experiments:
+            return self._experiments[name]
         raise ValueError(f'Experiment with the name "{name}" does not exist in the project.')
 
-    def get_experiments(self) -> list[Experiment]:
+    def experiments(self) -> list[Experiment]:
         """
         Gets the ordered list of Experiment instances in the Project.
 
@@ -110,7 +110,7 @@ class Project:
         list[Experiment]
             The list of all Experiment instances stored in the Project instance.
         """
-        return [self.experiments[i] for i in natsorted(self.experiments)]
+        return [self._experiments[i] for i in natsorted(self._experiments)]
 
     #####################################################################
     #               PROJECT PROCESSING SCAFFOLD METHODS
@@ -138,7 +138,7 @@ class Project:
         # Starting a dask cluster
         with cluster_proc_contxt(LocalCluster(n_workers=self.nprocs, threads_per_worker=1)):
             # Preparing all experiments for execution
-            f_d_ls = [dask.delayed(method)(exp, *args, **kwargs) for exp in self.get_experiments()]  # type: ignore
+            f_d_ls = [dask.delayed(method)(exp, *args, **kwargs) for exp in self.experiments()]  # type: ignore
             # Executing in parallel
             dd_ls = list(dask.compute(*f_d_ls))  # type: ignore
         return dd_ls
@@ -163,7 +163,7 @@ class Project:
         ```
         """
         # Processing all experiments and storing process outcomes as list of dicts
-        return [method(exp, *args, **kwargs) for exp in self.get_experiments()]
+        return [method(exp, *args, **kwargs) for exp in self.experiments()]
 
     def _proc_scaff(self, method: Callable, *args: Any, **kwargs: Any) -> None:
         """
@@ -208,8 +208,8 @@ class Project:
             Whether the experiment was imported or not.
             True if imported, False if not.
         """
-        if name not in self.experiments:
-            self.experiments[name] = Experiment(name, self.root_dir)
+        if name not in self._experiments:
+            self._experiments[name] = Experiment(name, self.root_dir)
             return True
         return False
 
@@ -240,10 +240,9 @@ class Project:
                 except ValueError as e:  # do not add invalid files
                     self.logger.info(f"failed: {f.value}    --    {fp_name}: {e}")
         # Logging outcome of imported and failed experiments
-        msg = "Experiments imported successfully:"
-        for exp in self.experiments:
-            msg += f"\n    - {exp}"
-        self.logger.info(msg)
+        self.logger.info(
+            "Experiments imported successfully:" "".join([f"\n    - {exp.name}" for exp in self.experiments()])
+        )
         # Constructing dd_df from dd_dict
         dd_df = DiagnosticsDf.init_df(pd.Series(np.unique(np.concatenate(list(dd_dict.values())))))
         # Setting each (experiment, folder) pair to True if the file exists
@@ -280,7 +279,7 @@ class Project:
         gputouse_ls = get_gpu_ids() if gputouse is None else [gputouse]
         nprocs = len(gputouse_ls)
         # Getting the experiments to run DLC on
-        exp_ls = self.get_experiments()
+        exp_ls = self.experiments()
         # If overwrite is False, filtering for only experiments that need processing
         if not overwrite:
             exp_ls = [exp for exp in exp_ls if not os.path.isfile(exp.get_fp(Folders.KEYPOINTS.value))]
@@ -386,7 +385,7 @@ class Project:
         # AGGREGATING BINNED DATA
         # NOTE: need a more robust way of getting the list of bin sizes
         proj_analyse_dir = os.path.join(self.root_dir, ANALYSIS_DIR)
-        configs = ExperimentConfigs.read_json(self.get_experiments()[0].get_fp(Folders.CONFIGS.value))
+        configs = ExperimentConfigs.read_json(self.experiments()[0].get_fp(Folders.CONFIGS.value))
         bin_sizes_sec = configs.get_ref(configs.user.analyse.bins_sec)
         bin_sizes_sec = np.append(bin_sizes_sec, "custom")
         # Searching through all the analysis subdir
@@ -394,7 +393,7 @@ class Project:
             for bin_i in bin_sizes_sec:
                 df_ls = []
                 names_ls = []
-                for exp in self.get_experiments():
+                for exp in self.experiments():
                     in_fp = os.path.join(
                         proj_analyse_dir, analyse_subdir, f"binned_{bin_i}", f"{exp.name}.{AnalysisBinnedDf.IO}"
                     )
@@ -426,7 +425,7 @@ class Project:
         for analyse_subdir in os.listdir(proj_analyse_dir):
             df_ls = []
             names_ls = []
-            for exp in self.get_experiments():
+            for exp in self.experiments():
                 in_fp = os.path.join(proj_analyse_dir, analyse_subdir, "summary", f"{exp.name}.{AnalysisSummaryDf.IO}")
                 if os.path.isfile(in_fp):
                     # Reading exp summary df
