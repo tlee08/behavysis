@@ -147,7 +147,7 @@ class Experiment:
         ```
         """
         f_names_ls_msg = "".join([f"\n    - {f.__name__}" for f in funcs])
-        self.logger.info(f"Processing experiment, {self.name}, with: {f_names_ls_msg}")
+        self.logger.info(f"Processing experiment, {self.name}, with:{f_names_ls_msg}")
         # Setting up diagnostics dict
         dd = {"experiment": self.name}
         # Running functions and saving outcome to diagnostics dict
@@ -166,7 +166,7 @@ class Experiment:
             dd[f_name] = get_io_obj_content(f_io_obj)
             # Clearing io object
             f_io_obj.truncate(0)
-        self.logger.info(f"Finished processing experiment, {self.name}, with: {f_names_ls_msg}")
+        self.logger.info(f"Finished processing experiment, {self.name}, with:{f_names_ls_msg}")
         return dd
 
     #####################################################################
