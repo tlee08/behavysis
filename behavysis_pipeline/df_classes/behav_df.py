@@ -83,6 +83,18 @@ class BehavPredictedDf(BehavDf):
 
     OutcomesCols = OutcomesPredictedCols
 
+    @classmethod
+    def check_outcomes_cols(cls, df: pd.DataFrame) -> None:
+        # Running regular outcomes columns check
+        super().check_outcomes_cols(df)
+        # Checking that these are the ONLY outcomes columns
+        expected_outcomes_cols = enum2tuple(cls.OutcomesCols)
+        df_outcomes_cols = df.columns.unique(cls.CN.OUTCOMES.value)
+        assert set(df_outcomes_cols) == set(expected_outcomes_cols), (
+            f"Expected ONLY {expected_outcomes_cols} outcomes columns.\n"
+            f"The outcomes columns in the df are: {df_outcomes_cols}"
+        )
+
 
 class BehavScoredDf(BehavDf):
     """
@@ -90,6 +102,22 @@ class BehavScoredDf(BehavDf):
     """
 
     OutcomesCols = OutcomesScoredCols
+
+    @classmethod
+    def check_outcomes_cols(cls, df: pd.DataFrame) -> None:
+        # Running regular outcomes columns check
+        super().check_outcomes_cols(df)
+        # Checking that the "PROB" column is not in the outcomes columns
+        exclude_outcomes_cols = [BehavPredictedDf.OutcomesCols.PROB.value]
+        df_outcome_cols = df.columns.unique(cls.CN.OUTCOMES.value)
+        assert not (set(df_outcome_cols) & set(exclude_outcomes_cols)), (
+            f"Expected NOT to find {exclude_outcomes_cols} in outcomes columns.\n"
+            f"The outcomes columns in the df are: {df_outcome_cols}"
+        )
+
+    ###############################################################################################
+    # BORIS IMPORT METHODS
+    ###############################################################################################
 
     @classmethod
     def import_boris_tsv(cls, fp: str, behavs_ls: list[str], start_frame: int, stop_frame: int) -> pd.DataFrame:

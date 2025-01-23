@@ -46,7 +46,7 @@ class DiagnosticsDf(DFMixin):
         df = super().basic_clean(df)
         # Natural sort the index
         index = natsorted(df.index.get_level_values(cls.IN.EXPERIMENT.value))
-        assert len(index) == len(np.unique(index)), (
+        assert set(index) == set(np.unique(index)), (
             "All experiments must be unique.\n" f"Some duplicates found in the following list of experiments: {index}"
         )
         df = df.loc[index, :]
