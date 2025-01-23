@@ -328,13 +328,13 @@ def calc_exists_from_likelihood(
     indivs, _ = KeypointsDf.get_indivs_bpts(keypoints_df)
     for indiv in indivs:
         # Calculating likelihood of subject existing at each frame from median
-        lhood_df[(indiv, "current")] = keypoints_df.loc[:, idx[indiv, bpts, lhood_name]].apply(np.nanmedian, axis=1)
+        lhood_df[(indiv, "current")] = keypoints_df.loc[:, idx[indiv, bpts, lhood_name]].apply(np.nanmedian, axis=1)  # type: ignore
         # Calculating likelihood of subject existing over time window
         lhood_df[(indiv, "rolling")] = lhood_df[(indiv, "current")].rolling(window_frames, center=True).agg(np.nanmean)
     lhood_df.columns = pd.MultiIndex.from_tuples(lhood_df.columns)
     # Determining when ALL indivs exists from rolling average windows
     idx = pd.IndexSlice
-    exists_vect = (lhood_df.loc[:, idx[:, "rolling"]] > pcutoff).all(axis=1)
+    exists_vect = (lhood_df.loc[:, idx[:, "rolling"]] > pcutoff).all(axis=1)  # type: ignore
     # Getting when subject first and last exists in video
     start_frame = 0
     stop_frame = 0

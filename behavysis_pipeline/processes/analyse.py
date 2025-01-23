@@ -112,19 +112,19 @@ class Analyse:
             # For each individual, getting the in-roi status
             for indiv in indivs:
                 # Getting average body center (x, y) for each individual
-                analysis_i_df[(indiv, x)] = keypoints_df.loc[:, idx[indiv, bpts, x]].mean(axis=1).values
-                analysis_i_df[(indiv, y)] = keypoints_df.loc[:, idx[indiv, bpts, y]].mean(axis=1).values
+                analysis_i_df[(indiv, x)] = keypoints_df.loc[:, idx[indiv, bpts, x]].mean(axis=1).values  # type: ignore
+                analysis_i_df[(indiv, y)] = keypoints_df.loc[:, idx[indiv, bpts, y]].mean(axis=1).values  # type: ignore
                 # Determining if the indiv body center is in the ROI
                 analysis_i_df[(indiv, roi_name)] = analysis_i_df[indiv].apply(
                     lambda pt: pt_in_roi(pt, corners_i_df), axis=1
                 )
             # Inverting in_roi status if is_in is False
             if not is_in:
-                analysis_i_df.loc[:, idx[:, roi_name]] = ~analysis_i_df.loc[:, idx[:, roi_name]]
+                analysis_i_df.loc[:, idx[:, roi_name]] = ~analysis_i_df.loc[:, idx[:, roi_name]]  # type: ignore
             # Saving scatter_df to list
             scatter_df_ls.append(analysis_i_df)
             # Saving analysis_df to list
-            analysis_df_ls.append(analysis_i_df.loc[:, idx[:, roi_name]].astype(np.int8))
+            analysis_df_ls.append(analysis_i_df.loc[:, idx[:, roi_name]].astype(np.int8))  # type: ignore
         # Concatenating all analysis_df_ls and roi_corners_df_ls
         analysis_df = pd.concat(analysis_df_ls, axis=1)
         corners_df = pd.concat(corners_df_ls, keys=roi_names_ls, names=["roi"]).reset_index(level="roi")
@@ -135,7 +135,7 @@ class Analyse:
         # First getting scatter_in_roi columns
         # TODO: any way to include all different "x", "y" to use, rather
         # than the last res_df?
-        scatter_df = analysis_i_df.loc[:, idx[:, ["x", "y"]]]
+        scatter_df = analysis_i_df.loc[:, idx[:, ["x", "y"]]]  # type: ignore
         for i in indivs:
             scatter_df[(i, "roi")] = analysis_df[(i, "thigmo")]
             # scatter_df[(i, "roi")] = analysis_df.loc[:, idx[i, roi_names_ls]].apply(
@@ -195,8 +195,8 @@ class Analyse:
             jitter_frames = 3
             smoothed_xy_df = keypoints_df.rolling(window=jitter_frames, min_periods=1, center=True).agg(np.nanmean)
             # Getting changes in x-y values between frames (deltas)
-            delta_x = smoothed_xy_df.loc[:, idx[indiv, bpts, "x"]].mean(axis=1).diff()
-            delta_y = smoothed_xy_df.loc[:, idx[indiv, bpts, "y"]].mean(axis=1).diff()
+            delta_x = smoothed_xy_df.loc[:, idx[indiv, bpts, "x"]].mean(axis=1).diff()  # type: ignore
+            delta_y = smoothed_xy_df.loc[:, idx[indiv, bpts, "y"]].mean(axis=1).diff()  # type: ignore
             delta = np.array(np.sqrt(np.power(delta_x, 2) + np.power(delta_y, 2)))
             # Storing speed (raw and smoothed)
             analysis_df[(indiv, "SpeedMMperSec")] = (delta / px_per_mm) * fps
@@ -259,9 +259,9 @@ class Analyse:
         indiv_b = indivs[1]
         # Getting distances between each individual
         idx_a = idx[indiv_b, bpts, "x"]
-        dist_x = (keypoints_df.loc[:, idx_a] - keypoints_df.loc[:, idx_a]).mean(axis=1)
+        dist_x = (keypoints_df.loc[:, idx_a] - keypoints_df.loc[:, idx_a]).mean(axis=1)  # type: ignore
         idx_b = idx[indiv_a, bpts, "y"]
-        dist_y = (keypoints_df.loc[:, idx_b] - keypoints_df.loc[:, idx_b]).mean(axis=1)
+        dist_y = (keypoints_df.loc[:, idx_b] - keypoints_df.loc[:, idx_b]).mean(axis=1)  # type: ignore
         dist = np.array(np.sqrt(np.power(dist_x, 2) + np.power(dist_y, 2)))
         # Adding mm distance to saved analysis_df table
         analysis_df[(f"{indiv_a}_{indiv_b}", "DistMM")] = dist / px_per_mm

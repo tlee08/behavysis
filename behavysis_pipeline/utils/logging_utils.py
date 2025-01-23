@@ -24,9 +24,6 @@ def init_logger(
     - file (<cache_dir>/debug.log)
     """
     name = name or get_func_name_in_stack(2)
-    # Making cache directory if it does not exist
-    os.makedirs(CACHE_DIR, exist_ok=True)
-    # Initialising/getting logger and its configuration
     logger = logging.getLogger(name)
     logger.setLevel(logging.DEBUG)
     # If logger does not have handlers, add them
@@ -39,6 +36,7 @@ def init_logger(
         console_handler.setFormatter(formatter)
         logger.addHandler(console_handler)
         # File handler
+        os.makedirs(CACHE_DIR, exist_ok=True)
         log_fp = os.path.join(CACHE_DIR, "debug.log")
         file_handler = logging.FileHandler(log_fp, mode="a")
         file_handler.setLevel(file_level)
@@ -53,15 +51,14 @@ def init_logger_with_io_obj(
     file_level: int = logging.DEBUG,
     io_obj_level: int = logging.INFO,
 ) -> tuple[logging.Logger, io.StringIO]:
-    # Making logger
+    name = name or get_func_name_in_stack(2)
     logger = init_logger(name, console_level=console_level, file_level=file_level)
-    # Getting io_obj
     io_obj = None
-    # Getting the io obj attached to one of the handlers
+    # Getting the io_obj attached to the logger (if it exists)
     for handler in logger.handlers:
         if isinstance(handler.stream, io.StringIO):  # type: ignore
             io_obj = handler.stream  # type: ignore
-    # Adding io object to logger no io object handler is found
+    # Adding io_obj to logger no io object handler is found
     if io_obj is None:
         # Formatter
         formatter = logging.Formatter(LOG_IO_OBJ_FORMAT)
