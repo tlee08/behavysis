@@ -27,7 +27,7 @@ if __name__ == "__main__":
     proj.format_vid(
         (
             FormatVid.format_vid,
-            FormatVid.get_vid_metadata,
+            FormatVid.get_vids_metadata,
         ),
         overwrite=overwrite,
     )

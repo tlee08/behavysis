@@ -7,7 +7,6 @@ from behavysis_pipeline.df_classes.analysis_df import FBF, AnalysisDf
 from behavysis_pipeline.utils.diagnostics_utils import file_exists_msg
 from behavysis_pipeline.utils.io_utils import get_name
 from behavysis_pipeline.utils.logging_utils import get_io_obj_content, init_logger_with_io_obj
-from behavysis_pipeline.utils.misc_utils import get_current_func_name
 
 ###################################################################################################
 #               ANALYSIS API FUNCS
@@ -29,7 +28,7 @@ class CombineAnalysis:
         Concatenates across columns the frame-by-frame dataframes for all analysis subdirectories
         and saves this in a single dataframe.
         """
-        logger, io_obj = init_logger_with_io_obj(get_current_func_name())
+        logger, io_obj = init_logger_with_io_obj()
         if not overwrite and os.path.exists(analysis_combined_fp):
             logger.warning(file_exists_msg(analysis_combined_fp))
             return get_io_obj_content(io_obj)

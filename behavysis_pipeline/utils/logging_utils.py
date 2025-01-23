@@ -6,21 +6,24 @@ import traceback
 from typing import Callable
 
 from behavysis_pipeline.constants import CACHE_DIR
+from behavysis_pipeline.utils.misc_utils import get_func_name_in_stack
 
 LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 LOG_IO_OBJ_FORMAT = "%(levelname)s - %(message)s"
 
 
 def init_logger(
-    name: str = __name__, console_level: int = logging.DEBUG, file_level: int = logging.DEBUG
+    name: str | None = None, console_level: int = logging.DEBUG, file_level: int = logging.DEBUG
 ) -> logging.Logger:
     """
     Setup logging configuration.
+    Default name is the name of the function creating the logger.
 
     Logs to:
     - console
     - file (<cache_dir>/debug.log)
     """
+    name = name or get_func_name_in_stack(2)
     # Making cache directory if it does not exist
     os.makedirs(CACHE_DIR, exist_ok=True)
     # Initialising/getting logger and its configuration
@@ -45,7 +48,7 @@ def init_logger(
 
 
 def init_logger_with_io_obj(
-    name: str = __name__,
+    name: str | None = None,
     console_level: int = logging.DEBUG,
     file_level: int = logging.DEBUG,
     io_obj_level: int = logging.INFO,

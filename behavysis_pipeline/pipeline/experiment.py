@@ -24,7 +24,7 @@ from behavysis_pipeline.processes.update_configs import UpdateConfigs
 from behavysis_pipeline.pydantic_models.configs import AutoConfigs, ExperimentConfigs
 from behavysis_pipeline.utils.diagnostics_utils import success_msg
 from behavysis_pipeline.utils.logging_utils import get_io_obj_content, init_logger, init_logger_with_io_obj
-from behavysis_pipeline.utils.misc_utils import enum2tuple, get_current_func_name
+from behavysis_pipeline.utils.misc_utils import enum2tuple
 
 
 class Experiment:
@@ -150,7 +150,8 @@ class Experiment:
         func(*args, **kwargs)
         ```
         """
-        self.logger.info(f"Processing experiment: {self.name}")
+        f_names_ls = [f.__name__ for f in funcs]
+        self.logger.info(f"Processing experiment, {self.name}, with {f_names_ls}")
         # Setting up diagnostics dict
         # TODO: Make custom logger that records the success/error to log
         # AND diagnostics dict (maybe in an IOStream object)
@@ -171,7 +172,7 @@ class Experiment:
             dd[f_name] = get_io_obj_content(f_io_obj)
             # Clearing io object
             f_io_obj.truncate(0)
-        self.logger.info(f"Finished processing experiment: {self.name}")
+        self.logger.info(f"Finished processing experiment, {self.name}, with {f_names_ls}")
         return dd
 
     #####################################################################
@@ -304,7 +305,7 @@ class Experiment:
         """
         dd = {"experiment": self.name}
         # Reading the experiment's configs file
-        f_logger, f_io_obj = init_logger_with_io_obj(get_current_func_name())
+        f_logger, f_io_obj = init_logger_with_io_obj()
         try:
             configs = ExperimentConfigs.read_json(self.get_fp(Folders.CONFIGS))
             f_logger.info("Read configs file.")

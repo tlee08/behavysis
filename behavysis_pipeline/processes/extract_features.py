@@ -13,7 +13,6 @@ from behavysis_pipeline.pydantic_models.configs import ExperimentConfigs
 from behavysis_pipeline.utils.diagnostics_utils import file_exists_msg
 from behavysis_pipeline.utils.io_utils import get_name, silent_remove
 from behavysis_pipeline.utils.logging_utils import get_io_obj_content, init_logger_with_io_obj
-from behavysis_pipeline.utils.misc_utils import get_current_func_name
 from behavysis_pipeline.utils.multiproc_utils import get_cpid
 from behavysis_pipeline.utils.subproc_utils import run_subproc_console
 from behavysis_pipeline.utils.template_utils import save_template
@@ -60,7 +59,7 @@ class ExtractFeatures:
         str
             The outcome of the process.
         """
-        logger, io_obj = init_logger_with_io_obj(get_current_func_name())
+        logger, io_obj = init_logger_with_io_obj()
         if not overwrite and os.path.exists(features_fp):
             logger.warning(file_exists_msg(features_fp))
             return get_io_obj_content(io_obj)

@@ -66,7 +66,7 @@ class BehavDf(DFMixin):
         # Getting columns
         columns = df.columns.to_frame(index=False)
         # Updating the behaviour column
-        columns[cls.CN.BEHAVS.value] = columns[cls.CN.OUTCOMES.value].map(lambda x: behav_dst if x == behav_src else x)
+        columns[cls.CN.BEHAVS.value] = columns[cls.CN.BEHAVS.value].replace(behav_src, behav_dst)
         # Setting the new columns
         df.columns = pd.MultiIndex.from_frame(columns)
         return df
