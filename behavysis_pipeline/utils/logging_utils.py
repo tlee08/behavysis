@@ -154,10 +154,10 @@ def init_logger_io_obj(
     return logger, io_obj
 
 
-def get_io_obj_content(io_obj: io.StringIO) -> str:
+def get_io_obj_content(io_obj: io.IOBase) -> str:
     """
-    Gets the content from the StringIO object.
-    Also restores cursor position of the StringIO object.
+    Reads and returns the content from the IOBase object.
+    Also restores cursor position of the object.
     """
     cursor = io_obj.tell()
     io_obj.seek(0)
