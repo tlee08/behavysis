@@ -149,8 +149,6 @@ class Experiment:
         f_names_ls_msg = "".join([f"\n    - {f.__name__}" for f in funcs])
         self.logger.info(f"Processing experiment, {self.name}, with: {f_names_ls_msg}")
         # Setting up diagnostics dict
-        # TODO: Make custom logger that records the success/error to log
-        # AND diagnostics dict (maybe in an IOStream object)
         dd = {"experiment": self.name}
         # Running functions and saving outcome to diagnostics dict
         for f in funcs:
