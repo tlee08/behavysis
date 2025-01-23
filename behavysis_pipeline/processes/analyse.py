@@ -34,7 +34,7 @@ from behavysis_pipeline.df_classes.keypoints_df import (
 )
 from behavysis_pipeline.pydantic_models.configs import ExperimentConfigs
 from behavysis_pipeline.utils.io_utils import get_name
-from behavysis_pipeline.utils.logging_utils import get_io_obj_content, init_logger_with_io_obj
+from behavysis_pipeline.utils.logging_utils import get_io_obj_content, init_logger_io_obj
 from behavysis_pipeline.utils.misc_utils import get_func_name_in_stack
 
 ###################################################################################################
@@ -55,7 +55,7 @@ class Analyse:
 
         Points are `thresh_px` padded (away) from center.
         """
-        logger, io_obj = init_logger_with_io_obj()
+        logger, io_obj = init_logger_io_obj()
         f_name = get_func_name_in_stack()
         name = get_name(keypoints_fp)
         dst_subdir = os.path.join(dst_dir, f_name)
@@ -165,7 +165,7 @@ class Analyse:
         """
         Determines the speed of the subject in each frame.
         """
-        logger, io_obj = init_logger_with_io_obj()
+        logger, io_obj = init_logger_io_obj()
         f_name = get_func_name_in_stack()
         name = get_name(keypoints_fp)
         dst_subdir = os.path.join(dst_dir, f_name)
@@ -231,7 +231,7 @@ class Analyse:
         """
         Determines the speed of the subject in each frame.
         """
-        logger, io_obj = init_logger_with_io_obj()
+        logger, io_obj = init_logger_io_obj()
         f_name = get_func_name_in_stack()
         name = get_name(keypoints_fp)
         dst_subdir = os.path.join(dst_dir, f_name)
@@ -299,7 +299,7 @@ class Analyse:
 
         NOTE: method is "greedy" because it looks at a freezing bout from earliest possible frame.
         """
-        logger, io_obj = init_logger_with_io_obj()
+        logger, io_obj = init_logger_io_obj()
         f_name = get_func_name_in_stack()
         name = get_name(keypoints_fp)
         dst_subdir = os.path.join(dst_dir, f_name)

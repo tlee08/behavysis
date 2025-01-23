@@ -2,10 +2,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-from behavysis_pipeline.utils.logging_utils import init_logger
-
-logger = init_logger(__name__)
-
 
 def make_colours(vals, cmap: str) -> np.ndarray:
     """

@@ -26,7 +26,7 @@ from behavysis_pipeline.df_classes.keypoints_df import (
 )
 from behavysis_pipeline.pydantic_models.configs import ExperimentConfigs
 from behavysis_pipeline.utils.io_utils import get_name
-from behavysis_pipeline.utils.logging_utils import get_io_obj_content, init_logger, init_logger_with_io_obj
+from behavysis_pipeline.utils.logging_utils import get_io_obj_content, init_logger_file, init_logger_io_obj
 
 
 class CalculateParams:
@@ -45,7 +45,7 @@ class CalculateParams:
         str
             The name of the scorer.
         """
-        logger, io_obj = init_logger_with_io_obj()
+        logger, io_obj = init_logger_io_obj()
         keypoints_df = KeypointsDf.read(keypoints_fp)
         scorer_name = keypoints_df.columns.get_level_values(0)[0]
         # Writing to configs
@@ -79,7 +79,7 @@ class CalculateParams:
                     - pcutoff: float
         ```
         """
-        logger, io_obj = init_logger_with_io_obj()
+        logger, io_obj = init_logger_io_obj()
         start_frame, stop_frame = calc_exists_from_likelihood(keypoints_fp, configs_fp, logger)
         # Writing to configs
         configs = ExperimentConfigs.read_json(configs_fp)
@@ -109,7 +109,7 @@ class CalculateParams:
                     - name: None | str
         ```
         """
-        logger, io_obj = init_logger_with_io_obj()
+        logger, io_obj = init_logger_io_obj()
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
         configs_filt = configs.user.calculate_params.start_frame_from_csv
@@ -150,7 +150,7 @@ class CalculateParams:
         the determine this as the start time.
 
         """
-        logger, io_obj = init_logger_with_io_obj()
+        logger, io_obj = init_logger_io_obj()
         start_frame, stop_frame = calc_exists_from_likelihood(keypoints_fp, configs_fp, logger)
         # Writing to configs
         configs = ExperimentConfigs.read_json(configs_fp)
@@ -177,7 +177,7 @@ class CalculateParams:
                     - dur_sec: float
         ```
         """
-        logger, io_obj = init_logger_with_io_obj()
+        logger, io_obj = init_logger_io_obj()
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
         configs_filt = configs.user.calculate_params.stop_frame_from_dur
@@ -213,7 +213,7 @@ class CalculateParams:
         to the time they disappeared.
         Appear/disappear is calculated from likelihood.
         """
-        logger, io_obj = init_logger_with_io_obj()
+        logger, io_obj = init_logger_io_obj()
         start_frame, stop_frame = calc_exists_from_likelihood(keypoints_fp, configs_fp, logger)
         # Writing to configs
         configs = ExperimentConfigs.read_json(configs_fp)
@@ -247,7 +247,7 @@ class CalculateParams:
                     - dist_mm: float
         ```
         """
-        logger, io_obj = init_logger_with_io_obj()
+        logger, io_obj = init_logger_io_obj()
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
         configs_filt = configs.user.calculate_params.px_per_mm
@@ -306,7 +306,7 @@ def calc_exists_from_likelihood(
     ```
     """
     # TODO: implement similar logger functionality/paradigm elsewhere
-    logger = logger or init_logger()
+    logger = logger or init_logger_file()
     # Getting necessary config parameters
     configs = ExperimentConfigs.read_json(configs_fp)
     configs_filt = configs.user.calculate_params.from_likelihood
@@ -339,7 +339,6 @@ def calc_exists_from_likelihood(
     start_frame = 0
     stop_frame = 0
     if np.all(exists_vect == 0):
-        # If subject never exists (i.e. no True values in exist column), then raise warning
         logger.warning(
             "The subject was not detected in any frames - using the first frame.\n" "Please also check the video."
         )

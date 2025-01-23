@@ -5,11 +5,6 @@ Utility functions.
 import os
 import shutil
 
-from behavysis_pipeline.utils.logging_utils import init_logger
-
-logger = init_logger(__name__)
-
-
 # def clear_dir_junk(my_dir: str) -> None:
 #     """
 #     Removes all hidden junk files in given directory.
@@ -52,12 +47,7 @@ def check_files_exist(*args: str):
     """
     args is dst_fp_ls
     """
-    logger.debug(f"Checking if the following files exist already: {args}")
     for dst_fp in args:
         if os.path.exists(dst_fp):
-            logger.debug(f"{dst_fp} already exists.")
-            logger.debug("Returning True.")
             return True
-    logger.debug("None of the filepaths exist.")
-    logger.debug("Returning False.")
     return False

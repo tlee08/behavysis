@@ -6,10 +6,6 @@ import re
 import subprocess
 from multiprocessing import current_process
 
-from behavysis_pipeline.utils.logging_utils import init_logger
-
-logger = init_logger(__name__)
-
 
 def get_cpid() -> int:
     """Get child process ID for multiprocessing."""
@@ -26,7 +22,8 @@ def get_gpu_ids():
         gpu_ids = [int(i) for i in gpu_ids]
         return gpu_ids
     except subprocess.CalledProcessError as e:
-        logger.error("%s", e)
+        # raise e
+        print(e)
         return []
 
 

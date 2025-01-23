@@ -21,7 +21,7 @@ from typing import Literal
 from pydantic import ValidationError
 
 from behavysis_pipeline.pydantic_models.configs import ExperimentConfigs
-from behavysis_pipeline.utils.logging_utils import get_io_obj_content, init_logger_with_io_obj
+from behavysis_pipeline.utils.logging_utils import get_io_obj_content, init_logger_io_obj
 
 
 class UpdateConfigs:
@@ -53,7 +53,7 @@ class UpdateConfigs:
         str
             Description of the function's outcome.
         """
-        logger, io_obj = init_logger_with_io_obj()
+        logger, io_obj = init_logger_io_obj()
         # Parsing in the experiment's existing JSON configs
         try:
             configs = ExperimentConfigs.read_json(configs_fp)

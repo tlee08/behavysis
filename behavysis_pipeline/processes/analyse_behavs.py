@@ -7,7 +7,7 @@ from behavysis_pipeline.df_classes.analysis_df import FBF, AnalysisDf
 from behavysis_pipeline.df_classes.behav_df import BehavScoredDf, BehavValues
 from behavysis_pipeline.pydantic_models.configs import ExperimentConfigs
 from behavysis_pipeline.utils.io_utils import get_name
-from behavysis_pipeline.utils.logging_utils import get_io_obj_content, init_logger_with_io_obj
+from behavysis_pipeline.utils.logging_utils import get_io_obj_content, init_logger_io_obj
 from behavysis_pipeline.utils.misc_utils import get_func_name_in_stack
 
 ###################################################################################################
@@ -25,7 +25,7 @@ class AnalyseBehavs:
         """
         Takes a behavs dataframe and generates a summary and binned version of the data.
         """
-        logger, io_obj = init_logger_with_io_obj()
+        logger, io_obj = init_logger_io_obj()
         f_name = get_func_name_in_stack()
         name = get_name(behavs_fp)
         dst_subdir = os.path.join(dst_dir, f_name)

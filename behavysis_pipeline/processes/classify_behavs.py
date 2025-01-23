@@ -13,7 +13,7 @@ from behavysis_pipeline.df_classes.behav_df import BehavPredictedDf, BehavScored
 from behavysis_pipeline.df_classes.features_df import FeaturesDf
 from behavysis_pipeline.pydantic_models.configs import ExperimentConfigs
 from behavysis_pipeline.utils.diagnostics_utils import file_exists_msg
-from behavysis_pipeline.utils.logging_utils import get_io_obj_content, init_logger_with_io_obj
+from behavysis_pipeline.utils.logging_utils import get_io_obj_content, init_logger_io_obj
 
 # TODO: handle reading the model file whilst in multiprocessing
 
@@ -59,7 +59,7 @@ class ClassifyBehavs:
         ```
         Where the `models` list is a list of `model_config.json` filepaths.
         """
-        logger, io_obj = init_logger_with_io_obj()
+        logger, io_obj = init_logger_io_obj()
         if not overwrite and os.path.exists(behavs_fp):
             logger.warning(file_exists_msg(behavs_fp))
             return get_io_obj_content(io_obj)

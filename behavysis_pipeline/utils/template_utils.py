@@ -9,9 +9,6 @@ from jinja2 import Environment, PackageLoader
 
 from behavysis_pipeline.utils.diagnostics_utils import file_exists_msg
 from behavysis_pipeline.utils.io_utils import check_files_exist
-from behavysis_pipeline.utils.logging_utils import init_logger
-
-logger = init_logger(__name__)
 
 
 def render_template(tmpl_name: str, pkg_name: str, pkg_subdir: str, **kwargs: Any) -> str:

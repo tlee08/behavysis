@@ -17,7 +17,7 @@ from behavysis_pipeline.df_classes.analysis_combined_df import AnalysisCombinedD
 from behavysis_pipeline.df_classes.keypoints_df import IndivCols, KeypointsDf
 from behavysis_pipeline.pydantic_models.configs import ExperimentConfigs
 from behavysis_pipeline.utils.diagnostics_utils import file_exists_msg
-from behavysis_pipeline.utils.logging_utils import get_io_obj_content, init_logger_with_io_obj
+from behavysis_pipeline.utils.logging_utils import get_io_obj_content, init_logger_io_obj
 from behavysis_pipeline.utils.plotting_utils import make_colours
 
 ###################################################################################################
@@ -41,7 +41,7 @@ class EvaluateVid:
         """
         Generate an annotated video with (optionally) keypoints and tracking analysis graphs.
         """
-        logger, io_obj = init_logger_with_io_obj()
+        logger, io_obj = init_logger_io_obj()
         if not overwrite and os.path.exists(eval_vid_fp):
             logger.warning(file_exists_msg(eval_vid_fp))
             return get_io_obj_content(io_obj)

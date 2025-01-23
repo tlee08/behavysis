@@ -23,7 +23,7 @@ from behavysis_pipeline.processes.run_dlc import RunDLC
 from behavysis_pipeline.processes.update_configs import UpdateConfigs
 from behavysis_pipeline.pydantic_models.configs import AutoConfigs, ExperimentConfigs
 from behavysis_pipeline.utils.diagnostics_utils import success_msg
-from behavysis_pipeline.utils.logging_utils import get_io_obj_content, init_logger, init_logger_with_io_obj
+from behavysis_pipeline.utils.logging_utils import get_io_obj_content, init_logger_file, init_logger_io_obj
 from behavysis_pipeline.utils.misc_utils import enum2tuple
 
 
@@ -52,7 +52,7 @@ class Experiment:
         ValueError: `root_dir` does not exist or `name` does not exist in the `root_dir` folder.
     """
 
-    logger = init_logger(__name__)
+    logger = init_logger_file(__name__)
 
     def __init__(self, name: str, root_dir: str) -> None:
         """
@@ -160,7 +160,7 @@ class Experiment:
         for f in funcs:
             f_name = f.__name__
             # Getting logger and corresponding io object
-            f_logger, f_io_obj = init_logger_with_io_obj(f_name)
+            f_logger, f_io_obj = init_logger_io_obj(f_name)
             # Running each func and saving outcome
             try:
                 f(*args, **kwargs)
@@ -305,7 +305,7 @@ class Experiment:
         """
         dd = {"experiment": self.name}
         # Reading the experiment's configs file
-        f_logger, f_io_obj = init_logger_with_io_obj()
+        f_logger, f_io_obj = init_logger_io_obj()
         try:
             configs = ExperimentConfigs.read_json(self.get_fp(Folders.CONFIGS))
             f_logger.info("Read configs file.")
@@ -538,13 +538,13 @@ class Experiment:
             overwrite=overwrite,
         )
 
-    def export2csv(self, in_dir: str, dst_dir: str, overwrite: bool) -> dict:
+    def export2csv(self, src_dir: str, dst_dir: str, overwrite: bool) -> dict:
         """
         _summary_
 
         Parameters
         ----------
-        in_dir : str
+        src_dir : str
             _description_
         dst_dir : str
             _description_
@@ -556,7 +556,7 @@ class Experiment:
         """
         return self._process_scaffold(
             (Export.df2csv,),
-            src_fp=self.get_fp(in_dir),
+            src_fp=self.get_fp(src_dir),
             dst_fp=os.path.join(dst_dir, f"{self.name}.csv"),
             overwrite=overwrite,
         )

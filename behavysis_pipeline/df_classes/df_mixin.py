@@ -8,7 +8,6 @@ from enum import Enum, EnumType
 import pandas as pd
 
 from behavysis_pipeline.constants import DF_IO_FORMAT
-from behavysis_pipeline.utils.logging_utils import init_logger
 from behavysis_pipeline.utils.misc_utils import enum2tuple
 
 
@@ -18,8 +17,6 @@ class FramesIN(Enum):
 
 class DFMixin:
     """__summary"""
-
-    logger = init_logger(__name__)
 
     NULLABLE = True
     IN = None

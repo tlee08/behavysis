@@ -28,7 +28,7 @@ from behavysis_pipeline.pydantic_models.configs import (
 )
 from behavysis_pipeline.utils.dask_utils import cluster_proc_contxt
 from behavysis_pipeline.utils.io_utils import get_name
-from behavysis_pipeline.utils.logging_utils import init_logger
+from behavysis_pipeline.utils.logging_utils import init_logger_file
 from behavysis_pipeline.utils.multiproc_utils import get_gpu_ids
 
 
@@ -47,7 +47,7 @@ class Project:
             The number of processes to use for multiprocessing.
     """
 
-    logger = init_logger(__name__)
+    logger = init_logger_file(__name__)
 
     root_dir: str
     experiments: dict[str, Experiment]
@@ -138,9 +138,9 @@ class Project:
         # Starting a dask cluster
         with cluster_proc_contxt(LocalCluster(n_workers=self.nprocs, threads_per_worker=1)):
             # Preparing all experiments for execution
-            f_d_ls = [dask.delayed(method)(exp, *args, **kwargs) for exp in self.get_experiments()]
+            f_d_ls = [dask.delayed(method)(exp, *args, **kwargs) for exp in self.get_experiments()]  # type: ignore
             # Executing in parallel
-            dd_ls = list(dask.compute(*f_d_ls))
+            dd_ls = list(dask.compute(*f_d_ls))  # type: ignore
         return dd_ls
 
     def _proc_scaff_sp(self, method: Callable, *args: Any, **kwargs: Any) -> list[dict]:
@@ -258,15 +258,12 @@ class Project:
     #         BATCH PROCESSING WRAPPING EXPERIMENT METHODS
     #####################################################################
 
-    @functools.wraps(Experiment.update_configs)
-    def update_configs(self, *args, **kwargs):
-        self._proc_scaff(Experiment.update_configs, *args, **kwargs)
+    def update_configs(self, default_configs_fp: str, overwrite: str) -> None:
+        self._proc_scaff(Experiment.update_configs, default_configs_fp, overwrite)
 
-    @functools.wraps(Experiment.format_vid)
-    def format_vid(self, *args, **kwargs):
-        self._proc_scaff(Experiment.format_vid, *args, **kwargs)
+    def format_vid(self, funcs: tuple[Callable, ...], overwrite: bool) -> None:
+        self._proc_scaff(Experiment.format_vid, funcs, overwrite)
 
-    @functools.wraps(Experiment.run_dlc)
     def run_dlc(self, gputouse: int | None = None, overwrite: bool = False) -> None:
         """
         Batch processing corresponding to
@@ -293,7 +290,7 @@ class Project:
         with cluster_proc_contxt(LocalCluster(n_workers=nprocs, threads_per_worker=1)):
             # Preparing all experiments for execution
             f_d_ls = [
-                dask.delayed(RunDLC.ma_dlc_run_batch)(
+                dask.delayed(RunDLC.ma_dlc_run_batch)(  # type: ignore
                     vid_fp_ls=[exp.get_fp(Folders.FORMATTED_VID.value) for exp in exp_batch],
                     keypoints_dir=os.path.join(self.root_dir, Folders.KEYPOINTS.value),
                     configs_dir=os.path.join(self.root_dir, Folders.CONFIGS.value),
@@ -303,18 +300,16 @@ class Project:
                 for gputouse, exp_batch in zip(gputouse_ls, exp_batches_ls)
             ]
             # Executing in parallel
-            list(dask.compute(*f_d_ls))
+            list(dask.compute(*f_d_ls))  # type: ignore
 
-    @functools.wraps(Experiment.calculate_parameters)
-    def calculate_parameters(self, *args, **kwargs):
-        self._proc_scaff(Experiment.calculate_parameters, *args, **kwargs)
+    def calculate_parameters(self, funcs: tuple[Callable, ...]) -> None:
+        self._proc_scaff(Experiment.calculate_parameters, funcs)
 
-    def collate_auto_configs(self):
+    def collate_auto_configs(self) -> None:
         # Saving the auto fields of the configs of all experiments in the diagnostics folder
         self._proc_scaff(Experiment.collate_auto_configs)
-        auto_configs_df = DiagnosticsDf.read(
-            os.path.join(self.root_dir, DIAGNOSTICS_DIR, f"{Experiment.collate_auto_configs.__name__}.csv")
-        )
+        f_name = Experiment.collate_auto_configs.__name__
+        auto_configs_df = DiagnosticsDf.read(os.path.join(self.root_dir, DIAGNOSTICS_DIR, f"{f_name}.csv"))
         # Making and saving histogram plots of the numerical auto fields
         # NOTE: NOT including string frequencies, only numerical
         auto_configs_df = auto_configs_df.loc[:, auto_configs_df.apply(pd.api.types.is_numeric_dtype)]
@@ -329,51 +324,41 @@ class Project:
         g.savefig(os.path.join(self.root_dir, DIAGNOSTICS_DIR, "collate_auto_configs.png"))
         g.figure.clf()
 
-    @functools.wraps(Experiment.preprocess)
-    def preprocess(self, *args, **kwargs):
-        self._proc_scaff(Experiment.preprocess, *args, **kwargs)
+    def preprocess(self, funcs: tuple[Callable, ...], overwrite: bool) -> None:
+        self._proc_scaff(Experiment.preprocess, funcs, overwrite)
 
-    @functools.wraps(Experiment.extract_features)
-    def extract_features(self, *args, **kwargs):
-        self._proc_scaff(Experiment.extract_features, *args, **kwargs)
+    def extract_features(self, overwrite: bool) -> None:
+        self._proc_scaff(Experiment.extract_features, overwrite)
 
-    @functools.wraps(Experiment.classify_behavs)
-    def classify_behavs(self, *args, **kwargs):
-        # TODO: handle reading the model file whilst in multiprocessing.
-        # Current fix is single processing.
+    def classify_behavs(self, overwrite: bool) -> None:
+        # TODO: IO error with multiprocessing. Using single processing for now.
         nprocs = self.nprocs
         self.nprocs = 1
-        self._proc_scaff(Experiment.classify_behavs, *args, **kwargs)
+        self._proc_scaff(Experiment.classify_behavs, overwrite)
         self.nprocs = nprocs
 
-    @functools.wraps(Experiment.export_behavs)
-    def export_behavs(self, *args, **kwargs):
-        self._proc_scaff(Experiment.export_behavs, *args, **kwargs)
+    def export_behavs(self, overwrite: bool) -> None:
+        self._proc_scaff(Experiment.export_behavs, overwrite)
 
-    @functools.wraps(Experiment.analyse)
-    def analyse(self, *args, **kwargs):
-        self._proc_scaff(Experiment.analyse, *args, **kwargs)
+    def analyse(self, funcs: tuple[Callable, ...]) -> None:
+        self._proc_scaff(Experiment.analyse, funcs)
 
-    @functools.wraps(Experiment.analyse_behavs)
-    def analyse_behavs(self, *args, **kwargs):
-        self._proc_scaff(Experiment.analyse_behavs, *args, **kwargs)
+    def analyse_behavs(self) -> None:
+        self._proc_scaff(Experiment.analyse_behavs)
 
-    @functools.wraps(Experiment.combine_analysis)
-    def combine_analysis(self, *args, **kwargs):
-        self._proc_scaff(Experiment.combine_analysis, *args, **kwargs)
+    def combine_analysis(self, overwrite: bool) -> None:
+        self._proc_scaff(Experiment.combine_analysis, overwrite)
 
-    @functools.wraps(Experiment.evaluate_vid)
-    def evaluate_vid(self, *args, **kwargs):
-        # TODO: handle reading the model file whilst in multiprocessing.
-        # Current fix is single processing.
+    def evaluate_vid(self, overwrite: bool) -> None:
+        # TODO: IO error with multiprocessing. Using single processing for now.
         nprocs = self.nprocs
         self.nprocs = 1
-        self._proc_scaff(Experiment.evaluate_vid, *args, **kwargs)
+        self._proc_scaff(Experiment.evaluate_vid, overwrite)
         self.nprocs = nprocs
 
     @functools.wraps(Experiment.export2csv)
-    def export2csv(self, *args, **kwargs):
-        self._proc_scaff(Experiment.export2csv, *args, **kwargs)
+    def export2csv(self, src_dir: str, dst_dir: str, overwrite: bool) -> None:
+        self._proc_scaff(Experiment.export2csv, src_dir, dst_dir, overwrite)
 
     #####################################################################
     #            COMBINING ANALYSIS DATA ACROSS EXPS METHODS

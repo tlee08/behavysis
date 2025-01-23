@@ -5,16 +5,14 @@ Utility functions.
 import os
 from subprocess import PIPE, Popen
 
-from behavysis_pipeline.utils.logging_utils import init_logger
-
-logger = init_logger(__name__)
+ENCODING = "utf-8"
 
 
 def run_subproc_fstream(cmd: list[str], fp: str, **kwargs) -> None:
     """Run a subprocess and stream the output to a file."""
     # Making a file to store the output
     os.makedirs(os.path.dirname(fp), exist_ok=True)
-    with open(fp, "w", encoding="utf-8") as f:
+    with open(fp, "w", encoding=ENCODING) as f:
         # Starting the subprocess
         with Popen(cmd, stdout=f, stderr=f, **kwargs) as p:
             # Wait for the subprocess to finish
@@ -22,7 +20,7 @@ def run_subproc_fstream(cmd: list[str], fp: str, **kwargs) -> None:
             # Error handling
             if p.returncode:
                 f.seek(0)
-                raise ValueError(f.read().decode())
+                raise ValueError(f.read())
 
 
 def run_subproc_str(cmd: list[str], **kwargs) -> str:
@@ -33,8 +31,8 @@ def run_subproc_str(cmd: list[str], **kwargs) -> str:
         out, err = p.communicate()
         # Error handling
         if p.returncode:
-            raise ValueError(err.decode("utf-8"))
-        return out.decode("utf-8")
+            raise ValueError(err)
+        return out
 
 
 def run_subproc_console(cmd: list[str], **kwargs) -> None:

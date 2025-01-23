@@ -2,10 +2,6 @@ import inspect
 from enum import EnumType
 from typing import Any, Iterable
 
-from behavysis_pipeline.utils.logging_utils import init_logger
-
-logger = init_logger(__name__)
-
 
 def import_extra_error_func(extra_dep_name: str):
     def error_func(*args, **kwargs):
@@ -97,13 +93,13 @@ def get_func_name_in_stack(levels_back: int = 1) -> str:
     Where `levels_back = 1`
     ```
     def my_func():
-        f_name = get_current_func_name(1)
+        f_name = get_func_name_in_stack(1)
         # f_name == "my_func"
     ```
     Where `levels_back = 2`
     ```
     def my_func():
-        f_name = get_current_func_name(2)
+        f_name = get_func_name_in_stack(2)
         # f_name == ""
     ```
     """

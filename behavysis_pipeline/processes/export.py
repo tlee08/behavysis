@@ -9,7 +9,7 @@ from behavysis_pipeline.df_classes.df_mixin import DFMixin
 from behavysis_pipeline.pydantic_models.bouts import BoutStruct
 from behavysis_pipeline.pydantic_models.configs import ExperimentConfigs
 from behavysis_pipeline.utils.diagnostics_utils import file_exists_msg
-from behavysis_pipeline.utils.logging_utils import get_io_obj_content, init_logger_with_io_obj
+from behavysis_pipeline.utils.logging_utils import get_io_obj_content, init_logger_io_obj
 
 
 class Export:
@@ -23,7 +23,7 @@ class Export:
         overwrite: bool,
     ) -> str:
         """__summary__"""
-        logger, io_obj = init_logger_with_io_obj()
+        logger, io_obj = init_logger_io_obj()
         if not overwrite and os.path.exists(dst_fp):
             logger.warning(file_exists_msg(dst_fp))
             return get_io_obj_content(io_obj)
@@ -40,7 +40,7 @@ class Export:
         overwrite: bool,
     ) -> str:
         """__summary__"""
-        logger, io_obj = init_logger_with_io_obj()
+        logger, io_obj = init_logger_io_obj()
         if not overwrite and os.path.exists(dst_fp):
             logger.warning(file_exists_msg(dst_fp))
             return get_io_obj_content(io_obj)
@@ -63,7 +63,7 @@ class Export:
         - Adds an "actual" column to the df. All predicted positive BEHAV frames are set to UNDETERMINED.
         - Adds user_defined columns to the df and sets all values to 0 (NON_BEHAV).
         """
-        logger, io_obj = init_logger_with_io_obj()
+        logger, io_obj = init_logger_io_obj()
         if not overwrite and os.path.exists(dst_fp):
             logger.warning(file_exists_msg(dst_fp))
             return get_io_obj_content(io_obj)
@@ -103,7 +103,7 @@ class Export:
         behavs_ls: list[str],
         overwrite: bool,
     ) -> str:
-        logger, io_obj = init_logger_with_io_obj()
+        logger, io_obj = init_logger_io_obj()
         if not overwrite and os.path.exists(dst_fp):
             logger.warning(file_exists_msg(dst_fp))
             return get_io_obj_content(io_obj)

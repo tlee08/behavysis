@@ -26,7 +26,7 @@ import cv2
 from behavysis_pipeline.pydantic_models.configs import ExperimentConfigs
 from behavysis_pipeline.pydantic_models.vid_metadata import VidMetadata
 from behavysis_pipeline.utils.diagnostics_utils import file_exists_msg
-from behavysis_pipeline.utils.logging_utils import get_io_obj_content, init_logger, init_logger_with_io_obj
+from behavysis_pipeline.utils.logging_utils import get_io_obj_content, init_logger_file, init_logger_io_obj
 from behavysis_pipeline.utils.subproc_utils import run_subproc_console
 
 
@@ -56,7 +56,7 @@ class FormatVid:
         str
             Description of the function's outcome.
         """
-        logger, io_obj = init_logger_with_io_obj()
+        logger, io_obj = init_logger_io_obj()
         if not overwrite and os.path.exists(formatted_vid_fp):
             logger.warning(file_exists_msg(formatted_vid_fp))
             return get_io_obj_content(io_obj)
@@ -104,7 +104,7 @@ class FormatVid:
         str
             Description of the function's outcome.
         """
-        logger, io_obj = init_logger_with_io_obj()
+        logger, io_obj = init_logger_io_obj()
         # Saving video metadata to configs dict
         configs = ExperimentConfigs.read_json(configs_fp)
         configs.auto.raw_vid = get_vid_metadata(raw_vid_fp, logger)
@@ -126,7 +126,7 @@ def process_vid(
     logger: None | logging.Logger = None,
 ) -> None:
     """__summary__"""
-    logger = logger or init_logger()
+    logger = logger or init_logger_file()
     if not overwrite and os.path.exists(dst_fp):
         logger.warning(file_exists_msg(dst_fp))
         return
@@ -202,7 +202,7 @@ def get_vid_metadata(vid_fp: str, logger: None | logging.Logger = None) -> VidMe
     VidMetadata
         Object containing video metadata.
     """
-    logger = logger or init_logger()
+    logger = logger or init_logger_file()
     configs_meta = VidMetadata()
     cap = cv2.VideoCapture(vid_fp)
     if not cap.isOpened():

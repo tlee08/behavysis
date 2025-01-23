@@ -1,9 +1,7 @@
-import functools
 import io
 import logging
 import os
-import traceback
-from typing import Callable
+import sys
 
 from behavysis_pipeline.constants import CACHE_DIR
 from behavysis_pipeline.utils.misc_utils import get_func_name_in_stack
@@ -12,83 +10,148 @@ LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 LOG_IO_OBJ_FORMAT = "%(levelname)s - %(message)s"
 
 
+def _add_console_handler(logger: logging.Logger, level: int = logging.DEBUG) -> None:
+    """
+    If logger does not have a console handler,
+    create a console handler and add it to the logger.
+
+    Returns nothing as the console handler is always sys,stderr.
+    """
+    # Checking if logger has a console handler
+    for handler in logger.handlers:
+        if isinstance(handler, logging.StreamHandler):
+            if handler.stream == sys.stderr:
+                return
+    # Adding console handler
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(level)
+    console_handler.setFormatter(logging.Formatter(LOG_FORMAT))
+    logger.addHandler(console_handler)
+
+
+def _add_log_file_handler(logger: logging.Logger, level: int = logging.DEBUG) -> str:
+    """
+    If logger does not have a file handler,
+    create a file handler and add it to the logger.
+
+    Returns the log filepath.
+    """
+    log_fp = os.path.join(CACHE_DIR, "debug.log")
+    # Checking if logger has a file handler
+    for handler in logger.handlers:
+        if isinstance(handler, logging.FileHandler):
+            if handler.baseFilename == log_fp:
+                return handler.baseFilename
+    # Adding file handler
+    os.makedirs(os.path.dirname(log_fp), exist_ok=True)
+    file_handler = logging.FileHandler(log_fp, mode="a")
+    file_handler.setLevel(level)
+    file_handler.setFormatter(logging.Formatter(LOG_FORMAT))
+    logger.addHandler(file_handler)
+    return file_handler.baseFilename
+
+
+def _add_io_obj_handler(logger: logging.Logger, level: int = logging.INFO) -> io.StringIO:
+    """
+    If logger does not have a StringIO handler,
+    create a StringIO handler and add it to the logger.
+
+    Returns the StringIO object.
+    """
+    # Checking if logger has a StringIO handler
+    for handler in logger.handlers:
+        if isinstance(handler, logging.StreamHandler):
+            if isinstance(handler.stream, io.StringIO):
+                return handler.stream
+    # Adding StringIO handler
+    io_obj = io.StringIO()
+    io_obj_handler = logging.StreamHandler(io_obj)
+    io_obj_handler.setLevel(level)
+    io_obj_handler.setFormatter(logging.Formatter(LOG_IO_OBJ_FORMAT))
+    logger.addHandler(io_obj_handler)
+    return io_obj
+
+
 def init_logger(
-    name: str | None = None, console_level: int = logging.DEBUG, file_level: int = logging.DEBUG
+    name: str | None = None,
+    console_level: int | None = None,
+    file_level: int | None = None,
+    io_obj_level: int | None = None,
 ) -> logging.Logger:
     """
     Setup logging configuration.
-    Default name is the name of the function creating the logger.
 
+    For each of the following levels,
+    if the level argument is not None,
+    then add the handler with that level:
+    - console
+    - file (<cache_dir>/debug.log)
+    - io.StringIO object
+    """
+    # Creating logger
+    logger = logging.getLogger(name or get_func_name_in_stack(2))
+    logger.setLevel(logging.DEBUG)
+    # Adding handlers
+    if console_level is not None:
+        _add_console_handler(logger, console_level)
+    if file_level is not None:
+        _add_log_file_handler(logger, file_level)
+    if io_obj_level is not None:
+        _add_io_obj_handler(logger, io_obj_level)
+    return logger
+
+
+def init_logger_console(
+    name: str | None = None,
+    console_level: int = logging.DEBUG,
+) -> logging.Logger:
+    """
+    Logs to:
+    - console
+    """
+    return init_logger(
+        name=name or get_func_name_in_stack(2),
+        console_level=console_level,
+    )
+
+
+def init_logger_file(
+    name: str | None = None,
+    console_level: int = logging.DEBUG,
+    file_level: int = logging.DEBUG,
+) -> logging.Logger:
+    """
     Logs to:
     - console
     - file (<cache_dir>/debug.log)
     """
-    name = name or get_func_name_in_stack(2)
-    logger = logging.getLogger(name)
-    logger.setLevel(logging.DEBUG)
-    # If logger does not have handlers, add them
-    if not logger.hasHandlers():
-        # Formatter
-        formatter = logging.Formatter(LOG_FORMAT)
-        # Console handler
-        console_handler = logging.StreamHandler()
-        console_handler.setLevel(console_level)
-        console_handler.setFormatter(formatter)
-        logger.addHandler(console_handler)
-        # File handler
-        os.makedirs(CACHE_DIR, exist_ok=True)
-        log_fp = os.path.join(CACHE_DIR, "debug.log")
-        file_handler = logging.FileHandler(log_fp, mode="a")
-        file_handler.setLevel(file_level)
-        file_handler.setFormatter(formatter)
-        logger.addHandler(file_handler)
-    return logger
+    return init_logger(
+        name=name or get_func_name_in_stack(2),
+        console_level=console_level,
+        file_level=file_level,
+    )
 
 
-def init_logger_with_io_obj(
+def init_logger_io_obj(
     name: str | None = None,
     console_level: int = logging.DEBUG,
     file_level: int = logging.DEBUG,
     io_obj_level: int = logging.INFO,
 ) -> tuple[logging.Logger, io.StringIO]:
-    name = name or get_func_name_in_stack(2)
-    logger = init_logger(name, console_level=console_level, file_level=file_level)
-    io_obj = None
-    # Getting the io_obj attached to the logger (if it exists)
-    for handler in logger.handlers:
-        if isinstance(handler.stream, io.StringIO):  # type: ignore
-            io_obj = handler.stream  # type: ignore
-    # Adding io_obj to logger no io object handler is found
-    if io_obj is None:
-        # Formatter
-        formatter = logging.Formatter(LOG_IO_OBJ_FORMAT)
-        # Making io object
-        io_obj = io.StringIO()
-        # StringIO object handler
-        io_handler = logging.StreamHandler(io_obj)
-        io_handler.setLevel(io_obj_level)
-        io_handler.setFormatter(formatter)
-        logger.addHandler(io_handler)
+    """
+    Logs to:
+    - console
+    - file (<cache_dir>/debug.log)
+    - io.StringIO object (returned)
+    """
+    logger = init_logger(
+        name=name or get_func_name_in_stack(2),
+        console_level=console_level,
+        file_level=file_level,
+        io_obj_level=io_obj_level,
+    )
+    io_obj = _add_io_obj_handler(logger)
     return logger, io_obj
-
-
-def logger_func_decorator(logger: logging.Logger):
-    def decorator(func: Callable):
-        @functools.wraps(func)
-        def wrapper(*args, **kwargs):
-            try:
-                logger.info(f"STARTED {func.__name__}")
-                output = func(*args, **kwargs)
-                logger.info(f"FINISHED {func.__name__}")
-                return output
-            except Exception as e:
-                logger.error(f"Error in {func.__name__}: {e}")
-                logger.debug(traceback.format_exc())
-                raise e
-
-        return wrapper
-
-    return decorator
 
 
 def get_io_obj_content(io_obj: io.StringIO) -> str:

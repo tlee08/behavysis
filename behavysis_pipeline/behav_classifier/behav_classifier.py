@@ -37,7 +37,7 @@ from behavysis_pipeline.pydantic_models.behav_classifier import (
     BehavClassifierConfigs,
 )
 from behavysis_pipeline.utils.io_utils import get_name
-from behavysis_pipeline.utils.logging_utils import init_logger
+from behavysis_pipeline.utils.logging_utils import init_logger_file
 from behavysis_pipeline.utils.misc_utils import enum2tuple
 
 if TYPE_CHECKING:
@@ -61,7 +61,7 @@ class BehavClassifier:
     evaluation, and inference.
     """
 
-    logger = init_logger(__name__)
+    logger = init_logger_file(__name__)
 
     _proj_dir: str
     _behav_name: str
