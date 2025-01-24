@@ -85,7 +85,6 @@ class ExtractFeatures:
         # Need to remove index name for SimBA to import correctly
         keypoints_df.index.name = None
         # Saving as csv
-        print(keypoints_df)
         keypoints_df.to_csv(simba_in_fp)
         # Running SimBA env and script to run SimBA feature extraction
         run_simba_subproc(simba_dir, simba_in_dir, configs_dir, CACHE_DIR, cpid, logger)
