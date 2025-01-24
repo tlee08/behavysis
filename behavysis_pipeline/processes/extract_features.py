@@ -4,7 +4,6 @@ _summary_
 
 import logging
 import os
-import shutil
 
 import pandas as pd
 
@@ -70,7 +69,11 @@ class ExtractFeatures:
         configs_dir = os.path.dirname(configs_fp)
         simba_in_dir = os.path.join(CACHE_DIR, f"input_{cpid}")
         simba_dir = os.path.join(CACHE_DIR, f"simba_proj_{cpid}")
-        features_from_dir = os.path.join(simba_dir, "project_folder", "csv", "features_extracted")
+        simba_features_dir = os.path.join(simba_dir, "project_folder", "csv", "features_extracted")
+        simba_features_fp = os.path.join(simba_features_dir, f"{name}.csv")
+        # Removing temp folders (preemptively)
+        silent_remove(simba_in_dir)
+        silent_remove(simba_dir)
         # Preparing keypoints dataframes for input to SimBA project
         os.makedirs(simba_in_dir, exist_ok=True)
         simba_in_fp = os.path.join(simba_in_dir, f"{name}.csv")
@@ -84,15 +87,12 @@ class ExtractFeatures:
         # Saving as csv
         print(keypoints_df)
         keypoints_df.to_csv(simba_in_fp)
-        # Removing simba folder (if it exists)
-        silent_remove(simba_dir)
         # Running SimBA env and script to run SimBA feature extraction
         run_simba_subproc(simba_dir, simba_in_dir, configs_dir, CACHE_DIR, cpid, logger)
         # Exporting SimBA feature extraction csv to disk
-        simba_dst_fp = os.path.join(features_from_dir, f"{name}.csv")
-        export2df(simba_dst_fp, features_fp, index, logger)
-        # Removing temp folders (simba_in_dir, simba_dir)
-        shutil.rmtree(simba_in_dir)
+        export2df(simba_features_fp, features_fp, index, logger)
+        # Removing temp folders
+        silent_remove(simba_in_dir)
         silent_remove(simba_dir)
         return get_io_obj_content(io_obj)
 
@@ -161,6 +161,7 @@ def run_simba_subproc(
     """
     # Saving the script to a file
     script_fp = os.path.join(temp_dir, f"simba_subproc_{cpid}.py")
+    silent_remove(script_fp)
     save_template(
         "simba_subproc.py",
         "behavysis_pipeline",
@@ -180,9 +181,8 @@ def run_simba_subproc(
         "python",
         script_fp,
     ]
-    # run_subproc_fstream(cmd)
+    # Running script in subprocess
     run_subproc_console(cmd)
-    # Removing the script file
     silent_remove(script_fp)
     logger.info("Ran SimBA feature extraction script.")
 
