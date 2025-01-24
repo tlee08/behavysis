@@ -4,6 +4,7 @@ _summary_
 
 import logging
 import os
+import shutil
 
 import pandas as pd
 
@@ -89,7 +90,7 @@ class ExtractFeatures:
         simba_dst_fp = os.path.join(features_from_dir, f"{name}.csv")
         export2df(simba_dst_fp, features_fp, index, logger)
         # Removing temp folders (simba_in_dir, simba_dir)
-        silent_remove(simba_in_dir)
+        shutil.rmtree(simba_in_dir)
         silent_remove(simba_dir)
         return get_io_obj_content(io_obj)
 
