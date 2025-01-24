@@ -181,6 +181,7 @@ def run_simba_subproc(
         script_fp,
     ]
     # Running script in subprocess
+    # TODO: more explicit error messages (maybe with logging and in run_subproc method)
     run_subproc_console(cmd)
     silent_remove(script_fp)
     logger.info("Ran SimBA feature extraction script.")
