@@ -10,11 +10,12 @@ import pandas as pd
 
 from behavysis_pipeline.constants import CACHE_DIR
 from behavysis_pipeline.df_classes.features_df import FeaturesDf
-from behavysis_pipeline.df_classes.keypoints_df import KeypointsDf
+from behavysis_pipeline.df_classes.keypoints_df import CoordsCols, KeypointsDf
 from behavysis_pipeline.pydantic_models.configs import ExperimentConfigs
 from behavysis_pipeline.utils.diagnostics_utils import file_exists_msg
 from behavysis_pipeline.utils.io_utils import get_name, silent_remove
 from behavysis_pipeline.utils.logging_utils import get_io_obj_content, init_logger_io_obj
+from behavysis_pipeline.utils.misc_utils import enum2list
 from behavysis_pipeline.utils.multiproc_utils import get_cpid
 from behavysis_pipeline.utils.subproc_utils import run_subproc_console
 from behavysis_pipeline.utils.template_utils import save_template
@@ -125,7 +126,8 @@ def select_cols(keypoints_df: pd.DataFrame, configs_fp: str, logger: logging.Log
     KeypointsDf.check_bpts_exist(keypoints_df, bpts)
     # Selecting given columns
     idx = pd.IndexSlice
-    keypoints_df = keypoints_df.loc[:, idx[:, indivs, bpts]]  # type: ignore
+    coords = enum2list(CoordsCols)
+    keypoints_df = keypoints_df.loc[:, idx[:, indivs, bpts, coords]]  # type: ignore
     return keypoints_df
 
 
