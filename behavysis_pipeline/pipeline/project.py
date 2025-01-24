@@ -78,6 +78,18 @@ class Project:
     # GETTER METHODS
     #####################################################################
 
+    @property
+    def experiments(self) -> list[Experiment]:
+        """
+        Gets the ordered list of Experiment instances in the Project.
+
+        Returns
+        -------
+        list[Experiment]
+            The list of all Experiment instances stored in the Project instance.
+        """
+        return [self._experiments[i] for i in natsorted(self._experiments)]
+
     def get_experiment(self, name: str) -> Experiment:
         """
         Gets the experiment with the given name
@@ -100,17 +112,6 @@ class Project:
         if name in self._experiments:
             return self._experiments[name]
         raise ValueError(f'Experiment with the name "{name}" does not exist in the project.')
-
-    def experiments(self) -> list[Experiment]:
-        """
-        Gets the ordered list of Experiment instances in the Project.
-
-        Returns
-        -------
-        list[Experiment]
-            The list of all Experiment instances stored in the Project instance.
-        """
-        return [self._experiments[i] for i in natsorted(self._experiments)]
 
     #####################################################################
     #               PROJECT PROCESSING SCAFFOLD METHODS
@@ -138,7 +139,7 @@ class Project:
         # Starting a dask cluster
         with cluster_proc_contxt(LocalCluster(n_workers=self.nprocs, threads_per_worker=1)):
             # Preparing all experiments for execution
-            f_d_ls = [dask.delayed(method)(exp, *args, **kwargs) for exp in self.experiments()]  # type: ignore
+            f_d_ls = [dask.delayed(method)(exp, *args, **kwargs) for exp in self.experiments]  # type: ignore
             # Executing in parallel
             dd_ls = list(dask.compute(*f_d_ls))  # type: ignore
         return dd_ls
@@ -163,7 +164,7 @@ class Project:
         ```
         """
         # Processing all experiments and storing process outcomes as list of dicts
-        return [method(exp, *args, **kwargs) for exp in self.experiments()]
+        return [method(exp, *args, **kwargs) for exp in self.experiments]
 
     def _proc_scaff(self, method: Callable, *args: Any, **kwargs: Any) -> None:
         """
@@ -241,7 +242,7 @@ class Project:
                     self.logger.info(f"failed: {f.value}    --    {fp_name}: {e}")
         # Logging outcome of imported and failed experiments
         self.logger.info(
-            "Experiments imported successfully:" "".join([f"\n    - {exp.name}" for exp in self.experiments()])
+            "Experiments imported successfully:" "".join([f"\n    - {exp.name}" for exp in self.experiments])
         )
         # Constructing dd_df from dd_dict
         dd_df = DiagnosticsDf.init_df(pd.Series(np.unique(np.concatenate(list(dd_dict.values())))))
@@ -279,7 +280,7 @@ class Project:
         gputouse_ls = get_gpu_ids() if gputouse is None else [gputouse]
         nprocs = len(gputouse_ls)
         # Getting the experiments to run DLC on
-        exp_ls = self.experiments()
+        exp_ls = self.experiments
         # If overwrite is False, filtering for only experiments that need processing
         if not overwrite:
             exp_ls = [exp for exp in exp_ls if not os.path.isfile(exp.get_fp(Folders.KEYPOINTS.value))]
@@ -385,7 +386,7 @@ class Project:
         # AGGREGATING BINNED DATA
         # NOTE: need a more robust way of getting the list of bin sizes
         proj_analyse_dir = os.path.join(self.root_dir, ANALYSIS_DIR)
-        configs = ExperimentConfigs.read_json(self.experiments()[0].get_fp(Folders.CONFIGS.value))
+        configs = ExperimentConfigs.read_json(self.experiments[0].get_fp(Folders.CONFIGS.value))
         bin_sizes_sec = configs.get_ref(configs.user.analyse.bins_sec)
         bin_sizes_sec = np.append(bin_sizes_sec, "custom")
         # Searching through all the analysis subdir
@@ -393,7 +394,7 @@ class Project:
             for bin_i in bin_sizes_sec:
                 df_ls = []
                 names_ls = []
-                for exp in self.experiments():
+                for exp in self.experiments:
                     in_fp = os.path.join(
                         proj_analyse_dir, analyse_subdir, f"binned_{bin_i}", f"{exp.name}.{AnalysisBinnedDf.IO}"
                     )
@@ -425,7 +426,7 @@ class Project:
         for analyse_subdir in os.listdir(proj_analyse_dir):
             df_ls = []
             names_ls = []
-            for exp in self.experiments():
+            for exp in self.experiments:
                 in_fp = os.path.join(proj_analyse_dir, analyse_subdir, "summary", f"{exp.name}.{AnalysisSummaryDf.IO}")
                 if os.path.isfile(in_fp):
                     # Reading exp summary df

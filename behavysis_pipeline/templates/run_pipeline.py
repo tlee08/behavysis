@@ -14,7 +14,7 @@ if __name__ == "__main__":
     proj_dir = os.path.join(".")
     proj = Project(proj_dir)
     proj.import_experiments()
-    exp = proj.experiments()[1]
+    exp = proj.experiments[1]
 
     proj.nprocs = 5
 
