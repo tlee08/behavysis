@@ -242,7 +242,7 @@ class Project:
                     self.logger.info(f"failed: {f.value}    --    {fp_name}: {e}")
         # Logging outcome of imported and failed experiments
         self.logger.info(
-            "Experiments imported successfully:" "".join([f"\n    - {exp.name}" for exp in self.experiments])
+            "Experiments imported successfully:" + "".join([f"\n    - {exp.name}" for exp in self.experiments])
         )
         # Constructing dd_df from dd_dict
         dd_df = DiagnosticsDf.init_df(pd.Series(np.unique(np.concatenate(list(dd_dict.values())))))

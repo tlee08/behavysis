@@ -71,7 +71,7 @@ class Experiment:
             raise ValueError(
                 f'No files named "{name}" exist in "{root_dir}".\n'
                 f'Please specify a file that exists in "{root_dir}", in one of the following folder WITH the correct file extension name:'
-                "".join([f"\n    - {f.value}" for f in Folders])
+                + "".join([f"\n    - {f.value}" for f in Folders])
             )
 
     #####################################################################
@@ -105,7 +105,7 @@ class Experiment:
                 raise ValueError(
                     f"{_folder} is not a valid experiment folder name.\n"
                     "Please only specify one of the following folders:"
-                    "".join([f"\n    - {f.value}" for f in Folders])
+                    + "".join([f"\n    - {f.value}" for f in Folders])
                 )
         else:
             folder = _folder
