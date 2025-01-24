@@ -164,8 +164,16 @@ class DFMixin:
         Also checks that the df structure is as expected with `check_df`.
         """
         if cls.IN:
+            assert df.columns.nlevels == len(enum2tuple(cls.IN)), (
+                "Different number of column levels than expected.\n"
+                f"Expected columns are {enum2tuple(cls.IN)} but got {df.columns.nlevels} levels."
+            )
             df.index = df.index.set_names(enum2tuple(cls.IN))
         if cls.CN:
+            assert df.columns.nlevels == len(enum2tuple(cls.CN)), (
+                "Different number of column levels than expected.\n"
+                f"Expected columns are {enum2tuple(cls.CN)} but got {df.columns.nlevels} levels."
+            )
             df.columns = df.columns.set_names(enum2tuple(cls.CN))
         df = df.sort_index()
         df = df.sort_index(axis=1)
