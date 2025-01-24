@@ -172,7 +172,7 @@ class AnalysisBinnedDf(DFMixin):
         t_max = np.max(timestamps)
         bins = np.append(bins, t_max) if np.max(bins) < t_max else bins
         # Making binned data
-        bin_sec = pd.cut(x=timestamps, bins=bins, labels=bins[1:], include_lowest=True)
+        bin_sec = pd.cut(x=timestamps, bins=bins, labels=bins[1:], include_lowest=True)  # type: ignore
         grouped_df = analysis_df.groupby(bin_sec)
         binned_df = grouped_df.apply(
             lambda x: summary_func(x, fps)
@@ -180,6 +180,7 @@ class AnalysisBinnedDf(DFMixin):
             .reorder_levels(enum2list(cls.CN))
             .sort_index(level=enum2tuple(AnalysisSummaryDf.IN))
         )
+        print(binned_df)
         # Cleaning (sets index and column names) and checking
         binned_df = cls.basic_clean(binned_df)
         return binned_df
