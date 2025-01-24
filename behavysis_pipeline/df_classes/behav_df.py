@@ -129,11 +129,12 @@ class BehavScoredDf(BehavDf):
         # Reading in corresponding BORIS tsv file
         df_boris = pd.read_csv(fp, sep="\t")
         # Initialising new classification columns based on
-        # BORIS behavs and given `behavs_ls`
-        # TODO: how to reconcile this with the behavs_ls?
-        for behav in df_boris["Behavior"].unique():
-            df[(behav, cls.OutcomesCols.ACTUAL.value)] = BehavValues.NON_BEHAV.value
-            df[(behav, cls.OutcomesCols.PRED.value)] = BehavValues.NON_BEHAV.value
+        # BORIS behavs must be same as given `behavs_ls`
+        assert np.isin(behavs_ls, df_boris["Behavior"].unique()), (
+            f"Only behaviour names in BORIS dataframe are valid.\n"
+            f"Given behaviours: {behavs_ls}\n"
+            f"BORIS behaviours: {df_boris['Behavior'].unique()}"
+        )
         for behav in behavs_ls:
             df[(behav, cls.OutcomesCols.ACTUAL.value)] = BehavValues.NON_BEHAV.value
             df[(behav, cls.OutcomesCols.PRED.value)] = BehavValues.NON_BEHAV.value
@@ -143,6 +144,9 @@ class BehavScoredDf(BehavDf):
             behav = row["Behavior"]
             frame = row["Image index"]
             status = row["Behavior type"]
+            # Only using in behav is in behavs_ls
+            if behav not in behavs_ls:
+                continue
             # Status is either "START" (of behaviour) or "STOP"
             val = BehavValues.BEHAV.value if status == "START" else BehavValues.NON_BEHAV.value
             # Updating the classification in the scored df
