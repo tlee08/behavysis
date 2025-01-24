@@ -128,8 +128,8 @@ class BehavScoredDf(BehavDf):
         df = cls.init_df(pd.Series(np.arange(start_frame, stop_frame)))
         # Reading in corresponding BORIS tsv file
         df_boris = pd.read_csv(fp, sep="\t")
-        # Initialising new classification columns based on
-        # BORIS behavs must be same as given `behavs_ls`
+        # Initialising new behaviour columns
+        # `behavs_ls` can only include behaviours in BORIS df
         assert np.isin(behavs_ls, df_boris["Behavior"].unique()), (
             f"Only behaviour names in BORIS dataframe are valid.\n"
             f"Given behaviours: {behavs_ls}\n"
