@@ -180,7 +180,6 @@ class AnalysisBinnedDf(DFMixin):
             .reorder_levels(enum2list(cls.CN))
             .sort_index(level=enum2tuple(AnalysisSummaryDf.IN))
         )
-        print(binned_df)
         # Cleaning (sets index and column names) and checking
         binned_df = cls.basic_clean(binned_df)
         return binned_df
