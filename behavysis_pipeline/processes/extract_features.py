@@ -82,6 +82,7 @@ class ExtractFeatures:
         # Need to remove index name for SimBA to import correctly
         keypoints_df.index.name = None
         # Saving as csv
+        print(keypoints_df)
         keypoints_df.to_csv(simba_in_fp)
         # Removing simba folder (if it exists)
         silent_remove(simba_dir)
