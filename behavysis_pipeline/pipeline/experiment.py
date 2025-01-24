@@ -68,10 +68,11 @@ class Experiment:
         # Assertion: name must correspond to at least one file in root_dir
         file_exists_ls = [os.path.isfile(self.get_fp(f)) for f in Folders]
         if not np.any(file_exists_ls):
+            folders_ls_msg = "".join([f"\n    - {f.value}" for f in Folders])
             raise ValueError(
                 f'No files named "{name}" exist in "{root_dir}".\n'
-                f'Please specify a file that exists in "{root_dir}", in one of the following folder WITH the correct file extension name:'
-                + "".join([f"\n    - {f.value}" for f in Folders])
+                f'Please specify a file that exists in "{root_dir}", '
+                f"in one of the following folder WITH the correct file extension name:{folders_ls_msg}"
             )
 
     #####################################################################
@@ -102,10 +103,10 @@ class Experiment:
             try:
                 folder = Folders(_folder)
             except ValueError:
+                folders_ls_msg = "".join([f"\n    - {f.value}" for f in Folders])
                 raise ValueError(
                     f"{_folder} is not a valid experiment folder name.\n"
-                    "Please only specify one of the following folders:"
-                    + "".join([f"\n    - {f.value}" for f in Folders])
+                    f"Please only specify one of the following folders:{folders_ls_msg}"
                 )
         else:
             folder = _folder

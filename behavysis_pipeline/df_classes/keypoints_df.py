@@ -59,9 +59,9 @@ class KeypointsDf(DFMixin):
         # Checking that the bodyparts are all valid (i.e. there are no missing bodyparts)
         bpts_not_exist = np.isin(bodyparts, df.columns.unique("bodyparts"), invert=True)
         if bpts_not_exist.any():
+            bpts_ls_msg = "".join([f"\n    - {bpt}" for bpt in np.array(bodyparts)[bpts_not_exist]])
             raise ValueError(
-                "Some bodyparts in the config file are missing from the dataframe. They are:"
-                + "".join([f"\n    - {bpt}" for bpt in np.array(bodyparts)[bpts_not_exist]])
+                f"Some bodyparts in the config file are missing from the dataframe. They are:{bpts_ls_msg}"
             )
 
     @classmethod
