@@ -28,7 +28,7 @@ import re
 import pandas as pd
 
 from behavysis_pipeline.constants import CACHE_DIR
-from behavysis_pipeline.df_classes.keypoints_df import KeypointsDf
+from behavysis_pipeline.df_classes.keypoints_df import CoordsCols, KeypointsDf
 from behavysis_pipeline.pydantic_models.configs import ExperimentConfigs
 from behavysis_pipeline.utils.diagnostics_utils import file_exists_msg
 from behavysis_pipeline.utils.io_utils import get_name, silent_remove
@@ -205,6 +205,9 @@ def export2df(name: str, src_dir: str, dst_dir: str, logger: logging.Logger) -> 
         df = pd.DataFrame(pd.read_hdf(name_fp))
         # Imputing na values with 0
         df = df.fillna(0)
+        # Clipping likelihood values between 0 and 1
+        lhoods_idx = pd.IndexSlice[:, :, :, CoordsCols.LIKELIHOOD.value]
+        df.loc[:, lhoods_idx] = df.loc[:, lhoods_idx].clip(0, 1)  # type: ignore
         # Writing the file
         KeypointsDf.write(df, os.path.join(dst_dir, f"{name}.{KeypointsDf.IO}"))
         logger.info("Outputted DLC file successfully.")
