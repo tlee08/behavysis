@@ -331,7 +331,7 @@ class BehavClassifier:
         # Filtering out the prob and pred columns (in the `outcomes` level)
         columns_filter = np.isin(
             y.columns.get_level_values(BehavScoredDf.CN.OUTCOMES.value),
-            [BehavScoredDf.OutcomesCols.PROB.value, BehavScoredDf.OutcomesCols.PRED.value],
+            [BehavScoredDf.OutcomesCols.PROB.value], 
             invert=True,
         )
         y = y.loc[:, columns_filter]
@@ -614,9 +614,9 @@ class BehavClassifier:
         # Including `actual` lables in `y_eval`
         y_eval[self.configs.behav_name, BehavScoredDf.OutcomesCols.ACTUAL.value] = y[index]
         # Getting individual columns
-        y_prob = y_eval[self.configs.behav_name, BehavScoredDf.OutcomesCols.PROB.value]
-        y_pred = y_eval[self.configs.behav_name, BehavScoredDf.OutcomesCols.PRED.value]
-        y_true = y_eval[self.configs.behav_name, BehavScoredDf.OutcomesCols.ACTUAL.value]
+        y_prob = y_eval[self.configs.behav_name, BehavPredictedDf.OutcomesCols.PROB.value]
+        y_pred = y_eval[self.configs.behav_name, BehavPredictedDf.OutcomesCols.PRED.value]
+        y_true = y_eval[self.configs.behav_name, BehavPredictedDf.OutcomesCols.ACTUAL.value]
         # Making classification report
         report_dict = self.eval_report(y_true, y_pred)
         # Making confusion matrix figure
