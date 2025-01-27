@@ -331,7 +331,7 @@ class BehavClassifier:
         # Filtering out the prob and pred columns (in the `outcomes` level)
         columns_filter = np.isin(
             y.columns.get_level_values(BehavScoredDf.CN.OUTCOMES.value),
-            [BehavScoredDf.OutcomesCols.PROB.value], 
+            [BehavScoredDf.OutcomesCols.PRED.value],
             invert=True,
         )
         y = y.loc[:, columns_filter]
