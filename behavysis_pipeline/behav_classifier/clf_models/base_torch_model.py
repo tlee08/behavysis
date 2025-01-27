@@ -214,25 +214,17 @@ class TimeSeriesDataset(Dataset):
         # Checking that the indexes are equal
         if y is not None:
             assert x.shape[0] == y.shape[0]
-        # Removing the x-y-l columns (only derived features kept)
-        # 2 (indivs) * 8 (bpts) * 3 (coords) = 48 (columns)
-        # TODO do the removing in preprocessing in behav_classifier pipeline, NOT in base torch model
-        x = x[:, 48:]
+        # # Removing the x-y-l columns (only derived features kept)
+        # # 2 (indivs) * 8 (bpts) * 3 (coords) = 48 (columns)
+        # # TODO do the removing in preprocessing in behav_classifier pipeline, NOT in base torch model
+        # x = x[:, 48:]
         # Padding x (for frames on either side)
-        x = self.pad_arr(x, window_frames)
+        x = np.concatenate([x[np.repeat(0, window_frames)], x, x[np.repeat(-1, window_frames)]])
         # Storing the data and labels
         self.x = x
         self.y = y if y is not None else np.zeros(x.shape[0])
         self.index = index if index is not None else np.arange(x.shape[0])
         self.window_frames = window_frames
-
-    @classmethod
-    def pad_arr(cls, x: np.ndarray, n: int) -> np.ndarray:
-        """
-        synthesising data by padding with bfill and ffill
-        for window size
-        """
-        return np.concatenate([x[np.repeat(0, n)], x, x[np.repeat(-1, n)]])
 
     def __len__(self):
         return self.index.shape[0]

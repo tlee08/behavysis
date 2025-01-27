@@ -21,7 +21,7 @@ from sklearn.metrics import (
 )
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import FunctionTransformer, MinMaxScaler
 
 from behavysis_pipeline.behav_classifier.clf_models.base_torch_model import (
     BaseTorchModel,
@@ -31,7 +31,7 @@ from behavysis_pipeline.behav_classifier.clf_models.clf_templates import (
     CNN1,
 )
 from behavysis_pipeline.constants import Folders
-from behavysis_pipeline.df_classes.behav_df import BehavScoredDf, BehavValues
+from behavysis_pipeline.df_classes.behav_df import BehavPredictedDf, BehavScoredDf, BehavValues
 from behavysis_pipeline.df_classes.df_mixin import DFMixin
 from behavysis_pipeline.pydantic_models.behav_classifier import (
     BehavClassifierConfigs,
@@ -44,15 +44,15 @@ if TYPE_CHECKING:
     from behavysis_pipeline.pipeline.project import Project
 
 
+class GenericBehavLabels(Enum):
+    NIL = "nil"
+    BEHAV = "behav"
+
+
 BEHAV_MODELS_SUBDIR = "behav_models"
 CONFIGS_NAME = "configs.json"
 PREPROC_NAME = "preproc.sav"
 MODEL_NAME = "model.sav"
-
-
-class GenericBehavLabels(Enum):
-    NIL = "nil"
-    BEHAV = "behav"
 
 
 class BehavClassifier:
@@ -282,20 +282,30 @@ class BehavClassifier:
     @classmethod
     def preproc_x_fit(cls, x: np.ndarray | pd.DataFrame, preproc_fp: str) -> None:
         """
-        __summary__
+        The preprocessing steps are:
+        - Select only the derived features (not the x-y-l columns)
+        - MinMax scaling (using previously fitted MinMaxScaler)
         """
+        # # Removing the x-y-l columns (only derived features kept)
+        # # 2 (indivs) * 8 (bpts) * 3 (coords) = 48 (columns)
+        # # TODO do the removing in preprocessing in behav_classifier pipeline, NOT in base torch model
+        # x = x[:, 48:]
         # Making pipeline
-        preproc_pipe = Pipeline(steps=[("MinMaxScaler", MinMaxScaler())])
+        preproc_pipe = Pipeline(
+            steps=[
+                ("select_columns", FunctionTransformer(lambda x: x[:, 48:])),
+                ("min_max_scaler", MinMaxScaler()),
+            ]
+        )
         # Fitting pipeline
         preproc_pipe.fit(x)
         # Saving pipeline
         joblib.dump(preproc_pipe, preproc_fp)
 
     @classmethod
-    def preproc_x(cls, x: np.ndarray | pd.DataFrame, preproc_fp: str) -> np.ndarray:
+    def preproc_x_transform(cls, x: np.ndarray | pd.DataFrame, preproc_fp: str) -> np.ndarray:
         """
-        The preprocessing steps are:
-        - MinMax scaling (using previously fitted MinMaxScaler)
+        Runs the preprocessing steps fitted from `preproc_x_fit` on the given `x` data.
         """
         # Loading in pipeline
         preproc_pipe = joblib.load(preproc_fp)
@@ -392,7 +402,7 @@ class BehavClassifier:
         # Fitting the preprocessor pipeline
         self.preproc_x_fit(x, self.preproc_fp)
         # Preprocessing x df
-        x = self.preproc_x(x, self.preproc_fp)
+        x = self.preproc_x_transform(x, self.preproc_fp)
         # Preprocessing y df
         y = self.wrangle_columns_y(y)[self.configs.behav_name].values
         # TODO: why is this linting error?
@@ -445,7 +455,7 @@ class BehavClassifier:
             Features array in the format: `(samples, window, features)`
         """
         # Preprocessing x df
-        x_preproc = self.preproc_x(x, self.preproc_fp)
+        x_preproc = self.preproc_x_transform(x, self.preproc_fp)
         return x_preproc
 
     #################################################
@@ -559,9 +569,9 @@ class BehavClassifier:
         # Making predictions from probabilities (and pcutoff)
         y_preds = (y_probs > self.configs.pcutoff).astype(int)
         # Making df
-        pred_df = BehavDf.init_df(pd.Series(index))
-        pred_df[(self.configs.behav_name, BehavScoredDf.OutcomesCols.PROB.value)] = y_probs
-        pred_df[(self.configs.behav_name, BehavScoredDf.OutcomesCols.PRED.value)] = y_preds
+        pred_df = BehavPredictedDf.init_df(pd.Series(index))
+        pred_df[(self.configs.behav_name, BehavPredictedDf.OutcomesCols.PROB.value)] = y_probs
+        pred_df[(self.configs.behav_name, BehavPredictedDf.OutcomesCols.PRED.value)] = y_preds
         return pred_df
 
     #################################################
