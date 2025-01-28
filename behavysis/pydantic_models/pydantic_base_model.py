@@ -8,7 +8,7 @@ from pydantic import BaseModel, ConfigDict
 
 
 class PydanticBaseModel(BaseModel):
-    """Mixin class for Pydantic models (i.e. configs)."""
+    """Helper class for Pydantic models (i.e. configs)."""
 
     model_config = ConfigDict(extra="forbid")
 

@@ -1,20 +1,19 @@
 from __future__ import annotations
 
-import sys
 from typing import TYPE_CHECKING
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QShortcut
-from PySide6.QtWidgets import QApplication, QMainWindow, QTabWidget
+from PySide6.QtWidgets import QTabWidget
 
+from behavysis.utils.qt_utils import toggle_window
 from behavysis.viewer.ui.settings_ui import Ui_SettingsWindow
-from behavysis.viewer.windows.window_mixin import WindowMixin
 
 if TYPE_CHECKING:
     from behavysis.viewer.windows.main import MainWindow
 
 
-class SettingsWindow(QTabWidget, WindowMixin):
+class SettingsWindow(QTabWidget):
     ui: Ui_SettingsWindow
     main: MainWindow
 
@@ -46,7 +45,7 @@ class SettingsWindow(QTabWidget, WindowMixin):
         QShortcut(Qt.Key.Key_P, self).activated.connect(self.cancel)
 
     def cancel(self):
-        self.toggle_window(self)
+        toggle_window(self)
 
     def save(self):
         self.set_vid_size()
@@ -65,7 +64,7 @@ class SettingsWindow(QTabWidget, WindowMixin):
     def set_fps(self):
         vid_speed_str = self.ui.vid_speed_le.text()
         try:
-            self.main.vid_speed = float(vid_speed_str)
+            self.main.vid_speed = int(vid_speed_str)
         except ValueError:
             pass
 
@@ -84,12 +83,3 @@ class SettingsWindow(QTabWidget, WindowMixin):
             self.main.focus_size_frames = int(secs * self.main.vid_model.fps)
         except ValueError:
             pass
-
-
-if __name__ == "__main__":
-    app = QApplication(sys.argv)
-
-    window = SettingsWindow(QMainWindow())
-    window.show()
-
-    sys.exit(app.exec())

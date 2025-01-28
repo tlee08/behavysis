@@ -20,12 +20,6 @@ class DiagnosticsCN(Enum):
 
 
 class DiagnosticsDf(DFMixin):
-    """
-    Mixin for features DF
-    (generated from SimBA feature extraction)
-    functions.
-    """
-
     NULLABLE = True
     IN = DiagnosticsIN
     CN = DiagnosticsCN

@@ -6,13 +6,13 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QShortcut
 from PySide6.QtWidgets import QDialog, QLabel, QVBoxLayout
 
-from behavysis.viewer.windows.window_mixin import WindowMixin
+from behavysis.utils.qt_utils import toggle_window
 
 if TYPE_CHECKING:
     from behavysis.viewer.windows.main import MainWindow
 
 
-class HelpWindow(QDialog, WindowMixin):
+class HelpWindow(QDialog):
     # ui: Ui_TabWidget
     main: MainWindow
 
@@ -59,4 +59,4 @@ class HelpWindow(QDialog, WindowMixin):
         QShortcut(Qt.Key.Key_H, self).activated.connect(self.cancel)
 
     def cancel(self):
-        self.toggle_window(self)
+        toggle_window(self)

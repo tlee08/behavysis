@@ -12,12 +12,6 @@ class FeaturesCN(Enum):
 
 
 class FeaturesDf(DFMixin):
-    """
-    Mixin for features DF
-    (generated from SimBA feature extraction)
-    functions.
-    """
-
     NULLABLE = False
     IN = FramesIN
     CN = FeaturesCN

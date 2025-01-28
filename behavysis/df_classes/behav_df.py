@@ -41,12 +41,6 @@ class BehavCN(Enum):
 
 
 class BehavDf(DFMixin):
-    """
-    Mixin for behaviour DF
-    (generated from maDLC keypoint detection)
-    functions.
-    """
-
     NULLABLE = False
     IN = FramesIN
     CN = BehavCN
@@ -77,10 +71,6 @@ class BehavDf(DFMixin):
 
 
 class BehavPredictedDf(BehavDf):
-    """
-    Mixin for behaviour DF, specifically for predicted behaviours dfs.
-    """
-
     OutcomesCols = OutcomesPredictedCols
 
     @classmethod
@@ -97,10 +87,6 @@ class BehavPredictedDf(BehavDf):
 
 
 class BehavScoredDf(BehavDf):
-    """
-    Mixin for behaviour DF, specifically for scored behaviours dfs.
-    """
-
     OutcomesCols = OutcomesScoredCols
 
     @classmethod

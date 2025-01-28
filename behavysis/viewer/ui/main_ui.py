@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'main_ui.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.7.0
+## Created by: Qt User Interface Compiler version 6.8.1
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -21,8 +21,8 @@ from PySide6.QtWidgets import (QApplication, QCheckBox, QGridLayout, QGroupBox,
     QMenu, QMenuBar, QPushButton, QRadioButton,
     QSizePolicy, QSlider, QStatusBar, QWidget)
 
-from behavysis_viewer.widgets.cv_view import CvView
-from behavysis_viewer.widgets.graph_view import GraphView
+from behavysis.viewer.widgets.cv_view import CvView
+from behavysis.viewer.widgets.graph_view import GraphView
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
@@ -240,7 +240,7 @@ class Ui_MainWindow(object):
         self.slider.setObjectName(u"slider")
         sizePolicy1.setHeightForWidth(self.slider.sizePolicy().hasHeightForWidth())
         self.slider.setSizePolicy(sizePolicy1)
-        self.slider.setOrientation(Qt.Horizontal)
+        self.slider.setOrientation(Qt.Orientation.Horizontal)
 
         self.gridLayout.addWidget(self.slider, 5, 0, 1, 3)
 
@@ -257,7 +257,7 @@ class Ui_MainWindow(object):
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 683, 21))
+        self.menubar.setGeometry(QRect(0, 0, 683, 23))
         self.menubar.setNativeMenuBar(False)
         self.menu_file = QMenu(self.menubar)
         self.menu_file.setObjectName(u"menu_file")

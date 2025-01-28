@@ -10,12 +10,12 @@ import numpy as np
 import pandas as pd
 import pyqtgraph as pg
 from pyqtgraph.exporters import ImageExporter
-from PySide6 import QtGui
 from tqdm import trange
 
 from behavysis.df_classes.analysis_combined_df import AnalysisCombinedDf
 from behavysis.df_classes.keypoints_df import IndivCols, KeypointsDf
 from behavysis.pydantic_models.configs import ExperimentConfigs
+from behavysis.utils.cv_qt_utils import qt2cv
 from behavysis.utils.diagnostics_utils import file_exists_msg
 from behavysis.utils.logging_utils import get_io_obj_content, init_logger_io_obj
 from behavysis.utils.plotting_utils import make_colours
@@ -256,8 +256,6 @@ class Analysis(EvalVidFuncBase):
 
     name = "analysis"
 
-    qimage_format = QtGui.QImage.Format.Format_RGB888
-
     def __init__(
         self,
         width_input: int,
@@ -394,28 +392,6 @@ class Analysis(EvalVidFuncBase):
         self.plot_arr[i][j].setXRange(secs - self.padding, secs + self.padding)
 
     @classmethod
-    def qt2cv(cls, img_qt: QtGui.QImage) -> np.ndarray:
-        """Convert from a QImage to an opencv image."""
-        # QImage to RGB888 format
-        img_qt = img_qt.convertToFormat(cls.qimage_format)
-        # Get shape of image
-        w = img_qt.width()
-        h = img_qt.height()
-        bpl = img_qt.bytesPerLine()
-        # Get bytes pointer to image data
-        ptr = img_qt.bits()
-        # Bytes to numpy 1d arr
-        img_cv = np.array(ptr, dtype=np.uint8)
-        # Reshaping to height-bytesPerLine format
-        img_cv = img_cv.reshape(h, bpl)
-        # Remove the padding bytes
-        # NOTE: adjust the static number for bytes per pixel
-        img_cv = img_cv[:, : w * 3]
-        # Reshaping to cv2 format
-        img_cv = img_cv.reshape(h, w, 3)
-        return img_cv
-
-    @classmethod
     def grl2cv_(cls, grl):
         # Making pyqtgraph image exporter to bytes
         # TODO: was original. check this still works
@@ -423,8 +399,8 @@ class Analysis(EvalVidFuncBase):
         # exporter.parameters()["width"] = self.width()
         # Exporting to QImage (bytes)
         img_qt = exporter.export(toBytes=True)
-        # QImage to cv2 image (using mixin)
-        img_cv = cls.qt2cv(img_qt)  # type: ignore
+        # QImage to cv2 image
+        img_cv = qt2cv(img_qt)
         # cv2 BGR to RGB
         img_cv = cv2.cvtColor(img_cv, cv2.COLOR_BGR2RGB)
         # Resize to widget size
@@ -441,8 +417,8 @@ class Analysis(EvalVidFuncBase):
         # exporter.parameters()["width"] = self.width()
         # Exporting to QImage (bytes)
         img_qt = exporter.export(toBytes=True)
-        # QImage to cv2 image (using mixin)
-        img_cv = cls.qt2cv(img_qt)  # type: ignore
+        # QImage to cv2 image
+        img_cv = qt2cv(img_qt)
         # cv2 BGR to RGB
         img_cv = cv2.cvtColor(img_cv, cv2.COLOR_BGR2RGB)
         # Resize to widget size

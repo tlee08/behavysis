@@ -6,19 +6,19 @@ from typing import TYPE_CHECKING
 import cv2
 import numpy as np
 import pandas as pd
-from behavysis_viewer.utils.constants import VALUE2COLOR
-from behavysis_viewer.utils.cv2_qt_mixin import Cv2QtMixin
 from pyqtgraph import BarGraphItem, InfiniteLine, PlotWidget, mkBrush
 from pyqtgraph.exporters import ImageExporter
 from PySide6.QtGui import QImage
 from PySide6.QtWidgets import QApplication
 
+from behavysis.constants import VALUE2COLOR
 from behavysis.df_classes.behav_df import BehavScoredDf
 from behavysis.pydantic_models.bouts import Bouts
 from behavysis.pydantic_models.configs import ExperimentConfigs
+from behavysis.utils.cv_qt_utils import qt2cv
 
 if TYPE_CHECKING:
-    from behavysis_viewer.windows.main import MainWindow
+    from behavysis.viewer.windows.main import MainWindow
 
 
 class GraphView(PlotWidget):
@@ -59,7 +59,7 @@ class GraphView(PlotWidget):
         # Getting data
         start_ls = np.array([i.start for i in bouts.bouts]) / fps
         stop_ls = np.array([i.stop for i in bouts.bouts]) / fps
-        behavs_ls = np.array([i.behaviour for i in bouts.bouts])
+        behavs_ls = np.array([i.behav for i in bouts.bouts])
         actual_ls = np.array([i.actual for i in bouts.bouts])
         # Plotting data
         self.plot_init(start_ls, stop_ls, behavs_ls, actual_ls)
@@ -128,8 +128,8 @@ class GraphView(PlotWidget):
         # Exporting to QImage (bytes)
         img_qt = exporter.export(toBytes=True)
         assert isinstance(img_qt, QImage)
-        # QImage to cv2 image (using mixin)
-        img_cv = Cv2QtMixin.qt2cv(img_qt)
+        # QImage to cv2 image
+        img_cv = qt2cv(img_qt)
         # cv2 BGR to RGB
         img_cv = cv2.cvtColor(img_cv, cv2.COLOR_BGR2RGB)
         # Resize to widget size
@@ -156,7 +156,7 @@ if __name__ == "__main__":
     # Updating graph_viewer
     start_ls = np.array([bout.start for bout in bouts_dict.bouts])
     stop_ls = np.array([bout.stop for bout in bouts_dict.bouts])
-    behavs_ls = np.array([bout.behaviour for bout in bouts_dict.bouts])
+    behavs_ls = np.array([bout.behav for bout in bouts_dict.bouts])
     actual_ls = np.array([bout.actual for bout in bouts_dict.bouts])
     start_ls = start_ls / fps
     stop_ls = stop_ls / fps

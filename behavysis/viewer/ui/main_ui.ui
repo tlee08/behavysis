@@ -604,7 +604,7 @@
        </sizepolicy>
       </property>
       <property name="orientation">
-       <enum>Qt::Horizontal</enum>
+       <enum>Qt::Orientation::Horizontal</enum>
       </property>
      </widget>
     </item>
@@ -630,7 +630,7 @@
      <x>0</x>
      <y>0</y>
      <width>683</width>
-     <height>21</height>
+     <height>23</height>
     </rect>
    </property>
    <property name="nativeMenuBar">
@@ -714,12 +714,12 @@
   <customwidget>
    <class>CvView</class>
    <extends>QLabel</extends>
-   <header>behavysis_viewer.widgets.cv_view</header>
+   <header>behavysis.viewer.widgets.cv_view</header>
   </customwidget>
   <customwidget>
    <class>GraphView</class>
    <extends>QWidget</extends>
-   <header>behavysis_viewer.widgets.graph_view</header>
+   <header>behavysis.viewer.widgets.graph_view</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

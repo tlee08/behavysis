@@ -29,12 +29,6 @@ class KeypointsCN(Enum):
 
 
 class KeypointsDf(DFMixin):
-    """
-    Mixin for behaviour DF
-    (generated from maDLC keypoint detection)
-    functions.
-    """
-
     NULLABLE = False
     IN = FramesIN
     CN = KeypointsCN

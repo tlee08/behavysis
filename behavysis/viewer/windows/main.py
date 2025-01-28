@@ -1,3 +1,14 @@
+"""
+## GUI designer and exporting the design to Python code
+
+```bash
+pyside6-designer
+
+pyside6-uic behavysis/viewer/ui/main_ui.ui -o behavysis/viewer/ui/main_ui.py
+pyside6-uic behavysis/viewer/ui/settings_ui.ui -o behavysis/viewer/ui/settings_ui.py
+```
+"""
+
 from multiprocessing import Process
 
 import cv2
@@ -12,23 +23,23 @@ from PySide6.QtWidgets import (
 )
 from tqdm import trange
 
+from behavysis.constants import STATUS_MSG_TIMEOUT, VALUE2COLOR
 from behavysis.df_classes.behav_df import BehavScoredDf
 from behavysis.df_classes.df_mixin import DFMixin
 from behavysis.pydantic_models.configs import ExperimentConfigs
+from behavysis.utils.qt_utils import toggle_window
 from behavysis.viewer.models.bout_inspect_list_model import BoutInspectListModel
 from behavysis.viewer.models.bouts_list_model import BoutsListModel
 from behavysis.viewer.models.exp_file_manager import ExpFileManager
 from behavysis.viewer.models.keypoints_model import KeypointsModel
 from behavysis.viewer.models.vid_model import VidModel
 from behavysis.viewer.ui.main_ui import Ui_MainWindow
-from behavysis.viewer.utils.constants import STATUS_MSG_TIMEOUT, VALUE2COLOR
 from behavysis.viewer.widgets.graph_view import GraphView
 from behavysis.viewer.windows.help import HelpWindow
 from behavysis.viewer.windows.settings import SettingsWindow
-from behavysis.viewer.windows.window_mixin import WindowMixin
 
 
-class MainWindow(QMainWindow, WindowMixin):
+class MainWindow(QMainWindow):
     """__summary__"""
 
     ui: Ui_MainWindow
@@ -213,8 +224,8 @@ class MainWindow(QMainWindow, WindowMixin):
         """__summary__"""
         # SIGNALS AND SLOTS: I/O
         # Handle opening settings and help windows
-        self.ui.action_settings.triggered.connect(lambda: self.toggle_window(self.settings_window))
-        self.ui.action_help.triggered.connect(lambda: self.toggle_window(self.help_window))
+        self.ui.action_settings.triggered.connect(lambda: toggle_window(self.settings_window))
+        self.ui.action_help.triggered.connect(lambda: toggle_window(self.help_window))
         # Handle opening
         self.ui.action_open.triggered.connect(self.open)
         # Handle saving
