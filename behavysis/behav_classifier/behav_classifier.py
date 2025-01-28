@@ -136,11 +136,14 @@ class BehavClassifier:
 
     @configs.setter
     def configs(self, configs: BehavClassifierConfigs) -> None:
-        old_configs = self.configs
-        if old_configs != configs:
-            self.logger.debug("Configs have changed")
-            self.logger.debug("Updating model configs on disk")
-            configs.write_json(self.configs_fp)
+        try:
+            if self.configs == configs:
+                return
+        except FileNotFoundError:
+            pass
+        self.logger.debug("Configs have changed")
+        self.logger.debug("Updating model configs on disk")
+        configs.write_json(self.configs_fp)
 
     @property
     def clfs_dir(self) -> str:
@@ -443,7 +446,7 @@ class BehavClassifier:
         # Preprocessing features
         x_preproc = self.preproc_x_transform(x.values, self.preproc_fp)
         # Loading the model
-        self.clf: BaseTorchModel = joblib_load(self.clf_fp)
+        self.clf = joblib_load(self.clf_fp)
         # Getting probabilities
         y_prob = self.clf.predict(
             x=x_preproc,

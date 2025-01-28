@@ -17,7 +17,7 @@ class BehavClassifierYCN(Enum):
     BEHAVS = "behavs"
 
 
-class BehavClassifierEvalCN(Enum):
+class OutcomesEvalCols(Enum):
     PROB = "prob"
     PRED = "pred"
     ACTUAL = "actual"
@@ -28,4 +28,4 @@ class BehavClassifierCombinedDf(DFMixin):
 
 
 class BehavClassifierEvalDf(BehavPredictedDf):
-    CN = BehavClassifierEvalCN
+    OutcomesCols = OutcomesEvalCols
