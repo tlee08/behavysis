@@ -310,11 +310,11 @@ class BehavScoredDf(BehavDf):
         columns = df.columns
         index = df.index
         # Scaling the df
-        df_scaled_vals = np.ceil(ndimage.zoom(df, (fps_scale, 1))).astype(int)
-        index_scaled_vals = np.round(ndimage.zoom(index, fps_scale) * fps_scale).astype(int)
+        scaled_vals = np.ceil(ndimage.zoom(df, (fps_scale, 1))).astype(int)
+        index_scaled = np.round(ndimage.zoom(index, fps_scale) * fps_scale).astype(int)
         # Making new df
-        df_scaled = pd.DataFrame(df_scaled_vals, index=index_scaled_vals, columns=columns)
-        return cls.basic_clean(df_scaled)
+        scaled_df = pd.DataFrame(scaled_vals, index=index_scaled, columns=columns)
+        return cls.basic_clean(scaled_df)
 
 
 if __name__ == "__main__":

@@ -118,3 +118,13 @@ class KeypointsDf(DFMixin):
         columns = columns[[cls.CN.INDIVIDUALS.value, cls.CN.BODYPARTS.value, cls.CN.COORDS.value]]
         df.columns = pd.MultiIndex.from_frame(columns)
         return df
+
+    @classmethod
+    def resolution_scale_df(cls, df: pd.DataFrame, width_x_scale: float, height_y_scale: float) -> pd.DataFrame:
+        scaled_df = cls.basic_clean(df)
+        idx = pd.IndexSlice
+        # Scaling width coords
+        scaled_df[CoordsCols.X.value] = scaled_df.loc[:, idx[:, :, :, CoordsCols.X.value]] * width_x_scale  # type: ignore
+        # Scaling height coords
+        scaled_df[CoordsCols.Y.value] = scaled_df.loc[:, idx[:, :, :, CoordsCols.Y.value]] * height_y_scale  # type: ignore
+        return cls.basic_clean(scaled_df)

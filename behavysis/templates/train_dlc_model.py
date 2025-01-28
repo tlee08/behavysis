@@ -1,11 +1,11 @@
 # %% [markdown]
 # # DLC Model Creation and Training Script
-# 
+#
 # **RUNNING THIS SCRIPT:** Run this script with the DEEPLABCUT conda environment.
-# 
+#
 # This script generates a DLC multi-animal model, which can even be used for single animals (in fact, training and inference is both faster too).
-# 
-# 
+#
+#
 # The script follows the below steps, which are almost identical to the prescribed process [here](https://deeplabcut.github.io/DeepLabCut/docs/maDLC_UserGuide.html):
 # 1. Create a DLC project folder and config file. The config file stores the model's data, training, and inference configurations.
 # 1. Manually change the following parameters in the config file:
@@ -26,28 +26,28 @@
 #     * `maxiter = 50000`
 # 1. Evaluate statistic (optional - gives MAE but difficult to interrogate this single statistic).
 # 1. Test on novel video(s) and manually inspect tracking.
-# 
+#
 # NOTE: for experiments with multiple animals, the following parameters are usually ideal:
 # * TODO: in pose_inference.yaml
-# 
+#
 
 # %%
 import os
 import re
+import shutil
 
 import cv2
-import shutil
 import deeplabcut
-import yaml
 import numpy as np
 import pandas as pd
+import yaml
 
 # %% [markdown]
 # ## Specify project folder and name
-# 
+#
 # DLC models are usually stored in the `Z:\PRJ-BowenLab\PRJ-BowenLab\DeepLabCut-Projects` folder.
-# 
-# 
+#
+#
 
 # %%
 # Don't need to change
@@ -81,9 +81,9 @@ os.path.isfile(config_fp)
 
 # %% [markdown]
 # ## Creating project
-# 
+#
 # NOTE: don't need to run if project is already created.
-# 
+#
 
 # %%
 # Only run if porject doesn't exist yet
@@ -97,13 +97,10 @@ else:
         videos=placeholder_videos,
         working_directory=root_dir,
         copy_videos=True,
-        multianimal=True
+        multianimal=True,
     )
     # Renaming project to just proj_name
-    os.rename(
-        src=os.path.dirname(temp_config_fp),
-        dst=proj_dir
-    )
+    os.rename(src=os.path.dirname(temp_config_fp), dst=proj_dir)
     # Updating config file with:
     # animals are identifiable, updated project path, and batch size
     deeplabcut.auxiliaryfunctions.edit_config(
@@ -121,25 +118,26 @@ else:
 
 # %% [markdown]
 # ## 1. Manually change config file parameters
-# 
+#
 # **ATTENTION**
-# 
+#
 # Manually update the following parameters in the `config.yaml` file.
 # * `individuals`: name for each animal (e.g. `mouse1`)
 # * `uniquebodyparts`: parts in the arena that are NOT the animal (e.g. `TopLeft`, `ColourMarking`)
 # * `multianimalbodyparts`: bodyparts for an animal (e.g. `Nose`)
 # * `numframes2pick`: The number of frames to extract from each video for labeling. A rule of thumb is ~500 frames overall is sufficient to train a model well.
-# 
+#
 
 # %% [markdown]
 # # Import training videos
-# 
+#
 # **ATTENTION**
-# 
+#
 # Copy training videos to the `<proj_dir>\videos` folder.
-# 
+#
 # Then run the following code block to update the config file with the videos.
-# 
+#
+
 
 # %%
 def update_config_videos(proj_dir):
@@ -167,11 +165,7 @@ def update_config_videos(proj_dir):
             continue
         # Getting one of the image frames in the
         # labeled data dict (to get video dimensions)
-        fp_ls = [
-            j
-            for j in os.listdir(os.path.join(labeled_dir, i))
-            if re.search("\.png$", j)
-        ]
+        fp_ls = [j for j in os.listdir(os.path.join(labeled_dir, i)) if re.search("\.png$", j)]
         # If no frames, skip
         if len(fp_ls) == 0:
             continue
@@ -183,6 +177,7 @@ def update_config_videos(proj_dir):
         video_sets[vid_fp] = {"crop": f"0, {width}, 0, {height}"}
     # Updating configs file with video_sets
     deeplabcut.auxiliaryfunctions.edit_config(config_fp, {"video_sets": video_sets})
+
 
 update_config_videos(proj_dir)
 
@@ -196,14 +191,14 @@ update_config_videos(proj_dir)
 
 # %% [markdown]
 # ## Extract frames
-# 
+#
 # Randomly extract `n` (user specified) frames from each video and store in the `labeled-data` folder.
-# 
+#
 # NOTE: edit the `numframes2pick` value in `configs.yaml` to change the number of frames extracted.
 # ~500 frames overall is sufficient to train a model well.
-# 
+#
 # NOTE: it can be useful to trim videos and import these to the project to get frames that you'd particularly like to label (e.g. close interaction in social experiments).
-# 
+#
 
 # %%
 # EXTRACTING FRAMES
@@ -255,7 +250,7 @@ for i in os.listdir(videos_dir):
 
 # %% [markdown]
 # ## Label frames
-# 
+#
 
 # %%
 deeplabcut.label_frames(config_fp)
@@ -263,9 +258,10 @@ deeplabcut.label_frames(config_fp)
 
 # %% [markdown]
 # ## saDLC to maDLC
-# 
+#
 
 # %%
+
 
 def labels_sa2ma(from_dir, to_dir):
     # Exporting from_dir to to_dir
@@ -301,11 +297,7 @@ def labels_sa2ma(from_dir, to_dir):
             new_columns.append(col_val)
         df.columns = pd.MultiIndex.from_tuples(new_columns, names=new_names)
         # reordering columns
-        df = df.reindex(
-            columns=df.columns.reindex(indiv_ordering, level=1)[0].reindex(
-                bp_ordering, level=2
-            )[0]
-        )
+        df = df.reindex(columns=df.columns.reindex(indiv_ordering, level=1)[0].reindex(bp_ordering, level=2)[0])
     # saving new .h5 and .csv files
     df.to_hdf(
         os.path.join(to_dir, "CollectedData_BowenLab.h5"),
@@ -401,25 +393,25 @@ for vid_dir in labeled_data_folders:
 
 # %% [markdown]
 # ## Delete unneeded files and images with no labeled keypoints
-# 
+#
 
 # %% [markdown]
 # TODO: check that all frames are labelled without deleting rows and images
-# 
+#
 
 # %%
 import os
-import shutil
-import re
-import pandas as pd
+
 import numpy as np
 from natsort import natsorted
+
 
 def silent_remove(fp):
     try:
         os.remove(fp)
     except FileNotFoundError:
         pass
+
 
 labeled_dir = os.path.join(proj_dir, "labeled-data")
 
@@ -429,10 +421,10 @@ for vid_dir in natsorted(os.listdir(labeled_dir)):
     if not os.path.exists(df_fp):
         continue
     df = pd.read_hdf(df_fp)
-    
+
     df_is_na_rows = df[df.apply(lambda x: x.notna().any(), axis=1)]
     df_is_na_ids = df_is_na_rows.index.get_level_values(2)
-    
+
     for img_fp in natsorted(os.listdir(os.path.join(labeled_dir, vid_dir))):
         if img_fp.endswith(".png"):
             if img_fp not in df_is_na_ids:
@@ -443,24 +435,24 @@ for vid_dir in natsorted(os.listdir(labeled_dir)):
             # if img_num not in df_is_na_rows.index:
             #     print(f"Removing {img_fp}")
             #     os.remove(os.path.join(labeled_dir, vid_dir, img_fp))
-    
+
     df_is_na_rows.to_hdf(df_fp, key="keypoints", mode="w")
-    
+
     print()
-    
+
     # silent_remove(os.path.join(labeled_dir, vid_dir, "CollectedData_BowenLabsingleanimal.h5"))
     # silent_remove(os.path.join(labeled_dir, vid_dir, "CollectedData_BowenLabsingleanimal.csv"))
     # silent_remove(os.path.join(labeled_dir, vid_dir, "CollectedData_BowenLab_copy.h5"))
     # silent_remove(os.path.join(labeled_dir, vid_dir, "CollectedData_BowenLab_copy.csv"))
-    
+
 
 # %%
 import os
-import shutil
-import re
-import pandas as pd
+
 import numpy as np
+import pandas as pd
 from natsort import natsorted
+
 
 def silent_remove(fp):
     try:
@@ -468,10 +460,11 @@ def silent_remove(fp):
     except FileNotFoundError:
         pass
 
+
 labeled_dir = os.path.join(proj_dir, "labeled-data")
 
 for vid_dir in natsorted(os.listdir(labeled_dir)):
-    print(vid_dir)    
+    print(vid_dir)
     silent_remove(os.path.join(labeled_dir, vid_dir, "CollectedData_BowenLabsingleanimal.h5"))
     silent_remove(os.path.join(labeled_dir, vid_dir, "CollectedData_BowenLabsingleanimal.csv"))
     silent_remove(os.path.join(labeled_dir, vid_dir, "CollectedData_BowenLab_copy.h5"))
@@ -481,9 +474,9 @@ for vid_dir in natsorted(os.listdir(labeled_dir)):
 
 # %% [markdown]
 # ## Downsample frames
-# 
+#
 # Resolution to downsample to is specified at start of script with `res_width` and `res_height` variables.
-# 
+#
 # Usually, `960 x 540 px` is good for downsampling.
 
 # %%
@@ -534,13 +527,9 @@ for i in os.listdir(labeled_dir):
         h5_row = h5.loc[row_idx]
         # Note header is ["scorer", "individuals", "bodyparts", "coords"]
         # Resizing all x coords
-        h5_row.loc[idx[:, :, :, "x"]] = (
-            h5_row.loc[idx[:, :, :, "x"]] * x_scale
-        )
+        h5_row.loc[idx[:, :, :, "x"]] = h5_row.loc[idx[:, :, :, "x"]] * x_scale
         # Resizing all y coords
-        h5_row.loc[idx[:, :, :, "y"]] = (
-            h5_row.loc[idx[:, :, :, "y"]] * y_scale
-        )
+        h5_row.loc[idx[:, :, :, "y"]] = h5_row.loc[idx[:, :, :, "y"]] * y_scale
     # Saving h5 keypoints data (intermediately within loop)
     h5.to_hdf(h5_fp, key=HDF_KEY, mode="w")
 
@@ -550,7 +539,7 @@ update_config_videos(proj_dir)
 
 # %% [markdown]
 # ## Create training dataset
-# 
+#
 
 # %%
 deeplabcut.create_training_dataset(config_fp)
@@ -561,7 +550,7 @@ deeplabcut.create_training_dataset(config_fp)
 # %% [markdown]
 # ## Editing training configs
 # Training configs are in the `dlc-models-pytorch/.../train/pytorch_config.yaml` file.
-# 
+#
 
 # %%
 # At the end of the file, ensure the following parameters
@@ -580,10 +569,9 @@ train_settings:
 """
 
 
-
 # %% [markdown]
 # ## Train model
-# 
+#
 
 # %%
 deeplabcut.train_network(
@@ -603,11 +591,11 @@ deeplabcut.train_network(
 
 # %% [markdown]
 # ## Evaluate model
-# 
+#
 # Optional - this gives a Mean Absolute Error, which is difficult to interrogate.
-# 
+#
 # It is advisable to instead run the model on some novel videos and inspect its performance by eye.
-# 
+#
 
 # %%
 deeplabcut.evaluate_network(config_fp, plotting=False)
@@ -615,18 +603,18 @@ deeplabcut.evaluate_network(config_fp, plotting=False)
 
 # %% [markdown]
 # ## Test on novel video(s) and manually inspect tracking
-# 
+#
 # Firstly, make a folder in `proj_dir` called `novel_videos` and add some novel videos.
-# 
+#
 # Then run the following code block, which runs the model on these video.
-# 
+#
 # Inspect these videos and if performance is not satisfactory, label more frames and rerun training.
-# 
+#
 # Notes for inspection:
 # * Importantly, do bodypoints track well.
 # * For multi-animal experiments, do points assemble to a single animal well (even if the identity is incorrect),
 # * For multi-animal experiments, don't worry about swapping identities - a postprocessing step is done in our pipeline which fixes the identities to the markings/non-markings of each animal.
-# 
+#
 
 # %%
 # ProcessVidMixin.process_vid(
@@ -636,7 +624,7 @@ deeplabcut.evaluate_network(config_fp, plotting=False)
 #     height_px=960,
 # )
 
-novel_vids_dir = "/home/linux1/Desktop/models_training/3_CHAMBER_CUPS/test_3_chamber_cups_black"
+novel_vids_dir = os.path.join(proj_dir, "test_on_novels")
 assert os.path.exists(novel_vids_dir)
 
 try:
@@ -671,14 +659,15 @@ deeplabcut.create_labeled_video(
 
 # %% [markdown]
 # ## EXTRA CODE SNIPPETS
-# 
+#
 # * Impute all points from first for corners (do we need this?)
 # * Convert SA to MA project (todo)
 # * Resize images and corresponding CollectedData points (todo)
-# 
+#
 
 # %%
 import os
+
 import pandas as pd
 
 HDF_KEY = "keypoints"
@@ -708,12 +697,8 @@ for i in os.listdir(labeled_dir):
     # h5.loc[:, idx[:, :, corner_bpts]] = h5.loc[:, idx[:, :, corner_bpts]].ffill()
     # Bounding the values to (0+5, res_height-5) and (0+5, res_width-5)
     # THIS SEEMS TO WORK BEST BECAUSE IT JUST ENSURES THE POINTS ARE WITHIN THE FRAME (AUTOMATICALLY)
-    h5.loc[:, idx[:, :, corner_bpts, "y"]] = h5.loc[:, idx[:, :, corner_bpts, "y"]].clip(
-        5, res_height - 5
-    )
-    h5.loc[:, idx[:, :, corner_bpts, "x"]] = h5.loc[:, idx[:, :, corner_bpts, "x"]].clip(
-        5, res_width - 5
-    )
+    h5.loc[:, idx[:, :, corner_bpts, "y"]] = h5.loc[:, idx[:, :, corner_bpts, "y"]].clip(5, res_height - 5)
+    h5.loc[:, idx[:, :, corner_bpts, "x"]] = h5.loc[:, idx[:, :, corner_bpts, "x"]].clip(5, res_width - 5)
     # saving h5
     h5.to_hdf(h5_fp, key=HDF_KEY, mode="w")
 
@@ -740,6 +725,3 @@ display(x.keys())
 x.close()
 
 pd.read_hdf(df_out_fp, key="keypoints")
-
-
-
