@@ -4,7 +4,6 @@ _summary_
 
 from __future__ import annotations
 
-import json
 import os
 from enum import Enum
 from typing import TYPE_CHECKING
@@ -511,8 +510,6 @@ class BehavClassifier:
         metrics_fig.savefig(os.path.join(self.eval_dir, f"{name}_confm.png"))
         pcutoffs_fig.savefig(os.path.join(self.eval_dir, f"{name}_pcutoffs.png"))
         logc_fig.savefig(os.path.join(self.eval_dir, f"{name}_logc.png"))
-        # Print classification report
-        print(json.dumps(report_dict, indent=4))
         return eval_df, report_dict, metrics_fig, pcutoffs_fig, logc_fig
 
     #################################################

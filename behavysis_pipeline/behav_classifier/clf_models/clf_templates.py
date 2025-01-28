@@ -25,7 +25,6 @@ class RF1(RandomForestClassifier):
             verbose=1,
         )
         self.window_frames = 0
-        print("Window frames", self.window_frames)
 
     def fit(self, x, y, index, *args, **kwargs):
         super().fit(x[index], y[index])
@@ -35,7 +34,6 @@ class RF1(RandomForestClassifier):
         )
 
     def predict(self, x, index, *args, **kwargs):
-        print(index.shape)
         return super().predict_proba(x[index])[:, 1]
 
 

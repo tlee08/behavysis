@@ -69,9 +69,8 @@ class BaseTorchModel(nn.Module):
             loss = self._train_epoch(train_dl, self.criterion, self.optimizer, verbose=True)
             # Validate model
             vloss = self._validate(val_dl, self.criterion)
-            # Printing loss
+            # showing losses
             print(f"epochs: {epoch+1}/{epochs}")
-            print(f"loss: {loss:.3f}")
             print(f"loss: {loss:.3f}, vloss: {vloss:.3f}")
             # Storing loss
             history.loc[epoch, "loss"] = loss
@@ -108,7 +107,7 @@ class BaseTorchModel(nn.Module):
             loss.backward()
             # Update learning weights
             optimizer.step()
-            # print statistics
+            # calculating loss
             loss += loss.item()
         # Scaling loss by number of batches
         loss /= len(dl)
