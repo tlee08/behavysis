@@ -2,6 +2,7 @@
 Utility functions.
 """
 
+import json
 import os
 import shutil
 
@@ -51,3 +52,19 @@ def check_files_exist(*args: str):
         if os.path.exists(dst_fp):
             return True
     return False
+
+
+def read_json(fp: str) -> dict:
+    """
+    Reads the json file at the given filepath.
+    """
+    with open(fp, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def write_json(fp: str, data: dict) -> None:
+    """
+    Writes the given data to the json file at the given filepath.
+    """
+    with open(fp, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=4)

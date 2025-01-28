@@ -84,7 +84,7 @@ class ClassifyBehavs:
             pcutoff = get_pcutoff(configs.get_ref(model_config.pcutoff), behav_model.configs.pcutoff, logger)
             min_window_frames = configs.get_ref(model_config.min_window_frames)
             # Running the clf pipeline
-            behav_df_i = behav_model.pipeline_run(features_df)
+            behav_df_i = behav_model.pipeline_inference(features_df)
             # Getting prob and pred column names
             prob_col = (behav_name, OutcomesPredictedCols.PROB.value)
             pred_col = (behav_name, OutcomesPredictedCols.PRED.value)

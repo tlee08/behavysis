@@ -7,6 +7,8 @@ from subprocess import PIPE, Popen
 
 ENCODING = "utf-8"
 
+# TODO: Add logging (e.g. run_subproc_logger)
+
 
 def run_subproc_fstream(cmd: list[str], fp: str, **kwargs) -> None:
     """Run a subprocess and stream the output to a file."""

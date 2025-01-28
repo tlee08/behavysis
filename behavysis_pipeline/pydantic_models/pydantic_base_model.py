@@ -6,6 +6,8 @@ import os
 
 from pydantic import BaseModel, ConfigDict
 
+from behavysis_pipeline.utils.io_utils import read_json, write_json
+
 
 class PydanticBaseModel(BaseModel):
     """Mixin class for Pydantic models (i.e. configs)."""
@@ -31,8 +33,7 @@ class PydanticBaseModel(BaseModel):
         -------
         >>> config = ConfigModel.read_json("/path/to/config.json")
         """
-        with open(fp, "r", encoding="utf-8") as f:
-            return cls.model_validate_json(f.read())
+        return cls.model_validate_json(read_json(fp))
 
     def write_json(self, fp: str) -> None:
         """
@@ -47,8 +48,7 @@ class PydanticBaseModel(BaseModel):
         """
         fp_dir = os.path.dirname(fp)
         os.makedirs(fp_dir, exist_ok=True) if fp_dir else None
-        with open(fp, "w", encoding="utf-8") as f:
-            f.write(self.model_dump_json(indent=2))
+        write_json(fp, self.model_dump_json(indent=2))
 
     @staticmethod
     def validate_attrs(model, field_names, model_cls):

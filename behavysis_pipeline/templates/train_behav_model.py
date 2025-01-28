@@ -45,7 +45,7 @@ if __name__ == "__main__":
     # Testing all different classifiers
     model.clf_eval_all()
     # MANUALLY LOOK AT THE BEST CLASSIFIER AND SELECT
-    model.pipeline_build_save(DNN1)
+    model.pipeline_build_save(CNN1)
 
     # Example of evaluating model with novel data
     x = pd.read("path/to/features_extracted")
