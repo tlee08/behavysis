@@ -1,7 +1,7 @@
-from behavysis.constants import SIMBA_BODYPARTS, SIMBA_INDIVIDUALS
+from behavysis.constants import BPTS_SIMBA, INDIVS_SIMBA
 from behavysis.pydantic_models.pydantic_base_model import PydanticBaseModel
 
 
 class ExtractFeaturesConfigs(PydanticBaseModel):
-    individuals: list[str] | str = SIMBA_INDIVIDUALS
-    bodyparts: list[str] | str = SIMBA_BODYPARTS
+    individuals: list[str] | str = INDIVS_SIMBA
+    bodyparts: list[str] | str = BPTS_SIMBA

@@ -1,11 +1,11 @@
 import os
 
-from behavysis.constants import SIMBA_BODYPARTS
+from behavysis.constants import BPTS_SIMBA
 from behavysis.pydantic_models.pydantic_base_model import PydanticBaseModel
 
 
 class FromLikelihoodConfigs(PydanticBaseModel):
-    bodyparts: list[str] | str = SIMBA_BODYPARTS
+    bodyparts: list[str] | str = BPTS_SIMBA
     window_sec: float | str = 1.0
     pcutoff: float | str = 0.8
 

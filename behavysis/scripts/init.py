@@ -13,7 +13,7 @@ def main() -> None:
     behavysis_dir = get_module_dir("behavysis")
     templates_dir = os.path.join(behavysis_dir, "templates")
     # Installing DEEPLABCUT env
-    run_subproc_console(["cd", "templates_dir", "&&" "conda", "env", "create", "-f", "DEEPLABCUT.yaml"])
+    run_subproc_console(["cd", templates_dir, "&&" "conda", "env", "create", "-f", "DEEPLABCUT.yaml"])
     # Installing simba env
     run_subproc_console(["cd", templates_dir, "&&", "conda", "env", "create", "-f", "simba_env.yaml"])
 

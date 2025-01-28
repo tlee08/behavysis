@@ -1,6 +1,6 @@
 from typing import Literal
 
-from behavysis.constants import SIMBA_BODYPARTS
+from behavysis.constants import BPTS_SIMBA
 from behavysis.pydantic_models.pydantic_base_model import PydanticBaseModel
 
 
@@ -20,7 +20,7 @@ class RefineIdsConfigs(PydanticBaseModel):
     marked: str = "marked"
     unmarked: str = "unmarked"
     marking: str = "marking"
-    bodyparts: list[str] | str = SIMBA_BODYPARTS
+    bodyparts: list[str] | str = BPTS_SIMBA
     window_sec: float | str = 0.5
     metric: Literal["current", "rolling", "binned"] | str = "current"
 

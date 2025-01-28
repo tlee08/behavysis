@@ -90,7 +90,6 @@ BPTS_CENTRE = ["LeftFlankMid", "BodyCentre", "RightFlankMid", "LeftFlankRear", "
 
 BPTS_FRONT = ["LeftEar", "RightEar", "Nose", "BodyCentre"]
 
-# TODO: is this necessary? Also similar variables elsewhere
 INDIVS_SINGLE = "single"
 
 BPTS_ARENA = [

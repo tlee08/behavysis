@@ -1,30 +1,30 @@
-from behavysis.constants import ARENA_BODYPARTS, SIMBA_BODYPARTS
+from behavysis.constants import BPTS_ARENA, BPTS_SIMBA
 from behavysis.pydantic_models.pydantic_base_model import PydanticBaseModel
 
 
 class SpeedConfigs(PydanticBaseModel):
     smoothing_sec: float | str = 1
-    bodyparts: list[str] | str = SIMBA_BODYPARTS
+    bodyparts: list[str] | str = BPTS_SIMBA
 
 
 class SocialDistanceConfigs(PydanticBaseModel):
     smoothing_sec: float | str = 1
-    bodyparts: list[str] | str = SIMBA_BODYPARTS
+    bodyparts: list[str] | str = BPTS_SIMBA
 
 
 class FreezingConfigs(PydanticBaseModel):
     window_sec: float | str = 2
     thresh_mm: float | str = 5
     smoothing_sec: float | str = 0.2
-    bodyparts: list[str] | str = SIMBA_BODYPARTS
+    bodyparts: list[str] | str = BPTS_SIMBA
 
 
 class InRoiConfigs(PydanticBaseModel):
     roi_name: str = "in_my_roi"
     is_in: bool | str = True
     thresh_mm: float | str = 0
-    roi_corners: list[str] | str = ARENA_BODYPARTS
-    bodyparts: list[str] | str = SIMBA_BODYPARTS
+    roi_corners: list[str] | str = BPTS_ARENA
+    bodyparts: list[str] | str = BPTS_SIMBA
 
 
 class AnalyseConfigs(PydanticBaseModel):

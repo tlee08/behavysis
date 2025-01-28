@@ -23,11 +23,6 @@ from behavysis.pydantic_models.processes.preprocess import PreprocessConfigs, Re
 from behavysis.pydantic_models.processes.run_dlc import RunDlcConfigs
 from behavysis.pydantic_models.pydantic_base_model import PydanticBaseModel
 
-# class EvalKeypointsPlotConfigs(PydanticBaseModel):
-#     bodyparts: list[str] | str = SIMBA_BODYPARTS
-
-# TODO: make the default configs here (incl RefConfigs). I think use a function to get the default configs
-
 
 class UserConfigs(PydanticBaseModel):
     format_vid: FormatVidConfigs = FormatVidConfigs()
@@ -129,8 +124,8 @@ def get_default_configs() -> ExperimentConfigs:
         ref=RefConfigs.model_validate(
             {
                 "indivs_simba": INDIVS_SIMBA,
-                "bpts_centre": BPTS_CENTRE,
                 "bpts_simba": BPTS_SIMBA,
+                "bpts_centre": BPTS_CENTRE,
                 "bpts_front": BPTS_FRONT,
                 "corners": BPTS_ARENA,
             }
