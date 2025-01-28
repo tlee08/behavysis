@@ -48,7 +48,7 @@ class PydanticBaseModel(BaseModel):
         """
         fp_dir = os.path.dirname(fp)
         os.makedirs(fp_dir, exist_ok=True) if fp_dir else None
-        write_json(fp, self.model_dump(indent=2))
+        write_json(fp, self.model_dump())
 
     @staticmethod
     def validate_attrs(model, field_names, model_cls):
