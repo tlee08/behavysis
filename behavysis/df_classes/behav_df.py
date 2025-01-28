@@ -66,9 +66,10 @@ class BehavDf(DFMixin):
                 # For each outcome
                 for outcome in enum2tuple(cls.OutcomesCols):
                     # Assert the (behav, outcome) column is present
-                    assert (behav, outcome) in columns, (
-                        f"Expected {outcome} column for {behav}.\nThe columns in the df are: {columns}"
-                    )
+                    assert (
+                        behav,
+                        outcome,
+                    ) in columns, f"Expected {outcome} column for {behav}.\nThe columns in the df are: {columns}"
 
 
 class BehavPredictedDf(BehavDf):
@@ -303,18 +304,17 @@ class BehavScoredDf(BehavDf):
         return df
 
     @classmethod
-    def fps_scale_df(cls, df: pd.DataFrame, src_fps: int, dst_fps: int) -> pd.DataFrame:
+    def fps_scale_df(cls, df: pd.DataFrame, src_fps: float, dst_fps: float) -> pd.DataFrame:
         fps_scale = dst_fps / src_fps
         df = cls.basic_clean(df)
         columns = df.columns
         index = df.index
         # Scaling the df
-        df = np.ceil(ndimage.zoom(df, (fps_scale, 1))).astype(int)
-        index = np.round(ndimage.zoom(index, fps_scale)).astype(int)
+        df_scaled_vals = np.ceil(ndimage.zoom(df, (fps_scale, 1))).astype(int)
+        index_scaled_vals = np.round(ndimage.zoom(index, fps_scale) * fps_scale).astype(int)
         # Making new df
-        df = pd.DataFrame(df, index=index, columns=columns)
-        df = cls.basic_clean(df)
-        return df
+        df_scaled = pd.DataFrame(df_scaled_vals, index=index_scaled_vals, columns=columns)
+        return cls.basic_clean(df_scaled)
 
 
 if __name__ == "__main__":

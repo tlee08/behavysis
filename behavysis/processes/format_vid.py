@@ -76,16 +76,11 @@ class FormatVid:
             start_sec=configs.get_ref(configs_filt.start_sec),
             stop_sec=configs.get_ref(configs_filt.stop_sec),
         )
-
-        # Saving video metadata to configs dict
-        configs.auto.raw_vid = get_vid_metadata(raw_vid_fp, logger)
-        configs.auto.formatted_vid = get_vid_metadata(formatted_vid_fp, logger)
-        logger.info("Video metadata stored in config file.")
-        configs.write_json(configs_fp)
+        cls.get_vids_metadata(raw_vid_fp, formatted_vid_fp, configs_fp)
         return get_io_obj_content(io_obj)
 
     @classmethod
-    def get_vids_metadata(cls, raw_vid_fp: str, formatted_vid_fp: str, configs_fp: str, overwrite: bool) -> str:
+    def get_vids_metadata(cls, raw_vid_fp: str, formatted_vid_fp: str, configs_fp: str) -> str:
         """
         Finds the video metadata/parameters for either the raw or formatted video,
         and stores this data in the experiment's config file.
@@ -98,8 +93,6 @@ class FormatVid:
             The output video filepath.
         configs_fp : str
             The JSON configs filepath.
-        overwrite : bool
-            Whether to overwrite the output file (if it exists). IGNORED
 
         Returns
         -------

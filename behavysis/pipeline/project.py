@@ -260,8 +260,11 @@ class Project:
     def update_configs(self, default_configs_fp: str, overwrite: str) -> None:
         self._proc_scaff(Experiment.update_configs, default_configs_fp, overwrite)
 
-    def format_vid(self, funcs: tuple[Callable, ...], overwrite: bool) -> None:
-        self._proc_scaff(Experiment.format_vid, funcs, overwrite)
+    def format_vid(self, overwrite: bool) -> None:
+        self._proc_scaff(Experiment.format_vid, overwrite)
+
+    def get_vid_metadata(self) -> None:
+        self._proc_scaff(Experiment.get_vid_metadata)
 
     def run_dlc(self, gputouse: int | None = None, overwrite: bool = False) -> None:
         """

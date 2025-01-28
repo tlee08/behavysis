@@ -24,13 +24,9 @@ if __name__ == "__main__":
         overwrite="user",
     )
 
-    proj.format_vid(
-        (
-            FormatVid.format_vid,
-            FormatVid.get_vids_metadata,
-        ),
-        overwrite=overwrite,
-    )
+    proj.format_vid(overwrite=overwrite)
+
+    proj.format_vid_metadata()
 
     proj.run_dlc(
         gputouse=None,

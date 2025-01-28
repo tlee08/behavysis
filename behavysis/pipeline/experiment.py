@@ -19,6 +19,7 @@ from behavysis.processes.combine_analysis import CombineAnalysis
 from behavysis.processes.evaluate_vid import EvaluateVid
 from behavysis.processes.export import Export
 from behavysis.processes.extract_features import ExtractFeatures
+from behavysis.processes.format_vid import FormatVid
 from behavysis.processes.run_dlc import RunDLC
 from behavysis.processes.update_configs import UpdateConfigs
 from behavysis.pydantic_models.configs import AutoConfigs, ExperimentConfigs
@@ -205,7 +206,7 @@ class Experiment:
     #                    FORMATTING VIDEO METHODS
     #####################################################################
 
-    def format_vid(self, funcs: tuple[Callable, ...], overwrite: bool) -> dict:
+    def format_vid(self, overwrite: bool) -> dict:
         """
         Formats the video with ffmpeg to fit the formatted configs (e.g. fps and resolution_px).
         Once the formatted video is produced, the configs dict and *configs.json file are
@@ -228,11 +229,32 @@ class Experiment:
         Can call any methods from `FormatVid`.
         """
         return self._proc_scaff(
-            funcs,
+            (FormatVid.format_vid,),
             raw_vid_fp=self.get_fp(Folders.RAW_VID),
             formatted_vid_fp=self.get_fp(Folders.FORMATTED_VID),
             configs_fp=self.get_fp(Folders.CONFIGS),
             overwrite=overwrite,
+        )
+
+    def get_vid_metadata(self) -> dict:
+        """
+        Gets the video metadata for the raw and formatted video files.
+
+        Parameters
+        ----------
+        overwrite : bool
+            _description_
+
+        Returns
+        -------
+        dict
+            _description_
+        """
+        return self._proc_scaff(
+            (FormatVid.get_vids_metadata,),
+            raw_vid_fp=self.get_fp(Folders.RAW_VID),
+            formatted_vid_fp=self.get_fp(Folders.FORMATTED_VID),
+            configs_fp=self.get_fp(Folders.CONFIGS),
         )
 
     #####################################################################
