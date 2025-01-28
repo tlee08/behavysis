@@ -166,13 +166,15 @@ class DFMixin:
         if cls.IN:
             assert df.index.nlevels == len(enum2tuple(cls.IN)), (
                 "Different number of column levels than expected.\n"
-                f"Expected columns are {enum2tuple(cls.IN)} but got {df.index.nlevels} levels."
+                f"Expected columns are {enum2tuple(cls.IN)} but got {df.index.nlevels} levels.\n"
+                f"{df}"
             )
             df.index = df.index.set_names(enum2tuple(cls.IN))
         if cls.CN:
             assert df.columns.nlevels == len(enum2tuple(cls.CN)), (
                 "Different number of column levels than expected.\n"
-                f"Expected columns are {enum2tuple(cls.CN)} but got {df.columns.nlevels} levels."
+                f"Expected columns are {enum2tuple(cls.CN)} but got {df.columns.nlevels} levels.\n"
+                f"{df}"
             )
             df.columns = df.columns.set_names(enum2tuple(cls.CN))
         df = df.sort_index()
@@ -207,7 +209,7 @@ class DFMixin:
             levels = enum2tuple(levels)
         elif isinstance(levels, str):  # If str
             levels = (levels,)
-        assert df.index.names == levels, f"The index level is incorrect. Expected {levels} but got {df.index.names}."
+        assert df.index.names == levels, f"The index levels are incorrect. Expected {levels} but got {df.index.names}."
 
     @classmethod
     def check_CN(cls, df: pd.DataFrame, levels: EnumType | tuple[str] | str) -> None:
@@ -219,4 +221,4 @@ class DFMixin:
             levels = (levels,)
         assert (
             df.columns.names == levels
-        ), f"The column level is incorrect. Expected {levels} but got {df.columns.names}."
+        ), f"The column levels are incorrect. Expected {levels} but got {df.columns.names}."

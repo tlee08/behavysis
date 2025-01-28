@@ -33,7 +33,7 @@ class PydanticBaseModel(BaseModel):
         -------
         >>> config = ConfigModel.read_json("/path/to/config.json")
         """
-        return cls.model_validate_json(read_json(fp))
+        return cls.model_validate(read_json(fp))
 
     def write_json(self, fp: str) -> None:
         """
@@ -48,7 +48,7 @@ class PydanticBaseModel(BaseModel):
         """
         fp_dir = os.path.dirname(fp)
         os.makedirs(fp_dir, exist_ok=True) if fp_dir else None
-        write_json(fp, self.model_dump_json(indent=2))
+        write_json(fp, self.model_dump(indent=2))
 
     @staticmethod
     def validate_attrs(model, field_names, model_cls):

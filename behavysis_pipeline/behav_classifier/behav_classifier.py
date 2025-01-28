@@ -31,7 +31,7 @@ from behavysis_pipeline.behav_classifier.clf_models.clf_templates import (
     CNN1,
 )
 from behavysis_pipeline.constants import Folders
-from behavysis_pipeline.df_classes.behav_df import BehavPredictedDf, BehavScoredDf, BehavValues
+from behavysis_pipeline.df_classes.behav_df import BehavCombinedDf, BehavPredictedDf, BehavScoredDf, BehavValues
 from behavysis_pipeline.df_classes.df_mixin import DFMixin
 from behavysis_pipeline.pydantic_models.behav_classifier import (
     BehavClassifierConfigs,
@@ -206,7 +206,7 @@ class BehavClassifier:
             BehavClassifierConfigs.read_json(configs_fp)
         except (FileNotFoundError, OSError):
             raise ValueError(
-                f"Model in project directory, {proj_dir}, and behav name, {behav_name}, not found.\n"
+                f'Model in project directory, "{proj_dir}", and behav name, "{behav_name}", not found.\n'
                 "Please check file path."
             )
         return cls(proj_dir, behav_name)
@@ -222,7 +222,9 @@ class BehavClassifier:
         Adds a MultiIndex level to the rows, with the values as the filenames in the directory.
         """
         data_dict = {get_name(i): DFMixin.read(os.path.join(src_dir, i)) for i in os.listdir(os.path.join(src_dir))}
-        return pd.concat(data_dict.values(), axis=0, keys=data_dict.keys())
+        df = pd.concat(data_dict.values(), axis=0, keys=data_dict.keys())
+        df = BehavCombinedDf.basic_clean(df)
+        return df
 
     ###############################################################################################
     #            PREPROCESSING DFS
@@ -260,7 +262,6 @@ class BehavClassifier:
         Filters the `y` dataframe to only include the `behav` column and the specific outcome columns,
         and rename the columns to be in the format `{behav}__{outcome}`.
         """
-        y = BehavScoredDf.basic_clean(y)
         # Filtering out the pred columns (in the `outcomes` level)
         columns_filter = np.isin(
             y.columns.get_level_values(BehavScoredDf.CN.OUTCOMES.value),
@@ -346,17 +347,26 @@ class BehavClassifier:
         # Preprocessing y df
         y_preproc = self.wrangle_columns_y(y)[self.configs.behav_name]
         y_preproc = self.preproc_y_transform(y_preproc)
-        # Getting entire index
-        index = np.arange(x_preproc.shape[0])
+        # filtering "available" index down so frames in "outer" window for each video are excluded
+        window_frames = self.clf.window_frames
+        if window_frames > 0:
+            index = (
+                index.to_frame(index=False)
+                .assign(index_num=np.arange(index.shape[0]))
+                .groupby(BehavCombinedDf.IN.VIDEO.value)
+                .apply(lambda group: group.iloc[window_frames:-window_frames])
+            )["index_num"].values
+        else:
+            index = np.arange(index.shape[0])
         # Splitting into train and test indexes
-        ind_train, ind_test = train_test_split(
+        index_train, index_test = train_test_split(
             index,
             test_size=self.configs.test_split,
             stratify=y_preproc[index],
         )
         # Undersampling training index
-        ind_train = self.undersample(ind_train, y_preproc[ind_train], self.configs.undersample_ratio)
-        return x_preproc, y_preproc, ind_train, ind_test
+        index_train = self.undersample(index_train, y_preproc[index_train], self.configs.undersample_ratio)
+        return x_preproc, y_preproc, index_train, index_test
 
     #################################################
     # PIPELINE FOR CLASSIFIER TRAINING AND INFERENCE
@@ -369,14 +379,14 @@ class BehavClassifier:
         Callable is a method from `ClfTemplates`.
         """
         # Preparing data
-        x_preproc, y_preproc, ind_train, ind_test = self.preproc_training()
+        x_preproc, y_preproc, index_train, index_test = self.preproc_training()
         # Initialising the model
         self.clf = clf_cls()
         # Training the model
         history = self.clf.fit(
             x=x_preproc,
             y=y_preproc,
-            index=ind_train,
+            index=index_train,
             batch_size=self.configs.batch_size,
             epochs=self.configs.epochs,
             val_split=self.configs.val_split,
@@ -384,8 +394,8 @@ class BehavClassifier:
         # Saving history
         self.clf_eval_save_history(history, self.configs.clf_struct)
         # Evaluating on train and test data
-        self.clf_eval_save_performance(x_preproc, y_preproc, ind_train, "train")
-        self.clf_eval_save_performance(x_preproc, y_preproc, ind_test, "test")
+        self.clf_eval_save_performance(x_preproc, y_preproc, index_train, "train")
+        self.clf_eval_save_performance(x_preproc, y_preproc, index_test, "test")
         # Saving model
         self.clf_save()
 
@@ -414,13 +424,24 @@ class BehavClassifier:
         [behavysis_pipeline.behav_classifier.BehavClassifier.preproc_x][] for details.
         - Makes predictions and returns the predicted behaviours.
         """
+        index = x.index
         # Preprocessing features
         x_preproc = self.preproc_x_transform(x, self.preproc_fp)
         # Loading the model
         self.clf_load()
-        # Making predictions
-        y_eval = self.clf_predict(x_preproc, self.configs.batch_size, x.index.values)
-        return y_eval
+        # Getting probabilities
+        y_probs = self.clf.predict(
+            x=x_preproc,
+            index=np.arange(x_preproc.shape[0]),
+            batch_size=self.configs.batch_size,
+        )
+        # Making predictions from probabilities (and pcutoff)
+        y_preds = (y_probs > self.configs.pcutoff).astype(int)
+        # Making df
+        pred_df = BehavPredictedDf.init_df(pd.Series(index))
+        pred_df[(self.configs.behav_name, BehavPredictedDf.OutcomesCols.PROB.value)] = y_probs
+        pred_df[(self.configs.behav_name, BehavPredictedDf.OutcomesCols.PRED.value)] = y_preds
+        return pred_df
 
     #################################################
     # MODEL CLASSIFIER METHODS
@@ -437,45 +458,6 @@ class BehavClassifier:
         Saves the model's classifier
         """
         joblib.dump(self.clf, self.clf_fp)
-
-    def clf_predict(
-        self,
-        x: np.ndarray,
-        batch_size: int,
-        index: None | np.ndarray = None,
-    ) -> pd.DataFrame:
-        """
-        Making predictions using the given model and preprocessed features.
-        Assumes the x array is already preprocessed.
-
-        Parameters
-        ----------
-        x : np.ndarray
-            Preprocessed features.
-
-        Returns
-        -------
-        pd.DataFrame
-            Predicted behaviour classifications. Dataframe columns are in the format:
-            ```
-            behavs     :  <behav>   <behav>
-            outcomes   :  "prob"    "pred"
-            ```
-        """
-        # Getting probabilities
-        index = index or np.arange(x.shape[0])
-        y_probs = self.clf.predict(
-            x=x,
-            index=index,
-            batch_size=batch_size,
-        )
-        # Making predictions from probabilities (and pcutoff)
-        y_preds = (y_probs > self.configs.pcutoff).astype(int)
-        # Making df
-        pred_df = BehavPredictedDf.init_df(pd.Series(index))
-        pred_df[(self.configs.behav_name, BehavPredictedDf.OutcomesCols.PROB.value)] = y_probs
-        pred_df[(self.configs.behav_name, BehavPredictedDf.OutcomesCols.PRED.value)] = y_preds
-        return pred_df
 
     #################################################
     # COMPREHENSIVE EVALUATION FUNCTIONS

@@ -56,8 +56,8 @@ class BaseTorchModel(nn.Module):
         # Split data into training and validation sets
         ind_train, ind_val = train_test_split(index, stratify=y[index], test_size=val_split)
         # Making data loaders
-        train_ld = self.fit_loader(x, y, ind_train, batch_size=batch_size)
-        val_ld = self.fit_loader(x, y, ind_val, batch_size=batch_size)
+        train_dl = self.fit_loader(x, y, ind_train, batch_size=batch_size)
+        val_dl = self.fit_loader(x, y, ind_val, batch_size=batch_size)
         # Storing training history
         history = pd.DataFrame(
             index=pd.Index(np.arange(epochs), name="epoch"),
@@ -66,9 +66,9 @@ class BaseTorchModel(nn.Module):
         # Training the model
         for epoch in range(epochs):
             # Training model for one epoch
-            loss = self._train_epoch(train_ld, self.criterion, self.optimizer, verbose=True)
+            loss = self._train_epoch(train_dl, self.criterion, self.optimizer, verbose=True)
             # Validate model
-            vloss = self._validate(val_ld, self.criterion)
+            vloss = self._validate(val_dl, self.criterion)
             # Printing loss
             print(f"epochs: {epoch+1}/{epochs}")
             print(f"loss: {loss:.3f}")
@@ -80,7 +80,7 @@ class BaseTorchModel(nn.Module):
 
     def _train_epoch(
         self,
-        ld: DataLoader,
+        dl: DataLoader,
         criterion: nn.Module,
         optimizer: optim.Optimizer,
         verbose: bool = False,
@@ -89,11 +89,11 @@ class BaseTorchModel(nn.Module):
         self.train()
         # If verbose, then wrap the loader in tqdm to show a progress bar
         if verbose:
-            ld = tqdm(ld)
+            dl = tqdm(dl)
         # To store the running loss
         loss = 0.0
         # Iterate over the data batches
-        for data in ld:
+        for data in dl:
             # get the inputs
             inputs, labels = data
             inputs = inputs.to(self.device)
@@ -111,21 +111,21 @@ class BaseTorchModel(nn.Module):
             # print statistics
             loss += loss.item()
         # Scaling loss by number of batches
-        loss /= len(ld)
+        loss /= len(dl)
         # Converting loss to float
         loss = loss.cpu().detach().numpy().item()
         return loss
 
-    def _validate(self, ld: DataLoader, criterion: nn.Module) -> float:
+    def _validate(self, dl: DataLoader, criterion: nn.Module) -> float:
         # Calculating loss across an entire dataset (i.e. data loader)
         # Running inference
-        outputs = self._inference(ld, verbose=False)
+        outputs = self._inference(dl, verbose=False)
         # Getting the actual labels
-        y = torch.concatenate([i[1] for i in ld]).to(self.device)
+        y = torch.concatenate([i[1] for i in dl]).to(self.device)
         # Calculating the loss
         loss = criterion(outputs, y)
         # Scaling loss by number of batches
-        loss /= len(ld)
+        loss /= len(dl)
         # Converting loss to float
         loss = loss.cpu().numpy().item()
         return loss
@@ -144,20 +144,20 @@ class BaseTorchModel(nn.Module):
         probs = probs.cpu().numpy()
         return probs
 
-    def _inference(self, ld: DataLoader, verbose: bool = False) -> torch.Tensor:
+    def _inference(self, dl: DataLoader, verbose: bool = False) -> torch.Tensor:
         # Switch the model to evaluation mode
         self.eval()
         # List to store the predictions
-        probs_all = torch.zeros((len(ld.dataset), 1), device=self.device)
+        probs_all = torch.zeros((len(dl.dataset), 1), device=self.device)
         # If verbose, then wrap the loader in tqdm to show a progress bar
         if verbose:
-            ld = tqdm(ld)
+            dl = tqdm(dl)
         # Keeping track of number of predictions made
         n = 0
         # No need to track gradients for inference, so wrap in no_grad()
         with torch.no_grad():
             # Iterate over the data batches
-            for data in ld:
+            for data in dl:
                 # Getting inputs
                 inputs = data[0]
                 inputs = inputs.to(self.device)
@@ -214,10 +214,6 @@ class TimeSeriesDataset(Dataset):
         # Checking that the indexes are equal
         if y is not None:
             assert x.shape[0] == y.shape[0]
-        # # Removing the x-y-l columns (only derived features kept)
-        # # 2 (indivs) * 8 (bpts) * 3 (coords) = 48 (columns)
-        # # TODO do the removing in preprocessing in behav_classifier pipeline, NOT in base torch model
-        # x = x[:, 48:]
         # Padding x (for frames on either side)
         x = np.concatenate([x[np.repeat(0, window_frames)], x, x[np.repeat(-1, window_frames)]])
         # Storing the data and labels
@@ -239,6 +235,7 @@ class TimeSeriesDataset(Dataset):
         i = self.index[index]
         # Calculate start and end of the window
         # Because of data padding, the start is i and end is i + 2 * window_frames + 1
+        # Centre is i + window_frames
         start = i
         end = i + 2 * self.window_frames + 1
         # Extract the window and label and convert to torch tensors
@@ -258,7 +255,7 @@ class MemoizedTimeSeriesDataset(TimeSeriesDataset):
             return self.memo[index]
         else:
             # Otherwise, calculate
-            window, label = super().__getitem__(index)
+            x_i, y_i = super().__getitem__(index)
             # Memoize the result
-            self.memo[index] = window, label
-            return window, label
+            self.memo[index] = x_i, y_i
+            return x_i, y_i
