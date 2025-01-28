@@ -1,8 +1,8 @@
 from PySide6.QtCore import QAbstractListModel, Qt, Signal
 from PySide6.QtGui import QColor
 
+from behavysis.constants import CHECKSTATE2VALUE, VALUE2CHECKSTATE, VALUE2COLOR
 from behavysis.pydantic_models.bouts import Bout
-from behavysis.viewer.constants import CHECKSTATE2VALUE, VALUE2CHECKSTATE, VALUE2COLOR
 
 
 class BoutInspectListModel(QAbstractListModel):

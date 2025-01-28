@@ -1,5 +1,7 @@
 import os
 
+from behavysis.constants import DF_IO_FORMAT
+
 
 class ExpFileManager:
     _root_dir: str
@@ -22,11 +24,11 @@ class ExpFileManager:
 
     @property
     def behavs_df_fp(self):
-        return os.path.join(self.root_dir, "7_scored_behavs", f"{self.name}.feather")
+        return os.path.join(self.root_dir, "7_scored_behavs", f"{self.name}.{DF_IO_FORMAT}")
 
     @property
     def dlc_df_fp(self):
-        return os.path.join(self.root_dir, "4_preprocessed", f"{self.name}.feather")
+        return os.path.join(self.root_dir, "4_preprocessed", f"{self.name}.{DF_IO_FORMAT}")
 
     @property
     def configs_fp(self):

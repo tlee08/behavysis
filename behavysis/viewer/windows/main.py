@@ -23,9 +23,8 @@ from PySide6.QtWidgets import (
 )
 from tqdm import trange
 
-from behavysis.constants import STATUS_MSG_TIMEOUT, VALUE2COLOR
+from behavysis.constants import DF_IO_FORMAT, STATUS_MSG_TIMEOUT, VALUE2COLOR
 from behavysis.df_classes.behav_df import BehavScoredDf
-from behavysis.df_classes.df_mixin import DFMixin
 from behavysis.pydantic_models.configs import ExperimentConfigs
 from behavysis.utils.qt_utils import toggle_window
 from behavysis.viewer.models.bout_inspect_list_model import BoutInspectListModel
@@ -419,14 +418,14 @@ class MainWindow(QMainWindow):
             fp = QFileDialog.getSaveFileName(
                 self,
                 "",
-                f"{self.file_manager.name}.feather",
-                "feather dataframe (*.feather)",
+                f"{self.file_manager.name}.{DF_IO_FORMAT}",
+                f"{DF_IO_FORMAT} dataframe (*.{DF_IO_FORMAT})",
             )[0]
         if fp:
             # bouts to behavs_df
             behavs_df = BehavScoredDf.bouts2frames(self.bouts_model.bouts)
-            # Writing to feather file
-            DFMixin.write_feather(behavs_df, fp)
+            # Writing to file
+            BehavScoredDf.write(behavs_df, fp)
             self.ui.statusbar.showMessage(f"Saved scored behaviour frames to {fp}", timeout=STATUS_MSG_TIMEOUT)
 
     def save_bouts(self, fp=None):

@@ -7,7 +7,7 @@ import numpy as np
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import QLabel
 
-from behavysis.utils.cv_qt_mixin import cv2qt
+from behavysis.utils.qt_utils import cv2qt
 
 
 class CvView(QLabel):

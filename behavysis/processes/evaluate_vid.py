@@ -15,10 +15,10 @@ from tqdm import trange
 from behavysis.df_classes.analysis_combined_df import AnalysisCombinedDf
 from behavysis.df_classes.keypoints_df import IndivCols, KeypointsDf
 from behavysis.pydantic_models.configs import ExperimentConfigs
-from behavysis.utils.cv_qt_utils import qt2cv
 from behavysis.utils.diagnostics_utils import file_exists_msg
 from behavysis.utils.logging_utils import get_io_obj_content, init_logger_io_obj
 from behavysis.utils.plotting_utils import make_colours
+from behavysis.utils.qt_utils import qt2cv
 
 ###################################################################################################
 # EVALUATE VID FUNC, WHICH FACES OUT
@@ -394,7 +394,6 @@ class Analysis(EvalVidFuncBase):
     @classmethod
     def grl2cv_(cls, grl):
         # Making pyqtgraph image exporter to bytes
-        # TODO: was original. check this still works
         exporter = ImageExporter(grl.scene())
         # exporter.parameters()["width"] = self.width()
         # Exporting to QImage (bytes)
@@ -411,8 +410,6 @@ class Analysis(EvalVidFuncBase):
     @classmethod
     def plot2cv_(cls, plot):
         # Making pyqtgraph image exporter to bytes
-        # TODO: was original. check this still works
-        # exporter = ImageExporter(plot.plotItem)
         exporter = ImageExporter(plot)
         # exporter.parameters()["width"] = self.width()
         # Exporting to QImage (bytes)

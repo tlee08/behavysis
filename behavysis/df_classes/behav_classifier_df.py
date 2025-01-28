@@ -4,6 +4,7 @@ Utility functions.
 
 from enum import Enum
 
+from behavysis.df_classes.behav_df import BehavPredictedDf
 from behavysis.df_classes.df_mixin import DFMixin
 
 
@@ -16,13 +17,15 @@ class BehavClassifierYCN(Enum):
     BEHAVS = "behavs"
 
 
+class BehavClassifierEvalCN(Enum):
+    PROB = "prob"
+    PRED = "pred"
+    ACTUAL = "actual"
+
+
 class BehavClassifierCombinedDf(DFMixin):
     IN = CombinedFramesIN
 
 
-# class BehavClassifierXDf(BehavClassifierCombinedDf):
-#     CN = FeaturesDf.CN
-
-
-# class BehavClassifierYDf(BehavClassifierCombinedDf):
-#     CN = BehavClassifierYCN
+class BehavClassifierEvalDf(BehavPredictedDf):
+    CN = BehavClassifierEvalCN

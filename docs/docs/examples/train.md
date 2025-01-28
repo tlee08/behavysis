@@ -27,7 +27,7 @@ if __name__ == "__main__":
         # Paths
         boris_fp = os.path.join(boris_dir, f"{name}.tsv")
         configs_fp = os.path.join(configs_dir, f"{name}.json")
-        dst_fp = os.path.join(dst_dir, f"{name}.feather")
+        dst_fp = os.path.join(dst_dir, f"{name}.parquet")
         # Making df from BORIS
         df = BehavMixin.import_boris_tsv(boris_fp, configs_fp, behavs_ls)
         # Saving df

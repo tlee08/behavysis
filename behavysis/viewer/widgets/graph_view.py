@@ -15,7 +15,7 @@ from behavysis.constants import VALUE2COLOR
 from behavysis.df_classes.behav_df import BehavScoredDf
 from behavysis.pydantic_models.bouts import Bouts
 from behavysis.pydantic_models.configs import ExperimentConfigs
-from behavysis.utils.cv_qt_utils import qt2cv
+from behavysis.utils.qt_utils import qt2cv
 
 if TYPE_CHECKING:
     from behavysis.viewer.windows.main import MainWindow
@@ -147,7 +147,7 @@ if __name__ == "__main__":
     graph_viewer.resize(800, 600)
     graph_viewer.move(100, 100)
 
-    fp = "/Users/timothylee/Desktop/Work/dev/behavysis_viewer/tests/resources/2_Round1.1_20220530_AGG-MOA_test3-M3_a2.feather"
+    # fp = "/Users/timothylee/Desktop/Work/dev/behavysis/viewer/tests/resources/2_Round1.1_20220530_AGG-MOA_test3-M3_a2.parquet"
 
     behavs_df = BehavScoredDf.read(fp)
     # frames_df to bouts_dict
