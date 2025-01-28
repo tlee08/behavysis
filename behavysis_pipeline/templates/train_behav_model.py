@@ -44,7 +44,7 @@ if __name__ == "__main__":
     # Testing all different classifiers
     model.pipeline_training_all()
     # MANUALLY LOOK AT THE BEST CLASSIFIER AND SELECT
-    model = "CNN1"
+    model.clf = "CNN1"
 
     # Example of evaluating model with novel data
     x = pd.read_parquet("path/to/features_extracted")

@@ -177,13 +177,6 @@ class BehavClassifier:
         return os.path.join(self.proj_dir, Folders.SCORED_BEHAVS.value)
 
     #################################################
-    #            SETTING CLASSIFIER
-    #################################################
-
-    def select_clf(self, name: str) -> None:
-        self.clf = joblib_load(name)
-
-    #################################################
     # CREATE/LOAD MODEL METHODS
     #################################################
 
@@ -422,10 +415,6 @@ class BehavClassifier:
     def pipeline_training_all(self):
         """
         Making classifier for all available templates.
-
-        Notes
-        -----
-        Takes a long time to run.
         """
         # Saving existing clf
         clf = self.clf
