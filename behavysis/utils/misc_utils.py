@@ -1,6 +1,17 @@
 import inspect
 from enum import EnumType
+from importlib.util import find_spec
 from typing import Any, Iterable
+
+
+def get_module_dir(module_name: str) -> str:
+    module_spec = find_spec(module_name)
+    if module_spec is None:
+        raise ModuleNotFoundError(f"Module '{module_name}' not found.")
+    submodules = module_spec.submodule_search_locations
+    if not submodules:
+        raise ModuleNotFoundError(f"Module '{module_name}' has no submodules.")
+    return submodules[0]
 
 
 def import_extra_error_func(extra_dep_name: str):

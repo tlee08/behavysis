@@ -70,12 +70,12 @@ PLOT_DPI = 75
 # DEFAULT BODYPOINT CONSTANTS (FOR SIMBA FEATURE EXTRACTION)
 ####################################################################################################
 
-SIMBA_INDIVIDUALS = [
+INDIVS_SIMBA = [
     "mouse1marked",
     "mouse2unmarked",
 ]
 
-SIMBA_BODYPARTS = [
+BPTS_SIMBA = [
     "LeftEar",
     "RightEar",
     "Nose",
@@ -86,10 +86,14 @@ SIMBA_BODYPARTS = [
     "TailTip4",
 ]
 
-# TODO: is this necessary? Also similar variables elsewhere
-SINGLE_INDIVIDUAL = "single"
+BPTS_CENTRE = ["LeftFlankMid", "BodyCentre", "RightFlankMid", "LeftFlankRear", "RightFlankRear", "TailBase1"]
 
-ARENA_BODYPARTS = [
+BPTS_FRONT = ["LeftEar", "RightEar", "Nose", "BodyCentre"]
+
+# TODO: is this necessary? Also similar variables elsewhere
+INDIVS_SINGLE = "single"
+
+BPTS_ARENA = [
     "TopLeft",
     "TopRight",
     "BottomRight",

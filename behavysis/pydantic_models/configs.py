@@ -6,13 +6,20 @@ from typing import Any
 
 from pydantic import ConfigDict
 
-from behavysis.pydantic_models.processes.analyse import AnalyseConfigs
-from behavysis.pydantic_models.processes.calculate_params import CalculateParamsConfigs
+from behavysis.constants import BPTS_ARENA, BPTS_CENTRE, BPTS_FRONT, BPTS_SIMBA, INDIVS_SIMBA
+from behavysis.pydantic_models.processes.analyse import (
+    AnalyseConfigs,
+    FreezingConfigs,
+    InRoiConfigs,
+    SocialDistanceConfigs,
+    SpeedConfigs,
+)
+from behavysis.pydantic_models.processes.calculate_params import CalculateParamsConfigs, FromLikelihoodConfigs
 from behavysis.pydantic_models.processes.classify_behavs import ClassifyBehavConfigs
 from behavysis.pydantic_models.processes.evaluate_vid import EvaluateVidConfigs
 from behavysis.pydantic_models.processes.extract_features import ExtractFeaturesConfigs
 from behavysis.pydantic_models.processes.format_vid import FormatVidConfigs, VidMetadata
-from behavysis.pydantic_models.processes.preprocess import PreprocessConfigs
+from behavysis.pydantic_models.processes.preprocess import PreprocessConfigs, RefineIdsConfigs
 from behavysis.pydantic_models.processes.run_dlc import RunDlcConfigs
 from behavysis.pydantic_models.pydantic_base_model import PydanticBaseModel
 
@@ -98,3 +105,34 @@ class ExperimentConfigs(PydanticBaseModel):
             list(self.get_ref(self.user.analyse.bins_sec)),
             list(self.get_ref(self.user.analyse.custom_bins_sec)),
         )
+
+
+def get_default_configs() -> ExperimentConfigs:
+    return ExperimentConfigs(
+        user=UserConfigs(
+            format_vid=FormatVidConfigs(width_px=960, height_px=540, fps=15),
+            calculate_params=CalculateParamsConfigs(
+                from_likelihood=FromLikelihoodConfigs(bodyparts="--bodyparts_simba")
+            ),
+            preprocess=PreprocessConfigs(
+                refine_ids=RefineIdsConfigs(bodyparts="--bodyparts_centre"),
+            ),
+            extract_features=ExtractFeaturesConfigs(individuals="--indivs_simba", bodyparts="--bpts_simba"),
+            classify_behavs=[ClassifyBehavConfigs()],
+            analyse=AnalyseConfigs(
+                in_roi=[InRoiConfigs(roi_corners="--bpts_arena", bodyparts="--bpts_front")],
+                speed=SpeedConfigs(bodyparts="--bpts_centre"),
+                social_distance=SocialDistanceConfigs(bodyparts="--bpts_centre"),
+                freezing=FreezingConfigs(bodyparts="--bpts_centre"),
+            ),
+        ),
+        ref=RefConfigs.model_validate(
+            {
+                "indivs_simba": INDIVS_SIMBA,
+                "bpts_centre": BPTS_CENTRE,
+                "bpts_simba": BPTS_SIMBA,
+                "bpts_front": BPTS_FRONT,
+                "corners": BPTS_ARENA,
+            }
+        ),
+    )
