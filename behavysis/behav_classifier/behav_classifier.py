@@ -107,7 +107,6 @@ class BehavClassifier:
     def clf(self, clf: BaseTorchModel | str) -> None:
         # If a str, then loading
         if isinstance(clf, str):
-            assert clf in os.listdir(self.clfs_dir), f'Classifier name,  "{clf}"" not found in "{self.clfs_dir}"'
             clf_name = clf
             self._clf = joblib_load(os.path.join(self.clfs_dir, clf, "classifier.sav"))
             self.logger.debug(f"Loaded classifier: {clf_name}")
