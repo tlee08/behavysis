@@ -3,7 +3,7 @@
     "format_vid": {
       "height_px": 540,
       "width_px": 960,
-      "fps": null,
+      "fps": 15,
       "start_sec": null,
       "stop_sec": null
     },

@@ -48,6 +48,7 @@ url = "https://download.pytorch.org/whl/cu121"
 priority = "explicit"
 
 [tool.poetry.scripts]
+behavysis_init = "behavysis.scripts.init:main"
 behavysis_make_project = "behavysis.scripts.make_project:main"
 behavysis_project_gui = "behavysis.scripts.project_gui:run_script"
 behavysis_viewer = 'behavysis.viewer.__main__:main'

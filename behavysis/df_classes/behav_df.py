@@ -6,6 +6,7 @@ from enum import Enum
 
 import numpy as np
 import pandas as pd
+from scipy import ndimage
 from scipy.stats import mode
 
 from behavysis.df_classes.df_mixin import DFMixin, FramesIN
@@ -66,7 +67,7 @@ class BehavDf(DFMixin):
                 for outcome in enum2tuple(cls.OutcomesCols):
                     # Assert the (behav, outcome) column is present
                     assert (behav, outcome) in columns, (
-                        f"Expected {outcome} column for {behav}.\n" f"The columns in the df are: {columns}"
+                        f"Expected {outcome} column for {behav}.\nThe columns in the df are: {columns}"
                     )
 
 
@@ -298,6 +299,20 @@ class BehavScoredDf(BehavDf):
             # Filling in user_defined columns
             for k, v in bout.user_defined.items():
                 df.loc[bout.start : bout.stop, (bout.behav, k)] = v
+        df = cls.basic_clean(df)
+        return df
+
+    @classmethod
+    def fps_scale_df(cls, df: pd.DataFrame, src_fps: int, dst_fps: int) -> pd.DataFrame:
+        fps_scale = dst_fps / src_fps
+        df = cls.basic_clean(df)
+        columns = df.columns
+        index = df.index
+        # Scaling the df
+        df = np.ceil(ndimage.zoom(df, (fps_scale, 1))).astype(int)
+        index = np.round(ndimage.zoom(index, fps_scale)).astype(int)
+        # Making new df
+        df = pd.DataFrame(df, index=index, columns=columns)
         df = cls.basic_clean(df)
         return df
 

@@ -36,6 +36,7 @@ import os
 import re
 
 import cv2
+import shutil
 import deeplabcut
 import yaml
 import numpy as np
@@ -50,16 +51,16 @@ import pandas as pd
 
 # %%
 # Don't need to change
-root_dir = r"/home/linux1/Desktop/models_training/EPM"
+root_dir = r"/home/linux1/Desktop/models_training/3_CHAMBER_CUPS"
 
 # Change
-proj_name = "EPM_BLACK_MICE_960px"
+proj_name = "3_CHAMBER_CUPS_BLACK_MICE_960x540px"
 
 # Don't need to change
 experimenter = "BowenLab"
 
 # Can modify if running multiple GPU's at once
-gputouse = 1
+gputouse = 0
 
 # Is a placeholder video
 # This is needed to make the project
@@ -253,6 +254,232 @@ for i in os.listdir(videos_dir):
 
 
 # %% [markdown]
+# ## Label frames
+# 
+
+# %%
+deeplabcut.label_frames(config_fp)
+
+
+# %% [markdown]
+# ## saDLC to maDLC
+# 
+
+# %%
+
+def labels_sa2ma(from_dir, to_dir):
+    # Exporting from_dir to to_dir
+    shutil.copytree(from_dir, to_dir)
+    # os.makedirs(to_dir, exist_ok=True)
+    from_dir = to_dir
+    # Reading in .h5
+    fp = os.path.join(from_dir, "CollectedData_BowenLab.h5")
+    try:
+        df = pd.read_hdf(fp)
+    except:
+        print(f"ERROR: COULD NOT READ {fp}")
+        return
+    # Checking if we need to convert to DLC version 2.3 (older versions have different index format)
+    if len(df.index.names) != 3:
+        new_index = []
+        for i in df.index:
+            ind_val = i.split("\\")
+            ind_val[0] = to_dir.split("\\")[-3]
+            ind_val[0] = to_dir.split("\\")[-2]
+            new_index.append(ind_val)
+        df.index = pd.MultiIndex.from_tuples(new_index)
+    # Checking if we need to convert the df to the maDLC version
+    if len(df.columns.names) != 4:
+        # renaming columns with new multiindex level ("individuals")
+        new_columns = []
+        new_names = list(df.columns.names)
+        new_names.insert(1, "individuals")
+        for i in df.columns:
+            key = i[1]
+            new_key = rename_mappings[key]
+            col_val = ("BowenLab", indiv_mappings[new_key], new_key, i[2])
+            new_columns.append(col_val)
+        df.columns = pd.MultiIndex.from_tuples(new_columns, names=new_names)
+        # reordering columns
+        df = df.reindex(
+            columns=df.columns.reindex(indiv_ordering, level=1)[0].reindex(
+                bp_ordering, level=2
+            )[0]
+        )
+    # saving new .h5 and .csv files
+    df.to_hdf(
+        os.path.join(to_dir, "CollectedData_BowenLab.h5"),
+        key="df_with_missing",
+        mode="w",
+    )
+    df.to_csv(os.path.join(to_dir, "CollectedData_BowenLab.csv"))
+
+
+# %%
+# Converting all csv and h5 labels from saDLC format to maDLC format
+rename_mappings = {
+    "TopLeft": "TopLeft",
+    "MidTopLeft": "MidTopLeft",
+    "BottomLeft": "BottomLeft",
+    "MidBottomLeft": "MidBottomLeft",
+    "LeftCupTop": "LeftCupTop",
+    "LeftCupRight": "LeftCupRight",
+    "LeftCupBottom": "LeftCupBottom",
+    "MidTopRight": "MidTopRight",
+    "TopRight": "TopRight",
+    "MidBottomRight": "MidBottomRight",
+    "BottomRight": "BottomRight",
+    "RightCupTop": "RightCupTop",
+    "RightCupLeft": "RightCupLeft",
+    "RightCupBottom": "RightCupBottom",
+    "Nose": "Nose",
+    "LeftEar": "LeftEar",
+    "RightEar": "RightEar",
+    "NeckBase": "NeckBase",
+    "BodyCentre": "BodyCentre",
+    "TailBase": "TailBase",
+    "TailMid": "TailMid",
+    "TailTip": "TailTip",
+}
+indiv_mappings = {
+    "TopLeft": "single",
+    "MidTopLeft": "single",
+    "BottomLeft": "single",
+    "MidBottomLeft": "single",
+    "LeftCupTop": "single",
+    "LeftCupRight": "single",
+    "LeftCupBottom": "single",
+    "MidTopRight": "single",
+    "TopRight": "single",
+    "MidBottomRight": "single",
+    "BottomRight": "single",
+    "RightCupTop": "single",
+    "RightCupLeft": "single",
+    "RightCupBottom": "single",
+    "Nose": "mouse",
+    "LeftEar": "mouse",
+    "RightEar": "mouse",
+    "NeckBase": "mouse",
+    "BodyCentre": "mouse",
+    "TailBase": "mouse",
+    "TailMid": "mouse",
+    "TailTip": "mouse",
+}
+indiv_ordering = ["mouse", "single"]
+bp_ordering = [
+    "Nose",
+    "LeftEar",
+    "RightEar",
+    "NeckBase",
+    "BodyCentre",
+    "TailBase",
+    "TailMid",
+    "TailTip",
+    "TopLeft",
+    "MidTopLeft",
+    "BottomLeft",
+    "MidBottomLeft",
+    "LeftCupTop",
+    "LeftCupRight",
+    "LeftCupBottom",
+    "MidTopRight",
+    "TopRight",
+    "MidBottomRight",
+    "BottomRight",
+    "RightCupTop",
+    "RightCupLeft",
+    "RightCupBottom",
+]
+
+labeled_data_folders = os.listdir(os.path.join(proj_dir, "labeled-data"))
+for vid_dir in labeled_data_folders:
+    print(vid_dir)
+    from_dir = os.path.join(proj_dir, "labeled-data_old", vid_dir)
+    to_dir = os.path.join(proj_dir, "labeled-data", vid_dir)
+    labels_sa2ma(from_dir, to_dir)
+
+
+# %% [markdown]
+# ## Delete unneeded files and images with no labeled keypoints
+# 
+
+# %% [markdown]
+# TODO: check that all frames are labelled without deleting rows and images
+# 
+
+# %%
+import os
+import shutil
+import re
+import pandas as pd
+import numpy as np
+from natsort import natsorted
+
+def silent_remove(fp):
+    try:
+        os.remove(fp)
+    except FileNotFoundError:
+        pass
+
+labeled_dir = os.path.join(proj_dir, "labeled-data")
+
+for vid_dir in natsorted(os.listdir(labeled_dir)):
+    print(vid_dir)
+    df_fp = os.path.join(labeled_dir, vid_dir, "CollectedData_BowenLab.h5")
+    if not os.path.exists(df_fp):
+        continue
+    df = pd.read_hdf(df_fp)
+    
+    df_is_na_rows = df[df.apply(lambda x: x.notna().any(), axis=1)]
+    df_is_na_ids = df_is_na_rows.index.get_level_values(2)
+    
+    for img_fp in natsorted(os.listdir(os.path.join(labeled_dir, vid_dir))):
+        if img_fp.endswith(".png"):
+            if img_fp not in df_is_na_ids:
+                print(f"Removing {img_fp}")
+                os.remove(os.path.join(labeled_dir, vid_dir, img_fp))
+
+            # img_num = int(re.findall(r"\d+", img_fp)[0])
+            # if img_num not in df_is_na_rows.index:
+            #     print(f"Removing {img_fp}")
+            #     os.remove(os.path.join(labeled_dir, vid_dir, img_fp))
+    
+    df_is_na_rows.to_hdf(df_fp, key="keypoints", mode="w")
+    
+    print()
+    
+    # silent_remove(os.path.join(labeled_dir, vid_dir, "CollectedData_BowenLabsingleanimal.h5"))
+    # silent_remove(os.path.join(labeled_dir, vid_dir, "CollectedData_BowenLabsingleanimal.csv"))
+    # silent_remove(os.path.join(labeled_dir, vid_dir, "CollectedData_BowenLab_copy.h5"))
+    # silent_remove(os.path.join(labeled_dir, vid_dir, "CollectedData_BowenLab_copy.csv"))
+    
+
+# %%
+import os
+import shutil
+import re
+import pandas as pd
+import numpy as np
+from natsort import natsorted
+
+def silent_remove(fp):
+    try:
+        os.remove(fp)
+    except FileNotFoundError:
+        pass
+
+labeled_dir = os.path.join(proj_dir, "labeled-data")
+
+for vid_dir in natsorted(os.listdir(labeled_dir)):
+    print(vid_dir)    
+    silent_remove(os.path.join(labeled_dir, vid_dir, "CollectedData_BowenLabsingleanimal.h5"))
+    silent_remove(os.path.join(labeled_dir, vid_dir, "CollectedData_BowenLabsingleanimal.csv"))
+    silent_remove(os.path.join(labeled_dir, vid_dir, "CollectedData_BowenLab_copy.h5"))
+    silent_remove(os.path.join(labeled_dir, vid_dir, "CollectedData_BowenLab_copy.csv"))
+    silent_remove(os.path.join(labeled_dir, vid_dir, "Thumbs.db"))
+
+
+# %% [markdown]
 # ## Downsample frames
 # 
 # Resolution to downsample to is specified at start of script with `res_width` and `res_height` variables.
@@ -278,7 +505,7 @@ for i in os.listdir(labeled_dir):
     h5_fp = os.path.join(vid_labeled_dir, f"CollectedData_{experimenter}.h5")
     h5 = None
     if os.path.isfile(h5_fp):
-        h5 = pd.read_hdf(h5_fp, key=HDF_KEY)
+        h5 = pd.read_hdf(h5_fp)
     # For each image in video folder, resizing (and keypoints if necessary)
     for j in os.listdir(vid_labeled_dir):
         # Skip if not .png
@@ -320,14 +547,6 @@ for i in os.listdir(labeled_dir):
 # Updating config file with frame/video downsampled widths and heights
 update_config_videos(proj_dir)
 
-
-# %% [markdown]
-# ## Manually label frames
-# 
-
-# %% [markdown]
-# deeplabcut.label_frames(config_fp)
-# 
 
 # %% [markdown]
 # ## Create training dataset
@@ -417,11 +636,20 @@ deeplabcut.evaluate_network(config_fp, plotting=False)
 #     height_px=960,
 # )
 
+novel_vids_dir = "/home/linux1/Desktop/models_training/3_CHAMBER_CUPS/test_3_chamber_cups_black"
+assert os.path.exists(novel_vids_dir)
+
+try:
+    shutil.rmtree(os.path.join(novel_vids_dir, "out"))
+except FileNotFoundError:
+    pass
+os.makedirs(os.path.join(novel_vids_dir, "out"), exist_ok=True)
+
 deeplabcut.analyze_videos(
     config=config_fp,
-    videos=os.path.join(proj_dir, "novel_videos"),
+    videos=os.path.join(novel_vids_dir, "in"),
     videotype=".mp4",
-    destfolder=os.path.join(proj_dir, "novel_videos"),
+    destfolder=os.path.join(novel_vids_dir, "out"),
     auto_track=True,
     gputouse=gputouse,
     save_as_csv=False,
@@ -434,17 +662,19 @@ deeplabcut.analyze_videos(
 # %%
 deeplabcut.create_labeled_video(
     config=config_fp,
-    videos=os.path.join(proj_dir, "novel_videos"),
+    videos=os.path.join(novel_vids_dir, "in"),
     videotype=".mp4",
     color_by="individual",
-    destfolder=os.path.join(proj_dir, "novel_videos"),
+    destfolder=os.path.join(novel_vids_dir, "out"),
 )
 
 
 # %% [markdown]
 # ## EXTRA CODE SNIPPETS
 # 
-# * Impute all points from first for corners
+# * Impute all points from first for corners (do we need this?)
+# * Convert SA to MA project (todo)
+# * Resize images and corresponding CollectedData points (todo)
 # 
 
 # %%
@@ -489,6 +719,27 @@ for i in os.listdir(labeled_dir):
 
 
 # %%
+labeled_dir = os.path.join(proj_dir, "labeled-data")
+
+# %%
+vid_dir = os.path.join(labeled_dir, "749_BALB-C57_NSPKNX224_OF_R1_A1")
+
+df_in_fp = os.path.join(vid_dir, f"CollectedData_{experimenter}.csv")
+df_out_fp = os.path.join(vid_dir, f"CollectedData_{experimenter}.h5")
+
+df = pd.read_csv(df_in_fp, header=[0, 1, 2, 3], index_col=[0, 1, 2])
+
+# df = pd.read_hdf(df_in_fp, key="keypoints", mode="r")
+
+df.to_hdf(df_out_fp, key="keypoints", mode="w")
+
+
+# %%
+x = pd.HDFStore(df_out_fp)
+display(x.keys())
+x.close()
+
+pd.read_hdf(df_out_fp, key="keypoints")
 
 
 
