@@ -1,3 +1,3 @@
-::: behavysis_pipeline.behav_classifier.behav_classifier.BehavClassifier
+::: behavysis.behav_classifier.behav_classifier.BehavClassifier
 
-::: behavysis_pipeline.behav_classifier.behav_classifier.BehavClassifierConfigs
+::: behavysis.behav_classifier.behav_classifier.BehavClassifierConfigs

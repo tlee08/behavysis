@@ -5,10 +5,10 @@
 ```python
 import os
 
-from behavysis_pipeline.mixins.behav_mixin import BehavMixin
-from behavysis_pipeline.behav_classifier import BehavClassifier
-from behavysis_pipeline.behav_classifier.clf_models.clf_templates import ClfTemplates
-from behavysis_pipeline.pipeline import Project
+from behavysis.mixins.behav_mixin import BehavMixin
+from behavysis.behav_classifier import BehavClassifier
+from behavysis.behav_classifier.clf_models.clf_templates import ClfTemplates
+from behavysis.pipeline import Project
 
 if __name__ == "__main__":
     root_dir = "."

@@ -5,9 +5,10 @@ _summary_
 import cv2
 import numpy as np
 import pandas as pd
-from behavysis_core.df_classes.keypoints_df import IndivColumns, KeypointsDf
-from behavysis_core.mixins.misc_mixin import MiscMixin
-from behavysis_core.pydantic_models.experiment_configs import ExperimentConfigs
+
+from behavysis.df_classes.keypoints_df import IndivCols, KeypointsDf
+from behavysis.pydantic_models.configs import ExperimentConfigs
+from behavysis.utils.plotting_utils import make_colours
 
 
 class KeypointsModel:
@@ -41,7 +42,7 @@ class KeypointsModel:
         configs : ExperimentConfigs
             _description_
         """
-        self.raw_dlc_df = KeypointsDf.read_feather(fp)
+        self.raw_dlc_df = KeypointsDf.read(fp)
         self.set_configs(configs)
         self.dlc2annot()
 
@@ -78,24 +79,20 @@ class KeypointsModel:
         dlc_df = KeypointsDf.clean_headings(dlc_df)
         # Modifying dlc_df and making list of how to select dlc_df components to optimise processing
         # Filtering out PROCESS "invidividuals" in columns
-        if IndivColumns.PROCESS.value in dlc_df.columns.unique("individuals"):
-            dlc_df.drop(columns=IndivColumns.PROCESS.value, level="individuals")
+        if IndivCols.PROCESSED.value in dlc_df.columns.unique("individuals"):
+            dlc_df.drop(columns=IndivCols.PROCESSED.value, level="individuals")
         # Getting (indivs, bpts) MultiIndex
         indivs_bpts_ls = dlc_df.columns.droplevel("coords").unique()
         # Rounding and casting to correct dtypes - "x" and "y" values are ints
         dlc_df = dlc_df.fillna(0)
-        columns = dlc_df.columns[
-            dlc_df.columns.get_level_values("coords").isin(["x", "y"])
-        ]
+        columns = dlc_df.columns[dlc_df.columns.get_level_values("coords").isin(["x", "y"])]
         dlc_df[columns] = dlc_df[columns].round(0).astype(int)
         # Changing the columns MultiIndex to a single-level index. For speedup
-        dlc_df.columns = [
-            f"{indiv}_{bpt}_{coord}" for indiv, bpt, coord in dlc_df.columns
-        ]
+        dlc_df.columns = [f"{indiv}_{bpt}_{coord}" for indiv, bpt, coord in dlc_df.columns]
         # Making the corresponding colours list for each bodypart instance
         # (colours depend on indiv/bpt)
         measures_ls = indivs_bpts_ls.get_level_values(self.colour_level)
-        colours_ls = MiscMixin.make_colours(measures_ls, self.cmap)
+        colours_ls = make_colours(measures_ls, self.cmap)
         # Saving data to instance
         self.annot_dlc_df = dlc_df
         self.indivs_bpts_ls = indivs_bpts_ls

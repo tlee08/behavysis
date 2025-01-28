@@ -8,10 +8,10 @@ Open a terminal (Mac or Linux) or Anaconda PowerShell Prompt (Windows)
 
 **Step 2:**
 
-To uninstall the `behavysis_pipeline_env`, `DEEPLABCUT`, and `simba` conda envs, run the following commands:
+To uninstall the `behavysis`, `DEEPLABCUT`, and `simba` conda envs, run the following commands:
 
 ```zsh
-conda env remove -n behavysis_pipeline_env
+conda env remove -n behavysis
 conda env remove -n DEEPLABCUT
 conda env remove -n simba
 ```

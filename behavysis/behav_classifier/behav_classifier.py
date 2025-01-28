@@ -436,7 +436,7 @@ class BehavClassifier:
 
         Pipeline is:
         - Preprocess `x` df. Refer to
-        [behavysis_pipeline.behav_classifier.BehavClassifier.preproc_x][] for details.
+        [behavysis.behav_classifier.BehavClassifier.preproc_x][] for details.
         - Makes predictions and returns the predicted behaviours.
         """
         index = x.index

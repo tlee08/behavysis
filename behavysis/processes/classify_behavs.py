@@ -15,8 +15,6 @@ from behavysis.df_classes.behav_df import (
     BoutCols,
     OutcomesPredictedCols,
 )
-
-# from behavysis_pipeline.df_classes.bouts_df import BoutColumns, BoutsDf
 from behavysis.df_classes.features_df import FeaturesDf
 from behavysis.pydantic_models.configs import ExperimentConfigs
 from behavysis.utils.diagnostics_utils import file_exists_msg

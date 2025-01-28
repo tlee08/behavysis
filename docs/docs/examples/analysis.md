@@ -5,8 +5,8 @@ All outcomes for experiment processing is stored in csv files in the `proj_dir/d
 ## Loading in all relevant packages
 
 ```python
-from behavysis_pipeline import Project
-from behavysis_pipeline.processes import *
+from behavysis import Project
+from behavysis.processes import *
 ```
 
 ## Making the project and importing all experiments
@@ -15,7 +15,7 @@ The directory path of the project must be specified and must contain the experim
 
 For more information on how to structure a project directory, please see [setup][].
 
-For more information on how a `Experiment` works, please see [behavysis_pipeline.pipeline.project.Project][].
+For more information on how a `Experiment` works, please see [behavysis.pipeline.project.Project][].
 
 ```python
 # Defining the project's folder
@@ -161,7 +161,7 @@ Exports to such a format, where
 a) `behavysis_viewer` can load it and perform semi-automated analysis, and
 b) after semi-automated verification, can be used to make a new/improve
 a current behaviour classifier
-(with [behavysis_pipeline.behav_classifier.behav_classifier.BehavClassifier][])
+(with [behavysis.behav_classifier.behav_classifier.BehavClassifier][])
 
 ```python
 proj.export_behaviours(overwrite)

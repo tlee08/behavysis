@@ -9,7 +9,7 @@ Open a terminal (Mac or Linux) or Anaconda PowerShell Prompt (Windows)
 Activate the program environment with the following command:
 
 ```zsh
-conda activate behavysis_pipeline_env
+conda activate behavysis
 ```
 
 **Step 3:**
@@ -22,7 +22,7 @@ See [here][explanation] for examples of Jupyter notebooks to train behaviour cla
 
 See [here][explanation] for a tutorial of `behavysis`'s workflow.
 
-See [here][behavysis_pipeline] for API documentation.
+See [here][behavysis] for API documentation.
 
 
 **Note**

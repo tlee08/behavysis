@@ -1,1 +1,1 @@
-::: behavysis_pipeline.behav_classifier.clf_templates
+::: behavysis.behav_classifier.clf_templates

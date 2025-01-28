@@ -2,12 +2,12 @@
 # import shutil
 
 # import pytest
-# from behavysis_pipeline.mixins.io_mixin import IOMixin
+# from behavysis.mixins.io_mixin import IOMixin
 
 # from .test_fixtures import cleanup, proj_dir
 
-# from behavysis_pipeline import Project
-# from behavysis_pipeline.processes import *
+# from behavysis import Project
+# from behavysis.processes import *
 
 
 # def test_Project(proj_dir):

@@ -1,12 +1,8 @@
 from PySide6.QtCore import QAbstractListModel, Qt, Signal
 from PySide6.QtGui import QColor
 
-from behavysis_core.pydantic_models.bouts import Bout
-from behavysis_viewer.utils.constants import (
-    CHECKSTATE2VALUE,
-    VALUE2CHECKSTATE,
-    VALUE2COLOR,
-)
+from behavysis.pydantic_models.bouts import Bout
+from behavysis.viewer.utils.constants import CHECKSTATE2VALUE, VALUE2CHECKSTATE, VALUE2COLOR
 
 
 class BoutInspectListModel(QAbstractListModel):
@@ -25,7 +21,7 @@ class BoutInspectListModel(QAbstractListModel):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.bout = Bout(start=-1, stop=-1, behaviour="nil", actual=0, user_defined={})
+        self.bout = Bout(start=-1, stop=-1, dur=0, behav="nil", actual=0, user_defined={})
         self.id = -1
 
     @property
@@ -90,8 +86,4 @@ class BoutInspectListModel(QAbstractListModel):
         return len(self.user_defined)
 
     def flags(self, index):
-        return (
-            Qt.ItemFlag.ItemIsEnabled
-            | Qt.ItemFlag.ItemIsSelectable
-            | Qt.ItemFlag.ItemIsUserCheckable
-        )
+        return Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsUserCheckable

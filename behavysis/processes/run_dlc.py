@@ -164,7 +164,7 @@ def run_dlc_subproc(
     script_fp = os.path.join(temp_dir, f"dlc_subproc_{gputouse}.py")
     save_template(
         "dlc_subproc.py",
-        "behavysis_pipeline",
+        "behavysis",
         "templates",
         script_fp,
         vid_fp_ls=vid_fp_ls,

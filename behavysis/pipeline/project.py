@@ -266,7 +266,7 @@ class Project:
     def run_dlc(self, gputouse: int | None = None, overwrite: bool = False) -> None:
         """
         Batch processing corresponding to
-        [behavysis_pipeline.pipeline.experiment.Experiment.run_dlc][]
+        [behavysis.pipeline.experiment.Experiment.run_dlc][]
 
         Uses a multiprocessing pool to run DLC on each batch of experiments with each GPU
         natively as batch in the same spawned subprocess (a DLC subprocess is spawned).

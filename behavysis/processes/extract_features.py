@@ -163,7 +163,7 @@ def run_simba_subproc(
     silent_remove(script_fp)
     save_template(
         "simba_subproc.py",
-        "behavysis_pipeline",
+        "behavysis",
         "templates",
         script_fp,
         simba_dir=simba_dir,

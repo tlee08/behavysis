@@ -8,7 +8,7 @@ def main() -> None:
     import_static_templates_script(
         description="Make Behavysis Pipeline Project",
         templates_ls=["run_pipeline.py", "default_configs.json"],
-        pkg_name="behavysis_pipeline",
+        pkg_name="behavysis",
         pkg_subdir="templates",
         root_dir=".",
         overwrite=False,

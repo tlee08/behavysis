@@ -1,6 +1,6 @@
 # Setup
 
-Before running the behavysis_pipeline analysises, the files that we want to analyse must be set up a certain way for the behavysis_pipeline program to recognise them.
+Before running the behavysis analysises, the files that we want to analyse must be set up a certain way for the behavysis program to recognise them.
 
 There are three important guidelines to set up the project:
 
@@ -25,8 +25,8 @@ The config file for an experiment stores all the parameters for how the experime
 
 An example of a config file is shown [here][configs-json-file].
 
-# Running behavysis_pipeline
+# Running behavysis
 
-To install `behavysis_pipeline`, follow [these][installing] instructions.
+To install `behavysis`, follow [these][installing] instructions.
 
-To run `behavysis_pipeline`, follow these [these][running] instructions.
+To run `behavysis`, follow these [these][running] instructions.

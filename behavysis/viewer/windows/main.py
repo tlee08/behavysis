@@ -2,9 +2,6 @@ from multiprocessing import Process
 
 import cv2
 import numpy as np
-from behavysis_core.df_classes.bouts_df import BoutsDf
-from behavysis_core.df_classes.df_mixin import DFMixin
-from behavysis_core.pydantic_models.experiment_configs import ExperimentConfigs
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtWidgets import (
@@ -15,6 +12,9 @@ from PySide6.QtWidgets import (
 )
 from tqdm import trange
 
+from behavysis.df_classes.behav_df import BehavScoredDf
+from behavysis.df_classes.df_mixin import DFMixin
+from behavysis.pydantic_models.configs import ExperimentConfigs
 from behavysis.viewer.models.bout_inspect_list_model import BoutInspectListModel
 from behavysis.viewer.models.bouts_list_model import BoutsListModel
 from behavysis.viewer.models.exp_file_manager import ExpFileManager
@@ -330,7 +330,7 @@ class MainWindow(QMainWindow, WindowMixin):
             # Loading in BoutInspectModel row
             self.bout_inspect_model.load(bout, index.row())
             # Setting bout inspect header text
-            self.ui.bout_inspect_header.setText(f"{bout.behaviour} - {index.row()}")
+            self.ui.bout_inspect_header.setText(f"{bout.behav} - {index.row()}")
             # Linking is_behav rbtns
             self.rbtns[bout.actual].toggle()
             # Jumping to bout start in video
@@ -413,7 +413,7 @@ class MainWindow(QMainWindow, WindowMixin):
             )[0]
         if fp:
             # bouts to behavs_df
-            behavs_df = BoutsDf.bouts2frames(self.bouts_model.bouts)
+            behavs_df = BehavScoredDf.bouts2frames(self.bouts_model.bouts)
             # Writing to feather file
             DFMixin.write_feather(behavs_df, fp)
             self.ui.statusbar.showMessage(f"Saved scored behaviour frames to {fp}", timeout=STATUS_MSG_TIMEOUT)

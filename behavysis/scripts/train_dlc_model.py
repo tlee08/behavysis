@@ -8,7 +8,7 @@ def main() -> None:
     import_static_templates_script(
         description="Make DLC Model Script",
         templates_ls=["train_dlc_model.py"],
-        pkg_name="behavysis_pipeline",
+        pkg_name="behavysis",
         pkg_subdir="templates",
         root_dir=".",
         overwrite=False,

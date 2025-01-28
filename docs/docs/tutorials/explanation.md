@@ -1,6 +1,6 @@
 # Explanation
 
-The behavysis_pipeline is used to analyse raw mp4 footage of lab mice. Analysis can include:
+The behavysis is used to analyse raw mp4 footage of lab mice. Analysis can include:
 
 - Open Field
   - Subject thigmotaxis

@@ -176,7 +176,7 @@ The configs file has three main sections
 
     For example, `user.calculate_params.px_per_mm` requires
     `pt_a`, `pt_b`, and `dist_mm`, which are described in the
-    [API docs][behavysis_pipeline.processes.CalculateParams].
+    [API docs][behavysis.processes.CalculateParams].
 
 ## The Ref section
 
@@ -219,7 +219,7 @@ To generate or modify an experiment's configs file, first make a `default.json` 
     Just make sure to change the multiple `model_fp` filepaths.
 
 ```py
-from behavysis_pipeline import Experiment
+from behavysis import Experiment
 
 # Getting the experiment
 experiment = Experiment("exp_name", "root_dir")

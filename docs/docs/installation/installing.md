@@ -36,7 +36,7 @@ conda install -n base nb_conda nb_conda_kernels
 
 **Step 5:**
 
-Install the `behavysis_pipeline` conda environment (download [here](https://github.com/tlee08/behavysis_pipeline/blob/main/conda_env.yaml)).
+Install the `behavysis` conda environment (download [here](https://github.com/tlee08/behavysis/blob/main/conda_env.yaml)).
 
 ```zsh
 conda env create -f path/to/conda_env.yaml
@@ -52,7 +52,7 @@ conda env create -f path/to/DEEPLABCUT.yaml
 
 **Step 7:**
 
-Install the `simba` conda environment (download [here](https://github.com/tlee08/behavysis_pipeline/blob/main/simba_env.yaml)).
+Install the `simba` conda environment (download [here](https://github.com/tlee08/behavysis/blob/main/simba_env.yaml)).
 
 ```zsh
 conda env create -f path/to/simba_env.yaml

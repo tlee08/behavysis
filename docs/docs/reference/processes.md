@@ -1,17 +1,17 @@
-<!-- :::behavysis_pipeline.processes -->
+<!-- :::behavysis.processes -->
 
-:::behavysis_pipeline.processes.CalculateParams
+:::behavysis.processes.CalculateParams
 
-:::behavysis_pipeline.processes.ClassifyBehaviours
+:::behavysis.processes.ClassifyBehaviours
 
-:::behavysis_pipeline.processes.Evaluate
+:::behavysis.processes.Evaluate
 
-:::behavysis_pipeline.processes.ExtractFeatures
+:::behavysis.processes.ExtractFeatures
 
-:::behavysis_pipeline.processes.FormatVid
+:::behavysis.processes.FormatVid
 
-:::behavysis_pipeline.processes.Preprocess
+:::behavysis.processes.Preprocess
 
-:::behavysis_pipeline.processes.RunDLC
+:::behavysis.processes.RunDLC
 
-:::behavysis_pipeline.processes.UpdateConfigs
+:::behavysis.processes.UpdateConfigs
