@@ -35,11 +35,6 @@ class BoutCols(Enum):
     DUR = "dur"
 
 
-class CombinedFramesIN(Enum):
-    VIDEO = "video"
-    FRAME = "frame"
-
-
 class BehavCN(Enum):
     BEHAVS = "behavs"
     OUTCOMES = "outcomes"
@@ -319,15 +314,6 @@ class BehavScoredDf(BehavDf):
                 df.loc[bout.start : bout.stop, (bout.behav, k)] = v
         df = cls.basic_clean(df)
         return df
-
-
-class BehavCombinedDf(BehavDf):
-    """
-    Mixin for behaviour DF, specifically for combined behaviours dfs.
-    """
-
-    IN = CombinedFramesIN
-    OutcomesCols = OutcomesScoredCols
 
 
 if __name__ == "__main__":

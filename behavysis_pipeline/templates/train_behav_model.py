@@ -3,7 +3,6 @@ import os
 import pandas as pd
 
 from behavysis_pipeline.behav_classifier.behav_classifier import BehavClassifier
-from behavysis_pipeline.behav_classifier.clf_models.clf_templates import DNN1
 from behavysis_pipeline.pipeline.project import Project
 from behavysis_pipeline.processes.export import Export
 
@@ -30,7 +29,7 @@ if __name__ == "__main__":
         )
     # Making BehavClassifier objects
     for behav in behavs_ls:
-        BehavClassifier.create_new_model(os.path.join(root_dir, "behav_models"), behav)
+        BehavClassifier.create_from_project_dir(root_dir)
 
     # Option 2: From previous behavysis project
     proj = Project(root_dir)
@@ -43,22 +42,20 @@ if __name__ == "__main__":
     model_fp = os.path.join(root_dir, "behav_models", behav)
     model = BehavClassifier.load(model_fp)
     # Testing all different classifiers
-    model.clf_eval_all()
+    model.pipeline_training_all()
     # MANUALLY LOOK AT THE BEST CLASSIFIER AND SELECT
-    model.pipeline_build_save(CNN1)
+    model = "CNN1"
 
     # Example of evaluating model with novel data
-    x = pd.read("path/to/features_extracted")
-    y = pd.read("path/to/scored_behavs")
+    x = pd.read_parquet("path/to/features_extracted")
+    y = pd.read_parquet("path/to/scored_behavs")
     # Evaluating classifier (results stored in "eval" folder)
     model.clf_eval_save_performance(x, y)
 
     # Example of using model for inference
     # Loading a BehavModel
     model = BehavClassifier.load(model_fp)
-    # Loading classifier
-    model.clf_load()
     # Getting data
     x = pd.read_parquet("path/to/features_extracted.parquet")
     # Running inference
-    res = model.pipeline_run(x)
+    res = model.pipeline_inference(x)

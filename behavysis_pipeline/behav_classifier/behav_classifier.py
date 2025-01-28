@@ -7,9 +7,8 @@ from __future__ import annotations
 import json
 import os
 from enum import Enum
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING
 
-import joblib
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -31,12 +30,13 @@ from behavysis_pipeline.behav_classifier.clf_models.clf_templates import (
     CNN1,
 )
 from behavysis_pipeline.constants import Folders
-from behavysis_pipeline.df_classes.behav_df import BehavCombinedDf, BehavPredictedDf, BehavScoredDf, BehavValues
+from behavysis_pipeline.df_classes.behav_classifier_df import BehavClassifierCombinedDf
+from behavysis_pipeline.df_classes.behav_df import BehavPredictedDf, BehavScoredDf, BehavValues
 from behavysis_pipeline.df_classes.df_mixin import DFMixin
 from behavysis_pipeline.pydantic_models.behav_classifier import (
     BehavClassifierConfigs,
 )
-from behavysis_pipeline.utils.io_utils import get_name, write_json
+from behavysis_pipeline.utils.io_utils import get_name, joblib_dump, joblib_load, write_json
 from behavysis_pipeline.utils.logging_utils import init_logger_file
 from behavysis_pipeline.utils.misc_utils import enum2tuple
 
@@ -62,33 +62,32 @@ class BehavClassifier:
     _clf: BaseTorchModel
 
     def __init__(self, proj_dir: str, behav_name: str) -> None:
-        # Assert that the behaviour is scored in the project (in the scored_behavs directory)
-        # Getting the list of behaviours in project to check against
-        y_df = self.wrangle_columns_y(self.combine_dfs(os.path.join(proj_dir, Folders.SCORED_BEHAVS.value)))
-        assert np.isin(behav_name, y_df.columns)
         # Setting attributes
         self._proj_dir = proj_dir
         self._behav_name = behav_name
-        # Trying to load configs (or making new configs)
+        self._clf = None
+        # Assert that the behaviour is scored in the project (in the scored_behavs directory)
+        # Getting the list of behaviours in project to check against
+        y_df = self.wrangle_columns_y(self.combine_dfs(self.y_dir))
+        assert np.isin(behav_name, y_df.columns)
+        # Trying to load configs (or making new)
         try:
             configs = BehavClassifierConfigs.read_json(self.configs_fp)
             self.logger.debug("Loaded existing configs")
-            return
         except FileNotFoundError:
             configs = BehavClassifierConfigs()
             self.logger.debug("Made new model configs")
-        finally:
-            # Setting and saving configs
-            configs.proj_dir = proj_dir
-            configs.behav_name = behav_name
-            self.configs = configs
-        # Trying to load classifier (or making new classifier)
+        # Setting and saving configs
+        configs.proj_dir = proj_dir
+        configs.behav_name = behav_name
+        self.configs = configs
+        # Trying to load classifier (or making new)
         try:
-            self.clf_load()
-            self.logger.debug("Loaded existing model")
+            self.clf = joblib_load(self.clf_fp)
+            self.logger.debug("Loaded existing classifier")
         except FileNotFoundError:
             self.clf = CNN1()
-            self.logger.debug("Made new model")
+            self.logger.debug("Made new classifier")
 
     #################################################
     #            GETTER AND SETTERS
@@ -107,10 +106,20 @@ class BehavClassifier:
         return self._clf
 
     @clf.setter
-    def clf(self, clf: BaseTorchModel) -> None:
-        clf_name = type(clf).__name__
-        self._clf = clf
-        self.logger.debug(f"Updating classifier in model configs: {clf_name}")
+    def clf(self, clf: BaseTorchModel | str) -> None:
+        # If a str, then loading
+        if isinstance(clf, str):
+            assert clf in os.listdir(self.clfs_dir), f'Classifier name,  "{clf}"" not found in "{self.clfs_dir}"'
+            clf_name = clf
+            self._clf = joblib_load(os.path.join(self.clfs_dir, clf, "classifier.sav"))
+            self.logger.debug(f"Loaded classifier: {clf_name}")
+        # If a BaseTorchModel, then setting
+        else:
+            clf_name = type(clf).__name__
+            self._clf = clf
+            self.logger.debug(f"Initialised classifier: {clf_name}")
+        # Updating in configs
+        self.logger.debug(f"Updating clf_struct in model configs: {clf_name}")
         configs = self.configs
         configs.clf_struct = clf_name
         self.configs = configs
@@ -168,7 +177,14 @@ class BehavClassifier:
         return os.path.join(self.proj_dir, Folders.SCORED_BEHAVS.value)
 
     #################################################
-    # CREATE MODEL METHODS
+    #            SETTING CLASSIFIER
+    #################################################
+
+    def select_clf(self, name: str) -> None:
+        self.clf = joblib_load(name)
+
+    #################################################
+    # CREATE/LOAD MODEL METHODS
     #################################################
 
     @classmethod
@@ -190,10 +206,6 @@ class BehavClassifier:
         Wraps the `create_from_project_dir` method.
         """
         return cls.create_from_project_dir(proj.root_dir)
-
-    #################################################
-    #            READING MODEL
-    #################################################
 
     @classmethod
     def load(cls, proj_dir: str, behav_name: str) -> BehavClassifier:
@@ -223,15 +235,24 @@ class BehavClassifier:
         """
         data_dict = {get_name(i): DFMixin.read(os.path.join(src_dir, i)) for i in os.listdir(os.path.join(src_dir))}
         df = pd.concat(data_dict.values(), axis=0, keys=data_dict.keys())
-        df = BehavCombinedDf.basic_clean(df)
+        df = BehavClassifierCombinedDf.basic_clean(df)
         return df
 
     ###############################################################################################
     #            PREPROCESSING DFS
     ###############################################################################################
 
+    @staticmethod
+    def _preproc_x_fit_select_cols(x: np.ndarray) -> np.ndarray:
+        """
+        Selects only the derived features (not the x-y-l columns).
+
+        Used in the preprocessing pipeline.
+        """
+        return x[:, 48:]
+
     @classmethod
-    def preproc_x_fit(cls, x: np.ndarray | pd.DataFrame, preproc_fp: str) -> None:
+    def preproc_x_fit(cls, x: np.ndarray, preproc_fp: str) -> None:
         """
         The preprocessing steps are:
         - Select only the derived features (not the x-y-l columns)
@@ -240,19 +261,19 @@ class BehavClassifier:
         """
         preproc_pipe = Pipeline(
             steps=[
-                ("select_columns", FunctionTransformer(lambda x: x[:, 48:])),
+                ("select_columns", FunctionTransformer(cls._preproc_x_fit_select_cols)),
                 ("min_max_scaler", MinMaxScaler()),
             ]
         )
         preproc_pipe.fit(x)
-        joblib.dump(preproc_pipe, preproc_fp)
+        joblib_dump(preproc_pipe, preproc_fp)
 
     @classmethod
-    def preproc_x_transform(cls, x: np.ndarray | pd.DataFrame, preproc_fp: str) -> np.ndarray:
+    def preproc_x_transform(cls, x: np.ndarray, preproc_fp: str) -> np.ndarray:
         """
         Runs the preprocessing steps fitted from `preproc_x_fit` on the given `x` data.
         """
-        preproc_pipe: Pipeline = joblib.load(preproc_fp)
+        preproc_pipe: Pipeline = joblib_load(preproc_fp)
         x_preproc = preproc_pipe.transform(x)
         return x_preproc
 
@@ -279,7 +300,7 @@ class BehavClassifier:
         return y
 
     @classmethod
-    def preproc_y_transform(cls, y: np.ndarray | pd.Series) -> np.ndarray:
+    def preproc_y_transform(cls, y: np.ndarray) -> np.ndarray:
         """
         The preprocessing steps are:
         - Imputing NaN values with 0
@@ -330,8 +351,8 @@ class BehavClassifier:
         A tuple containing four numpy arrays:
         - x: The input data.
         - y: The target labels.
-        - ind_train: The indexes for the training data.
-        - ind_test: The indexes for the testing data.
+        - index_train: The indexes for the training data.
+        - index_test: The indexes for the testing data.
         """
         # Getting the x and y dfs
         x = self.combine_dfs(self.x_dir)
@@ -342,27 +363,27 @@ class BehavClassifier:
         y = y.loc[index]
         assert x.shape[0] == y.shape[0]
         # Fitting the x preprocessor pipeline and transforming the x df
-        self.preproc_x_fit(x, self.preproc_fp)
-        x_preproc = self.preproc_x_transform(x, self.preproc_fp)
+        self.preproc_x_fit(x.values, self.preproc_fp)
+        x_preproc = self.preproc_x_transform(x.values, self.preproc_fp)
         # Preprocessing y df
         y_preproc = self.wrangle_columns_y(y)[self.configs.behav_name]
-        y_preproc = self.preproc_y_transform(y_preproc)
+        y_preproc = self.preproc_y_transform(y_preproc.values)
         # filtering "available" index down so frames in "outer" window for each video are excluded
         window_frames = self.clf.window_frames
         if window_frames > 0:
-            index = (
+            index_nums = (
                 index.to_frame(index=False)
                 .assign(index_num=np.arange(index.shape[0]))
-                .groupby(BehavCombinedDf.IN.VIDEO.value)
+                .groupby(BehavClassifierCombinedDf.IN.VIDEO.value)
                 .apply(lambda group: group.iloc[window_frames:-window_frames])
             )["index_num"].values
         else:
-            index = np.arange(index.shape[0])
+            index_nums = np.arange(index.shape[0])
         # Splitting into train and test indexes
         index_train, index_test = train_test_split(
-            index,
+            index_nums,
             test_size=self.configs.test_split,
-            stratify=y_preproc[index],
+            stratify=y_preproc[index_nums],
         )
         # Undersampling training index
         index_train = self.undersample(index_train, y_preproc[index_train], self.configs.undersample_ratio)
@@ -372,16 +393,15 @@ class BehavClassifier:
     # PIPELINE FOR CLASSIFIER TRAINING AND INFERENCE
     #################################################
 
-    def pipeline_training(self, clf_cls: Callable) -> None:
+    def pipeline_training(self) -> None:
         """
         Makes a classifier and saves it to the model's root directory.
 
         Callable is a method from `ClfTemplates`.
         """
+        self.logger.info(f"Training {self.configs.clf_struct}")
         # Preparing data
         x_preproc, y_preproc, index_train, index_test = self.preproc_training()
-        # Initialising the model
-        self.clf = clf_cls()
         # Training the model
         history = self.clf.fit(
             x=x_preproc,
@@ -392,12 +412,12 @@ class BehavClassifier:
             val_split=self.configs.val_split,
         )
         # Saving history
-        self.clf_eval_save_history(history, self.configs.clf_struct)
+        self.clf_eval_save_history(history)
         # Evaluating on train and test data
         self.clf_eval_save_performance(x_preproc, y_preproc, index_train, "train")
         self.clf_eval_save_performance(x_preproc, y_preproc, index_test, "test")
         # Saving model
-        self.clf_save()
+        joblib_dump(self.clf, self.clf_fp)
 
     def pipeline_training_all(self):
         """
@@ -410,8 +430,10 @@ class BehavClassifier:
         # Saving existing clf
         clf = self.clf
         for clf_cls in CLF_TEMPLATES:
+            # Initialising the model
+            self.clf = clf_cls()
             # Building pipeline, which runs and saves evaluation
-            self.pipeline_training(clf_cls)
+            self.pipeline_training()
         # Restoring clf
         self.clf = clf
 
@@ -428,36 +450,20 @@ class BehavClassifier:
         # Preprocessing features
         x_preproc = self.preproc_x_transform(x, self.preproc_fp)
         # Loading the model
-        self.clf_load()
+        self.clf: BaseTorchModel = joblib_load(self.clf_fp)
         # Getting probabilities
-        y_probs = self.clf.predict(
+        y_prob = self.clf.predict(
             x=x_preproc,
             index=np.arange(x_preproc.shape[0]),
             batch_size=self.configs.batch_size,
         )
         # Making predictions from probabilities (and pcutoff)
-        y_preds = (y_probs > self.configs.pcutoff).astype(int)
+        y_pred = (y_prob > self.configs.pcutoff).astype(int)
         # Making df
         pred_df = BehavPredictedDf.init_df(pd.Series(index))
-        pred_df[(self.configs.behav_name, BehavPredictedDf.OutcomesCols.PROB.value)] = y_probs
-        pred_df[(self.configs.behav_name, BehavPredictedDf.OutcomesCols.PRED.value)] = y_preds
+        pred_df[(self.configs.behav_name, BehavPredictedDf.OutcomesCols.PROB.value)] = y_prob
+        pred_df[(self.configs.behav_name, BehavPredictedDf.OutcomesCols.PRED.value)] = y_pred
         return pred_df
-
-    #################################################
-    # MODEL CLASSIFIER METHODS
-    #################################################
-
-    def clf_load(self):
-        """
-        Loads the model's classifier.
-        """
-        self.clf = joblib.load(self.clf_fp)
-
-    def clf_save(self):
-        """
-        Saves the model's classifier
-        """
-        joblib.dump(self.clf, self.clf_fp)
 
     #################################################
     # COMPREHENSIVE EVALUATION FUNCTIONS
@@ -475,8 +481,8 @@ class BehavClassifier:
         self,
         x: np.ndarray,
         y: np.ndarray,
+        index: np.ndarray,
         name: str,
-        index: None | np.ndarray = None,
     ) -> tuple[pd.DataFrame, dict, Figure, Figure, Figure]:
         """
         Evaluates the classifier performance on the given x and y data.
@@ -493,15 +499,15 @@ class BehavClassifier:
         logc_fig : mpl.Figure
             Figure showing the logistic curve for different predicted probabilities.
         """
-        # Making eval df
-        index = np.arange(x.shape[0]) if index is None else index
-        y_eval = self.clf_predict(x=x, index=index, batch_size=self.configs.batch_size)
-        # Including `actual` lables in `y_eval`
-        y_eval[self.configs.behav_name, BehavScoredDf.OutcomesCols.ACTUAL.value] = y[index]
-        # Getting individual columns
-        y_prob = y_eval[self.configs.behav_name, BehavPredictedDf.OutcomesCols.PROB.value]
-        y_pred = y_eval[self.configs.behav_name, BehavPredictedDf.OutcomesCols.PRED.value]
-        y_true = y_eval[self.configs.behav_name, BehavPredictedDf.OutcomesCols.ACTUAL.value]
+        # Getting predictions
+        y_prob = self.clf.predict(x=x, index=index, batch_size=self.configs.batch_size)
+        y_pred = (y_prob > self.configs.pcutoff).astype(int)
+        y_true = y[index]
+        # Making eval_df
+        eval_df = BehavPredictedDf.init_df(pd.Series(index))
+        eval_df[(self.configs.behav_name, BehavPredictedDf.OutcomesCols.PROB.value)] = y_prob
+        eval_df[(self.configs.behav_name, BehavPredictedDf.OutcomesCols.PRED.value)] = y_pred
+        eval_df[(self.configs.behav_name, BehavScoredDf.OutcomesCols.ACTUAL.value)] = y_true
         # Making classification report
         report_dict = self.eval_report(y_true, y_pred)
         # Making confusion matrix figure
@@ -511,14 +517,14 @@ class BehavClassifier:
         # Logistic curve
         logc_fig = self.eval_logc(y_true, y_prob)
         # Saving data and figures
-        DFMixin.write(y_eval, os.path.join(self.eval_dir, f"{name}_eval.{DFMixin.IO}"))
+        DFMixin.write(eval_df, os.path.join(self.eval_dir, f"{name}_eval.{DFMixin.IO}"))
         write_json(os.path.join(self.eval_dir, f"{name}_report.json"), report_dict)
         metrics_fig.savefig(os.path.join(self.eval_dir, f"{name}_confm.png"))
         pcutoffs_fig.savefig(os.path.join(self.eval_dir, f"{name}_pcutoffs.png"))
         logc_fig.savefig(os.path.join(self.eval_dir, f"{name}_logc.png"))
         # Print classification report
         print(json.dumps(report_dict, indent=4))
-        return y_eval, report_dict, metrics_fig, pcutoffs_fig, logc_fig
+        return eval_df, report_dict, metrics_fig, pcutoffs_fig, logc_fig
 
     #################################################
     # EVALUATION METRICS FUNCTIONS

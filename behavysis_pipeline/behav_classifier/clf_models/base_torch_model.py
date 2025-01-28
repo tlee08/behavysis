@@ -142,6 +142,8 @@ class BaseTorchModel(nn.Module):
         probs = self._inference(loader, verbose=True)
         # Converting probabilities to numpy array
         probs = probs.cpu().numpy()
+        # Flattening to 1D array
+        probs = probs.flatten()
         return probs
 
     def _inference(self, dl: DataLoader, verbose: bool = False) -> torch.Tensor:

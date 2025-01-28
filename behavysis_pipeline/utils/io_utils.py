@@ -6,6 +6,8 @@ import json
 import os
 import shutil
 
+import joblib
+
 # def clear_dir_junk(my_dir: str) -> None:
 #     """
 #     Removes all hidden junk files in given directory.
@@ -66,5 +68,22 @@ def write_json(fp: str, data: dict) -> None:
     """
     Writes the given data to the json file at the given filepath.
     """
+    os.makedirs(os.path.dirname(fp), exist_ok=True)
     with open(fp, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=4)
+
+
+def joblib_load(fp: str):
+    """
+    Load a joblib file.
+    """
+    os.makedirs(os.path.dirname(fp), exist_ok=True)
+    return joblib.load(fp)
+
+
+def joblib_dump(data, fp: str):
+    """
+    Dump a joblib file.
+    """
+    os.makedirs(os.path.dirname(fp), exist_ok=True)
+    joblib.dump(data, fp)

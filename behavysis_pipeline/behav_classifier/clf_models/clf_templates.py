@@ -24,6 +24,8 @@ class RF1(RandomForestClassifier):
             n_jobs=16,
             verbose=1,
         )
+        self.window_frames = 0
+        print("Window frames", self.window_frames)
 
     def fit(self, x, y, index, *args, **kwargs):
         super().fit(x[index], y[index])
