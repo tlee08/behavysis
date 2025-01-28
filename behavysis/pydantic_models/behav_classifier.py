@@ -8,7 +8,7 @@ class BehavClassifierConfigs(PydanticBaseModel):
     undersample_ratio: float = 0.2
 
     clf_struct: str = "clf"  # Classifier type (defined in ClfTemplates)
-    pcutoff: float = 0.5
+    pcutoff: float = 0.2
     test_split: float = 0.2
     val_split: float = 0.2
     batch_size: int = 256
