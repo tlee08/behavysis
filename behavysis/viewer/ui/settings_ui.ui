@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>SettingsWindow</class>
+ <widget class="QTabWidget" name="SettingsWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>270</width>
+    <height>222</height>
+   </rect>
+  </property>
+  <widget class="QWidget" name="general_tab">
+   <attribute name="title">
+    <string>General</string>
+   </attribute>
+   <layout class="QFormLayout">
+    <item row="0" column="0" colspan="2">
+     <widget class="QLabel" name="vid_header_lb">
+      <property name="text">
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; font-weight:700;&quot;&gt;Video Player&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      </property>
+     </widget>
+    </item>
+    <item row="4" column="0" colspan="2">
+     <widget class="QLabel" name="graph_header_lb">
+      <property name="text">
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; font-weight:700;&quot;&gt;Graph viewer&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      </property>
+     </widget>
+    </item>
+    <item row="6" column="0">
+     <widget class="QLabel" name="window_size_lb">
+      <property name="text">
+       <string>Viewed secs</string>
+      </property>
+      <property name="buddy">
+       <cstring>window_size_le</cstring>
+      </property>
+     </widget>
+    </item>
+    <item row="6" column="1">
+     <widget class="QLineEdit" name="window_size_le"/>
+    </item>
+    <item row="8" column="1">
+     <widget class="QDialogButtonBox" name="confirm_dbtn">
+      <property name="standardButtons">
+       <set>QDialogButtonBox::StandardButton::Cancel|QDialogButtonBox::StandardButton::Ok</set>
+      </property>
+     </widget>
+    </item>
+    <item row="7" column="0">
+     <widget class="QLabel" name="focus_size_lb">
+      <property name="text">
+       <string>Focus padding secs</string>
+      </property>
+     </widget>
+    </item>
+    <item row="2" column="0">
+     <widget class="QLabel" name="vid_speed_lb">
+      <property name="text">
+       <string>x Speed</string>
+      </property>
+     </widget>
+    </item>
+    <item row="2" column="1">
+     <widget class="QLineEdit" name="vid_speed_le"/>
+    </item>
+    <item row="7" column="1">
+     <widget class="QLineEdit" name="focus_size_le"/>
+    </item>
+    <item row="3" column="1">
+     <widget class="QLineEdit" name="vid_width_le"/>
+    </item>
+    <item row="3" column="0">
+     <widget class="QLabel" name="vid_width_lb">
+      <property name="text">
+       <string>Width</string>
+      </property>
+      <property name="buddy">
+       <cstring>vid_width_le</cstring>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QWidget" name="tab_2">
+   <attribute name="title">
+    <string>Tab 2</string>
+   </attribute>
+  </widget>
+ </widget>
+ <tabstops>
+  <tabstop>vid_speed_le</tabstop>
+  <tabstop>vid_width_le</tabstop>
+  <tabstop>window_size_le</tabstop>
+  <tabstop>focus_size_le</tabstop>
+ </tabstops>
+ <resources/>
+ <connections/>
+</ui>

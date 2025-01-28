@@ -50,6 +50,7 @@ priority = "explicit"
 [tool.poetry.scripts]
 behavysis_make_project = "behavysis_pipeline.scripts.make_project:main"
 behavysis_project_gui = "behavysis_pipeline.scripts.project_gui:run_script"
+behavysis_viewer = 'behavysis_viewer.__main__:main'
 
 [tool.ruff]
 line-length = 120
