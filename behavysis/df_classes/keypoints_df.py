@@ -6,6 +6,7 @@ from enum import Enum
 
 import numpy as np
 import pandas as pd
+from matplotlib import pyplot as plt
 
 from behavysis.df_classes.df_mixin import DFMixin, FramesIN
 
@@ -74,8 +75,6 @@ class KeypointsDf(DFMixin):
         tuple[list[str], list[str]]
             `(indivs_ls, bpts_ls)` tuples. It is recommended to unpack these vals.
         """
-        # Getting column MultiIndex
-        columns = df.columns
         # Filtering out any single and processing columns
         # Not incl. the `single` or `process`columns
         columns_filter = np.isin(
@@ -128,3 +127,112 @@ class KeypointsDf(DFMixin):
         # Scaling height coords
         scaled_df[CoordsCols.Y.value] = scaled_df.loc[:, idx[:, :, :, CoordsCols.Y.value]] * height_y_scale  # type: ignore
         return cls.basic_clean(scaled_df)
+
+
+class KeyptsAnnotationsCN(Enum):
+    ATTRIBUTES = "attributes"
+
+
+class KeypointsAnnotationsDf(DFMixin):
+    IN = FramesIN
+    CN = KeyptsAnnotationsCN
+
+    @classmethod
+    def keypoint2annotationsdf(cls, keypoints_df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Converts a single keypoint to an attributes dataframe.
+
+        Parameters
+        ----------
+        keypoint : pd.Series
+            A single keypoint.
+
+        Returns
+        -------
+        pd.DataFrame
+            An attributes dataframe.
+        """
+        df = KeypointsDf.basic_clean(keypoints_df)
+        # Filtering out IndivColumns.PROCESS.value columns
+        columns = np.isin(
+            keypoints_df.columns.get_level_values(KeypointsDf.CN.INDIVIDUALS.value),
+            [IndivCols.PROCESSED.value],
+            invert=True,
+        )
+        df = df.loc[:, columns]
+        # Rounding and converting to correct dtypes - "x" and "y" values are ints
+        xy_columns = df.columns[
+            df.columns.get_level_values(KeypointsDf.CN.COORDS.value).isin([CoordsCols.X.value, CoordsCols.Y.value])
+        ]
+        df[xy_columns] = df[xy_columns].round(0).astype(int)
+        # Changing the columns MultiIndex to a single-level index. For speedup
+        df.columns = [f"{indiv}_{bpt}_{coord}" for scorer, indiv, bpt, coord in df.columns]
+        return cls.basic_clean(df)
+
+    @classmethod
+    def get_indivs_bpts(cls, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Returns a tuple of the unique (indiv, bpt) pairs.
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            Keypoints pd.DataFrame.
+
+        Returns
+        -------
+        tuple[list[str], list[str]]
+            `(indivs_ls, bpts_ls)` tuples. It is recommended to unpack these vals.
+        """
+        df = cls.basic_clean(df)
+
+        indivs_bpts_df = df.columns.to_frame(index=False)[cls.CN.ATTRIBUTES.value].str.split("_", expand=True)
+        indivs_bpts_df = indivs_bpts_df.iloc[:, :2]
+        indivs_bpts_df.columns = [KeypointsDf.CN.INDIVIDUALS.value, KeypointsDf.CN.BODYPARTS.value]
+        indivs_bpts_df = indivs_bpts_df.drop_duplicates()
+        return indivs_bpts_df
+
+    @classmethod
+    def make_colours(cls, df: pd.DataFrame, colour_level: str, cmap: str) -> np.ndarray:
+        """
+        Makes a list of colours for each bodypart instance.
+
+        Parameters
+        ----------
+        measures_ls : list
+            _description_
+        cmap : str
+            _description_
+
+        Returns
+        -------
+        list
+            _description_
+
+        Example
+        -------
+        ```
+        [1,2,4,2,3,1,5]
+        --> [Red, Blue, Green, Blue, Yellow, Red, Purple]
+        ```
+        """
+        df = cls.basic_clean(df)
+        # Getting (indivs, bpts) df
+        indivs_bpts_df = cls.get_indivs_bpts(df)
+        # Making the corresponding colours list for each bodypart instance
+        # (colours depend on indiv/bpt)
+        category_vals = indivs_bpts_df[colour_level]
+        # If vals is an empty list, return colours_ls as an empty list
+        if len(category_vals) == 0:
+            return np.array([])
+        # Encoding colours as 0, 1, 2, ... for each unique value
+        category_idx, _ = pd.factorize(category_vals)
+        # Normalising between 0 and 1 (if only 1 unique value, it will be 0 div so setting values to 0)
+        category_idx = np.nan_to_num(category_idx / category_idx.max())
+        # Getting corresponding colour for each item in `vals` list and from cmap
+        colours_arr = plt.cm.get_cmap(cmap)(category_idx)
+        # Reassigning the order of the colours to be RGBA (not BGRA)
+        colours_arr = colours_arr[:, [2, 1, 0, 3]]
+        # Converting to (0, 255) range
+        colours_arr = colours_arr * 255
+        return colours_arr

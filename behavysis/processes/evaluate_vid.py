@@ -13,7 +13,7 @@ from pyqtgraph.exporters import ImageExporter
 from tqdm import trange
 
 from behavysis.df_classes.analysis_combined_df import AnalysisCombinedDf
-from behavysis.df_classes.keypoints_df import IndivCols, KeypointsDf
+from behavysis.df_classes.keypoints_df import CoordsCols, KeypointsAnnotationsDf, KeypointsDf
 from behavysis.pydantic_models.configs import ExperimentConfigs
 from behavysis.utils.diagnostics_utils import file_exists_msg
 from behavysis.utils.logging_utils import get_io_obj_content, init_logger_io_obj
@@ -185,42 +185,11 @@ class Keypoints(EvalVidFuncBase):
     ):
         self.width_output = width_input
         self.height_output = height_input
-        self.keypoints_df: pd.DataFrame = keypoints_df
-        self.colour_level = colour_level
-        self.cmap = cmap
+        self.keypoints_df = KeypointsAnnotationsDf.keypoint2annotationsdf(keypoints_df)
+        self.indivs_bpts_df = KeypointsAnnotationsDf.get_indivs_bpts(self.keypoints_df)
+        self.colours = KeypointsAnnotationsDf.make_colours(self.keypoints_df, colour_level, cmap)
         self.pcutoff = pcutoff
         self.radius = radius
-
-        self.init_df()
-
-    def init_df(self):
-        """
-        Modifying keypoints_df and making list of how to select keypoints_df components to optimise processing.
-        Specifically:
-        - Filtering out "process" columns
-        - Rounding and converting to correct dtypes - "x" and "y" values are ints
-        - Changing the columns MultiIndex to a single-level index. For speedup
-        - Making the corresponding colours list for each bodypart instance (colours depend on indiv/bpt)
-        """
-        # Filtering out IndivColumns.PROCESS.value columns
-        if IndivCols.PROCESSED.value in self.keypoints_df.columns.unique(KeypointsDf.CN.INDIVIDUALS.value):
-            self.keypoints_df.drop(
-                columns=IndivCols.PROCESSED.value,
-                level=KeypointsDf.CN.INDIVIDUALS.value,
-            )
-        # Getting (indivs, bpts) MultiIndex
-        # TODO: make explicitly selecting (indivs, bpts) levels
-        self.indivs_bpts_ls = self.keypoints_df.columns.droplevel(level=KeypointsDf.CN.COORDS.value).unique()
-        # Rounding and converting to correct dtypes - "x" and "y" values are ints
-        self.keypoints_df = self.keypoints_df.fillna(0)
-        columns = self.keypoints_df.columns[self.keypoints_df.columns.get_level_values("coords").isin(["x", "y"])]
-        self.keypoints_df[columns] = self.keypoints_df[columns].round(0).astype(int)
-        # Changing the columns MultiIndex to a single-level index. For speedup
-        self.keypoints_df.columns = [f"{indiv}_{bpt}_{coord}" for indiv, bpt, coord in self.keypoints_df.columns]
-        # Making the corresponding colours list for each bodypart instance
-        # (colours depend on indiv/bpt)
-        measures_ls = self.indivs_bpts_ls.get_level_values(self.colour_level)
-        self.colours = make_colours(measures_ls, self.cmap)
 
     def __call__(self, frame: np.ndarray, idx: int) -> np.ndarray:
         # Asserting the frame's dimensions
@@ -232,11 +201,14 @@ class Keypoints(EvalVidFuncBase):
         except KeyError:
             return frame
         # Making the bpts keypoints annot
-        for i, (indiv, bpt) in enumerate(self.indivs_bpts_ls):
-            if row[f"{indiv}_{bpt}_likelihood"] >= self.pcutoff:
+        for i, indiv, bpt in self.indivs_bpts_df.itertuples(name=None):
+            if row[f"{indiv}_{bpt}_{CoordsCols.LIKELIHOOD.value}"] >= self.pcutoff:
                 cv2.circle(
                     img=frame,
-                    center=(int(row[f"{indiv}_{bpt}_x"]), int(row[f"{indiv}_{bpt}_y"])),  # type: ignore
+                    center=(
+                        int(row[f"{indiv}_{bpt}_{CoordsCols.X.value}"]),
+                        int(row[f"{indiv}_{bpt}_{CoordsCols.Y.value}"]),
+                    ),
                     radius=self.radius,
                     color=self.colours[i],
                     thickness=-1,
