@@ -9,6 +9,8 @@ from sklearn.ensemble import RandomForestClassifier
 
 from .base_torch_model import BaseTorchModel
 
+# TODO: weighted loss functions
+
 
 class RF1(RandomForestClassifier):
     """

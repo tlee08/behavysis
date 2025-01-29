@@ -13,3 +13,4 @@ class BehavClassifierConfigs(PydanticBaseModel):
     val_split: float = 0.2
     batch_size: int = 256
     epochs: int = 50
+    bias_positives_ratio: float = 2

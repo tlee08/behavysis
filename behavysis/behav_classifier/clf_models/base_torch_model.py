@@ -103,11 +103,11 @@ class BaseTorchModel(nn.Module):
             outputs = self(inputs)
             # Calculate loss
             loss = criterion(outputs, labels)
-            # Calculate backward gradients
+            # Calculate backward gradients (derivative of loss w.r.t. weights)
             loss.backward()
-            # Update learning weights
+            # Update weights based on the gradients
             optimizer.step()
-            # calculating loss
+            # Updating overall loss
             loss += loss.item()
         # Scaling loss by number of batches
         loss /= len(dl)
