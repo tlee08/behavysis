@@ -310,7 +310,7 @@ class MainWindow(QMainWindow):
             # Loading data into vid, bouts, and keypoints models
             self.vid_model.load(self.file_manager.vid_fp)
             self.bouts_model.load(self.file_manager.behavs_df_fp, configs)
-            self.keypoints_model._load(self.file_manager.dlc_df_fp, configs)
+            self.keypoints_model.load(self.file_manager.dlc_df_fp, configs)
 
             # Setting primitive attributes
             # self.window_size_frames = 25
@@ -489,7 +489,7 @@ class MainWindow(QMainWindow):
         vid_model.load(file_manager.vid_fp)
         # Make keypoints model
         keypoints_model = KeypointsModel()
-        keypoints_model._load(file_manager.dlc_df_fp, configs)
+        keypoints_model.load(file_manager.dlc_df_fp, configs)
         # Make bouts model
         bouts_model = BoutsListModel()
         bouts_model.load(file_manager.behavs_df_fp, configs)

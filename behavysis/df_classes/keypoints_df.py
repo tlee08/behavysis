@@ -185,15 +185,16 @@ class KeypointsAnnotationsDf(DFMixin):
             `(indivs_ls, bpts_ls)` tuples. It is recommended to unpack these vals.
         """
         df = cls.basic_clean(df)
-
+        if df.columns.shape[0] == 0:
+            return pd.DataFrame(columns=[KeypointsDf.CN.INDIVIDUALS.value, KeypointsDf.CN.BODYPARTS.value])
         indivs_bpts_df = df.columns.to_frame(index=False)[cls.CN.ATTRIBUTES.value].str.split("_", expand=True)
         indivs_bpts_df = indivs_bpts_df.iloc[:, :2]
         indivs_bpts_df.columns = [KeypointsDf.CN.INDIVIDUALS.value, KeypointsDf.CN.BODYPARTS.value]
-        indivs_bpts_df = indivs_bpts_df.drop_duplicates()
+        indivs_bpts_df = indivs_bpts_df.drop_duplicates().reset_index(drop=True)
         return indivs_bpts_df
 
     @classmethod
-    def make_colours(cls, df: pd.DataFrame, colour_level: str, cmap: str) -> np.ndarray:
+    def make_colours(cls, category_vals: pd.Series, cmap: str) -> np.ndarray:
         """
         Makes a list of colours for each bodypart instance.
 
@@ -216,12 +217,6 @@ class KeypointsAnnotationsDf(DFMixin):
         --> [Red, Blue, Green, Blue, Yellow, Red, Purple]
         ```
         """
-        df = cls.basic_clean(df)
-        # Getting (indivs, bpts) df
-        indivs_bpts_df = cls.get_indivs_bpts(df)
-        # Making the corresponding colours list for each bodypart instance
-        # (colours depend on indiv/bpt)
-        category_vals = indivs_bpts_df[colour_level]
         # If vals is an empty list, return colours_ls as an empty list
         if len(category_vals) == 0:
             return np.array([])

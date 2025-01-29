@@ -17,7 +17,6 @@ from behavysis.df_classes.keypoints_df import CoordsCols, KeypointsAnnotationsDf
 from behavysis.pydantic_models.configs import ExperimentConfigs
 from behavysis.utils.diagnostics_utils import file_exists_msg
 from behavysis.utils.logging_utils import get_io_obj_content, init_logger_io_obj
-from behavysis.utils.plotting_utils import make_colours
 from behavysis.utils.qt_utils import qt2cv
 
 ###################################################################################################
@@ -67,13 +66,18 @@ class EvaluateVid:
         assert total_frames > 0, assert_msg % "video total frames"
 
         # Getting keypoints df
-        keypoints_df = KeypointsDf.clean_headings(KeypointsDf.read(keypoints_fp))
+        reserve_index = pd.Series(np.arange(configs.auto.start_frame, configs.auto.stop_frame))
+        try:
+            keypoints_df = KeypointsDf.read(keypoints_fp)
+        except FileNotFoundError:
+            logger.warning("Keypoints file not found or could not be loaded." "Disregarding keypoints.")
+            keypoints_df = KeypointsDf.init_df(reserve_index)
         # Getting analysis combined df
         try:
             analysis_df = AnalysisCombinedDf.read(analysis_combined_fp)
         except FileNotFoundError:
             logger.warning("Analysis combined file not found or could not be loaded." "Disregarding analysis.")
-            analysis_df = AnalysisCombinedDf.init_df(keypoints_df.index)
+            analysis_df = AnalysisCombinedDf.init_df(pd.Series(reserve_index))
 
         # MAKING ANNOTATED VIDEO
         # Making VidFuncsRunner object to annotate each frame with.
@@ -187,11 +191,14 @@ class Keypoints(EvalVidFuncBase):
         self.height_output = height_input
         self.keypoints_df = KeypointsAnnotationsDf.keypoint2annotationsdf(keypoints_df)
         self.indivs_bpts_df = KeypointsAnnotationsDf.get_indivs_bpts(self.keypoints_df)
-        self.colours = KeypointsAnnotationsDf.make_colours(self.keypoints_df, colour_level, cmap)
+        self.colours = KeypointsAnnotationsDf.make_colours(self.indivs_bpts_df[colour_level], cmap)
         self.pcutoff = pcutoff
         self.radius = radius
 
     def __call__(self, frame: np.ndarray, idx: int) -> np.ndarray:
+        # Skipping if no keypoints_df
+        if self.keypoints_df.columns.shape[0] == 0:
+            return frame
         # Asserting the frame's dimensions
         assert frame.shape[0] == self.height_output
         assert frame.shape[1] == self.width_output
@@ -246,18 +253,9 @@ class Analysis(EvalVidFuncBase):
         self.cmap = cmap
         self.padding = padding
         self.fps = fps
-        self.init_graph()
 
-    def init_graph(self):
-        """
-        Modifying analysis_df to optimise processing
-        Specifically:
-        - Making sure all relevant behaviour outcomes columns exist by imputing
-        - Changing the columns MultiIndex to a single-level index. For speedup
-        Getting behavs df
-        """
         # Skipping if no analysis_df
-        if len(self.analysis_df.columns.unique(AnalysisCombinedDf.CN.ANALYSIS.value)) == 0:
+        if self.analysis_df.columns.shape[0] == 0:
             return
         # Making multi-plot widget
         self.plots_layout = pg.GraphicsLayoutWidget()
@@ -278,8 +276,10 @@ class Analysis(EvalVidFuncBase):
             x_line_arr_i = []
             for j, indivs_j in enumerate(indivs_ls):
                 # Getting measures_ls, based on current analysis_i and indivs_j
-                measures_ls = self.analysis_df[(analysis_i, indivs_j)].columns.unique(
-                    AnalysisCombinedDf.CN.MEASURES.value
+                measures_vect = pd.Series(
+                    self.analysis_df[(analysis_i, indivs_j)]
+                    .columns.to_frame(index=False)[AnalysisCombinedDf.CN.MEASURES.value]
+                    .unique()
                 )
                 # Making plot
                 plot_arr_ij = self.plots_layout.addPlot(
@@ -296,10 +296,10 @@ class Analysis(EvalVidFuncBase):
                 x_line_arr_ij.setZValue(10)
                 plot_arr_ij.addItem(x_line_arr_ij)
                 # Making the corresponding colours list for each measures instance
-                colours_ls = make_colours(measures_ls, self.cmap)
+                colours_ls = KeypointsAnnotationsDf.make_colours(measures_vect, self.cmap)
                 # Making overal plot's legend
                 legend = plot_arr_ij.addLegend()
-                for k, measures_k in enumerate(measures_ls):
+                for k, measures_k in enumerate(measures_vect):
                     # Making measure's line
                     # Using seconds (frames / fps). "update_plot" method also converts to seconds
                     line_item = pg.PlotDataItem(
@@ -328,7 +328,7 @@ class Analysis(EvalVidFuncBase):
             dtype=np.uint8,
         )
         # Skipping if no analysis_df
-        if len(self.analysis_df.columns.unique(AnalysisCombinedDf.CN.ANALYSIS.value)) == 0:
+        if self.analysis_df.columns.shape[0] == 0:
             return plot_frame
         # Initialising columns start
         height_plot_start = 0

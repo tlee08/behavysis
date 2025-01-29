@@ -353,10 +353,10 @@ class Project:
 
     def evaluate_vid(self, overwrite: bool) -> None:
         # TODO: IO error with multiprocessing. Using single processing for now.
-        nprocs = self.nprocs
-        self.nprocs = 1
+        # nprocs = self.nprocs
+        # self.nprocs = 1
         self._proc_scaff(Experiment.evaluate_vid, overwrite)
-        self.nprocs = nprocs
+        # self.nprocs = nprocs
 
     @functools.wraps(Experiment.export2csv)
     def export2csv(self, src_dir: str, dst_dir: str, overwrite: bool) -> None:

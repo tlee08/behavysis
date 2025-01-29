@@ -42,7 +42,6 @@ class BoutsListModel(QAbstractListModel):
         behavs_df = BehavScoredDf.read(fp)
         # behavs_df to bouts
         self.bouts = BehavScoredDf.frames2bouts(behavs_df)
-        # print(self.bouts.model_dumps_json(indent=2))
         self.layoutChanged.emit()
 
     def rowCount(self, index):
