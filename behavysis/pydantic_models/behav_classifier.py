@@ -6,7 +6,7 @@ class BehavClassifierConfigs(PydanticBaseModel):
     behav_name: str = "behav_name"
     seed: int = 42
     oversample_ratio: float = 0.1
-    undersample_ratio: float = 0.5
+    undersample_ratio: float = 0.2
 
     clf_struct: str = "clf"  # Classifier type (defined in ClfTemplates)
     pcutoff: float = 0.2
