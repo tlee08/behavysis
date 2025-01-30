@@ -32,7 +32,6 @@ pyqtgraph = "^0.13.7"
 streamlit = "^1.36.0"
 # Classifier
 scikit-learn = "^1.4.2"
-imbalanced-learn = "^0.13.0"
 torch = "~2.6.0"
 # torch = {version = "~2.6.0", source = "torch"}
 
