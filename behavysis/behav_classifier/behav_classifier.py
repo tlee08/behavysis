@@ -485,7 +485,8 @@ class BehavClassifier:
 
     def clf_eval_save_history(self, history: pd.DataFrame):
         # Saving history df
-        DFMixin.write(history, os.path.join(self.eval_dir, f"history.{DFMixin.IO}"))
+        DFMixin.write_csv(history, os.path.join(self.eval_dir, "history.csv"))
+        # DFMixin.write(history, os.path.join(self.eval_dir, f"history.{DFMixin.IO}"))
         # Making and saving history figure
         fig, ax = plt.subplots(figsize=(10, 7))
         sns.lineplot(data=history, ax=ax)
