@@ -176,7 +176,7 @@ class BaseTorchModel(nn.Module):
         index: None | np.ndarray = None,
         batch_size: int = 1,
     ) -> DataLoader:
-        index = index or np.arange(x.shape[0])
+        index = index if index is not None else np.arange(x.shape[0])
         ds = MemoizedTimeSeriesDataset(x=x, y=y, index=index, window_frames=self.window_frames)
         return DataLoader(ds, batch_size=batch_size, shuffle=True)
 
@@ -186,7 +186,7 @@ class BaseTorchModel(nn.Module):
         index: None | np.ndarray = None,
         batch_size: int = 1,
     ) -> DataLoader:
-        index = index or np.arange(x.shape[0])
+        index = index if index is not None else np.arange(x.shape[0])
         ds = TimeSeriesDataset(x=x, y=np.zeros(x.shape[0]), index=index, window_frames=self.window_frames)
         return DataLoader(ds, batch_size=batch_size, shuffle=False)
 
