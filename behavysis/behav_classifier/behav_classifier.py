@@ -29,7 +29,7 @@ from behavysis.behav_classifier.clf_models.clf_templates import (
     CNN1,
 )
 from behavysis.constants import Folders
-from behavysis.df_classes.behav_classifier_df import BehavClassifierCombinedDf
+from behavysis.df_classes.behav_classifier_df import BehavClassifierCombinedDf, BehavClassifierEvalDf
 from behavysis.df_classes.behav_df import BehavPredictedDf, BehavScoredDf, BehavValues
 from behavysis.df_classes.df_mixin import DFMixin
 from behavysis.pydantic_models.behav_classifier import (
@@ -533,8 +533,7 @@ class BehavClassifier:
         # Logistic curve
         logc_fig = self.eval_logc(y_true, y_prob)
         # Saving data and figures
-        eval_df.to_csv(os.path.join(self.eval_dir, f"{name}_eval.csv"))
-        # BehavClassifierEvalDf.write(eval_df, os.path.join(self.eval_dir, f"{name}_eval.{BehavClassifierEvalDf.IO}"))
+        BehavClassifierEvalDf.write(eval_df, os.path.join(self.eval_dir, f"{name}_eval.{BehavClassifierEvalDf.IO}"))
         write_json(os.path.join(self.eval_dir, f"{name}_report.json"), report_dict)
         metrics_fig.savefig(os.path.join(self.eval_dir, f"{name}_confm.png"))
         pcutoffs_fig.savefig(os.path.join(self.eval_dir, f"{name}_pcutoffs.png"))
