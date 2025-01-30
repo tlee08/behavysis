@@ -403,7 +403,7 @@ class BehavClassifier:
             stratify=y_preproc[index_nums],
         )
         # Oversampling and undersampling ONLY on training data
-        index_train = self.oversample(index_train, y_preproc[index_train], self.configs.oversample_ratio)
+        # index_train = self.oversample(index_train, y_preproc[index_train], self.configs.oversample_ratio)
         index_train = self.undersample(index_train, y_preproc[index_train], self.configs.undersample_ratio)
 
         print(np.unique(y_preproc[index_train], return_counts=True))
