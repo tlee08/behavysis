@@ -126,12 +126,12 @@ class BaseTorchModel(nn.Module):
         # Making data loaders
         dl = self.predict_loader(x, index, batch_size=batch_size)
         # Running inference
-        probs, actual = self._inference(dl)
+        p, y = self._inference(dl)
         # Converting probabilities to numpy array
-        probs = probs.cpu().numpy()
+        p = p.cpu().numpy()
         # Flattening to 1D array
-        probs = probs.flatten()
-        return probs
+        p = p.flatten()
+        return p
 
     def _inference(self, dl: DataLoader) -> tuple[torch.Tensor, torch.Tensor]:
         """

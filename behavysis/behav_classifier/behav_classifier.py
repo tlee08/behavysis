@@ -230,7 +230,9 @@ class BehavClassifier:
         Combines the data in the given directory into a single dataframe.
         Adds a MultiIndex level to the rows, with the values as the filenames in the directory.
         """
-        data_dict = {get_name(i): DFMixin.read(os.path.join(src_dir, i)) for i in os.listdir(os.path.join(src_dir))}
+        data_dict = {
+            get_name(i): DFMixin.read(os.path.join(src_dir, i)) for i in os.listdir(os.path.join(src_dir))[:2]
+        }  # TODO:
         df = pd.concat(data_dict.values(), axis=0, keys=data_dict.keys())
         df = BehavClassifierCombinedDf.basic_clean(df)
         return df
@@ -531,6 +533,7 @@ class BehavClassifier:
         # Logistic curve
         logc_fig = self.eval_logc(y_true, y_prob)
         # Saving data and figures
+        print(eval_df)
         BehavClassifierEvalDf.write(eval_df, os.path.join(self.eval_dir, f"{name}_eval.{BehavClassifierEvalDf.IO}"))
         write_json(os.path.join(self.eval_dir, f"{name}_report.json"), report_dict)
         metrics_fig.savefig(os.path.join(self.eval_dir, f"{name}_confm.png"))
