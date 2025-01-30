@@ -9,8 +9,8 @@ from tqdm import tqdm
 
 
 class BaseTorchModel(nn.Module):
-    criterion: nn.Module | None
-    optimizer: optim.Optimizer | None
+    criterion: nn.Module
+    optimizer: optim.Optimizer
     nfeatures: int
     window_frames: int
     _device: torch.device
@@ -21,8 +21,6 @@ class BaseTorchModel(nn.Module):
         self.nfeatures = nfeatures
         self.window_frames = window_frames
         # Initialising the criterion and optimizer attributes
-        self.criterion = None
-        self.optimizer = None
 
     @property
     def device(self):
@@ -66,47 +64,37 @@ class BaseTorchModel(nn.Module):
         # Training the model
         for epoch in range(epochs):
             # Training model for one epoch
-            loss = self._train_epoch(train_dl, self.criterion, self.optimizer, verbose=True)
+            loss = self._train_epoch(train_dl)
             # Validate model
-            vloss = self._validate(val_dl, self.criterion)
+            vloss = self._validate(val_dl)
             # showing losses
-            print(f"epochs: {epoch+1}/{epochs}")
+            print(f"epochs: {epoch + 1}/{epochs}")
             print(f"loss: {loss:.3f}, vloss: {vloss:.3f}")
             # Storing loss
             history.loc[epoch, "loss"] = loss
             history.loc[epoch, "vloss"] = vloss
         return history
 
-    def _train_epoch(
-        self,
-        dl: DataLoader,
-        criterion: nn.Module,
-        optimizer: optim.Optimizer,
-        verbose: bool = False,
-    ) -> float:
+    def _train_epoch(self, dl: DataLoader) -> float:
         # Switch the model to training mode
         self.train()
-        # If verbose, then wrap the loader in tqdm to show a progress bar
-        if verbose:
-            dl = tqdm(dl)
         # To store the running loss
         loss = 0.0
         # Iterate over the data batches
-        for data in dl:
-            # get the inputs
-            inputs, labels = data
-            inputs = inputs.to(self.device)
-            labels = labels.to(self.device)
+        for x_i, y_i in tqdm(dl):
+            # Moving data to the device
+            x_i = x_i.to(self.device)
+            y_i = y_i.to(self.device)
             # zero the parameter gradients
-            optimizer.zero_grad()
+            self.optimizer.zero_grad()
             # forward pass
-            outputs = self(inputs)
+            p_i = self(x_i)
             # Calculate loss
-            loss = criterion(outputs, labels)
+            loss = self.criterion(p_i, y_i)
             # Calculate backward gradients (derivative of loss w.r.t. weights)
             loss.backward()
             # Update weights based on the gradients
-            optimizer.step()
+            self.optimizer.step()
             # Updating overall loss
             loss += loss.item()
         # Scaling loss by number of batches
@@ -115,14 +103,14 @@ class BaseTorchModel(nn.Module):
         loss = loss.cpu().detach().numpy().item()
         return loss
 
-    def _validate(self, dl: DataLoader, criterion: nn.Module) -> float:
-        # Calculating loss across an entire dataset (i.e. data loader)
-        # Running inference
-        outputs = self._inference(dl, verbose=False)
-        # Getting the actual labels
-        y = torch.concatenate([i[1] for i in dl]).to(self.device)
+    def _validate(self, dl: DataLoader) -> float:
+        """
+        Calculating loss across an entire dataset (i.e. dataloader)
+        """
+        # Running inference (also returns corresponding actual labels)
+        p, y = self._inference(dl)
         # Calculating the loss
-        loss = criterion(outputs, y)
+        loss = self.criterion(p, y)
         # Scaling loss by number of batches
         loss /= len(dl)
         # Converting loss to float
@@ -136,38 +124,42 @@ class BaseTorchModel(nn.Module):
         index: None | np.ndarray = None,
     ) -> np.ndarray:
         # Making data loaders
-        loader = self.predict_loader(x, index, batch_size=batch_size)
+        dl = self.predict_loader(x, index, batch_size=batch_size)
         # Running inference
-        probs = self._inference(loader, verbose=True)
+        probs, actual = self._inference(dl)
         # Converting probabilities to numpy array
         probs = probs.cpu().numpy()
         # Flattening to 1D array
         probs = probs.flatten()
         return probs
 
-    def _inference(self, dl: DataLoader, verbose: bool = False) -> torch.Tensor:
-        # Switch the model to evaluation mode
+    def _inference(self, dl: DataLoader) -> tuple[torch.Tensor, torch.Tensor]:
+        """
+        Given a dataloader, which has input and label tensors,
+        returns the predictions and actual labels.
+        """
+        # Switch the model to evaluation (inference) mode
         self.eval()
         # List to store the predictions
-        probs_all = torch.zeros((len(dl.dataset), 1), device=self.device)
-        # If verbose, then wrap the loader in tqdm to show a progress bar
-        if verbose:
-            dl = tqdm(dl)
+        p = torch.zeros((len(dl.dataset), 1), device=self.device)
+        y = torch.zeros((len(dl.dataset), 1), device=self.device)
         # Keeping track of number of predictions made
         n = 0
         # No need to track gradients for inference, so wrap in no_grad()
         with torch.no_grad():
             # Iterate over the data batches
-            for data in dl:
-                # Getting inputs
-                inputs = data[0]
-                inputs = inputs.to(self.device)
+            for x_i, y_i in tqdm(dl):
+                # Moving data to the device
+                x_i = x_i.to(self.device)
+                y_i = y_i.to(self.device)
                 # Running inference to get outputs
-                probs = self(inputs)
+                p_i = self(x_i)
                 # Storing the probabilities
-                probs_all[n : n + probs.shape[0]] = probs
-                n += probs.shape[0]
-        return probs_all
+                p[n : n + p_i.shape[0]] = p_i
+                y[n : n + y_i.shape[0]] = y_i
+                # Updating the number of predictions made
+                n += p_i.shape[0]
+        return p, y
 
     @classmethod
     def np_loader(cls, *args, batch_size: int = 1, shuffle: bool = False) -> DataLoader:
@@ -184,9 +176,9 @@ class BaseTorchModel(nn.Module):
         index: None | np.ndarray = None,
         batch_size: int = 1,
     ) -> DataLoader:
+        index = index or np.arange(x.shape[0])
         ds = MemoizedTimeSeriesDataset(x=x, y=y, index=index, window_frames=self.window_frames)
         return DataLoader(ds, batch_size=batch_size, shuffle=True)
-        # return self.np_loader(x, y, batch_size=batch_size, shuffle=shuffle)
 
     def predict_loader(
         self,
@@ -194,9 +186,9 @@ class BaseTorchModel(nn.Module):
         index: None | np.ndarray = None,
         batch_size: int = 1,
     ) -> DataLoader:
-        ds = TimeSeriesDataset(x=x, index=index, window_frames=self.window_frames)
+        index = index or np.arange(x.shape[0])
+        ds = TimeSeriesDataset(x=x, y=np.zeros(x.shape[0]), index=index, window_frames=self.window_frames)
         return DataLoader(ds, batch_size=batch_size, shuffle=False)
-        # return self.np_loader(x, batch_size=batch_size, shuffle=shuffle)
 
 
 class TimeSeriesDataset(Dataset):
@@ -205,54 +197,57 @@ class TimeSeriesDataset(Dataset):
     index: np.ndarray
     window_frames: int
 
-    def __init__(
-        self,
-        x: np.ndarray,
-        y: None | np.ndarray = None,
-        index: None | np.ndarray = None,
-        window_frames: int = 5,
-    ):
-        # Checking that the indexes are equal
-        if y is not None:
-            assert x.shape[0] == y.shape[0]
-        # Padding x (for frames on either side)
-        x = np.concatenate([x[np.repeat(0, window_frames)], x, x[np.repeat(-1, window_frames)]])
+    def __init__(self, x: np.ndarray, y: np.ndarray, index: np.ndarray, window_frames: int):
         # Storing the data and labels
         self.x = x
-        self.y = y if y is not None else np.zeros(x.shape[0])
-        self.index = index if index is not None else np.arange(x.shape[0])
+        self.y = y
+        self.index = index
         self.window_frames = window_frames
+        # Checking x, and y sizes are equal
+        assert self.x.shape[0] == self.y.shape[0]
+        # Checking indices are a valid range (between 0 and x.shape[0])
+        assert np.all(self.index >= 0) and np.all(self.index < self.x.shape[0])
+        # Padding x (for frames on either side)
+        self.x = np.concatenate(
+            [
+                self.x[np.repeat(0, self.window_frames)],
+                self.x,
+                self.x[np.repeat(-1, self.window_frames)],
+            ]
+        )
 
     def __len__(self):
         return self.index.shape[0]
 
     def __getitem__(self, index: int):
         """
-        NOTE:
-        `i` is the index of the label.
-        ALSO, `i` is middle of data because of padding.
+        Middle is i, start is i - window_frames, end is i + window_frames + 1.
+        THe start is i and end is i + 2 * window_frames + 1.
+        `i` is the index of the label. `i` is middle of data because of padding.
         """
-        # Get the actual index (because `index` is the index of `self.index`)
-        i = self.index[index]
+        # Get the centre index referring to x and y (because `index` is the index of `self.index`)
+        # and offsetting by window_frames (because of padding)
+        centre = self.index[index] + self.window_frames
         # Calculate start and end of the window
-        # Because of data padding, the start is i and end is i + 2 * window_frames + 1
         # Centre is i + window_frames
-        start = i
-        end = i + 2 * self.window_frames + 1
+        start = centre - self.window_frames
+        end = centre + self.window_frames + 1
         # Extract the window and label and convert to torch tensors
+        # TODO: why the transposing and reshaping? Is there a more explicit data struct?
         x_i = torch.tensor(self.x[start:end], dtype=torch.float).transpose(1, 0)
-        y_i = torch.tensor(self.y[i], dtype=torch.float).reshape(1)
+        y_i = torch.tensor(self.y[centre], dtype=torch.float).reshape(1)
         return x_i, y_i
 
 
 class MemoizedTimeSeriesDataset(TimeSeriesDataset):
-    def __init__(self, x, y, index, window_frames):
+    def __init__(self, x: np.ndarray, y: np.ndarray, index: np.ndarray, window_frames: int):
         super().__init__(x, y, index, window_frames)
         # For memoization
         self.memo = {}
 
     def __getitem__(self, index: int):
         if index in self.memo:
+            # Retrieving memoized result
             return self.memo[index]
         else:
             # Otherwise, calculate

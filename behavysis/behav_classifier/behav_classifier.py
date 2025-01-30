@@ -312,14 +312,31 @@ class BehavClassifier:
         return y_preproc
 
     @classmethod
+    def oversample(cls, index: np.ndarray, y: np.ndarray, ratio: float) -> np.ndarray:
+        assert index.shape[0] == y.shape[0]
+        # Getting indices where y is True
+        t = index[y == BehavValues.BEHAV.value]
+        # Getting indices where y is False
+        f = index[y == BehavValues.NON_BEHAV.value]
+        # Getting intended size (as t_len / f_len = ratio)
+        new_t_size = int(np.round(f.shape[0] * ratio))
+        # Oversampling the True indices
+        t = np.random.choice(t, size=new_t_size, replace=True)
+        # Combining the True and False indices
+        uindex = np.union1d(t, f)
+        return uindex
+
+    @classmethod
     def undersample(cls, index: np.ndarray, y: np.ndarray, ratio: float) -> np.ndarray:
         assert index.shape[0] == y.shape[0]
-        # Getting array of True indices
+        # Getting indices where y is True
         t = index[y == BehavValues.BEHAV.value]
-        # Getting array of False indices
+        # Getting indices where y is False
         f = index[y == BehavValues.NON_BEHAV.value]
+        # Getting intended size (as t_len / f_len = ratio)
+        new_f_size = int(np.round(t.shape[0] / ratio))
         # Undersampling the False indices
-        f = np.random.choice(f, size=int(np.round(t.shape[0] / ratio)), replace=False)
+        f = np.random.choice(f, size=new_f_size, replace=False)
         # Combining the True and False indices
         uindex = np.union1d(t, f)
         return uindex
@@ -365,27 +382,29 @@ class BehavClassifier:
         # Preprocessing y df
         y_preproc = self.wrangle_columns_y(y)[self.configs.behav_name]
         y_preproc = self.preproc_y_transform(np.array(y_preproc.values))
-        # filtering "available" index down so frames in "outer" window for each video are excluded
+        # Filtering "available" index to exclude frames in "edge" window of each video
         window_frames = self.clf.window_frames
+        index_nums = np.arange(index.shape[0])
         if window_frames > 0:
             index_nums = np.array(
                 (
                     index.to_frame(index=False)
-                    .assign(index_num=np.arange(index.shape[0]))
+                    .assign(index_nums=index_nums)
                     .groupby(BehavClassifierCombinedDf.IN.VIDEO.value)
                     .apply(lambda group: group.iloc[window_frames:-window_frames])
-                )["index_num"].values
+                )["index_nums"].values
             )
-        else:
-            index_nums = np.arange(index.shape[0])
         # Splitting into train and test indexes
         index_train, index_test = train_test_split(
             index_nums,
             test_size=self.configs.test_split,
             stratify=y_preproc[index_nums],
         )
-        # Undersampling training index
+        # Oversampling and undersampling ONLY on training data
+        index_train = self.oversample(index_train, y_preproc[index_train], self.configs.oversample_ratio)
         index_train = self.undersample(index_train, y_preproc[index_train], self.configs.undersample_ratio)
+
+        print(np.unique(y_preproc[index_train], return_counts=True))
         return x_preproc, y_preproc, index_train, index_test
 
     #################################################

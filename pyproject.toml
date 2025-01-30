@@ -32,9 +32,9 @@ pyqtgraph = "^0.13.7"
 streamlit = "^1.36.0"
 # Classifier
 scikit-learn = "^1.4.2"
-imbalanced-learn = "^0.12.2"
-torch = "~2.5.1"
-# torch = {version = "~2.5.1", source = "torch"}
+imbalanced-learn = "^0.13.0"
+torch = "~2.6.0"
+# torch = {version = "~2.6.0", source = "torch"}
 
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.4.8"
@@ -44,7 +44,7 @@ pytest = "^8.3.3"
 
 [[tool.poetry.source]]
 name = "torch"
-url = "https://download.pytorch.org/whl/cu121"
+url = "https://download.pytorch.org/whl/cu126"
 priority = "explicit"
 
 [tool.poetry.scripts]
