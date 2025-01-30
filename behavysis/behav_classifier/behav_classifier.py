@@ -533,7 +533,8 @@ class BehavClassifier:
         # Saving data and figures
         print(eval_df)
         print(eval_df.dtypes)
-        BehavClassifierEvalDf.write(eval_df, os.path.join(self.eval_dir, f"{name}_eval.{BehavClassifierEvalDf.IO}"))
+        BehavClassifierEvalDf.write_csv(eval_df, os.path.join(self.eval_dir, f"{name}_eval.csv"))
+        # BehavClassifierEvalDf.write(eval_df, os.path.join(self.eval_dir, f"{name}_eval.{BehavClassifierEvalDf.IO}"))
         write_json(os.path.join(self.eval_dir, f"{name}_report.json"), report_dict)
         metrics_fig.savefig(os.path.join(self.eval_dir, f"{name}_confm.png"))
         pcutoffs_fig.savefig(os.path.join(self.eval_dir, f"{name}_pcutoffs.png"))
