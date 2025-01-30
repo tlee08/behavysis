@@ -77,7 +77,6 @@ def joblib_load(fp: str):
     """
     Load a joblib file.
     """
-    os.makedirs(os.path.dirname(fp), exist_ok=True)
     return joblib.load(fp)
 
 
