@@ -230,9 +230,7 @@ class BehavClassifier:
         Combines the data in the given directory into a single dataframe.
         Adds a MultiIndex level to the rows, with the values as the filenames in the directory.
         """
-        data_dict = {
-            get_name(i): DFMixin.read(os.path.join(src_dir, i)) for i in os.listdir(os.path.join(src_dir))[:2]
-        }  # TODO:
+        data_dict = {get_name(i): DFMixin.read(os.path.join(src_dir, i)) for i in os.listdir(os.path.join(src_dir))}
         df = pd.concat(data_dict.values(), axis=0, keys=data_dict.keys())
         df = BehavClassifierCombinedDf.basic_clean(df)
         return df
@@ -485,8 +483,7 @@ class BehavClassifier:
 
     def clf_eval_save_history(self, history: pd.DataFrame):
         # Saving history df
-        DFMixin.write_csv(history, os.path.join(self.eval_dir, "history.csv"))
-        # DFMixin.write(history, os.path.join(self.eval_dir, f"history.{DFMixin.IO}"))
+        DFMixin.write(history, os.path.join(self.eval_dir, f"history.{DFMixin.IO}"))
         # Making and saving history figure
         fig, ax = plt.subplots(figsize=(10, 7))
         sns.lineplot(data=history, ax=ax)
@@ -532,10 +529,7 @@ class BehavClassifier:
         # Logistic curve
         logc_fig = self.eval_logc(y_true, y_prob)
         # Saving data and figures
-        print(eval_df)
-        print(eval_df.dtypes)
-        BehavClassifierEvalDf.write_csv(eval_df, os.path.join(self.eval_dir, f"{name}_eval.csv"))
-        # BehavClassifierEvalDf.write(eval_df, os.path.join(self.eval_dir, f"{name}_eval.{BehavClassifierEvalDf.IO}"))
+        BehavClassifierEvalDf.write(eval_df, os.path.join(self.eval_dir, f"{name}_eval.{BehavClassifierEvalDf.IO}"))
         write_json(os.path.join(self.eval_dir, f"{name}_report.json"), report_dict)
         metrics_fig.savefig(os.path.join(self.eval_dir, f"{name}_confm.png"))
         pcutoffs_fig.savefig(os.path.join(self.eval_dir, f"{name}_pcutoffs.png"))
