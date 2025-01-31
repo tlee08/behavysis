@@ -26,7 +26,7 @@ from behavysis.processes.run_dlc import RunDLC
 from behavysis.pydantic_models.configs import (
     ExperimentConfigs,
 )
-from behavysis.utils.dask_utils import cluster_proc_contxt
+from behavysis.utils.dask_utils import cluster_process
 from behavysis.utils.io_utils import get_name
 from behavysis.utils.logging_utils import init_logger_file
 from behavysis.utils.multiproc_utils import get_gpu_ids
@@ -137,7 +137,7 @@ class Project:
         ```
         """
         # Starting a dask cluster
-        with cluster_proc_contxt(LocalCluster(n_workers=self.nprocs, threads_per_worker=1)):
+        with cluster_process(LocalCluster(n_workers=self.nprocs, threads_per_worker=1)):
             # Preparing all experiments for execution
             f_d_ls = [dask.delayed(method)(exp, *args, **kwargs) for exp in self.experiments]  # type: ignore
             # Executing in parallel
@@ -289,7 +289,7 @@ class Project:
         # Running DLC on each batch of experiments with each GPU (given allocated GPU ID)
         exp_batches_ls = np.array_split(np.array(exp_ls), nprocs)
         # Starting a dask cluster
-        with cluster_proc_contxt(LocalCluster(n_workers=nprocs, threads_per_worker=1)):
+        with cluster_process(LocalCluster(n_workers=nprocs, threads_per_worker=1)):
             # Preparing all experiments for execution
             f_d_ls = [
                 dask.delayed(RunDLC.ma_dlc_run_batch)(  # type: ignore
