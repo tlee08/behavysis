@@ -33,7 +33,7 @@ import seaborn as sns
 
 from behavysis.df_classes.behav_df import BehavScoredDf
 from behavysis.df_classes.keypoints_df import CoordsCols, KeypointsDf
-from behavysis.pydantic_models.configs import ExperimentConfigs
+from behavysis.pydantic_models.experiment_configs import ExperimentConfigs
 from behavysis.utils.diagnostics_utils import file_exists_msg
 from behavysis.utils.io_utils import get_name
 

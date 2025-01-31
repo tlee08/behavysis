@@ -33,7 +33,7 @@ from behavysis.df_classes.behav_classifier_df import BehavClassifierCombinedDf, 
 from behavysis.df_classes.behav_df import BehavPredictedDf, BehavScoredDf, BehavValues
 from behavysis.df_classes.df_mixin import DFMixin
 from behavysis.df_classes.features_df import FeaturesDf
-from behavysis.pydantic_models.behav_classifier import (
+from behavysis.pydantic_models.behav_classifier_configs import (
     BehavClassifierConfigs,
 )
 from behavysis.utils.io_utils import async_read_files_run, get_name, joblib_dump, joblib_load, write_json

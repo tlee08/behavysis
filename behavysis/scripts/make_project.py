@@ -1,4 +1,4 @@
-from behavysis.pydantic_models.configs import get_default_configs
+from behavysis.pydantic_models.experiment_configs import get_default_configs
 from behavysis.utils.template_utils import import_static_templates_script
 
 
