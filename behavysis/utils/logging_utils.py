@@ -10,7 +10,7 @@ LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 LOG_IO_OBJ_FORMAT = "%(levelname)s - %(message)s"
 
 
-def add_console_handler(logger: logging.Logger, level: int = logging.DEBUG) -> None:
+def add_console_handler(logger: logging.Logger, level: int = logging.INFO) -> None:
     """
     If logger does not have a console handler,
     create a console handler and add it to the logger.
@@ -103,7 +103,7 @@ def init_logger(
 
 def init_logger_console(
     name: str | None = None,
-    console_level: int = logging.DEBUG,
+    console_level: int = logging.INFO,
 ) -> logging.Logger:
     """
     Logs to:
@@ -117,7 +117,7 @@ def init_logger_console(
 
 def init_logger_file(
     name: str | None = None,
-    console_level: int = logging.DEBUG,
+    console_level: int = logging.INFO,
     file_level: int = logging.DEBUG,
 ) -> logging.Logger:
     """
@@ -134,7 +134,7 @@ def init_logger_file(
 
 def init_logger_io_obj(
     name: str | None = None,
-    console_level: int = logging.DEBUG,
+    console_level: int = logging.INFO,
     file_level: int = logging.DEBUG,
     io_obj_level: int = logging.INFO,
 ) -> tuple[logging.Logger, io.StringIO]:
