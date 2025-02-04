@@ -242,7 +242,7 @@ class Project:
                     self.logger.info(f"failed: {f.value}    --    {fp_name}: {e}")
         # Logging outcome of imported and failed experiments
         exp_ls_msg = "".join([f"\n    - {exp.name}" for exp in self.experiments])
-        self.logger.info(f"Experiments imported successfully:{exp_ls_msg}")
+        self.logger.info(f"Experiments imported:{exp_ls_msg}")
         # Constructing dd_df from dd_dict
         dd_df = DiagnosticsDf.init_df(pd.Series(np.unique(np.concatenate(list(dd_dict.values())))))
         # Setting each (experiment, folder) pair to True if the file exists

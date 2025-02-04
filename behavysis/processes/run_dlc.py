@@ -210,7 +210,7 @@ def export2df(name: str, src_dir: str, dst_dir: str, logger: logging.Logger) -> 
         df.loc[:, lhoods_idx] = df.loc[:, lhoods_idx].clip(0, 1)  # type: ignore
         # Writing the file
         KeypointsDf.write(df, os.path.join(dst_dir, f"{name}.{KeypointsDf.IO}"))
-        logger.info("Outputted DLC file successfully.")
+        logger.info("Outputted DLC file.")
 
     else:
         logger.warning(f"Multiple .h5 files found for {name}. Expected only 1.")

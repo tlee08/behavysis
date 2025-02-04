@@ -23,7 +23,6 @@ from behavysis.processes.format_vid import FormatVid
 from behavysis.processes.run_dlc import RunDLC
 from behavysis.processes.update_configs import UpdateConfigs
 from behavysis.pydantic_models.configs import AutoConfigs, ExperimentConfigs
-from behavysis.utils.diagnostics_utils import success_msg
 from behavysis.utils.logging_utils import get_io_obj_content, init_logger_file, init_logger_io_obj
 
 
@@ -61,7 +60,7 @@ class Experiment:
         # Assertion: root_dir mus† exist
         if not os.path.isdir(root_dir):
             raise ValueError(
-                f'Cannot find the project folder named "{root_dir}".\n' "Please specify a folder that exists."
+                f'Cannot find the project folder named "{root_dir}".\nPlease specify a folder that exists.'
             )
         # Setting up instance variables
         self.name = name
@@ -160,7 +159,7 @@ class Experiment:
             # Running each func and saving outcome
             try:
                 f(*args, **kwargs)
-                f_logger.info(success_msg())
+                # f_logger.info(success_msg())
             except Exception as e:
                 f_logger.error(e)
                 self.logger.debug(traceback.format_exc())
@@ -326,7 +325,7 @@ class Experiment:
         try:
             configs = ExperimentConfigs.read_json(self.get_fp(Folders.CONFIGS))
             f_logger.info("Read configs file.")
-            f_logger.info(success_msg())
+            # f_logger.info(success_msg())
             dd["reading_configs"] = get_io_obj_content(f_io_obj)
         except FileNotFoundError:
             f_logger.error("no configs file found.")
