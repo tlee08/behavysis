@@ -84,9 +84,10 @@ class AnalysisDf(DFMixin):
                     legend=False,
                     ax=ax,
                 )
-                # Setting titles and labels
+                # Setting axes characteristics
                 ax.set_title(f"{roi} - {indiv}")
                 ax.set_aspect("equal")
+                ax.invert_yaxis()
         # Saving fig
         os.makedirs(os.path.dirname(dst_fp), exist_ok=True)
         fig.savefig(dst_fp)
