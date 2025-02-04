@@ -66,6 +66,7 @@ class Analyse:
         configs_filt_ls = configs.user.analyse.in_roi
         # Loading in dataframe
         keypoints_df = KeypointsDf.clean_headings(KeypointsDf.read(keypoints_fp))
+        assert keypoints_df.shape[0] > 0, "No frames in keypoints_df. Please check keypoints file."
         # Getting indivs list
         indivs, _ = KeypointsDf.get_indivs_bpts(keypoints_df)
         # Making analysis_df
@@ -166,6 +167,7 @@ class Analyse:
 
         # Loading in dataframe
         keypoints_df = KeypointsDf.clean_headings(KeypointsDf.read(keypoints_fp))
+        assert keypoints_df.shape[0] > 0, "No frames in keypoints_df. Please check keypoints file."
         # Checking body-centre bodypart exists
         KeypointsDf.check_bpts_exist(keypoints_df, bpts)
         # Getting indivs and bpts list
@@ -232,6 +234,7 @@ class Analyse:
 
         # Loading in dataframe
         keypoints_df = KeypointsDf.clean_headings(KeypointsDf.read(keypoints_fp))
+        assert keypoints_df.shape[0] > 0, "No frames in keypoints_df. Please check keypoints file."
         # Checking body-centre bodypart exists
         KeypointsDf.check_bpts_exist(keypoints_df, bpts)
         # Getting indivs and bpts list
@@ -304,6 +307,7 @@ class Analyse:
 
         # Loading in dataframe
         keypoints_df = KeypointsDf.clean_headings(KeypointsDf.read(keypoints_fp))
+        assert keypoints_df.shape[0] > 0, "No frames in keypoints_df. Please check keypoints file."
         # Checking body-centre bodypart exists
         KeypointsDf.check_bpts_exist(keypoints_df, bpts)
         # Getting indivs and bpts list
