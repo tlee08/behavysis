@@ -282,8 +282,6 @@ class CalculateParams:
         # Finding pixels per mm conversion, using the given arena width and height as calibration
         px_per_mm = dist_px / dist_mm
         # Saving to configs file
-        print(pt_a_df)
-        print(pt_b_df)
         configs = ExperimentConfigs.read_json(configs_fp)
         configs.auto.px_per_mm = px_per_mm
         configs.write_json(configs_fp)
@@ -336,17 +334,14 @@ def calc_exists_from_likelihood(keypoints_fp: str, configs_fp: str, logger: logg
         # Calculating likelihood of subject existing over time window
         lhood_df[(indiv, "rolling")] = lhood_df[(indiv, "current")].rolling(window_frames, center=True).agg(np.nanmean)
     lhood_df.columns = pd.MultiIndex.from_tuples(lhood_df.columns)
-    # Determining when ALL indivs exists from rolling average windows
+    # Getting bool of frames where ALL indivs exist
     idx = pd.IndexSlice
     exists_vect = (lhood_df.loc[:, idx[:, "rolling"]] > pcutoff).all(axis=1)  # type: ignore
+    # Asserting that the indivs all exist in at least one frame
+    assert np.any(exists_vect), (
+        "The subject was not detected in any frames - using the first frame. Please also check the video."
+    )
     # Getting when subject first and last exists in video
-    start_frame = 0
-    stop_frame = 0
-    if np.all(exists_vect == 0):
-        logger.warning(
-            "The subject was not detected in any frames - using the first frame.\nPlease also check the video."
-        )
-    else:
-        start_frame = lhood_df[exists_vect].index[0]
-        stop_frame = lhood_df[exists_vect].index[-1]
+    start_frame = lhood_df[exists_vect].index[0]
+    stop_frame = lhood_df[exists_vect].index[-1]
     return start_frame, stop_frame
