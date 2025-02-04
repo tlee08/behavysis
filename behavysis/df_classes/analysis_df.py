@@ -49,7 +49,7 @@ class AnalysisDf(DFMixin):
         fig, axes = plt.subplots(
             nrows=roi_ls.shape[0],
             ncols=indivs_ls.shape[0],
-            figsize=(ax_size * roi_ls.shape[0], ax_size * indivs_ls.shape[0]),
+            figsize=(ax_size * indivs_ls.shape[0], ax_size * roi_ls.shape[0]),
         )
         axes = axes.reshape(roi_ls.shape[0], indivs_ls.shape[0])
         # For each roi and indiv, plotting the bpts scatter and ROI polygon plots
