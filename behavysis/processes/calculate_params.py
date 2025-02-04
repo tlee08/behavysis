@@ -264,11 +264,22 @@ class CalculateParams:
         # Getting calibration points (x, y, likelihood) values
         pt_a_df = keypoints_df[IndivCols.SINGLE.value, pt_a]
         pt_b_df = keypoints_df[IndivCols.SINGLE.value, pt_b]
+        # Asserting that at least one frame is above the likelihood threshold for each point (a and b)
+        assert np.any(pt_a_df[CoordsCols.LIKELIHOOD.value] > pcutoff), (
+            f'No points for "{pt_a}" are above the pcutoff of {pcutoff}.\n'
+            "Consider lowering the pcutoff in the configs file.\n"
+            f'The highest likelihood value in "{pt_a}" is {np.nanmax(pt_a_df[CoordsCols.LIKELIHOOD.value])}.'
+        )
+        assert np.any(pt_b_df[CoordsCols.LIKELIHOOD.value] > pcutoff), (
+            f'No points for "{pt_b}" are above the pcutoff of {pcutoff}.\n'
+            "Consider lowering the pcutoff in the configs file.\n"
+            f'The highest likelihood value in "{pt_b}" is {np.nanmax(pt_b_df[CoordsCols.LIKELIHOOD.value])}.'
+        )
         # Interpolating points which are below a likelihood threshold (linear)
         pt_a_df.loc[pt_a_df[CoordsCols.LIKELIHOOD.value] < pcutoff] = np.nan
-        pt_a_df = pt_a_df.interpolate(method="linear", axis=0).bfill()
+        pt_a_df = pt_a_df.interpolate(method="linear", axis=0).bfill().ffill()
         pt_b_df.loc[pt_b_df[CoordsCols.LIKELIHOOD.value] < pcutoff] = np.nan
-        pt_b_df = pt_b_df.interpolate(method="linear", axis=0).bfill()
+        pt_b_df = pt_b_df.interpolate(method="linear", axis=0).bfill().ffill()
         # Getting distance between calibration points
         # TODO: use variable names for x and y
         dist_px = np.nanmean(np.sqrt(np.square(pt_a_df["x"] - pt_b_df["x"]) + np.square(pt_a_df["y"] - pt_b_df["y"])))

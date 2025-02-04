@@ -22,7 +22,7 @@ class StopFrameFromDurConfigs(PydanticBaseModel):
 class PxPerMmConfigs(PydanticBaseModel):
     pt_a: str = "pt_a"
     pt_b: str = "pt_b"
-    pcutoff: float | str = 0.8
+    pcutoff: float | str = 0.5
     dist_mm: float | str = 400
 
 

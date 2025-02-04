@@ -201,7 +201,7 @@ class Preprocess:
         # Also imputing nan points with 0 (if the ENTIRE column is nan, then it's imputed)
         keypoints_df = keypoints_df.interpolate(method="linear").bfill().ffill()
         # if df.isnull().values.any() then the entire column is nan (log warning)
-        keypoints_df = keypoints_df.fillna(0)
+        # keypoints_df = keypoints_df.fillna(0)
         KeypointsDf.write(keypoints_df, dst_fp)
         return get_io_obj_content(io_obj)
 
