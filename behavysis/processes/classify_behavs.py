@@ -82,7 +82,7 @@ class ClassifyBehavs:
             behav_name = configs.get_ref(model_config.behav_name)
             behav_model = BehavClassifier.load(proj_dir, behav_name)
             pcutoff = get_pcutoff(configs.get_ref(model_config.pcutoff), behav_model.configs.pcutoff, logger)
-            min_window_secs = configs.get_ref(model_config.min_window_secs)
+            min_window_secs = configs.get_ref(model_config.min_empty_window_secs)
             min_window_frames = int(np.round(min_window_secs * fps))
             # Running the clf pipeline
             behav_df_i = behav_model.pipeline_inference(features_df)

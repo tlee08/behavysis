@@ -118,10 +118,8 @@ class BehavClassifier:
             self.logger.debug(f"Initialised classifier: {clf_name}")
         # Updating in configs
         configs = self.configs
-        if configs.clf_struct != clf_name:
-            self.logger.debug(f"Updating clf_struct in model configs: {clf_name}")
-            configs.clf_struct = clf_name
-            self.configs = configs
+        configs.clf_struct = clf_name
+        self.configs = configs
 
     @property
     def model_dir(self) -> str:
@@ -142,8 +140,7 @@ class BehavClassifier:
                 return
         except FileNotFoundError:
             pass
-        self.logger.debug("Configs have changed")
-        self.logger.debug("Updating model configs on disk")
+        self.logger.debug("Configs have changed. Updating model configs on disk")
         configs.write_json(self.configs_fp)
 
     @property
