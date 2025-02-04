@@ -2,6 +2,7 @@
 _summary_
 """
 
+import numpy as np
 import pandas as pd
 import torch.nn as nn
 import torch.optim as optim
@@ -28,14 +29,22 @@ class RF1(RandomForestClassifier):
         )
         self.window_frames = 0
 
-    def fit(self, x, y, index, *args, **kwargs):
-        super().fit(x[index], y[index])
+    def fit(self, x_ls: list[np.ndarray], y_ls: list[np.ndarray], index_ls: list[np.ndarray], *args, **kwargs):
+        # Filtering data
+        x_ls = [x[index] for x, index in zip(x_ls, index_ls)]
+        y_ls = [y[index] for y, index in zip(y_ls, index_ls)]
+        # Concatenating dataframes
+        x = np.concatenate(x_ls, axis=0)
+        y = np.concatenate(y_ls, axis=0)
+        # Fitting
+        super().fit(x, y)
         return pd.DataFrame(
             index=pd.Index([], name="epoch"),
             columns=["loss", "vloss"],
         )
 
-    def predict(self, x, index, *args, **kwargs):
+    def predict(self, x: np.ndarray, index: None | np.ndarray = None, *args, **kwargs):
+        index = index if index is not None else np.arange(x.shape[0])
         return super().predict_proba(x[index])[:, 1]
 
 

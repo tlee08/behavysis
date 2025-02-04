@@ -32,12 +32,13 @@ from behavysis.constants import Folders
 from behavysis.df_classes.behav_classifier_df import BehavClassifierCombinedDf, BehavClassifierEvalDf
 from behavysis.df_classes.behav_df import BehavPredictedDf, BehavScoredDf, BehavValues
 from behavysis.df_classes.df_mixin import DFMixin
-from behavysis.pydantic_models.behav_classifier import (
+from behavysis.df_classes.features_df import FeaturesDf
+from behavysis.pydantic_models.behav_classifier_configs import (
     BehavClassifierConfigs,
 )
-from behavysis.utils.io_utils import get_name, joblib_dump, joblib_load, write_json
+from behavysis.utils.io_utils import async_read_files_run, get_name, joblib_dump, joblib_load, write_json
 from behavysis.utils.logging_utils import init_logger_file
-from behavysis.utils.misc_utils import enum2tuple
+from behavysis.utils.misc_utils import array2listofvect, enum2tuple, listofvects2array
 
 if TYPE_CHECKING:
     from behavysis.pipeline.project import Project
@@ -297,23 +298,10 @@ class BehavClassifier:
         return y
 
     @classmethod
-    def preproc_y_transform(cls, y: np.ndarray) -> np.ndarray:
-        """
-        The preprocessing steps are:
-        - Imputing NaN values with 0
-        - Setting -1 to 0
-        - Converting the MultiIndex columns from `(behav, outcome)` to `{behav}__{outcome}`,
-        by expanding the `actual` and all specific outcome columns of each behav.
-        """
-        # Imputing NaN values with 0
-        y_preproc = np.nan_to_num(y, nan=0)
-        # Setting -1 to 0 (i.e. "undecided" to "no behaviour")
-        y_preproc = np.maximum(y_preproc, 0)
-        return y_preproc
-
-    @classmethod
-    def oversample(cls, index: np.ndarray, y: np.ndarray, ratio: float) -> np.ndarray:
-        assert index.shape[0] == y.shape[0]
+    def oversample(cls, x: np.ndarray, y: np.ndarray, ratio: float) -> np.ndarray:
+        assert x.shape[0] == y.shape[0]
+        # Getting index
+        index = np.arange(y.shape[0])
         # Getting indices where y is True
         t = index[y == BehavValues.BEHAV.value]
         # Getting indices where y is False
@@ -323,12 +311,15 @@ class BehavClassifier:
         # Oversampling the True indices
         t = np.random.choice(t, size=new_t_size, replace=True)
         # Combining the True and False indices
-        uindex = np.union1d(t, f)
-        return uindex
+        new_index = np.concatenate([t, f])
+        # Returning the resampled x
+        return x[new_index]
 
     @classmethod
-    def undersample(cls, index: np.ndarray, y: np.ndarray, ratio: float) -> np.ndarray:
-        assert index.shape[0] == y.shape[0]
+    def undersample(cls, x: np.ndarray, y: np.ndarray, ratio: float) -> np.ndarray:
+        assert x.shape[0] == y.shape[0]
+        # Getting index
+        index = np.arange(y.shape[0])
         # Getting indices where y is True
         t = index[y == BehavValues.BEHAV.value]
         # Getting indices where y is False
@@ -338,8 +329,9 @@ class BehavClassifier:
         # Undersampling the False indices
         f = np.random.choice(f, size=new_f_size, replace=False)
         # Combining the True and False indices
-        uindex = np.union1d(t, f)
-        return uindex
+        new_index = np.concatenate([t, f])
+        # Returning the resampled x
+        return x[new_index]
 
     #################################################
     #            PIPELINE FOR DATA PREP
@@ -347,7 +339,7 @@ class BehavClassifier:
 
     def preproc_training(
         self,
-    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    ) -> tuple[list[np.ndarray], list[np.ndarray], list[np.ndarray], list[np.ndarray]]:
         """
         Prepares the data for the training pipeline.
 
@@ -363,47 +355,50 @@ class BehavClassifier:
         Returns
         -------
         A tuple containing four numpy arrays:
-        - x: The input data.
-        - y: The target labels.
-        - index_train: The indexes for the training data.
-        - index_test: The indexes for the testing data.
+        - x_ls: list of each dataframe's input data.
+        - y_ls: list of each dataframe's target labels.
+        - index_train_ls: list of each dataframe's indexes for the training data.
+        - index_test_ls: list of each dataframe's indexes for the testing data.
         """
-        # Getting the x and y dfs
-        x = self.combine_dfs(self.x_dir)
-        y = self.combine_dfs(self.y_dir)
-        # Getting the intersection pf the x and y row indexes
-        index = x.index.intersection(y.index)
-        x = x.loc[index]
-        y = y.loc[index]
-        assert x.shape[0] == y.shape[0]
-        # Fitting the x preprocessor pipeline and transforming the x df
-        self.preproc_x_fit(x.values, self.preproc_fp)
-        x_preproc = self.preproc_x_transform(x.values, self.preproc_fp)
-        # Preprocessing y df
-        y_preproc = self.wrangle_columns_y(y)[self.configs.behav_name]
-        y_preproc = self.preproc_y_transform(np.array(y_preproc.values))
-        # Filtering "available" index to exclude frames in "edge" window of each video
-        window_frames = self.clf.window_frames
-        index_nums = np.arange(index.shape[0])
-        if window_frames > 0:
-            index_nums = np.array(
-                (
-                    index.to_frame(index=False)
-                    .assign(index_nums=index_nums)
-                    .groupby(BehavClassifierCombinedDf.IN.VIDEO.value)
-                    .apply(lambda group: group.iloc[window_frames:-window_frames])
-                )["index_nums"].values
+        # Getting the lists of x and y dfs
+        x_fp_ls = [os.path.join(self.x_dir, i) for i in os.listdir(os.path.join(self.x_dir))]
+        y_fp_ls = [os.path.join(self.y_dir, i) for i in os.listdir(os.path.join(self.y_dir))]
+        x_df_ls = async_read_files_run(x_fp_ls, FeaturesDf.read)
+        y_df_ls = async_read_files_run(y_fp_ls, BehavScoredDf.read)
+        # Formatting y dfs (selecting column and replacing UNDETERMINED with NON_BEHAV values)
+        y_df_ls = [
+            y[(self.configs.behav_name, BehavScoredDf.OutcomesCols.ACTUAL.value)].replace(
+                BehavValues.UNDETERMINED.value, BehavValues.NON_BEHAV.value
             )
+            for y in y_df_ls
+        ]
+        # Ensuring x and y dfs have the same index and are in the same row order
+        index_df_ls = [x.index.intersection(y.index) for x, y in zip(x_df_ls, y_df_ls)]
+        x_df_ls = [x.loc[index] for x, index in zip(x_df_ls, index_df_ls)]
+        y_df_ls = [y.loc[index] for y, index in zip(y_df_ls, index_df_ls)]
+        assert np.all([x.shape[0] == y.shape[0] for x, y in zip(x_df_ls, y_df_ls)])
+        # Converting to numpy arrays
+        x_ls = [x.values for x in x_df_ls]
+        y_ls = [y.values for y in y_df_ls]
+        index_ls = [np.arange(x.shape[0]) for x in x_ls]
+        # x preprocessing: fitting (across all x dfs) and transforming (for each x df)
+        self.preproc_x_fit(np.concatenate(x_ls, axis=0), self.preproc_fp)
+        x_ls = [self.preproc_x_transform(x, self.preproc_fp) for x in x_ls]
+        # Making a 2D array of (df_index, index, y) for train-test splitting, stratifying and sampling
+        index_flat = listofvects2array(index_ls, y_ls)
         # Splitting into train and test indexes
-        index_train, index_test = train_test_split(
-            index_nums,
+        index_train_flat, index_test_flat = train_test_split(
+            index_flat,
             test_size=self.configs.test_split,
-            stratify=y_preproc[index_nums],
+            stratify=index_flat[:, 2],
         )
         # Oversampling and undersampling ONLY on training data
-        index_train = self.oversample(index_train, y_preproc[index_train], self.configs.oversample_ratio)
-        index_train = self.undersample(index_train, y_preproc[index_train], self.configs.undersample_ratio)
-        return x_preproc, y_preproc, index_train, index_test
+        index_train_flat = self.oversample(index_train_flat, index_train_flat[:, 2], self.configs.oversample_ratio)
+        index_train_flat = self.undersample(index_train_flat, index_train_flat[:, 2], self.configs.undersample_ratio)
+        # Reshaping back to individual df index lists
+        index_train_ls = array2listofvect(index_train_flat, 1)
+        index_test_ls = array2listofvect(index_test_flat, 1)
+        return x_ls, y_ls, index_train_ls, index_test_ls
 
     #################################################
     # PIPELINE FOR CLASSIFIER TRAINING AND INFERENCE
@@ -417,12 +412,12 @@ class BehavClassifier:
         """
         self.logger.info(f"Training {self.configs.clf_struct}")
         # Preparing data
-        x_preproc, y_preproc, index_train, index_test = self.preproc_training()
+        x_ls, y_ls, index_train_ls, index_test_ls = self.preproc_training()
         # Training the model
         history = self.clf.fit(
-            x=x_preproc,
-            y=y_preproc,
-            index=index_train,
+            x_ls=x_ls,
+            y_ls=y_ls,
+            index_ls=index_train_ls,
             batch_size=self.configs.batch_size,
             epochs=self.configs.epochs,
             val_split=self.configs.val_split,
@@ -430,8 +425,8 @@ class BehavClassifier:
         # Saving history
         self.clf_eval_save_history(history)
         # Evaluating on train and test data
-        self.clf_eval_save_performance(x_preproc, y_preproc, index_train, "train")
-        self.clf_eval_save_performance(x_preproc, y_preproc, index_test, "test")
+        self.clf_eval_save_performance(x_ls, y_ls, index_train_ls, "train")
+        self.clf_eval_save_performance(x_ls, y_ls, index_test_ls, "test")
         # Saving model
         joblib_dump(self.clf, self.clf_fp)
 
@@ -449,7 +444,7 @@ class BehavClassifier:
         # Restoring clf
         self.clf = clf
 
-    def pipeline_inference(self, x: pd.DataFrame) -> pd.DataFrame:
+    def pipeline_inference(self, x_df: pd.DataFrame) -> pd.DataFrame:
         """
         Given the unprocessed features dataframe, runs the model pipeline to make predictions.
 
@@ -458,15 +453,15 @@ class BehavClassifier:
         [behavysis.behav_classifier.BehavClassifier.preproc_x][] for details.
         - Makes predictions and returns the predicted behaviours.
         """
-        index = x.index
+        index = x_df.index
         # Preprocessing features
-        x_preproc = self.preproc_x_transform(x.values, self.preproc_fp)
+        x = self.preproc_x_transform(x_df.values, self.preproc_fp)
         # Loading the model
         self.clf = joblib_load(self.clf_fp)
         # Getting probabilities
         y_prob = self.clf.predict(
-            x=x_preproc,
-            index=np.arange(x_preproc.shape[0]),
+            x=x,
+            index=np.arange(x.shape[0]),
             batch_size=self.configs.batch_size,
         )
         # Making predictions from probabilities (and pcutoff)
@@ -491,9 +486,9 @@ class BehavClassifier:
 
     def clf_eval_save_performance(
         self,
-        x: np.ndarray,
-        y: np.ndarray,
-        index: np.ndarray,
+        x_ls: list[np.ndarray],
+        y_ls: list[np.ndarray],
+        index_ls: list[np.ndarray],
         name: str,
     ) -> tuple[pd.DataFrame, dict, Figure, Figure, Figure]:
         """
@@ -512,11 +507,16 @@ class BehavClassifier:
             Figure showing the logistic curve for different predicted probabilities.
         """
         # Getting predictions
-        y_prob = self.clf.predict(x=x, index=index, batch_size=self.configs.batch_size)
+        y_true_ls = [y[index] for y, index in zip(y_ls, index_ls)]
+        y_prob_ls = [
+            self.clf.predict(x=x, index=index, batch_size=self.configs.batch_size) for x, index in zip(x_ls, index_ls)
+        ]
+        # Making eval vects
+        y_true = np.concatenate(y_true_ls)
+        y_prob = np.concatenate(y_prob_ls)
         y_pred = (y_prob > self.configs.pcutoff).astype(int)
-        y_true = y[index]
         # Making eval_df
-        eval_df = BehavPredictedDf.init_df(pd.Series(index))
+        eval_df = BehavPredictedDf.init_df(pd.Series(np.arange(np.concatenate(index_ls).shape[0])))
         eval_df[(self.configs.behav_name, BehavPredictedDf.OutcomesCols.PROB.value)] = y_prob
         eval_df[(self.configs.behav_name, BehavPredictedDf.OutcomesCols.PRED.value)] = y_pred
         eval_df[(self.configs.behav_name, BehavScoredDf.OutcomesCols.ACTUAL.value)] = y_true

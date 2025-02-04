@@ -25,7 +25,7 @@ from tqdm import trange
 
 from behavysis.constants import DF_IO_FORMAT, STATUS_MSG_TIMEOUT, VALUE2COLOR
 from behavysis.df_classes.behav_df import BehavScoredDf
-from behavysis.pydantic_models.configs import ExperimentConfigs
+from behavysis.pydantic_models.experiment_configs import ExperimentConfigs
 from behavysis.utils.qt_utils import toggle_window
 from behavysis.viewer.models.bout_inspect_list_model import BoutInspectListModel
 from behavysis.viewer.models.bouts_list_model import BoutsListModel

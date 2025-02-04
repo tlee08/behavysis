@@ -24,7 +24,7 @@ from behavysis.df_classes.keypoints_df import (
     IndivCols,
     KeypointsDf,
 )
-from behavysis.pydantic_models.configs import ExperimentConfigs
+from behavysis.pydantic_models.experiment_configs import ExperimentConfigs
 from behavysis.utils.io_utils import get_name
 from behavysis.utils.logging_utils import get_io_obj_content, init_logger_io_obj
 

@@ -1,7 +1,7 @@
 import os
 
 from behavysis.constants import Folders
-from behavysis.pydantic_models.configs import get_default_configs
+from behavysis.pydantic_models.experiment_configs import get_default_configs
 from behavysis.utils.diagnostics_utils import file_exists_msg
 from behavysis.utils.template_utils import save_template
 

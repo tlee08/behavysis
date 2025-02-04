@@ -16,7 +16,7 @@ from behavysis.df_classes.behav_df import (
     OutcomesPredictedCols,
 )
 from behavysis.df_classes.features_df import FeaturesDf
-from behavysis.pydantic_models.configs import ExperimentConfigs
+from behavysis.pydantic_models.experiment_configs import ExperimentConfigs
 from behavysis.utils.diagnostics_utils import file_exists_msg
 from behavysis.utils.logging_utils import get_io_obj_content, init_logger_io_obj
 
@@ -80,7 +80,9 @@ class ClassifyBehavs:
             behav_name = configs.get_ref(model_config.behav_name)
             behav_model = BehavClassifier.load(proj_dir, behav_name)
             pcutoff = get_pcutoff(configs.get_ref(model_config.pcutoff), behav_model.configs.pcutoff, logger)
-            min_window_frames = configs.get_ref(model_config.min_window_frames)
+            min_window_frames = configs.get_ref(
+                model_config.min_window_frames
+            )  # TODO: MAKE min_window_secs, not frames
             # Running the clf pipeline
             behav_df_i = behav_model.pipeline_inference(features_df)
             # Getting prob and pred column names

@@ -27,7 +27,7 @@ def cluster_proc_dec(cluster_factory: Callable[[], SpecCluster]):
 
 
 @contextlib.contextmanager
-def cluster_proc_contxt(cluster: SpecCluster):
+def cluster_process(cluster: SpecCluster):
     """
     Makes a Dask cluster and client, runs the body in the context manager,
     then closes the client and cluster.

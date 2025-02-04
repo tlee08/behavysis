@@ -5,7 +5,7 @@ import numpy as np
 from behavysis.df_classes.analysis_agg_df import AnalysisBinnedDf
 from behavysis.df_classes.analysis_df import FBF, AnalysisDf
 from behavysis.df_classes.behav_df import BehavScoredDf, BehavValues
-from behavysis.pydantic_models.configs import ExperimentConfigs
+from behavysis.pydantic_models.experiment_configs import ExperimentConfigs
 from behavysis.utils.io_utils import get_name
 from behavysis.utils.logging_utils import get_io_obj_content, init_logger_io_obj
 from behavysis.utils.misc_utils import get_func_name_in_stack

@@ -7,6 +7,8 @@ from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader, Dataset, TensorDataset
 from tqdm import tqdm
 
+from behavysis.utils.misc_utils import array2listofvect, listofvects2array
+
 
 class BaseTorchModel(nn.Module):
     criterion: nn.Module
@@ -44,18 +46,22 @@ class BaseTorchModel(nn.Module):
 
     def fit(
         self,
-        x: np.ndarray,
-        y: np.ndarray,
-        index: np.ndarray,
+        x_ls: list[np.ndarray],
+        y_ls: list[np.ndarray],
+        index_ls: list[np.ndarray],
         batch_size: int,
         epochs: int,
         val_split: float,
     ):
+        # Making a 2D array of (df_index, index, y) for train test split
+        index_flat = listofvects2array(index_ls, [y[index] for y, index in zip(y_ls, index_ls)])
         # Split data into training and validation sets
-        ind_train, ind_val = train_test_split(index, stratify=y[index], test_size=val_split)
+        index_train_flat, index_val_flat = train_test_split(index_flat, stratify=index_flat[:, 2], test_size=val_split)
+        index_train_ls = array2listofvect(index_train_flat, 1)
+        index_val_ls = array2listofvect(index_val_flat, 1)
         # Making data loaders
-        train_dl = self.fit_loader(x, y, ind_train, batch_size=batch_size)
-        val_dl = self.fit_loader(x, y, ind_val, batch_size=batch_size)
+        train_dl = self.fit_loader(x_ls, y_ls, index_train_ls, batch_size=batch_size)
+        val_dl = self.fit_loader(x_ls, y_ls, index_val_ls, batch_size=batch_size)
         # Storing training history
         history = pd.DataFrame(
             index=pd.Index(np.arange(epochs), name="epoch"),
@@ -171,13 +177,13 @@ class BaseTorchModel(nn.Module):
 
     def fit_loader(
         self,
-        x: np.ndarray,
-        y: np.ndarray,
-        index: None | np.ndarray = None,
+        x_ls: list[np.ndarray],
+        y_ls: list[np.ndarray],
+        index_ls: None | list[np.ndarray] = None,
         batch_size: int = 1,
     ) -> DataLoader:
-        index = index if index is not None else np.arange(x.shape[0])
-        ds = MemoizedTimeSeriesDataset(x=x, y=y, index=index, window_frames=self.window_frames)
+        index_ls = index_ls if index_ls is not None else [np.arange(x.shape[0]) for x in x_ls]
+        ds = MemoizedTimeSeriesDataset(x_ls=x_ls, y_ls=y_ls, index_ls=index_ls, window_frames=self.window_frames)
         return DataLoader(ds, batch_size=batch_size, shuffle=True)
 
     def predict_loader(
@@ -186,38 +192,34 @@ class BaseTorchModel(nn.Module):
         index: None | np.ndarray = None,
         batch_size: int = 1,
     ) -> DataLoader:
-        index = index if index is not None else np.arange(x.shape[0])
-        ds = TimeSeriesDataset(x=x, y=np.zeros(x.shape[0]), index=index, window_frames=self.window_frames)
+        index_ls = [index] if index is not None else [np.arange(x.shape[0])]
+        ds = TimeSeriesDataset(
+            x_ls=[x], y_ls=[np.zeros(x.shape[0])], index_ls=index_ls, window_frames=self.window_frames
+        )
         return DataLoader(ds, batch_size=batch_size, shuffle=False)
 
 
 class TimeSeriesDataset(Dataset):
-    x: np.ndarray
-    y: np.ndarray
-    index: np.ndarray
+    x_ls: list[np.ndarray]
+    y_ls: list[np.ndarray]
     window_frames: int
 
-    def __init__(self, x: np.ndarray, y: np.ndarray, index: np.ndarray, window_frames: int):
+    def __init__(self, x_ls: list[np.ndarray], y_ls: list[np.ndarray], index_ls: list[np.ndarray], window_frames: int):
+        # Asserting x, and y sizes are equal
+        assert np.all([x.shape[0] == y.shape[0] for x, y in zip(x_ls, y_ls)])
+        # Asserting indices are a valid range (between 0 and x.shape[0])
+        assert np.all([np.all(index >= 0) and np.all(index < x.shape[0]) for x, index in zip(x_ls, index_ls)])
+        # Padding x dfs (for frames on either side)
+        x_ls = [np.concatenate([x[np.repeat(0, window_frames)], x, x[np.repeat(-1, window_frames)]]) for x in x_ls]
         # Storing the data and labels
-        self.x = x
-        self.y = y
-        self.index = index
+        self.x_ls = x_ls
+        self.y_ls = y_ls
         self.window_frames = window_frames
-        # Checking x, and y sizes are equal
-        assert self.x.shape[0] == self.y.shape[0]
-        # Checking indices are a valid range (between 0 and x.shape[0])
-        assert np.all(self.index >= 0) and np.all(self.index < self.x.shape[0])
-        # Padding x (for frames on either side)
-        self.x = np.concatenate(
-            [
-                self.x[np.repeat(0, self.window_frames)],
-                self.x,
-                self.x[np.repeat(-1, self.window_frames)],
-            ]
-        )
+        # Making 2D array of (df_index, i)
+        self.index_flat = listofvects2array(index_ls)
 
     def __len__(self):
-        return self.index.shape[0]
+        return self.index_flat.shape[0]
 
     def __getitem__(self, index: int):
         """
@@ -225,23 +227,27 @@ class TimeSeriesDataset(Dataset):
         THe start is i and end is i + 2 * window_frames + 1.
         `i` is the index of the label. `i` is middle of data because of padding.
         """
-        # Get the centre index referring to x and y (because `index` is the index of `self.index`)
-        # and offsetting by window_frames (because of padding)
-        centre = self.index[index] + self.window_frames
-        # Calculate start and end of the window
-        # Centre is i + window_frames
-        start = centre - self.window_frames
-        end = centre + self.window_frames + 1
-        # Extract the window and label and convert to torch tensors
-        # TODO: why the transposing and reshaping? Is there a more explicit data struct?
-        x_i = torch.tensor(self.x[start:end], dtype=torch.float).transpose(1, 0)
-        y_i = torch.tensor(self.y[centre], dtype=torch.float).reshape(1)
+        # Getting the dataframe index and centre index referring to x and y
+        df_index, i = self.index_flat[index]
+        # Getting x and y data
+        x = self.x_ls[df_index]
+        y = self.y_ls[df_index]
+        # Getting centre for x and y data
+        centre_x = i + self.window_frames
+        centre_y = i
+        # Getting start and end of the window
+        start = centre_x - self.window_frames
+        end = centre_x + self.window_frames + 1
+        # Extract the window and label, and convert to torch tensors
+        # Transposing from (time, features) to (features, time)
+        x_i = torch.tensor(x[start:end], dtype=torch.float).transpose(1, 0)
+        y_i = torch.tensor(y[centre_y], dtype=torch.float).reshape(1)
         return x_i, y_i
 
 
 class MemoizedTimeSeriesDataset(TimeSeriesDataset):
-    def __init__(self, x: np.ndarray, y: np.ndarray, index: np.ndarray, window_frames: int):
-        super().__init__(x, y, index, window_frames)
+    def __init__(self, x_ls: list[np.ndarray], y_ls: list[np.ndarray], index_ls: list[np.ndarray], window_frames: int):
+        super().__init__(x_ls, y_ls, index_ls, window_frames)
         # For memoization
         self.memo = {}
 

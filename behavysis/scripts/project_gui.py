@@ -12,7 +12,7 @@ from behavysis.processes.calculate_params import (
 from behavysis.processes.extract_features import run_simba_subproc
 from behavysis.processes.preprocess import Preprocess
 from behavysis.processes.run_dlc import run_dlc_subproc
-from behavysis.pydantic_models.configs import ExperimentConfigs
+from behavysis.pydantic_models.experiment_configs import ExperimentConfigs
 from behavysis.utils.io_utils import silent_remove
 
 #####################################################################
