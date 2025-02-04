@@ -117,10 +117,11 @@ class BehavClassifier:
             self._clf = clf
             self.logger.debug(f"Initialised classifier: {clf_name}")
         # Updating in configs
-        self.logger.debug(f"Updating clf_struct in model configs: {clf_name}")
         configs = self.configs
-        configs.clf_struct = clf_name
-        self.configs = configs
+        if configs.clf_struct != clf_name:
+            self.logger.debug(f"Updating clf_struct in model configs: {clf_name}")
+            configs.clf_struct = clf_name
+            self.configs = configs
 
     @property
     def model_dir(self) -> str:
