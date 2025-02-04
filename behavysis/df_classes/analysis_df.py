@@ -108,10 +108,11 @@ class AnalysisDf(DFMixin):
             ignore_index=True,
         )
         # Rows are rois, columns are individuals
+        ax_size = 5
         fig, axes = plt.subplots(
             nrows=roi_ls.shape[0],
             ncols=indivs_ls.shape[0],
-            figsize=(4 * roi_ls.shape[0], 4 * indivs_ls.shape[0]),
+            figsize=(ax_size * roi_ls.shape[0], ax_size * indivs_ls.shape[0]),
         )
         # For each roi and indiv, plotting the bpts scatter and ROI polygon plots
         for i, roi in enumerate(roi_ls):
@@ -123,10 +124,10 @@ class AnalysisDf(DFMixin):
                     x=CoordsCols.X.value,
                     y=CoordsCols.Y.value,
                     hue=roi,
-                    alpha=0.8,
+                    alpha=0.3,
                     linewidth=0,
                     marker=".",
-                    s=10,
+                    s=5,
                     legend=True,
                     ax=ax,
                 )
