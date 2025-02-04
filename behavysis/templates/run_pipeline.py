@@ -58,15 +58,14 @@ if __name__ == "__main__":
         (
             Analyse.in_roi,
             Analyse.speed,
-            Analyse.social_distance,
-            Analyse.freezing,
         )
     )
     proj.combine_analysis(overwrite)
 
     for exp in proj.experiments:
-        Export.df2csv(
-            src_fp=os.path.join(exp.root_dir, "9_analysis_combined", f"{exp.name}.parquet"),
-            dst_fp=os.path.join(exp.root_dir, "9_analysis_combined_csv", f"{exp.name}.csv"),
-            overwrite=overwrite,
-        )
+        if os.path.exists(os.path.join(exp.root_dir, "9_analysis_combined", f"{exp.name}.parquet")):
+            Export.df2csv(
+                src_fp=os.path.join(exp.root_dir, "9_analysis_combined", f"{exp.name}.parquet"),
+                dst_fp=os.path.join(exp.root_dir, "9_analysis_combined_csv", f"{exp.name}.csv"),
+                overwrite=overwrite,
+            )
