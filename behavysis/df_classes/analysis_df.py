@@ -114,6 +114,7 @@ class AnalysisDf(DFMixin):
             ncols=indivs_ls.shape[0],
             figsize=(ax_size * roi_ls.shape[0], ax_size * indivs_ls.shape[0]),
         )
+        axes = axes.reshape(roi_ls.shape[0], indivs_ls.shape[0])
         # For each roi and indiv, plotting the bpts scatter and ROI polygon plots
         for i, roi in enumerate(roi_ls):
             for j, indiv in enumerate(indivs_ls):
