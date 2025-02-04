@@ -1,10 +1,9 @@
-"""_summary_"""
-
 import os
 
 from behavysis.pipeline.project import Project
 from behavysis.processes.analyse import Analyse
 from behavysis.processes.calculate_params import CalculateParams
+from behavysis.processes.export import Export
 from behavysis.processes.preprocess import Preprocess
 
 if __name__ == "__main__":
@@ -13,8 +12,7 @@ if __name__ == "__main__":
     proj_dir = os.path.join(".")
     proj = Project(proj_dir)
     proj.import_experiments()
-    exp = proj.experiments[1]
-
+    exp = proj.experiments[0]
     proj.nprocs = 5
 
     default_configs_fp = os.path.join(proj_dir, "default_configs.json")
@@ -24,7 +22,6 @@ if __name__ == "__main__":
     )
 
     proj.format_vid(overwrite=overwrite)
-
     proj.get_vid_metadata()
 
     proj.run_dlc(
@@ -42,7 +39,6 @@ if __name__ == "__main__":
             CalculateParams.px_per_mm,
         )
     )
-
     proj.collate_auto_configs()
 
     proj.preprocess(
@@ -53,6 +49,11 @@ if __name__ == "__main__":
         overwrite=overwrite,
     )
 
+    proj.extract_features(overwrite)
+    proj.classify_behavs(overwrite)
+    proj.export_behavs(overwrite)
+    proj.analyse_behavs()
+
     proj.analyse(
         (
             Analyse.in_roi,
@@ -61,15 +62,11 @@ if __name__ == "__main__":
             Analyse.freezing,
         )
     )
-
-    proj.extract_features(overwrite)
-    proj.classify_behavs(overwrite)
-    proj.export_behavs(overwrite)
-
-    proj.analyse_behavs()
-
     proj.combine_analysis(overwrite)
 
-    proj.evaluate_vid(overwrite)
-
-    # proj.export2csv("7_scored_behavs", "./scored_csv", overwrite)
+    for exp in proj.experiments:
+        Export.df2csv(
+            src_fp=os.path.join(exp.root_dir, "9_analysis_combined", f"{exp.name}.parquet"),
+            dst_fp=os.path.join(exp.root_dir, "9_analysis_combined_csv", f"{exp.name}.csv"),
+            overwrite=overwrite,
+        )
