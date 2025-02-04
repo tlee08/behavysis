@@ -129,7 +129,7 @@ class AnalysisDf(DFMixin):
                     linewidth=0,
                     marker=".",
                     s=5,
-                    legend=True,
+                    legend=None,
                     ax=ax,
                 )
                 # ROI polygon plot
