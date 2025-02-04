@@ -118,8 +118,8 @@ class Analyse:
             # Inverting in_roi status if is_in is False
             if not is_in:
                 analysis_i_df.loc[:, idx[:, roi_name]] = ~analysis_i_df.loc[:, idx[:, roi_name]]  # type: ignore
-            scatter_df_ls.append(analysis_i_df)
             analysis_df_ls.append(analysis_i_df.loc[:, idx[:, roi_name]].astype(np.int8))  # type: ignore
+            scatter_df_ls.append(analysis_i_df)
             corners_df_ls.append(corners_i_df)
             roi_names_ls.append(roi_name)
         # Concatenating all analysis_df_ls and roi_corners_df_ls
