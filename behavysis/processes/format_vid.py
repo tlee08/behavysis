@@ -26,7 +26,7 @@ import cv2
 from behavysis.pydantic_models.experiment_configs import ExperimentConfigs
 from behavysis.pydantic_models.processes.format_vid import VidMetadata
 from behavysis.utils.diagnostics_utils import file_exists_msg
-from behavysis.utils.logging_utils import get_io_obj_content, init_logger_io_obj
+from behavysis.utils.logging_utils import get_io_obj_content, init_logger_console, init_logger_io_obj
 from behavysis.utils.subproc_utils import run_subproc_console
 
 # TODO: Maybe separate format_vid and get_vids_metadata into separate classes and processes
@@ -66,7 +66,7 @@ class FormatVid:
         configs = ExperimentConfigs.read_json(configs_fp)
         configs_filt = configs.user.format_vid
         # Processing the video
-        process_vid(
+        ffmpeg_process_vid(
             in_fp=raw_vid_fp,
             dst_fp=formatted_vid_fp,
             logger=logger,
@@ -109,10 +109,10 @@ class FormatVid:
         return get_io_obj_content(io_obj)
 
 
-def process_vid(
+def ffmpeg_process_vid(
     in_fp: str,
     dst_fp: str,
-    logger: logging.Logger,
+    logger: None | logging.Logger = None,
     width_px: None | int = None,
     height_px: None | int = None,
     fps: None | int = None,
@@ -121,6 +121,8 @@ def process_vid(
     overwrite: bool = False,
 ) -> None:
     """__summary__"""
+    if not logger:
+        logger = init_logger_console()
     if not overwrite and os.path.exists(dst_fp):
         logger.warning(file_exists_msg(dst_fp))
         return

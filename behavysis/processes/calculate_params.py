@@ -116,15 +116,13 @@ class CalculateParams:
         fps = configs.auto.formatted_vid.fps
         csv_fp = configs.get_ref(configs_filt.csv_fp)
         name = configs.get_ref(configs_filt.name)
-        # Assert fps should not be negative (-1 is a special value for None)
-        assert fps > 0, "fps value in configs should not be negative.\nRun FormatVid.get_vid_metadata() beforehand."
+        assert fps != -1, "fps not yet set. Please calculate fps first with `proj.get_vid_metadata`."
         # Using the name of the video as the name of the experiment if not specified
         if name is None:
             name = get_name(keypoints_fp)
         # Reading csv_fp
         start_times_df = pd.read_csv(csv_fp, index_col=0)
         start_times_df.index = start_times_df.index.astype(str)
-        # Asserting that the name and col_name is in the df
         assert name in start_times_df.index.values, (
             f"{name} not in {csv_fp}.\n"
             "Update the `name` parameter in the configs file or check the start_frames csv file."
@@ -185,9 +183,8 @@ class CalculateParams:
         start_frame = configs.auto.start_frame
         fps = configs.auto.formatted_vid.fps
         total_frames = configs.auto.formatted_vid.total_frames
-        # Asserting that the necessary auto configs are valid
-        assert start_frame is not None, "start_frame is None. Please calculate start_frame first."
-        assert fps is not None, "fps is None. Please calculate fps first."
+        assert start_frame != -1, "start_frame is None. Please calculate start_frame first."
+        assert fps != -1, "fps not yet set. Please calculate fps first with `proj.get_vid_metadata`."
         # Calculating stop_frame
         dur_frames = int(dur_sec * fps)
         stop_frame = start_frame + dur_frames
@@ -264,7 +261,6 @@ class CalculateParams:
         # Getting calibration points (x, y, likelihood) values
         pt_a_df = keypoints_df[IndivCols.SINGLE.value, pt_a]
         pt_b_df = keypoints_df[IndivCols.SINGLE.value, pt_b]
-        # Asserting that at least one frame is above the likelihood threshold for each point (a and b)
         for pt_df, pt in ([pt_a_df, pt_a], [pt_b_df, pt_b]):
             assert np.any(pt_df[CoordsCols.LIKELIHOOD.value] > pcutoff), (
                 f'No points for "{pt}" are above the pcutoff of {pcutoff}.\n'
@@ -316,8 +312,7 @@ def calc_exists_from_likelihood(keypoints_fp: str, configs_fp: str, logger: logg
     window_sec = configs.get_ref(configs_filt.window_sec)
     pcutoff = configs.get_ref(configs_filt.pcutoff)
     fps = configs.auto.formatted_vid.fps
-    # Asserting that the necessary auto configs are valid
-    assert fps is not None, "fps is None. Please calculate fps first."
+    assert fps != -1, "fps not yet set. Please calculate fps first with `proj.get_vid_metadata`."
     # Deriving more parameters
     window_frames = int(np.round(fps * window_sec, 0))
     # Loading dataframe
@@ -337,7 +332,6 @@ def calc_exists_from_likelihood(keypoints_fp: str, configs_fp: str, logger: logg
     # Getting bool of frames where ALL indivs exist
     idx = pd.IndexSlice
     exists_vect = (lhood_df.loc[:, idx[:, "rolling"]] > pcutoff).all(axis=1)  # type: ignore
-    # Asserting that the indivs all exist in at least one frame
     assert np.any(exists_vect), "The subject was not detected in any frames. Please also check the video."
     # Getting when subject first and last exists in video
     start_frame = lhood_df[exists_vect].index[0]
