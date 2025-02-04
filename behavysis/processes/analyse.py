@@ -84,8 +84,6 @@ class Analyse:
             bpts = configs.get_ref(configs_filt.bodyparts)
             thresh_mm = configs.get_ref(configs_filt.thresh_mm)
             roi_corners = configs.get_ref(configs_filt.roi_corners)
-            # Saving roi_name
-            roi_names_ls.append(roi_name)
             # Calculating more parameters
             thresh_px = thresh_mm / px_per_mm
             # Checking bodyparts and roi_corners exist
@@ -106,8 +104,6 @@ class Analyse:
                 # Getting x, y distances so point is `thresh_px` padded (away) from center
                 corners_i_df.loc[i, x] = corners_i_df.loc[i, x] + (thresh_px * np.cos(theta))
                 corners_i_df.loc[i, y] = corners_i_df.loc[i, y] + (thresh_px * np.sin(theta))
-            # Saving corners_df to list
-            corners_df_ls.append(corners_i_df)
             # Making the res_df
             analysis_i_df = AnalysisDf.init_df(keypoints_df.index)
             # For each individual, getting the in-roi status
@@ -122,29 +118,21 @@ class Analyse:
             # Inverting in_roi status if is_in is False
             if not is_in:
                 analysis_i_df.loc[:, idx[:, roi_name]] = ~analysis_i_df.loc[:, idx[:, roi_name]]  # type: ignore
-            # Saving scatter_df to list
             scatter_df_ls.append(analysis_i_df)
-            # Saving analysis_df to list
             analysis_df_ls.append(analysis_i_df.loc[:, idx[:, roi_name]].astype(np.int8))  # type: ignore
+            corners_df_ls.append(corners_i_df)
+            roi_names_ls.append(roi_name)
         # Concatenating all analysis_df_ls and roi_corners_df_ls
         analysis_df = pd.concat(analysis_df_ls, axis=1)
         scatter_df = pd.concat(scatter_df_ls, axis=1)
         corners_df = pd.concat(corners_df_ls, keys=roi_names_ls, names=["roi"]).reset_index(level="roi")
+
+        print(analysis_df)
+        print(scatter_df)
+
         # Saving analysis_df
         fbf_fp = os.path.join(dst_subdir, FBF, f"{name}.{AnalysisDf.IO}")
         AnalysisDf.write(analysis_df, fbf_fp)
-        # # Generating scatterplot
-        # # First getting scatter_in_roi columns
-        # # TODO: any way to include all different "x", "y" to use, rather
-        # # than the last res_df?
-        # scatter_df = analysis_i_df.loc[:, idx[:, ["x", "y"]]]  # type: ignore
-        # for i in indivs:
-        #     scatter_df[(i, "roi")] = analysis_df[(i, "thigmo")]
-        #     # scatter_df[(i, "roi")] = analysis_df.loc[:, idx[i, roi_names_ls]].apply(
-        #     #     lambda x: " - ".join(np.array(roi_names_ls)[x.values.astype(bool)]),
-        #     #     axis=1,
-        #     # )
-        # Making and saving scatterplot
         plot_fp = os.path.join(dst_subdir, "scatter_plot", f"{name}.png")
         AnalysisDf.make_location_scatterplot_a(scatter_df, corners_df, plot_fp)
         # Summarising and binning analysis_df
