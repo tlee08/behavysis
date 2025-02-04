@@ -22,7 +22,7 @@ from behavysis.processes.extract_features import ExtractFeatures
 from behavysis.processes.format_vid import FormatVid
 from behavysis.processes.run_dlc import RunDLC
 from behavysis.processes.update_configs import UpdateConfigs
-from behavysis.pydantic_models.configs import AutoConfigs, ExperimentConfigs
+from behavysis.pydantic_models.experiment_configs import AutoConfigs, ExperimentConfigs
 from behavysis.utils.logging_utils import get_io_obj_content, init_logger_file, init_logger_io_obj
 
 
