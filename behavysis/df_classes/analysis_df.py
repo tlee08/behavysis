@@ -1,6 +1,7 @@
 import os
 from enum import Enum
 
+import numpy as np
 import pandas as pd
 import seaborn as sns
 from matplotlib import pyplot as plt
@@ -100,6 +101,7 @@ class AnalysisDf(DFMixin):
         # Getting list of individuals and measures
         indivs_ls = scatter_df.columns.unique(cls.CN.INDIVIDUALS.value)
         roi_ls = scatter_df.columns.unique(cls.CN.MEASURES.value)
+        roi_ls = roi_ls[np.isin(roi_ls, ["x", "y"], invert=True)]
         # "Looping" ROI bounding corners (to make closed polygons)
         corners_df = pd.concat(
             [corners_df, corners_df.groupby("roi").first().reset_index()],
