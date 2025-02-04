@@ -324,7 +324,7 @@ class Experiment:
         f_logger, f_io_obj = init_logger_io_obj()
         try:
             configs = ExperimentConfigs.read_json(self.get_fp(Folders.CONFIGS))
-            f_logger.info("Read configs file.")
+            f_logger.debug("Reading configs file.")
             # f_logger.info(success_msg())
             dd["reading_configs"] = get_io_obj_content(f_io_obj)
         except FileNotFoundError:

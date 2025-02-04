@@ -128,24 +128,25 @@ class Analyse:
             analysis_df_ls.append(analysis_i_df.loc[:, idx[:, roi_name]].astype(np.int8))  # type: ignore
         # Concatenating all analysis_df_ls and roi_corners_df_ls
         analysis_df = pd.concat(analysis_df_ls, axis=1)
+        scatter_df = pd.concat(scatter_df_ls, axis=1)
         corners_df = pd.concat(corners_df_ls, keys=roi_names_ls, names=["roi"]).reset_index(level="roi")
         # Saving analysis_df
         fbf_fp = os.path.join(dst_subdir, FBF, f"{name}.{AnalysisDf.IO}")
         AnalysisDf.write(analysis_df, fbf_fp)
-        # Generating scatterplot
-        # First getting scatter_in_roi columns
-        # TODO: any way to include all different "x", "y" to use, rather
-        # than the last res_df?
-        scatter_df = analysis_i_df.loc[:, idx[:, ["x", "y"]]]  # type: ignore
-        for i in indivs:
-            scatter_df[(i, "roi")] = analysis_df[(i, "thigmo")]
-            # scatter_df[(i, "roi")] = analysis_df.loc[:, idx[i, roi_names_ls]].apply(
-            #     lambda x: " - ".join(np.array(roi_names_ls)[x.values.astype(bool)]),
-            #     axis=1,
-            # )
+        # # Generating scatterplot
+        # # First getting scatter_in_roi columns
+        # # TODO: any way to include all different "x", "y" to use, rather
+        # # than the last res_df?
+        # scatter_df = analysis_i_df.loc[:, idx[:, ["x", "y"]]]  # type: ignore
+        # for i in indivs:
+        #     scatter_df[(i, "roi")] = analysis_df[(i, "thigmo")]
+        #     # scatter_df[(i, "roi")] = analysis_df.loc[:, idx[i, roi_names_ls]].apply(
+        #     #     lambda x: " - ".join(np.array(roi_names_ls)[x.values.astype(bool)]),
+        #     #     axis=1,
+        #     # )
         # Making and saving scatterplot
         plot_fp = os.path.join(dst_subdir, "scatter_plot", f"{name}.png")
-        AnalysisDf.make_location_scatterplot(scatter_df, corners_df, plot_fp, "roi")
+        AnalysisDf.make_location_scatterplot_a(scatter_df, corners_df, plot_fp)
         # Summarising and binning analysis_df
         AnalysisBinnedDf.summary_binned_behavs(
             analysis_df,
