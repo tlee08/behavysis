@@ -338,9 +338,7 @@ def calc_exists_from_likelihood(keypoints_fp: str, configs_fp: str, logger: logg
     idx = pd.IndexSlice
     exists_vect = (lhood_df.loc[:, idx[:, "rolling"]] > pcutoff).all(axis=1)  # type: ignore
     # Asserting that the indivs all exist in at least one frame
-    assert np.any(exists_vect), (
-        "The subject was not detected in any frames - using the first frame. Please also check the video."
-    )
+    assert np.any(exists_vect), "The subject was not detected in any frames. Please also check the video."
     # Getting when subject first and last exists in video
     start_frame = lhood_df[exists_vect].index[0]
     stop_frame = lhood_df[exists_vect].index[-1]

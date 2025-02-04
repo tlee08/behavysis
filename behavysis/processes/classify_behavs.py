@@ -22,6 +22,7 @@ from behavysis.utils.diagnostics_utils import file_exists_msg
 from behavysis.utils.logging_utils import get_io_obj_content, init_logger_io_obj
 
 # TODO: handle reading the model file whilst in multiprocessing
+# TODO: auto-remove anything with only 1 frame of behaviour (probably a spike)
 
 
 class ClassifyBehavs:
