@@ -1,4 +1,4 @@
-from behavysis.constants import BPTS_ARENA, BPTS_SIMBA
+from behavysis.constants import BPTS_CORNERS, BPTS_SIMBA
 from behavysis.pydantic_models.pydantic_base_model import PydanticBaseModel
 
 
@@ -23,7 +23,7 @@ class InRoiConfigs(PydanticBaseModel):
     roi_name: str = "in_my_roi"
     is_in: bool | str = True
     thresh_mm: float | str = 0
-    roi_corners: list[str] | str = BPTS_ARENA
+    roi_corners: list[str] | str = BPTS_CORNERS
     bodyparts: list[str] | str = BPTS_SIMBA
 
 

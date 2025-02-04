@@ -6,7 +6,7 @@ from typing import Any
 
 from pydantic import ConfigDict
 
-from behavysis.constants import BPTS_ARENA, BPTS_CENTRE, BPTS_FRONT, BPTS_SIMBA, INDIVS_SIMBA
+from behavysis.constants import BPTS_CENTRE, BPTS_CORNERS, BPTS_FRONT, BPTS_SIMBA, INDIVS_SIMBA
 from behavysis.pydantic_models.processes.analyse import (
     AnalyseConfigs,
     FreezingConfigs,
@@ -111,7 +111,7 @@ def get_default_configs() -> ExperimentConfigs:
             extract_features=ExtractFeaturesConfigs(individuals="--indivs_simba", bodyparts="--bpts_simba"),
             classify_behavs=[ClassifyBehavConfigs()],
             analyse=AnalyseConfigs(
-                in_roi=[InRoiConfigs(roi_corners="--bpts_arena", bodyparts="--bpts_front")],
+                in_roi=[InRoiConfigs(roi_corners="--bpts_corners", bodyparts="--bpts_front")],
                 speed=SpeedConfigs(bodyparts="--bpts_centre"),
                 social_distance=SocialDistanceConfigs(bodyparts="--bpts_centre"),
                 freezing=FreezingConfigs(bodyparts="--bpts_centre"),
@@ -123,7 +123,7 @@ def get_default_configs() -> ExperimentConfigs:
                 "bpts_simba": BPTS_SIMBA,
                 "bpts_centre": BPTS_CENTRE,
                 "bpts_front": BPTS_FRONT,
-                "corners": BPTS_ARENA,
+                "bpts_corners": BPTS_CORNERS,
             }
         ),
     )

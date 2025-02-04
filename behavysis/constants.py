@@ -92,7 +92,7 @@ BPTS_FRONT = ["LeftEar", "RightEar", "Nose", "BodyCentre"]
 
 INDIVS_SINGLE = "single"
 
-BPTS_ARENA = [
+BPTS_CORNERS = [
     "TopLeft",
     "TopRight",
     "BottomRight",
