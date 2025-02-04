@@ -5,6 +5,7 @@ Classify Behaviours
 import logging
 import os
 
+import numpy as np
 import pandas as pd
 
 from behavysis.behav_classifier.behav_classifier import BehavClassifier
@@ -68,6 +69,7 @@ class ClassifyBehavs:
             return get_io_obj_content(io_obj)
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
+        fps = configs.auto.formatted_vid.fps
         model_configs_ls = configs.user.classify_behavs
         # Getting features data
         features_df = FeaturesDf.read(features_fp)
@@ -80,9 +82,8 @@ class ClassifyBehavs:
             behav_name = configs.get_ref(model_config.behav_name)
             behav_model = BehavClassifier.load(proj_dir, behav_name)
             pcutoff = get_pcutoff(configs.get_ref(model_config.pcutoff), behav_model.configs.pcutoff, logger)
-            min_window_frames = configs.get_ref(
-                model_config.min_window_frames
-            )  # TODO: MAKE min_window_secs, not frames
+            min_window_secs = configs.get_ref(model_config.min_window_secs)
+            min_window_frames = int(np.round(min_window_secs * fps))
             # Running the clf pipeline
             behav_df_i = behav_model.pipeline_inference(features_df)
             # Getting prob and pred column names
@@ -123,7 +124,7 @@ def get_pcutoff(pcutoff: float, model_pcutoff: float, logger: logging.Logger) ->
         )
         return model_pcutoff
     assert 0 <= pcutoff <= 1, (
-        "pcutoff in configs must be between 0 and 1, or the special value -1.\n" f"Instead it has value: {pcutoff}"
+        f"pcutoff in configs must be between 0 and 1, or the special value -1.\nInstead it has value: {pcutoff}"
     )
     return pcutoff
 

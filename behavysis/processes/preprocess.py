@@ -147,7 +147,7 @@ class Preprocess:
                 keypoints_df[(scorer, "single", bodypart, CoordsCols.LIKELIHOOD.value)] = pcutoff
                 logger.info(
                     f"{bodypart} is detected in less than {pcutoff_all} of the video."
-                    " Setting x and y coordinates to ({x}, {y})."
+                    f" Setting x and y coordinates to ({x}, {y})."
                 )
             else:
                 logger.info(
@@ -251,7 +251,7 @@ class Preprocess:
         ]:
             if column not in keypoints_df.columns.unique(level):
                 raise ValueError(
-                    f'The marking value in the config file, "{column}",' " is not a column name in the DLC file."
+                    f'The marking value in the config file, "{column}", is not a column name in the DLC file.'
                 )
         # Checking that bodyparts are all valid
         KeypointsDf.check_bpts_exist(keypoints_df, bpts)

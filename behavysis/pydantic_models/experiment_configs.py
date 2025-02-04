@@ -106,12 +106,8 @@ def get_default_configs() -> ExperimentConfigs:
     return ExperimentConfigs(
         user=UserConfigs(
             format_vid=FormatVidConfigs(width_px=960, height_px=540, fps=15),
-            calculate_params=CalculateParamsConfigs(
-                from_likelihood=FromLikelihoodConfigs(bodyparts="--bodyparts_simba")
-            ),
-            preprocess=PreprocessConfigs(
-                refine_ids=RefineIdsConfigs(bodyparts="--bodyparts_centre"),
-            ),
+            calculate_params=CalculateParamsConfigs(from_likelihood=FromLikelihoodConfigs(bodyparts="--bpts_simba")),
+            preprocess=PreprocessConfigs(refine_ids=RefineIdsConfigs(bodyparts="--bpts_centre")),
             extract_features=ExtractFeaturesConfigs(individuals="--indivs_simba", bodyparts="--bpts_simba"),
             classify_behavs=[ClassifyBehavConfigs()],
             analyse=AnalyseConfigs(
