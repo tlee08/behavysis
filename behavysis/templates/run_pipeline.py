@@ -5,7 +5,6 @@ import os
 from behavysis.pipeline.project import Project
 from behavysis.processes.analyse import Analyse
 from behavysis.processes.calculate_params import CalculateParams
-from behavysis.processes.format_vid import FormatVid
 from behavysis.processes.preprocess import Preprocess
 
 if __name__ == "__main__":

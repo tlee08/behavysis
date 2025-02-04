@@ -117,7 +117,7 @@ class CalculateParams:
         csv_fp = configs.get_ref(configs_filt.csv_fp)
         name = configs.get_ref(configs_filt.name)
         # Assert fps should not be negative (-1 is a special value for None)
-        assert fps > 0, "fps value in configs should not be negative.\n" "Run FormatVid.get_vid_metadata() beforehand."
+        assert fps > 0, "fps value in configs should not be negative.\nRun FormatVid.get_vid_metadata() beforehand."
         # Using the name of the video as the name of the experiment if not specified
         if name is None:
             name = get_name(keypoints_fp)
@@ -264,7 +264,6 @@ class CalculateParams:
         # Getting calibration points (x, y, likelihood) values
         pt_a_df = keypoints_df[IndivCols.SINGLE.value, pt_a]
         pt_b_df = keypoints_df[IndivCols.SINGLE.value, pt_b]
-        # TODO: is interpolation necessary?
         # Interpolating points which are below a likelihood threshold (linear)
         pt_a_df.loc[pt_a_df[CoordsCols.LIKELIHOOD.value] < pcutoff] = np.nan
         pt_a_df = pt_a_df.interpolate(method="linear", axis=0).bfill()
@@ -276,6 +275,8 @@ class CalculateParams:
         # Finding pixels per mm conversion, using the given arena width and height as calibration
         px_per_mm = dist_px / dist_mm
         # Saving to configs file
+        print(pt_a_df)
+        print(pt_b_df)
         configs = ExperimentConfigs.read_json(configs_fp)
         configs.auto.px_per_mm = px_per_mm
         configs.write_json(configs_fp)
@@ -336,7 +337,7 @@ def calc_exists_from_likelihood(keypoints_fp: str, configs_fp: str, logger: logg
     stop_frame = 0
     if np.all(exists_vect == 0):
         logger.warning(
-            "The subject was not detected in any frames - using the first frame.\n" "Please also check the video."
+            "The subject was not detected in any frames - using the first frame.\nPlease also check the video."
         )
     else:
         start_frame = lhood_df[exists_vect].index[0]
