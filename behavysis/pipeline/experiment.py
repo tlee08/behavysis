@@ -511,7 +511,7 @@ class Experiment:
             configs_fp=self.get_fp(Folders.CONFIGS),
         )
 
-    def combine_analysis(self, overwrite: bool) -> dict:
+    def combine_analysis(self) -> dict:
         """
         Combine the experiment's analysis in each fbf into a single df
         """
@@ -521,7 +521,7 @@ class Experiment:
             analysis_dir=os.path.join(self.root_dir, ANALYSIS_DIR),
             analysis_combined_fp=self.get_fp(Folders.ANALYSIS_COMBINED),
             configs_fp=self.get_fp(Folders.CONFIGS),
-            overwrite=overwrite,
+            overwrite=True,  # TODO: remove overwrite
         )
 
     #####################################################################

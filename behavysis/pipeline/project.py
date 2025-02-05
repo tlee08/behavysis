@@ -349,8 +349,8 @@ class Project:
     def analyse_behavs(self) -> None:
         self._proc_scaff(Experiment.analyse_behavs)
 
-    def combine_analysis(self, overwrite: bool) -> None:
-        self._proc_scaff(Experiment.combine_analysis, overwrite)
+    def combine_analysis(self) -> None:
+        self._proc_scaff(Experiment.combine_analysis)
 
     def evaluate_vid(self, overwrite: bool) -> None:
         # TODO: IO error with multiprocessing. Using single processing for now.

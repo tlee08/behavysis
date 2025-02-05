@@ -6,7 +6,7 @@ from behavysis.processes.calculate_params import CalculateParams
 from behavysis.processes.preprocess import Preprocess
 
 if __name__ == "__main__":
-    overwrite = True
+    overwrite = False
 
     proj_dir = os.path.join(".")
     proj = Project(proj_dir)
@@ -59,7 +59,7 @@ if __name__ == "__main__":
             Analyse.speed,
         )
     )
-    proj.combine_analysis(overwrite)
+    proj.combine_analysis()
     proj.collate_analysis()
 
     # for exp in proj.experiments:
