@@ -52,8 +52,8 @@ if __name__ == "__main__":
     proj.extract_features(overwrite)
     proj.classify_behavs(overwrite)
     proj.export_behavs(overwrite)
-    proj.analyse_behavs()
 
+    proj.analyse_behavs()
     proj.analyse(
         (
             Analyse.in_roi,
@@ -61,6 +61,7 @@ if __name__ == "__main__":
         )
     )
     proj.combine_analysis(overwrite)
+    proj.collate_analysis()
 
     for exp in proj.experiments:
         if os.path.exists(os.path.join(exp.root_dir, "9_analysis_combined", f"{exp.name}.parquet")):
