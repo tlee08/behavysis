@@ -408,7 +408,6 @@ class Project:
                 if len(df_ls) > 0:
                     df = pd.concat(df_ls, keys=names_ls, names=["experiment"], axis=1)
                     df = df.fillna(0)
-                    print(df)
                     AnalysisBinnedCollatedDf.write(
                         df,
                         os.path.join(
@@ -444,7 +443,6 @@ class Project:
             if len(df_ls) > 0:
                 df = pd.concat(df_ls, keys=names_ls, names=["experiment"], axis=0)
                 df = df.fillna(0)
-                print(df)
                 AnalysisSummaryCollatedDf.write(
                     df, os.path.join(proj_analyse_dir, analyse_subdir, f"__ALL_summary.{AnalysisSummaryCollatedDf.IO}")
                 )

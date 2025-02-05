@@ -3,7 +3,6 @@ import os
 from behavysis.pipeline.project import Project
 from behavysis.processes.analyse import Analyse
 from behavysis.processes.calculate_params import CalculateParams
-from behavysis.processes.export import Export
 from behavysis.processes.preprocess import Preprocess
 
 if __name__ == "__main__":
@@ -63,10 +62,10 @@ if __name__ == "__main__":
     proj.combine_analysis(overwrite)
     proj.collate_analysis()
 
-    for exp in proj.experiments:
-        if os.path.exists(os.path.join(exp.root_dir, "9_analysis_combined", f"{exp.name}.parquet")):
-            Export.df2csv(
-                src_fp=os.path.join(exp.root_dir, "9_analysis_combined", f"{exp.name}.parquet"),
-                dst_fp=os.path.join(exp.root_dir, "9_analysis_combined_csv", f"{exp.name}.csv"),
-                overwrite=overwrite,
-            )
+    # for exp in proj.experiments:
+    #     if os.path.exists(os.path.join(exp.root_dir, "9_analysis_combined", f"{exp.name}.parquet")):
+    #         Export.df2csv(
+    #             src_fp=os.path.join(exp.root_dir, "9_analysis_combined", f"{exp.name}.parquet"),
+    #             dst_fp=os.path.join(exp.root_dir, "9_analysis_combined_csv", f"{exp.name}.csv"),
+    #             overwrite=overwrite,
+    #         )
