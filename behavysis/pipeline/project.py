@@ -20,6 +20,7 @@ from behavysis.constants import (
     Folders,
 )
 from behavysis.df_classes.analysis_agg_df import AnalysisBinnedDf, AnalysisSummaryDf
+from behavysis.df_classes.analysis_collated_df import AnalysisBinnedCollatedDf, AnalysisSummaryCollatedDf
 from behavysis.df_classes.diagnostics_df import DiagnosticsDf
 from behavysis.pipeline.experiment import Experiment
 from behavysis.processes.run_dlc import RunDLC
@@ -409,9 +410,9 @@ class Project:
                     dst_fp = os.path.join(
                         proj_analyse_dir,
                         analyse_subdir,
-                        f"__ALL_binned_{bin_i}.{AnalysisBinnedDf.IO}",
+                        f"__ALL_binned_{bin_i}.{AnalysisBinnedCollatedDf.IO}",
                     )
-                    AnalysisBinnedDf.write(df, dst_fp)
+                    AnalysisBinnedCollatedDf.write(df, dst_fp)
 
     def _analyse_collate_summary(self) -> None:
         """
@@ -434,8 +435,8 @@ class Project:
                     # Reading exp summary df
                     df_ls.append(AnalysisSummaryDf.read(in_fp))
                     names_ls.append(exp.name)
-            dst_fp = os.path.join(proj_analyse_dir, analyse_subdir, f"__ALL_summary.{AnalysisSummaryDf.IO}")
+            dst_fp = os.path.join(proj_analyse_dir, analyse_subdir, f"__ALL_summary.{AnalysisSummaryCollatedDf.IO}")
             # Concatenating total_df with df across columns, with experiment name to column MultiIndex
             if len(df_ls) > 0:
                 total_df = pd.concat(df_ls, keys=names_ls, names=["experiment"], axis=0)
-                AnalysisSummaryDf.write(total_df, dst_fp)
+                AnalysisSummaryCollatedDf.write(total_df, dst_fp)
