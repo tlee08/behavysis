@@ -412,6 +412,7 @@ class Project:
                         analyse_subdir,
                         f"__ALL_binned_{bin_i}.{AnalysisBinnedCollatedDf.IO}",
                     )
+                    print(df)
                     AnalysisBinnedCollatedDf.write(df, dst_fp)
 
     def _analyse_collate_summary(self) -> None:
@@ -438,5 +439,6 @@ class Project:
             dst_fp = os.path.join(proj_analyse_dir, analyse_subdir, f"__ALL_summary.{AnalysisSummaryCollatedDf.IO}")
             # Concatenating total_df with df across columns, with experiment name to column MultiIndex
             if len(df_ls) > 0:
-                total_df = pd.concat(df_ls, keys=names_ls, names=["experiment"], axis=0)
-                AnalysisSummaryCollatedDf.write(total_df, dst_fp)
+                df = pd.concat(df_ls, keys=names_ls, names=["experiment"], axis=0)
+                print(df)
+                AnalysisSummaryCollatedDf.write(df, dst_fp)
