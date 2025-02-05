@@ -2,8 +2,8 @@ from matplotlib import pyplot as plt
 from pydantic import field_validator
 
 from behavysis.df_classes.keypoints_df import KeypointsDf
-from behavysis.pydantic_models.pydantic_base_model import PydanticBaseModel
 from behavysis.utils.misc_utils import enum2tuple
+from behavysis.utils.pydantic_base_model import PydanticBaseModel
 
 
 class EvaluateVidConfigs(PydanticBaseModel):

@@ -3,16 +3,12 @@ Utility functions.
 """
 
 import os
-from enum import Enum, EnumType
+from enum import EnumType
 
 import pandas as pd
 
 from behavysis.constants import DF_IO_FORMAT
 from behavysis.utils.misc_utils import enum2tuple
-
-
-class FramesIN(Enum):
-    FRAME = "frame"
 
 
 class DFMixin:
@@ -72,7 +68,7 @@ class DFMixin:
             "parquet": cls.read_parquet,
         }
         assert cls.IO in methods, (
-            f"File type, {cls.IO}, not supported.\n" f"Supported IO types are: {list(methods.keys())}."
+            f"File type, {cls.IO}, not supported.\nSupported IO types are: {list(methods.keys())}."
         )
         return methods[cls.IO](fp)
 
@@ -121,7 +117,7 @@ class DFMixin:
             "parquet": cls.write_parquet,
         }
         assert cls.IO in methods, (
-            f"File type, {cls.IO}, not supported.\n" f"Supported IO types are: {list(methods.keys())}."
+            f"File type, {cls.IO}, not supported.\nSupported IO types are: {list(methods.keys())}."
         )
         return methods[cls.IO](df, fp)
 
@@ -219,6 +215,6 @@ class DFMixin:
             levels = enum2tuple(levels)
         elif isinstance(levels, str):  # If str
             levels = (levels,)
-        assert (
-            df.columns.names == levels
-        ), f"The column levels are incorrect. Expected {levels} but got {df.columns.names}."
+        assert df.columns.names == levels, (
+            f"The column levels are incorrect. Expected {levels} but got {df.columns.names}."
+        )

@@ -21,7 +21,7 @@ from behavysis.pydantic_models.processes.extract_features import ExtractFeatures
 from behavysis.pydantic_models.processes.format_vid import FormatVidConfigs, VidMetadata
 from behavysis.pydantic_models.processes.preprocess import PreprocessConfigs, RefineIdsConfigs
 from behavysis.pydantic_models.processes.run_dlc import RunDlcConfigs
-from behavysis.pydantic_models.pydantic_base_model import PydanticBaseModel
+from behavysis.utils.pydantic_base_model import PydanticBaseModel
 
 
 class UserConfigs(PydanticBaseModel):

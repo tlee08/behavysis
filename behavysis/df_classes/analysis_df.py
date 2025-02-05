@@ -6,8 +6,8 @@ import pandas as pd
 import seaborn as sns
 from matplotlib import pyplot as plt
 
-from behavysis.df_classes.df_mixin import DFMixin, FramesIN
-from behavysis.df_classes.keypoints_df import CoordsCols
+from behavysis.df_classes.keypoints_df import CoordsCols, FramesIN
+from behavysis.utils.df_mixin import DFMixin
 
 FBF = "fbf"
 
@@ -58,7 +58,7 @@ class AnalysisDf(DFMixin):
                 ax = axes[i, j]
                 # bpts scatter plot
                 sns.scatterplot(
-                    data=scatter_df[indiv],
+                    data=pd.DataFrame(scatter_df[indiv]),
                     x=CoordsCols.X.value,
                     y=CoordsCols.Y.value,
                     hue=roi,
