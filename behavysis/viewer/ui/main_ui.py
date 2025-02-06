@@ -249,11 +249,6 @@ class Ui_MainWindow(object):
 
         self.gridLayout.addWidget(self.annot_keypts_cbx, 5, 3, 1, 1)
 
-        self.example = QLabel(self.centralwidget)
-        self.example.setObjectName(u"example")
-
-        self.gridLayout.addWidget(self.example, 5, 4, 1, 1)
-
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
@@ -310,7 +305,6 @@ class Ui_MainWindow(object):
         self.select_behav_rbtn.setText(QCoreApplication.translate("MainWindow", u"Not sure..", None))
         self.bout_focus_btn.setText(QCoreApplication.translate("MainWindow", u"focus on bout", None))
         self.annot_keypts_cbx.setText(QCoreApplication.translate("MainWindow", u"Show Keypoints", None))
-        self.example.setText(QCoreApplication.translate("MainWindow", u"Example", None))
         self.menu_file.setTitle(QCoreApplication.translate("MainWindow", u"File", None))
         self.menu_save.setTitle(QCoreApplication.translate("MainWindow", u"Save", None))
         self.menu_export.setTitle(QCoreApplication.translate("MainWindow", u"Export", None))
