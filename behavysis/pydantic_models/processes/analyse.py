@@ -22,7 +22,7 @@ class FreezingConfigs(PydanticBaseModel):
 class InRoiConfigs(PydanticBaseModel):
     roi_name: str = "in_my_roi"
     is_in: bool | str = True
-    thresh_mm: float | str = 0
+    padding_mm: float | str = 0
     roi_corners: list[str] | str = BPTS_CORNERS
     bodyparts: list[str] | str = BPTS_SIMBA
 

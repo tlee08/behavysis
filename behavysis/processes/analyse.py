@@ -54,7 +54,7 @@ class Analyse:
         Determines the frames in which the subject is inside the cage (from average
         of given bodypoints).
 
-        Points are `thresh_px` padded (away) from center.
+        Points are `padding_px` padded (away) from center.
         """
         logger, io_obj = init_logger_io_obj()
         f_name = get_func_name_in_stack()
@@ -83,10 +83,10 @@ class Analyse:
             roi_name = configs.get_ref(configs_filt.roi_name)
             is_in = configs.get_ref(configs_filt.is_in)
             bpts = configs.get_ref(configs_filt.bodyparts)
-            thresh_mm = configs.get_ref(configs_filt.thresh_mm)
+            padding_mm = configs.get_ref(configs_filt.padding_mm)
             roi_corners = configs.get_ref(configs_filt.roi_corners)
             # Calculating more parameters
-            thresh_px = thresh_mm / px_per_mm
+            padding_px = padding_mm / px_per_mm
             # Checking bodyparts and roi_corners exist
             KeypointsDf.check_bpts_exist(keypoints_df, bpts)
             KeypointsDf.check_bpts_exist(keypoints_df, roi_corners)
@@ -94,7 +94,7 @@ class Analyse:
             corners_i_df = pd.DataFrame([keypoints_df[(IndivCols.SINGLE.value, pt)].mean() for pt in roi_corners]).drop(
                 columns=["likelihood"]
             )
-            # Adjusting x-y to have `thresh_px` dilation/erosion from the points themselves
+            # Adjusting x-y to have `padding_px` dilation/erosion from the points themselves
             roi_center = corners_i_df.mean()
             for i in corners_i_df.index:
                 # Calculating angle from centre to point (going out from centre)
@@ -102,9 +102,9 @@ class Analyse:
                     corners_i_df.loc[i, y] - roi_center[y],
                     corners_i_df.loc[i, x] - roi_center[x],
                 )
-                # Getting x, y distances so point is `thresh_px` padded (away) from center
-                corners_i_df.loc[i, x] = corners_i_df.loc[i, x] + (thresh_px * np.cos(theta))
-                corners_i_df.loc[i, y] = corners_i_df.loc[i, y] + (thresh_px * np.sin(theta))
+                # Getting x, y distances so point is `padding_px` padded (away) from center
+                corners_i_df.loc[i, x] = corners_i_df.loc[i, x] + (padding_px * np.cos(theta))
+                corners_i_df.loc[i, y] = corners_i_df.loc[i, y] + (padding_px * np.sin(theta))
             # Making the res_df
             analysis_i_df = AnalysisDf.init_df(keypoints_df.index)
             # For each individual, getting the in-roi status
@@ -283,7 +283,7 @@ class Analyse:
         """
         Determines the frames in which the subject is frozen.
 
-        "Frozen" is defined as not moving outside of a radius of `threshold_radius_mm`, and only
+        "Frozen" is defined as not moving outside of a radius of `threshold_mm`, and only
         includes bouts that last longer than `window_sec` spent seconds.
 
         NOTE: method is "greedy" because it looks at a freezing bout from earliest possible frame.
