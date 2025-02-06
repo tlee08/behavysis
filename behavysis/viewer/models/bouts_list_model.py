@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 from PySide6.QtCore import QAbstractListModel, Qt
 from PySide6.QtGui import QColor
 
@@ -39,9 +40,13 @@ class BoutsListModel(QAbstractListModel):
 
     def load(self, fp: str, configs: ExperimentConfigs):
         # Loading behaviour data
-        behavs_df = BehavScoredDf.read(fp)
+        df = BehavScoredDf.init_df(pd.Series())
+        try:
+            df = BehavScoredDf.read(fp)
+        except FileNotFoundError:
+            pass
         # behavs_df to bouts
-        self.bouts = BehavScoredDf.frames2bouts(behavs_df)
+        self.bouts = BehavScoredDf.frames2bouts(df)
         self.layoutChanged.emit()
 
     def rowCount(self, index):

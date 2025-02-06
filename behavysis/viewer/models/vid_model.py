@@ -3,7 +3,6 @@ import numpy as np
 
 
 class VidModel:
-
     vid: cv2.VideoCapture
     fps = int
     nframes = int

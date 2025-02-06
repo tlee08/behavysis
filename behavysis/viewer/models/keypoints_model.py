@@ -44,7 +44,12 @@ class KeypointsModel:
         self.colours = KeypointsAnnotationsDf.make_colours(self.indivs_bpts_df[self.colour_level], self.cmap)
 
     def load(self, fp: str, configs: ExperimentConfigs):
-        self.load_from_df(KeypointsDf.read(fp), configs)
+        df = KeypointsDf.init_df(pd.Series())
+        try:
+            df = KeypointsDf.read(fp)
+        except FileNotFoundError:
+            pass
+        self.load_from_df(df, configs)
 
     def annot_keypoints(self, frame: np.ndarray, frame_num: int) -> np.ndarray:
         """
