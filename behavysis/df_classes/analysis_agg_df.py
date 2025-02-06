@@ -8,7 +8,7 @@ import seaborn as sns
 
 from behavysis.df_classes.analysis_df import AnalysisDf
 from behavysis.df_classes.behav_df import BehavScoredDf
-from behavysis.df_classes.df_mixin import DFMixin
+from behavysis.utils.df_mixin import DFMixin
 from behavysis.utils.misc_utils import enum2list, enum2tuple
 
 SUMMARY = "summary"

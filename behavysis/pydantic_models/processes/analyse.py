@@ -1,5 +1,5 @@
 from behavysis.constants import BPTS_CORNERS, BPTS_SIMBA
-from behavysis.pydantic_models.pydantic_base_model import PydanticBaseModel
+from behavysis.utils.pydantic_base_model import PydanticBaseModel
 
 
 class SpeedConfigs(PydanticBaseModel):

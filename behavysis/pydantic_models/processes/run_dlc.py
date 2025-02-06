@@ -1,6 +1,6 @@
 import os
 
-from behavysis.pydantic_models.pydantic_base_model import PydanticBaseModel
+from behavysis.utils.pydantic_base_model import PydanticBaseModel
 
 
 class RunDlcConfigs(PydanticBaseModel):

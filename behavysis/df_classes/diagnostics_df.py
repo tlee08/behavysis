@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 from natsort import natsorted
 
-from behavysis.df_classes.df_mixin import DFMixin
+from behavysis.utils.df_mixin import DFMixin
 
 
 class DiagnosticsIN(Enum):
@@ -41,7 +41,7 @@ class DiagnosticsDf(DFMixin):
         # Natural sort the index
         index = natsorted(df.index.get_level_values(cls.IN.EXPERIMENT.value))
         assert set(index) == set(np.unique(index)), (
-            "All experiments must be unique.\n" f"Some duplicates found in the following list of experiments: {index}"
+            f"All experiments must be unique.\nSome duplicates found in the following list of experiments: {index}"
         )
         df = df.loc[index, :]
         return df

@@ -8,7 +8,11 @@ import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 
-from behavysis.df_classes.df_mixin import DFMixin, FramesIN
+from behavysis.utils.df_mixin import DFMixin
+
+
+class FramesIN(Enum):
+    FRAME = "frame"
 
 
 class CoordsCols(Enum):

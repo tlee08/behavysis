@@ -1,6 +1,6 @@
 from enum import Enum
 
-from behavysis.df_classes.df_mixin import DFMixin
+from behavysis.utils.df_mixin import DFMixin
 
 
 class AnalysisSummaryCollatedIN(Enum):

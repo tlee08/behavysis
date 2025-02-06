@@ -1,6 +1,7 @@
 from enum import Enum
 
-from behavysis.df_classes.df_mixin import DFMixin, FramesIN
+from behavysis.df_classes.keypoints_df import FramesIN
+from behavysis.utils.df_mixin import DFMixin
 
 
 class AnalysisCombinedCN(Enum):

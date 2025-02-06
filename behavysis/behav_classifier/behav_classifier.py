@@ -31,11 +31,11 @@ from behavysis.behav_classifier.clf_models.clf_templates import (
 from behavysis.constants import Folders
 from behavysis.df_classes.behav_classifier_df import BehavClassifierCombinedDf, BehavClassifierEvalDf
 from behavysis.df_classes.behav_df import BehavPredictedDf, BehavScoredDf, BehavValues
-from behavysis.df_classes.df_mixin import DFMixin
 from behavysis.df_classes.features_df import FeaturesDf
 from behavysis.pydantic_models.behav_classifier_configs import (
     BehavClassifierConfigs,
 )
+from behavysis.utils.df_mixin import DFMixin
 from behavysis.utils.io_utils import async_read_files_run, get_name, joblib_dump, joblib_load, write_json
 from behavysis.utils.logging_utils import init_logger_file
 from behavysis.utils.misc_utils import array2listofvect, enum2tuple, listofvects2array

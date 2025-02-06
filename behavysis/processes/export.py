@@ -5,9 +5,9 @@ from behavysis.df_classes.behav_df import (
     BehavPredictedDf,
     BehavScoredDf,
 )
-from behavysis.df_classes.df_mixin import DFMixin
 from behavysis.pydantic_models.bouts import BoutStruct
 from behavysis.pydantic_models.experiment_configs import ExperimentConfigs
+from behavysis.utils.df_mixin import DFMixin
 from behavysis.utils.diagnostics_utils import file_exists_msg
 from behavysis.utils.logging_utils import get_io_obj_content, init_logger_io_obj
 
