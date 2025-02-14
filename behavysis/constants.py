@@ -48,7 +48,7 @@ class FileExts(Enum):
 DIAGNOSTICS_DIR = "0_diagnostics"
 ANALYSIS_DIR = "8_analysis"
 
-CACHE_DIR = os.path.join(pathlib.Path.home(), ".behavysis_temp")
+CACHE_DIR = os.path.join(pathlib.Path.home(), ".behavysis")
 
 
 ####################################################################################################

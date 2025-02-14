@@ -1,7 +1,7 @@
 import os
-import subprocess
 
 from behavysis.utils.misc_utils import get_module_dir
+from behavysis.utils.subproc_utils import run_subproc_simple
 
 
 def main() -> None:
@@ -16,23 +16,12 @@ def main() -> None:
     templates_dir = os.path.abspath(templates_dir)
     # Checking if the templates directory exists
     assert os.path.isdir(templates_dir), f"Templates directory not found: {templates_dir}"
-    # Determine whether OS is Windows or Unix
-    shell = True if os.name == "nt" else False
-    # Running install DEEPLABCUT env
+    # Running
     for cmd_str in [
         f"cd {templates_dir} && conda env create -f DEEPLABCUT.yaml",
         f"cd {templates_dir} && conda env create -f simba_env.yaml",
     ]:
-        try:
-            subprocess.run(
-                f"cd {templates_dir} && conda env create -f DEEPLABCUT.yaml",
-                shell=shell,
-                check=True,
-                executable="/bin/bash" if not shell else None,
-            )
-            print("DEEPLABCUT environment installed successfully!")
-        except subprocess.CalledProcessError as e:
-            print(f"Error: {e}")
+        run_subproc_simple(cmd_str)
 
 
 if __name__ == "__main__":

@@ -3,6 +3,7 @@ Utility functions.
 """
 
 import os
+import subprocess
 from subprocess import PIPE, Popen
 
 ENCODING = "utf-8"
@@ -46,3 +47,10 @@ def run_subproc_console(cmd: list[str], **kwargs) -> None:
         # Error handling (returncode is not 0)
         if p.returncode:
             raise ValueError("ERROR: Subprocess failed to run.")
+
+
+def run_subproc_simple(cmd_str) -> None:
+    try:
+        subprocess.run(cmd_str, shell=True, check=True)
+    except subprocess.CalledProcessError as e:
+        print(f"Error: {e}")
