@@ -18,8 +18,8 @@ def main() -> None:
     assert os.path.isdir(templates_dir), f"Templates directory not found: {templates_dir}"
     # Running
     for cmd_str in [
-        f"cd {templates_dir} && conda env create -f DEEPLABCUT.yaml",
-        f"cd {templates_dir} && conda env create -f simba.yaml",
+        f"cd {templates_dir} \n conda env create -f DEEPLABCUT.yaml",
+        f"cd {templates_dir} \n conda env create -f simba.yaml",
     ]:
         run_subproc_simple(cmd_str)
 
