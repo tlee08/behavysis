@@ -19,7 +19,7 @@ def main() -> None:
     # Running
     for cmd_str in [
         f"cd {templates_dir} && conda env create -f DEEPLABCUT.yaml",
-        f"cd {templates_dir} && conda env create -f simba_env.yaml",
+        f"cd {templates_dir} && conda env create -f simba.yaml",
     ]:
         run_subproc_simple(cmd_str)
 
