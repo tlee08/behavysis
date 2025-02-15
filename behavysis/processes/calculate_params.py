@@ -31,30 +31,6 @@ from behavysis.utils.logging_utils import get_io_obj_content, init_logger_io_obj
 
 class CalculateParams:
     @staticmethod
-    def dlc_scorer_name(keypoints_fp: str, configs_fp: str) -> str:
-        """
-        Get the name of the scorer used in the DLC analysis.
-
-        Parameters
-        ----------
-        keypoints_fp : str
-            The filepath to the DLC file.
-
-        Returns
-        -------
-        str
-            The name of the scorer.
-        """
-        logger, io_obj = init_logger_io_obj()
-        keypoints_df = KeypointsDf.read(keypoints_fp)
-        scorer_name = keypoints_df.columns.get_level_values(0)[0]
-        # Writing to configs
-        configs = ExperimentConfigs.read_json(configs_fp)
-        configs.auto.scorer_name = scorer_name
-        configs.write_json(configs_fp)
-        return get_io_obj_content(io_obj)
-
-    @staticmethod
     def start_frame_from_likelihood(
         keypoints_fp: str,
         configs_fp: str,

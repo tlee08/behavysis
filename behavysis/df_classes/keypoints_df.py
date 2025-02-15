@@ -144,12 +144,15 @@ class KeypointsAnnotationsDf(DFMixin):
     @classmethod
     def keypoint2annotationsdf(cls, keypoints_df: pd.DataFrame) -> pd.DataFrame:
         """
-        Converts a single keypoint to an attributes dataframe.
+        Converts a keypoint to an attributes dataframe, which combines the column headings to:
+        `individual_bodypart_coord`.
+
+        Helpful for faster column indexing and processing.
 
         Parameters
         ----------
-        keypoint : pd.Series
-            A single keypoint.
+        keypoint : pd.DataFrame
+            A keypoint.
 
         Returns
         -------

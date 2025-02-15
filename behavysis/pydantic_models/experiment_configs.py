@@ -43,7 +43,6 @@ class AutoConfigs(PydanticBaseModel):
     start_frame: int = -1
     stop_frame: int = -1
     dur_frames: int = -1
-    scorer_name: str = "scorer"
 
 
 class RefConfigs(PydanticBaseModel):
