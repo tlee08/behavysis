@@ -14,12 +14,10 @@ def main() -> None:
     behavysis_dir = get_module_dir("behavysis")
     templates_dir = os.path.join(behavysis_dir, "templates")
     templates_dir = os.path.abspath(templates_dir)
-    # Checking if the templates directory exists
-    assert os.path.isdir(templates_dir), f"Templates directory not found: {templates_dir}"
     # Running
     for cmd_str in [
-        f"cd {templates_dir} \n conda env create -f DEEPLABCUT.yaml",
-        f"cd {templates_dir} \n conda env create -f simba.yaml",
+        f"conda env create -f {os.path.join(templates_dir, 'DEEPLABCUT.yaml')}",
+        f"conda env create -f {os.path.join(templates_dir, 'simba.yaml')}",
     ]:
         run_subproc_simple(cmd_str)
 
