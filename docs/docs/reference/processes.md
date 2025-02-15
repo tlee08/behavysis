@@ -1,17 +1,25 @@
-<!-- :::behavysis.processes -->
+<!-- ::: behavysis.processes -->
 
-:::behavysis.processes.CalculateParams
+::: behavysis.processes.update_configs.UpdateConfigs
 
-:::behavysis.processes.ClassifyBehaviours
+::: behavysis.processes.format_vid.FormatVid
 
-:::behavysis.processes.Evaluate
+::: behavysis.processes.run_dlc.RunDLC
 
-:::behavysis.processes.ExtractFeatures
+::: behavysis.processes.calculate_params.CalculateParams
 
-:::behavysis.processes.FormatVid
+::: behavysis.processes.preprocess.Preprocess
 
-:::behavysis.processes.Preprocess
+::: behavysis.processes.extract_features.ExtractFeatures
 
-:::behavysis.processes.RunDLC
+::: behavysis.processes.classify_behavs.ClassifyBehavs
 
-:::behavysis.processes.UpdateConfigs
+::: behavysis.processes.analyse_behavs.AnalyseBehavs
+
+::: behavysis.processes.analyse.Analyse
+
+::: behavysis.processes.combine_analysis
+
+::: behavysis.processes.evaluate.Evaluate
+
+
