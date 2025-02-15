@@ -1,88 +1,71 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
-         <loc>https://tlee08.github.io/behavysis_pipeline/index.html</loc>
-         <lastmod>2024-06-28</lastmod>
-         <changefreq>daily</changefreq>
+         <loc>https://tlee08.github.io/behavysis/index.html</loc>
+         <lastmod>2025-02-15</lastmod>
     </url>
     <url>
-         <loc>https://tlee08.github.io/behavysis_pipeline/examples/analysis.html</loc>
-         <lastmod>2024-06-28</lastmod>
-         <changefreq>daily</changefreq>
+         <loc>https://tlee08.github.io/behavysis/examples/analysis.html</loc>
+         <lastmod>2025-02-15</lastmod>
     </url>
     <url>
-         <loc>https://tlee08.github.io/behavysis_pipeline/examples/train.html</loc>
-         <lastmod>2024-06-28</lastmod>
-         <changefreq>daily</changefreq>
+         <loc>https://tlee08.github.io/behavysis/examples/train.html</loc>
+         <lastmod>2025-02-15</lastmod>
     </url>
     <url>
-         <loc>https://tlee08.github.io/behavysis_pipeline/installation/installing.html</loc>
-         <lastmod>2024-06-28</lastmod>
-         <changefreq>daily</changefreq>
+         <loc>https://tlee08.github.io/behavysis/installation/installing.html</loc>
+         <lastmod>2025-02-15</lastmod>
     </url>
     <url>
-         <loc>https://tlee08.github.io/behavysis_pipeline/installation/running.html</loc>
-         <lastmod>2024-06-28</lastmod>
-         <changefreq>daily</changefreq>
+         <loc>https://tlee08.github.io/behavysis/installation/running.html</loc>
+         <lastmod>2025-02-15</lastmod>
     </url>
     <url>
-         <loc>https://tlee08.github.io/behavysis_pipeline/installation/uninstalling.html</loc>
-         <lastmod>2024-06-28</lastmod>
-         <changefreq>daily</changefreq>
+         <loc>https://tlee08.github.io/behavysis/installation/uninstalling.html</loc>
+         <lastmod>2025-02-15</lastmod>
     </url>
     <url>
-         <loc>https://tlee08.github.io/behavysis_pipeline/installation/updating.html</loc>
-         <lastmod>2024-06-28</lastmod>
-         <changefreq>daily</changefreq>
+         <loc>https://tlee08.github.io/behavysis/installation/updating.html</loc>
+         <lastmod>2025-02-15</lastmod>
     </url>
     <url>
-         <loc>https://tlee08.github.io/behavysis_pipeline/reference/behav_classifier.html</loc>
-         <lastmod>2024-06-28</lastmod>
-         <changefreq>daily</changefreq>
+         <loc>https://tlee08.github.io/behavysis/reference/behav_classifier.html</loc>
+         <lastmod>2025-02-15</lastmod>
     </url>
     <url>
-         <loc>https://tlee08.github.io/behavysis_pipeline/reference/behav_classifier_templates.html</loc>
-         <lastmod>2024-06-28</lastmod>
-         <changefreq>daily</changefreq>
+         <loc>https://tlee08.github.io/behavysis/reference/behav_classifier_templates.html</loc>
+         <lastmod>2025-02-15</lastmod>
     </url>
     <url>
-         <loc>https://tlee08.github.io/behavysis_pipeline/reference/behavysis_pipeline.html</loc>
-         <lastmod>2024-06-28</lastmod>
-         <changefreq>daily</changefreq>
+         <loc>https://tlee08.github.io/behavysis/reference/behavysis.html</loc>
+         <lastmod>2025-02-15</lastmod>
     </url>
     <url>
-         <loc>https://tlee08.github.io/behavysis_pipeline/reference/experiment.html</loc>
-         <lastmod>2024-06-28</lastmod>
-         <changefreq>daily</changefreq>
+         <loc>https://tlee08.github.io/behavysis/reference/experiment.html</loc>
+         <lastmod>2025-02-15</lastmod>
     </url>
     <url>
-         <loc>https://tlee08.github.io/behavysis_pipeline/reference/processes.html</loc>
-         <lastmod>2024-06-28</lastmod>
-         <changefreq>daily</changefreq>
+         <loc>https://tlee08.github.io/behavysis/reference/processes.html</loc>
+         <lastmod>2025-02-15</lastmod>
     </url>
     <url>
-         <loc>https://tlee08.github.io/behavysis_pipeline/reference/project.html</loc>
-         <lastmod>2024-06-28</lastmod>
-         <changefreq>daily</changefreq>
+         <loc>https://tlee08.github.io/behavysis/reference/project.html</loc>
+         <lastmod>2025-02-15</lastmod>
     </url>
     <url>
-         <loc>https://tlee08.github.io/behavysis_pipeline/tutorials/configs_json.html</loc>
-         <lastmod>2024-06-28</lastmod>
-         <changefreq>daily</changefreq>
+         <loc>https://tlee08.github.io/behavysis/tutorials/configs_json.html</loc>
+         <lastmod>2025-02-15</lastmod>
     </url>
     <url>
-         <loc>https://tlee08.github.io/behavysis_pipeline/tutorials/diagnostics_messages.html</loc>
-         <lastmod>2024-06-28</lastmod>
-         <changefreq>daily</changefreq>
+         <loc>https://tlee08.github.io/behavysis/tutorials/diagnostics_messages.html</loc>
+         <lastmod>2025-02-15</lastmod>
     </url>
     <url>
-         <loc>https://tlee08.github.io/behavysis_pipeline/tutorials/explanation.html</loc>
-         <lastmod>2024-06-28</lastmod>
-         <changefreq>daily</changefreq>
+         <loc>https://tlee08.github.io/behavysis/tutorials/explanation.html</loc>
+         <lastmod>2025-02-15</lastmod>
     </url>
     <url>
-         <loc>https://tlee08.github.io/behavysis_pipeline/tutorials/setup.html</loc>
-         <lastmod>2024-06-28</lastmod>
-         <changefreq>daily</changefreq>
+         <loc>https://tlee08.github.io/behavysis/tutorials/setup.html</loc>
+         <lastmod>2025-02-15</lastmod>
     </url>
 </urlset>
