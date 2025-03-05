@@ -30,6 +30,7 @@ dependencies:
   - notebook<7.0.0
   - ffmpeg
   - pytables==3.8.0
+  - openpyxl
   - pip:
       # FOR PYTORCH, SEE https://pytorch.org/
       - "torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu126"
