@@ -32,4 +32,5 @@ dependencies:
   - pytables==3.8.0
   - pip:
       # FOR PYTORCH, SEE https://pytorch.org/
+      - "torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu126"
       - "git+https://github.com/DeepLabCut/DeepLabCut.git@pytorch_dlc#egg=deeplabcut[gui,modelzoo,wandb]"
