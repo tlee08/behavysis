@@ -15,9 +15,11 @@
 #
 # install: conda env create -f DEEPLABCUT.yaml
 # update:  conda env update -f DEEPLABCUT.yaml
+
 name: DEEPLABCUT
 channels:
   - conda-forge
+  - pytorch
   - defaults
 dependencies:
   - python=3.10
@@ -27,6 +29,8 @@ dependencies:
   - nb_conda
   - notebook<7.0.0
   - ffmpeg
+  - pytorch
+  - cudatoolkit
   - pytables==3.8.0
   - pip:
-    - "git+https://github.com/DeepLabCut/DeepLabCut.git@pytorch_dlc#egg=deeplabcut[gui,modelzoo,wandb]"
+      - "git+https://github.com/DeepLabCut/DeepLabCut.git@pytorch_dlc#egg=deeplabcut[gui,modelzoo,wandb]"
