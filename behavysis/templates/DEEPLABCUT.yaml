@@ -29,8 +29,7 @@ dependencies:
   - nb_conda
   - notebook<7.0.0
   - ffmpeg
-  - pytorch
-  - cudatoolkit
   - pytables==3.8.0
   - pip:
+      # FOR PYTORCH, SEE https://pytorch.org/
       - "git+https://github.com/DeepLabCut/DeepLabCut.git@pytorch_dlc#egg=deeplabcut[gui,modelzoo,wandb]"
