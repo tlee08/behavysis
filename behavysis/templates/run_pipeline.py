@@ -30,10 +30,8 @@ if __name__ == "__main__":
 
     proj.calculate_parameters(
         (
-            CalculateParams.dlc_scorer_name,
             CalculateParams.start_frame_from_likelihood,
             CalculateParams.stop_frame_from_dur,
-            CalculateParams.stop_frame_from_likelihood,
             CalculateParams.dur_frames_from_likelihood,
             CalculateParams.px_per_mm,
         )
@@ -61,6 +59,8 @@ if __name__ == "__main__":
     )
     proj.combine_analysis()
     proj.collate_analysis()
+
+    proj.evaluate_vid(overwrite)
 
     # for exp in proj.experiments:
     #     if os.path.exists(os.path.join(exp.root_dir, "9_analysis_combined", f"{exp.name}.parquet")):
