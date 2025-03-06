@@ -19,6 +19,7 @@ str
 import logging
 import os
 
+import cv2
 import numpy as np
 import pandas as pd
 import seaborn as sns
@@ -50,6 +51,7 @@ class Analyse:
     def in_roi(
         cls,
         keypoints_fp: str,
+        formatted_vid_fp: str,
         dst_dir: str,
         configs_fp: str,
     ) -> str:
@@ -66,6 +68,7 @@ class Analyse:
         # Calculating the deltas (changes in body position) between each frame for the subject
         configs = ExperimentConfigs.read_json(configs_fp)
         fps, _, _, px_per_mm, bins_ls, cbins_ls = configs.get_analysis_configs()
+        start_frame = configs.auto.start_frame
         configs_filt_ls = configs.user.analyse.in_roi
         # Loading in dataframe
         keypoints_df = KeypointsDf.clean_headings(KeypointsDf.read(keypoints_fp))
@@ -133,8 +136,17 @@ class Analyse:
         # Saving analysis_df
         fbf_fp = os.path.join(dst_subdir, FBF, f"{name}.{AnalysisDf.IO}")
         AnalysisDf.write(analysis_df, fbf_fp)
+        # Making scatter plot
+        formatted_vid_cap = cv2.VideoCapture(formatted_vid_fp)
+        # Getting 100th frame of video (arbitrary)
+        for _ in range(start_frame + 100):
+            ret, frame = formatted_vid_cap.read()
+            if ret is False:
+                logger.warning("Video shorter than start_frame")
+                break
+        # Getting scatter plot
         plot_fp = os.path.join(dst_subdir, "scatter_plot", f"{name}.png")
-        cls._make_location_scatterplot(scatter_df, corners_df, plot_fp)
+        cls._make_location_scatterplot(scatter_df, corners_df, frame, plot_fp)
         # Summarising and binning analysis_df
         AnalysisBinnedDf.summary_binned_behavs(
             analysis_df,
@@ -176,6 +188,7 @@ class Analyse:
         cls,
         scatter_df: pd.DataFrame,
         corners_df: pd.DataFrame,
+        frame: np.ndarray,
         dst_fp: str,
     ):
         """
@@ -203,6 +216,8 @@ class Analyse:
         for i, roi in enumerate(roi_ls):
             for j, indiv in enumerate(indivs_ls):
                 ax = axes[i, j]
+                # Adding frame image to plot
+                ax.imshow(frame)
                 # bpts scatter plot
                 sns.scatterplot(
                     data=pd.DataFrame(scatter_df[indiv]),

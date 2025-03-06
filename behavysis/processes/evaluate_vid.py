@@ -70,13 +70,13 @@ class EvaluateVid:
         try:
             keypoints_df = KeypointsDf.read(keypoints_fp)
         except FileNotFoundError:
-            logger.warning("Keypoints file not found or could not be loaded." "Disregarding keypoints.")
+            logger.warning("Keypoints file not found or could not be loaded.Disregarding keypoints.")
             keypoints_df = KeypointsDf.init_df(reserve_index)
         # Getting analysis combined df
         try:
             analysis_df = AnalysisCombinedDf.read(analysis_combined_fp)
         except FileNotFoundError:
-            logger.warning("Analysis combined file not found or could not be loaded." "Disregarding analysis.")
+            logger.warning("Analysis combined file not found or could not be loaded.Disregarding analysis.")
             analysis_df = AnalysisCombinedDf.init_df(pd.Series(reserve_index))
 
         # MAKING ANNOTATED VIDEO
