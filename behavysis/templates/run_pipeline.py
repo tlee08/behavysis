@@ -1,9 +1,6 @@
 import os
 
-from behavysis.pipeline.project import Project
-from behavysis.processes.analyse import Analyse
-from behavysis.processes.calculate_params import CalculateParams
-from behavysis.processes.preprocess import Preprocess
+from behavysis import Analyse, CalculateParams, Preprocess, Project
 
 if __name__ == "__main__":
     overwrite = False

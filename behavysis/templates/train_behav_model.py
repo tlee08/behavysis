@@ -2,9 +2,7 @@ import os
 
 import pandas as pd
 
-from behavysis.behav_classifier.behav_classifier import BehavClassifier
-from behavysis.pipeline.project import Project
-from behavysis.processes.export import Export
+from behavysis import BehavClassifier, Export, Project
 
 if __name__ == "__main__":
     root_dir = "."

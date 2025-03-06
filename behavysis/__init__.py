@@ -15,6 +15,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import seaborn as sns
 
+from behavysis.behav_classifier.behav_classifier import BehavClassifier
 from behavysis.constants import PLOT_DPI, PLOT_STYLE
 
 #####################################################################
@@ -23,6 +24,7 @@ from behavysis.constants import PLOT_DPI, PLOT_STYLE
 from behavysis.pipeline.project import Project
 from behavysis.processes.analyse import Analyse
 from behavysis.processes.calculate_params import CalculateParams
+from behavysis.processes.export import Export
 from behavysis.processes.preprocess import Preprocess
 
 #####################################################################
