@@ -16,7 +16,11 @@ def main() -> None:
     templates_dir = os.path.abspath(templates_dir)
     # Running
     for cmd_str in [
-        f"conda env create -f {os.path.join(templates_dir, 'DEEPLABCUT.yaml')}",
+        (
+            f"conda env create -f {os.path.join(templates_dir, 'DEEPLABCUT.yaml')} && "
+            "pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu126 && "
+            'pip install "git+https://github.com/DeepLabCut/DeepLabCut.git@pytorch_dlc#egg=deeplabcut[gui,modelzoo,wandb]"'
+        ),
         f"conda env create -f {os.path.join(templates_dir, 'simba.yaml')}",
     ]:
         subprocess.run(cmd_str, shell=True, check=True)
