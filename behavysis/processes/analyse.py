@@ -44,8 +44,9 @@ from behavysis.utils.misc_utils import get_func_name_in_stack
 
 
 class Analyse:
-    @staticmethod
+    @classmethod
     def in_roi(
+        cls,
         keypoints_fp: str,
         dst_dir: str,
         configs_fp: str,
@@ -114,7 +115,7 @@ class Analyse:
                 analysis_i_df[(indiv, y)] = keypoints_df.loc[:, idx[indiv, bpts, y]].mean(axis=1).values  # type: ignore
                 # Determining if the indiv body center is in the ROI
                 analysis_i_df[(indiv, roi_name)] = analysis_i_df[indiv].apply(
-                    lambda pt: pt_in_roi(pt, corners_i_df, logger), axis=1
+                    lambda pt: cls._pt_in_roi(pt, corners_i_df, logger), axis=1
                 )
             # Inverting in_roi status if is_in is False
             if not is_in:
@@ -143,8 +144,34 @@ class Analyse:
         )
         return get_io_obj_content(io_obj)
 
-    @staticmethod
+    @classmethod
+    def _pt_in_roi(cls, pt: pd.Series, corners_df: pd.DataFrame, logger: logging.Logger) -> bool:
+        """__summary__"""
+        # Counting crossings over edge in region when point is translated to the right
+        crossings = 0
+        # To loop back to the first point at the end
+        first_corner = pd.DataFrame(corners_df.iloc[0]).T
+        corners_df = pd.concat((corners_df, first_corner), axis=0, ignore_index=True)
+        # Making x and y aliases
+        x = CoordsCols.X.value
+        y = CoordsCols.Y.value
+        # For each edge
+        for i in range(corners_df.shape[0] - 1):
+            # Getting corner points of edge
+            c1 = corners_df.iloc[i]
+            c2 = corners_df.iloc[i + 1]
+            # Getting whether point-y is between corners-y
+            y_between = (c1[y] > pt[y]) != (c2[y] > pt[y])
+            # Getting whether point-x is to the left (less than) the intersection of corners-x
+            x_left_of = pt[x] < (c2[x] - c1[x]) * (pt[y] - c1[y]) / (c2[y] - c1[y]) + c1[x]
+            if y_between and x_left_of:
+                crossings += 1
+        # Odd number of crossings means point is in region
+        return crossings % 2 == 1
+
+    @classmethod
     def speed(
+        cls,
         keypoints_fp: str,
         dst_dir: str,
         configs_fp: str,
@@ -210,8 +237,79 @@ class Analyse:
         )
         return get_io_obj_content(io_obj)
 
-    @staticmethod
+    @classmethod
+    def distance(
+        cls,
+        keypoints_fp: str,
+        dst_dir: str,
+        configs_fp: str,
+    ) -> str:
+        """
+        Determines the distance travelled by the subject in each frame.
+
+        Very similar to speed, except not scaled by time (fps).
+        """
+        logger, io_obj = init_logger_io_obj()
+        f_name = get_func_name_in_stack()
+        name = get_name(keypoints_fp)
+        dst_subdir = os.path.join(dst_dir, f_name)
+        # Calculating the deltas (changes in body position) between each frame for the subject
+        configs = ExperimentConfigs.read_json(configs_fp)
+        fps, _, _, px_per_mm, bins_ls, cbins_ls = configs.get_analysis_configs()
+        configs_filt = configs.user.analyse.speed
+        bpts = configs.get_ref(configs_filt.bodyparts)
+        smoothing_sec = configs.get_ref(configs_filt.smoothing_sec)
+        # Calculating more parameters
+        smoothing_frames = int(smoothing_sec * fps)
+
+        # Loading in dataframe
+        keypoints_df = KeypointsDf.clean_headings(KeypointsDf.read(keypoints_fp))
+        assert keypoints_df.shape[0] > 0, "No frames in keypoints_df. Please check keypoints file."
+        # Checking body-centre bodypart exists
+        KeypointsDf.check_bpts_exist(keypoints_df, bpts)
+        # Getting indivs and bpts list
+        indivs, _ = KeypointsDf.get_indivs_bpts(keypoints_df)
+
+        # Calculating speed of subject for each frame
+        analysis_df = AnalysisDf.init_df(keypoints_df.index)
+        # keypoints_df.index = analysis_df.index
+        idx = pd.IndexSlice
+        for indiv in indivs:
+            # Making a rolling window of 3 frames for average body-centre
+            # Otherwise jitter contributes to movement
+            jitter_frames = 3
+            smoothed_xy_df = keypoints_df.rolling(window=jitter_frames, min_periods=1, center=True).agg(np.nanmean)
+            # Getting changes in x-y values between frames (deltas)
+            delta_x = smoothed_xy_df.loc[:, idx[indiv, bpts, "x"]].mean(axis=1).diff()  # type: ignore
+            delta_y = smoothed_xy_df.loc[:, idx[indiv, bpts, "y"]].mean(axis=1).diff()  # type: ignore
+            delta = np.array(np.sqrt(np.power(delta_x, 2) + np.power(delta_y, 2)))
+            # Storing speed (raw and smoothed)
+            analysis_df[(indiv, "DistMMperSec")] = delta / px_per_mm
+            analysis_df[(indiv, "DistMMperSecSmoothed")] = (
+                analysis_df[(indiv, "DistMMperSec")]
+                .rolling(window=smoothing_frames, min_periods=1, center=True)
+                .agg(np.nanmean)
+            )
+        # Backfilling the analysis_df so no nan's
+        analysis_df = analysis_df.bfill()
+        # Saving analysis_df
+        fbf_fp = os.path.join(dst_subdir, FBF, f"{name}.{AnalysisDf.IO}")
+        AnalysisDf.write(analysis_df, fbf_fp)
+
+        # Summarising and binning analysis_df
+        AnalysisBinnedDf.summary_binned_quantitative(
+            analysis_df,
+            dst_subdir,
+            name,
+            fps,
+            bins_ls,
+            cbins_ls,
+        )
+        return get_io_obj_content(io_obj)
+
+    @classmethod
     def social_distance(
+        cls,
         keypoints_fp: str,
         dst_dir: str,
         configs_fp: str,
@@ -274,8 +372,9 @@ class Analyse:
         )
         return get_io_obj_content(io_obj)
 
-    @staticmethod
+    @classmethod
     def freezing(
+        cls,
         keypoints_fp: str,
         dst_dir: str,
         configs_fp: str,
@@ -357,28 +456,3 @@ class Analyse:
             cbins_ls,
         )
         return get_io_obj_content(io_obj)
-
-
-def pt_in_roi(pt: pd.Series, corners_df: pd.DataFrame, logger: logging.Logger) -> bool:
-    """__summary__"""
-    # Counting crossings over edge in region when point is translated to the right
-    crossings = 0
-    # To loop back to the first point at the end
-    first_corner = pd.DataFrame(corners_df.iloc[0]).T
-    corners_df = pd.concat((corners_df, first_corner), axis=0, ignore_index=True)
-    # Making x and y aliases
-    x = CoordsCols.X.value
-    y = CoordsCols.Y.value
-    # For each edge
-    for i in range(corners_df.shape[0] - 1):
-        # Getting corner points of edge
-        c1 = corners_df.iloc[i]
-        c2 = corners_df.iloc[i + 1]
-        # Getting whether point-y is between corners-y
-        y_between = (c1[y] > pt[y]) != (c2[y] > pt[y])
-        # Getting whether point-x is to the left (less than) the intersection of corners-x
-        x_left_of = pt[x] < (c2[x] - c1[x]) * (pt[y] - c1[y]) / (c2[y] - c1[y]) + c1[x]
-        if y_between and x_left_of:
-            crossings += 1
-    # Odd number of crossings means point is in region
-    return crossings % 2 == 1

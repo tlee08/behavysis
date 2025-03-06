@@ -52,6 +52,7 @@ if __name__ == "__main__":
         (
             Analyse.in_roi,
             Analyse.speed,
+            Analyse.distance,
         )
     )
     proj.combine_analysis()

@@ -76,6 +76,7 @@ class AnalysisSummaryDf(DFMixin):
                         "median": np.nanmedian(vect),
                         "Q3": np.nanquantile(vect, q=0.75),
                         "max": np.nanmax(vect),
+                        "sum": np.nansum(vect),
                     },
                     name=col,
                 )

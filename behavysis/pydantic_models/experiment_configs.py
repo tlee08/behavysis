@@ -87,10 +87,10 @@ class ExperimentConfigs(PydanticBaseModel):
         tuple[ float, float, float, float, list, list, ]
             _description_
         """
-        assert self.auto.formatted_vid.fps
-        assert self.auto.formatted_vid.width_px
-        assert self.auto.formatted_vid.height_px
-        assert self.auto.px_per_mm
+        assert self.auto.formatted_vid.fps > 0
+        assert self.auto.formatted_vid.width_px > 0
+        assert self.auto.formatted_vid.height_px > 0
+        assert self.auto.px_per_mm > 0
         return (
             float(self.auto.formatted_vid.fps),
             float(self.auto.formatted_vid.width_px),
