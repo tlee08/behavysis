@@ -485,6 +485,7 @@ class Experiment:
         return self._proc_scaff(
             funcs,
             keypoints_fp=self.get_fp(Folders.PREPROCESSED),
+            formatted_vid_fp=self.get_fp(Folders.FORMATTED_VID),
             dst_dir=os.path.join(self.root_dir, ANALYSIS_DIR),
             configs_fp=self.get_fp(Folders.CONFIGS),
         )

@@ -259,6 +259,7 @@ class Analyse:
     def speed(
         cls,
         keypoints_fp: str,
+        formatted_vid_fp: str,
         dst_dir: str,
         configs_fp: str,
     ) -> str:
@@ -327,6 +328,7 @@ class Analyse:
     def distance(
         cls,
         keypoints_fp: str,
+        formatted_vid_fp: str,
         dst_dir: str,
         configs_fp: str,
     ) -> str:
@@ -397,6 +399,7 @@ class Analyse:
     def social_distance(
         cls,
         keypoints_fp: str,
+        formatted_vid_fp: str,
         dst_dir: str,
         configs_fp: str,
     ) -> str:
@@ -462,6 +465,7 @@ class Analyse:
     def freezing(
         cls,
         keypoints_fp: str,
+        formatted_vid_fp: str,
         dst_dir: str,
         configs_fp: str,
     ) -> str:
