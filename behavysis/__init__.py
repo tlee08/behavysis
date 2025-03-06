@@ -18,6 +18,14 @@ import seaborn as sns
 from behavysis.constants import PLOT_DPI, PLOT_STYLE
 
 #####################################################################
+#           IMPORTING SUBMODULES
+#####################################################################
+from behavysis.pipeline.project import Project
+from behavysis.processes.analyse import Analyse
+from behavysis.processes.calculate_params import CalculateParams
+from behavysis.processes.preprocess import Preprocess
+
+#####################################################################
 #               FILTERING STDOUT WARNINGS
 #####################################################################
 
