@@ -24,6 +24,7 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 from matplotlib import pyplot as plt
+from matplotlib.axes import Axes
 
 from behavysis.df_classes.analysis_agg_df import AnalysisBinnedDf
 from behavysis.df_classes.analysis_df import (
@@ -215,9 +216,12 @@ class Analyse:
         # For each roi and indiv, plotting the bpts scatter and ROI polygon plots
         for i, roi in enumerate(roi_ls):
             for j, indiv in enumerate(indivs_ls):
-                ax = axes[i, j]
+                ax: Axes = axes[i, j]
                 # Adding frame image to plot
-                ax.imshow(frame)
+                ax.imshow(
+                    X=frame,
+                    alpha=0.3,
+                )
                 # bpts scatter plot
                 sns.scatterplot(
                     data=pd.DataFrame(scatter_df[indiv]),
