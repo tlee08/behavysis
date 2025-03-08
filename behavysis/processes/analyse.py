@@ -25,6 +25,7 @@ import pandas as pd
 import seaborn as sns
 from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
+from matplotlib.colors import ListedColormap
 
 from behavysis.df_classes.analysis_agg_df import AnalysisBinnedDf
 from behavysis.df_classes.analysis_df import (
@@ -217,6 +218,8 @@ class Analyse:
         for i, roi in enumerate(roi_ls):
             for j, indiv in enumerate(indivs_ls):
                 ax: Axes = axes[i, j]
+                # Making colourmap of grey (not-roi) and green (in-roi)
+                roi_cmap = ListedColormap(["grey", "green"], name="roi_cmap")
                 # Adding frame image to plot
                 ax.imshow(
                     X=frame,
@@ -228,6 +231,7 @@ class Analyse:
                     x=CoordsCols.X.value,
                     y=CoordsCols.Y.value,
                     hue=roi,
+                    cmap=roi_cmap,
                     alpha=0.3,
                     linewidth=0,
                     marker=".",
@@ -376,9 +380,9 @@ class Analyse:
             delta_y = smoothed_xy_df.loc[:, idx[indiv, bpts, "y"]].mean(axis=1).diff()  # type: ignore
             delta = np.array(np.sqrt(np.power(delta_x, 2) + np.power(delta_y, 2)))
             # Storing speed (raw and smoothed)
-            analysis_df[(indiv, "DistMMperSec")] = delta / px_per_mm
-            analysis_df[(indiv, "DistMMperSecSmoothed")] = (
-                analysis_df[(indiv, "DistMMperSec")]
+            analysis_df[(indiv, "DistMM")] = delta / px_per_mm
+            analysis_df[(indiv, "DistMMSmoothed")] = (
+                analysis_df[(indiv, "DistMM")]
                 .rolling(window=smoothing_frames, min_periods=1, center=True)
                 .agg(np.nanmean)
             )
