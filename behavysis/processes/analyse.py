@@ -218,8 +218,6 @@ class Analyse:
         for i, roi in enumerate(roi_ls):
             for j, indiv in enumerate(indivs_ls):
                 ax: Axes = axes[i, j]
-                # Making colourmap of grey (not-roi) and green (in-roi)
-                roi_cmap = ListedColormap(["grey", "green"], name="roi_cmap")
                 # Adding frame image to plot
                 ax.imshow(
                     X=frame,
@@ -231,7 +229,7 @@ class Analyse:
                     x=CoordsCols.X.value,
                     y=CoordsCols.Y.value,
                     hue=roi,
-                    cmap=roi_cmap,
+                    cmap=ListedColormap(["grey", "green"], name="roi_cmap"),
                     alpha=0.3,
                     linewidth=0,
                     marker=".",
