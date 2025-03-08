@@ -25,7 +25,6 @@ import pandas as pd
 import seaborn as sns
 from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
-from matplotlib.colors import ListedColormap
 
 from behavysis.df_classes.analysis_agg_df import AnalysisBinnedDf
 from behavysis.df_classes.analysis_df import (
@@ -229,7 +228,7 @@ class Analyse:
                     x=CoordsCols.X.value,
                     y=CoordsCols.Y.value,
                     hue=roi,
-                    cmap=ListedColormap(["grey", "green"], name="roi_cmap"),
+                    cmap={0: "grey", 1: "green"},
                     alpha=0.3,
                     linewidth=0,
                     marker=".",
