@@ -228,7 +228,7 @@ class Analyse:
                     x=CoordsCols.X.value,
                     y=CoordsCols.Y.value,
                     hue=roi,
-                    cmap={0: "grey", 1: "green"},
+                    palette={0: "grey", 1: "green"},
                     alpha=0.3,
                     linewidth=0,
                     marker=".",
