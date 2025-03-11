@@ -20,7 +20,7 @@
 
 name: DEEPLABCUT2
 channels:
-  - nvidia
+  # - nvidia
   - conda-forge
   - defaults
 dependencies:
@@ -31,7 +31,7 @@ dependencies:
   - nb_conda
   - notebook<7.0.0
   - ffmpeg
-  - cuda-toolkit
+  - cudatoolkit
   - cudnn
   - pytables==3.8.0
   - openpyxl
