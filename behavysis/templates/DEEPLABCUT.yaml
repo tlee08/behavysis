@@ -15,8 +15,13 @@
 # If "False" is printed, PyTorch (and thus DeepLabCut) cannot access your GPU. For
 # more information, see: https://pytorch.org/get-started/locally/
 #
-# install: conda env create -f DEEPLABCUT.yaml
-# update:  conda env update -f DEEPLABCUT.yaml
+# install:
+# ```
+# conda env create -f DEEPLABCUT.yaml
+# conda activate DEEPLABCUT
+# pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu126
+# pip install "git+https://github.com/DeepLabCut/DeepLabCut.git@pytorch_dlc#egg=deeplabcut[gui,modelzoo,wandb]"
+# ```
 
 name: DEEPLABCUT
 channels:
