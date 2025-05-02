@@ -183,6 +183,7 @@ def run_dlc_subproc(
         script_fp,
     ]
     # run_subproc_fstream(cmd)
+    # TODO save output to a logger
     run_subproc_console(cmd)
     # Removing the script file
     # silent_remove(script_fp)

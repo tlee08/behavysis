@@ -1,3 +1,5 @@
+# DEEPLABCUT.yaml
+
 #DeepLabCut Toolbox (deeplabcut.org)
 #© A. & M.W. Mathis Labs
 #https://github.com/DeepLabCut/DeepLabCut
@@ -15,14 +17,8 @@
 # If "False" is printed, PyTorch (and thus DeepLabCut) cannot access your GPU. For
 # more information, see: https://pytorch.org/get-started/locally/
 #
-# install:
-# ```
-# conda env create -f DEEPLABCUT.yaml
-# conda activate DEEPLABCUT
-# pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu126
-# pip install "git+https://github.com/DeepLabCut/DeepLabCut.git@pytorch_dlc#egg=deeplabcut[gui,modelzoo,wandb]"
-# ```
-
+# install: conda env create -f DEEPLABCUT.yaml
+# update:  conda env update -f DEEPLABCUT.yaml
 name: DEEPLABCUT
 channels:
   - conda-forge
@@ -36,9 +32,7 @@ dependencies:
   - notebook<7.0.0
   - ffmpeg
   - pytables==3.8.0
-  - openpyxl
-  # - pip:
-  #     # FOR PYTORCH, SEE https://pytorch.org/: pip3 install torch torchvision --index-url https://download.pytorch.org/whl/cu126
-  #     - torch --index-url https://download.pytorch.org/whl/cu126
-  #     - torchvision --index-url https://download.pytorch.org/whl/cu126
-  #     - "git+https://github.com/DeepLabCut/DeepLabCut.git@pytorch_dlc#egg=deeplabcut[gui,modelzoo,wandb]"
+  - pip:
+      - torch
+      - torchvision
+      - deeplabcut[gui,modelzoo,wandb]==3.0.0rc8
