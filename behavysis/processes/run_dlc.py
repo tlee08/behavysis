@@ -160,7 +160,7 @@ def run_dlc_subproc(
     will be logged to the console and the process will continue to the next video.
     """
     # TODO: implement for and try for each video and get errors?? Maybe save a log to a file
-    # Saving the script to a file
+    # Saving the script to a file.
     script_fp = os.path.join(temp_dir, f"dlc_subproc_{gputouse}.py")
     save_template(
         "dlc_subproc.py",
@@ -172,7 +172,7 @@ def run_dlc_subproc(
         temp_dlc_dir=temp_dlc_dir,
         gputouse=gputouse,
     )
-    # Running the DLC subprocess in a separate conda env
+    logger.info("Running the DLC subprocess in a separate conda environment.")
     cmd = [
         os.environ["CONDA_EXE"],
         "run",
@@ -185,7 +185,7 @@ def run_dlc_subproc(
     # run_subproc_fstream(cmd)
     run_subproc_console(cmd)
     # Removing the script file
-    silent_remove(script_fp)
+    # silent_remove(script_fp)
 
 
 def export2df(name: str, src_dir: str, dst_dir: str, logger: logging.Logger) -> None:
