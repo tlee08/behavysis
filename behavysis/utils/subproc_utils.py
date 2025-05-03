@@ -8,8 +8,6 @@ from subprocess import PIPE, Popen
 
 ENCODING = "utf-8"
 
-# TODO: Add logging (e.g. run_subproc_logger)
-
 
 def run_subproc_fstream(cmd: list[str], fp: str, **kwargs) -> None:
     """Run a subprocess and stream the output to a file."""
@@ -36,6 +34,25 @@ def run_subproc_str(cmd: list[str], **kwargs) -> str:
         if p.returncode:
             raise ValueError(err)
         return out
+
+
+def run_subproc_logger(cmd: list[str], logger, **kwargs) -> None:
+    """Run a subprocess and stream the output to a logger."""
+    # Starting the subprocess
+    with Popen(cmd, stdout=PIPE, stderr=PIPE, **kwargs) as p:
+        # Wait for the subprocess to finish
+        while True:
+            out = p.stdout.readline()
+            err = p.stderr.readline()
+            if out == b"" and p.poll() is not None:
+                break
+            if out:
+                logger.info(out.strip())
+            if err:
+                logger.error(err.strip())
+        # Error handling (returncode is not 0)
+        if p.returncode:
+            raise ValueError(err)
 
 
 def run_subproc_console(cmd: list[str], **kwargs) -> None:

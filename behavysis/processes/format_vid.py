@@ -177,10 +177,7 @@ def ffmpeg_process_vid(
         # "quiet",
         dst_fp,
     ]
-    # Making the output directory
     os.makedirs(os.path.dirname(dst_fp), exist_ok=True)
-    # Running ffmpeg command
-    # run_subproc_fstream(cmd)
     run_subproc_console(cmd)
 
 

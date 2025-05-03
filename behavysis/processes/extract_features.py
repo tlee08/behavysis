@@ -16,7 +16,7 @@ from behavysis.utils.io_utils import get_name, silent_remove
 from behavysis.utils.logging_utils import get_io_obj_content, init_logger_io_obj
 from behavysis.utils.misc_utils import enum2list
 from behavysis.utils.multiproc_utils import get_cpid
-from behavysis.utils.subproc_utils import run_subproc_console
+from behavysis.utils.subproc_utils import run_subproc_logger
 from behavysis.utils.template_utils import save_template
 
 # Order of bodyparts is from
@@ -180,9 +180,7 @@ def run_simba_subproc(
         "python",
         script_fp,
     ]
-    # Running script in subprocess
-    # TODO: more explicit error messages (maybe with logging and in run_subproc method)
-    run_subproc_console(cmd)
+    run_subproc_logger(cmd, logger)
     silent_remove(script_fp)
     logger.info("Ran SimBA feature extraction script.")
 
