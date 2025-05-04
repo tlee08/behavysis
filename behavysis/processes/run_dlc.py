@@ -33,7 +33,7 @@ from behavysis.pydantic_models.experiment_configs import ExperimentConfigs
 from behavysis.utils.diagnostics_utils import file_exists_msg
 from behavysis.utils.io_utils import get_name, silent_remove
 from behavysis.utils.logging_utils import get_io_obj_content, init_logger_io_obj
-from behavysis.utils.subproc_utils import run_subproc_logger
+from behavysis.utils.subproc_utils import run_subproc_console
 from behavysis.utils.template_utils import save_template
 
 DLC_HDF_KEY = "data"
@@ -182,8 +182,8 @@ def run_dlc_subproc(
         "python",
         script_fp,
     ]
-    run_subproc_logger(cmd, logger)
-    # Removing the script file
+    # run_subproc_logger(cmd, logger)
+    run_subproc_console(cmd)
     silent_remove(script_fp)
 
 
