@@ -30,7 +30,6 @@ from behavysis.pydantic_models.experiment_configs import (
 from behavysis.utils.dask_utils import cluster_process
 from behavysis.utils.io_utils import get_name
 from behavysis.utils.logging_utils import init_logger_file
-from behavysis.utils.multiproc_utils import get_gpu_ids
 
 
 class Project:
@@ -280,30 +279,38 @@ class Project:
         # TODO: implement diagnostics
         # TODO: implement error handling
         # If gputouse is not specified, using all GPUs
-        gputouse_ls = get_gpu_ids() if gputouse is None else [gputouse]
-        nprocs = len(gputouse_ls)
-        # Getting the experiments to run DLC on
-        exp_ls = self.experiments
-        # If overwrite is False, filtering for only experiments that need processing
-        if not overwrite:
-            exp_ls = [exp for exp in exp_ls if not os.path.isfile(exp.get_fp(Folders.KEYPOINTS.value))]
-        # Running DLC on each batch of experiments with each GPU (given allocated GPU ID)
-        exp_batches_ls = np.array_split(np.array(exp_ls), nprocs)
-        # Starting a dask cluster
-        with cluster_process(LocalCluster(n_workers=nprocs, threads_per_worker=1)):
-            # Preparing all experiments for execution
-            f_d_ls = [
-                dask.delayed(RunDLC.ma_dlc_run_batch)(  # type: ignore
-                    vid_fp_ls=[exp.get_fp(Folders.FORMATTED_VID.value) for exp in exp_batch],
-                    keypoints_dir=os.path.join(self.root_dir, Folders.KEYPOINTS.value),
-                    configs_dir=os.path.join(self.root_dir, Folders.CONFIGS.value),
-                    gputouse=gputouse,
-                    overwrite=overwrite,
-                )
-                for gputouse, exp_batch in zip(gputouse_ls, exp_batches_ls)
-            ]
-            # Executing in parallel
-            list(dask.compute(*f_d_ls))  # type: ignore
+        # gputouse_ls = get_gpu_ids() if gputouse is None else [gputouse]
+        # nprocs = len(gputouse_ls)
+        # # Getting the experiments to run DLC on
+        # exp_ls = self.experiments
+        # # If overwrite is False, filtering for only experiments that need processing
+        # if not overwrite:
+        #     exp_ls = [exp for exp in exp_ls if not os.path.isfile(exp.get_fp(Folders.KEYPOINTS.value))]
+        # # Running DLC on each batch of experiments with each GPU (given allocated GPU ID)
+        # exp_batches_ls = np.array_split(np.array(exp_ls), nprocs)
+        # # Starting a dask cluster
+        # with cluster_process(LocalCluster(n_workers=nprocs, threads_per_worker=1)):
+        #     # Preparing all experiments for execution
+        #     f_d_ls = [
+        #         dask.delayed(RunDLC.ma_dlc_run_batch)(  # type: ignore
+        #             vid_fp_ls=[exp.get_fp(Folders.FORMATTED_VID.value) for exp in exp_batch],
+        #             keypoints_dir=os.path.join(self.root_dir, Folders.KEYPOINTS.value),
+        #             configs_dir=os.path.join(self.root_dir, Folders.CONFIGS.value),
+        #             gputouse=gputouse,
+        #             overwrite=overwrite,
+        #         )
+        #         for gputouse, exp_batch in zip(gputouse_ls, exp_batches_ls)
+        #     ]
+        #     # Executing in parallel
+        #     list(dask.compute(*f_d_ls))  # type: ignore
+        # VERSION 2:
+        RunDLC.ma_dlc_run_batch(
+            vid_fp_ls=[exp.get_fp(Folders.FORMATTED_VID.value) for exp in self.experiments],
+            keypoints_dir=os.path.join(self.root_dir, Folders.KEYPOINTS.value),
+            configs_dir=os.path.join(self.root_dir, Folders.CONFIGS.value),
+            gputouse=gputouse,
+            overwrite=overwrite,
+        )
 
     def calculate_parameters(self, funcs: tuple[Callable, ...]) -> None:
         self._proc_scaff(Experiment.calculate_parameters, funcs)
