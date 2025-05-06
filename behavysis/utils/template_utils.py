@@ -53,7 +53,7 @@ def import_static_templates_script(
     if dialogue:
         # Dialogue to check if the user wants to make the files
         to_continue = (input(f"Running {description} in current directory. Continue? [y/N]: ").lower() + " ")[0] == "y"
-        if to_continue:
+        if not to_continue:
             print("Exiting.")
             return to_continue, to_overwrite
         # Dialogue to check if the user wants to overwrite the files
