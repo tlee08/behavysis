@@ -50,7 +50,7 @@ behavysis_init = "behavysis.scripts.init:main"
 behavysis_make_project = "behavysis.scripts.make_project:main"
 behavysis_project_gui = "behavysis.scripts.project_gui:run_script"
 behavysis_viewer = "behavysis.viewer.__main__:main"
-behavysis_create_dlc_builder = "behavysis.scripts.create_dlc_builder:main"
+behavysis_make_dlc_builder = "behavysis.scripts.make_dlc_builder:main"
 
 [tool.ruff]
 line-length = 120

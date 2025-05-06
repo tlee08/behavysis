@@ -3,7 +3,7 @@ Utility functions.
 """
 
 import os
-from typing import Any
+from typing import Any, Tuple
 
 from jinja2 import Environment, PackageLoader
 
@@ -42,29 +42,32 @@ def import_static_templates_script(
     pkg_name: str,
     pkg_subdir: str,
     root_dir: str = ".",
-    overwrite: bool = False,
+    to_overwrite: bool = False,
     dialogue: bool = True,
-) -> None:
+) -> Tuple[bool, bool]:
     """
     A function to import static templates to a folder.
     Useful for calling scripts from the command line.
     """
+    to_continue = False
     if dialogue:
         # Dialogue to check if the user wants to make the files
-        to_continue = input(f"Running {description} in current directory. Continue? [y/N]: ").lower() + " "
-        if to_continue[0] != "y":
+        to_continue = (input(f"Running {description} in current directory. Continue? [y/N]: ").lower() + " ")[0] == "y"
+        if to_continue:
             print("Exiting.")
-            return
+            return to_continue, to_overwrite
         # Dialogue to check if the user wants to overwrite the files
-        to_overwrite = input("Overwrite existing files? [y/N]: ").lower() + " "
-        overwrite = to_overwrite[0] == "y"
+        to_overwrite = (input("Overwrite existing files? [y/N]: ").lower() + " ")[0] == "y"
     # Making the root folder
     os.makedirs(root_dir, exist_ok=True)
     # Copying the Python files to the project folder
     for template_fp in templates_ls:
         dst_fp = os.path.join(root_dir, template_fp)
-        if not overwrite and check_files_exist(dst_fp):
+        if not to_overwrite and check_files_exist(dst_fp):
             # Check if we should skip importing (i.e. overwrite is False and file exists)
             print(file_exists_msg(dst_fp))
             continue
+        # Writing the template to the destination file
         save_template(template_fp, pkg_name, pkg_subdir, dst_fp)
+    # Returning the overwrite and dialogue values
+    return to_continue, to_overwrite

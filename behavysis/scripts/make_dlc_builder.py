@@ -11,7 +11,7 @@ def main() -> None:
         pkg_name="behavysis",
         pkg_subdir="templates",
         root_dir=".",
-        overwrite=False,
+        to_overwrite=False,
         dialogue=True,
     )
 
