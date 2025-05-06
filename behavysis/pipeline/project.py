@@ -392,6 +392,9 @@ class Project:
         configs = ExperimentConfigs.read_json(self.experiments[0].get_fp(Folders.CONFIGS.value))
         bin_sizes_sec = configs.get_ref(configs.user.analyse.bins_sec)
         bin_sizes_sec = np.append(bin_sizes_sec, "custom")
+        # Checking that the analysis directory exists
+        if not os.path.isdir(proj_analyse_dir):
+            return
         # Searching through all the analysis subdir
         for analyse_subdir in os.listdir(proj_analyse_dir):
             for bin_i in bin_sizes_sec:
@@ -429,6 +432,9 @@ class Project:
         self.logger.info("%s...", description)
         # AGGREGATING SUMMARY DATA
         proj_analyse_dir = os.path.join(self.root_dir, ANALYSIS_DIR)
+        # Checking that the analysis directory exists
+        if not os.path.isdir(proj_analyse_dir):
+            return
         # Searching through all the analysis subdir
         for analyse_subdir in os.listdir(proj_analyse_dir):
             df_ls = []

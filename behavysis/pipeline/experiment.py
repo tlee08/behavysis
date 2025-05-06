@@ -548,7 +548,7 @@ class Experiment:
         return self._proc_scaff(
             (EvaluateVid.evaluate_vid,),
             formatted_vid_fp=self.get_fp(Folders.FORMATTED_VID),
-            keypoints_fp=self.get_fp(Folders.PREPROCESSED),
+            keypoints_fp=self.get_fp(Folders.KEYPOINTS),  # Folders.PREPROCESSED
             analysis_combined_fp=self.get_fp(Folders.ANALYSIS_COMBINED),
             eval_vid_fp=self.get_fp(Folders.EVALUATE_VID),
             configs_fp=self.get_fp(Folders.CONFIGS),
