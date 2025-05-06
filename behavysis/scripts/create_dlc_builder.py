@@ -7,7 +7,7 @@ def main() -> None:
     """
     import_static_templates_script(
         description="Make DLC Model Script",
-        templates_ls=["train_dlc_model.py"],
+        templates_ls=["dlc_builder.ipynb"],
         pkg_name="behavysis",
         pkg_subdir="templates",
         root_dir=".",
