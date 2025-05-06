@@ -4,7 +4,6 @@ Utility functions.
 
 import os
 import subprocess
-from subprocess import PIPE, Popen
 
 ENCODING = "utf-8"
 
@@ -15,7 +14,7 @@ def run_subproc_fstream(cmd: list[str], fp: str, **kwargs) -> None:
     os.makedirs(os.path.dirname(fp), exist_ok=True)
     with open(fp, "w", encoding=ENCODING) as f:
         # Starting the subprocess
-        with Popen(cmd, stdout=f, stderr=f, **kwargs) as p:
+        with subprocess.Popen(cmd, stdout=f, stderr=f, **kwargs) as p:
             # Wait for the subprocess to finish
             p.wait()
             # Error handling (returncode is not 0)
@@ -27,7 +26,7 @@ def run_subproc_fstream(cmd: list[str], fp: str, **kwargs) -> None:
 def run_subproc_str(cmd: list[str], **kwargs) -> str:
     """Run a subprocess and return the output as a string."""
     # Running the subprocess
-    with Popen(cmd, stdout=PIPE, stderr=PIPE, **kwargs) as p:
+    with subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, **kwargs) as p:
         # Wait for the subprocess to finish
         out, err = p.communicate()
         # Error handling (returncode is not 0)
@@ -39,11 +38,11 @@ def run_subproc_str(cmd: list[str], **kwargs) -> str:
 def run_subproc_logger(cmd: list[str], logger, **kwargs) -> None:
     """Run a subprocess and stream the output to a logger."""
     # Starting the subprocess
-    with Popen(cmd, stdout=PIPE, stderr=PIPE, **kwargs) as p:
+    with subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, **kwargs) as p:
         # Wait for the subprocess to finish
         while True:
-            out = p.stdout.readline()
-            err = p.stderr.readline()
+            out = p.stdout.readline() if p.stdout else b""
+            err = p.stderr.readline() if p.stderr else b""
             if out == b"" and p.poll() is not None:
                 break
             if out:
@@ -58,7 +57,7 @@ def run_subproc_logger(cmd: list[str], logger, **kwargs) -> None:
 def run_subproc_console(cmd: list[str], **kwargs) -> None:
     """Run a subprocess and stream the output to a file."""
     # Starting the subprocess
-    with Popen(cmd, **kwargs) as p:
+    with subprocess.Popen(cmd, **kwargs) as p:
         # Wait for the subprocess to finish
         p.wait()
         # Error handling (returncode is not 0)
