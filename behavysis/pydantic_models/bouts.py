@@ -18,7 +18,7 @@ class Bout(PydanticBaseModel):
 
 class BoutStruct(PydanticBaseModel):
     behav: str
-    user_defined: list[Bout]
+    user_defined: list[str]
 
 
 class Bouts(PydanticBaseModel):
