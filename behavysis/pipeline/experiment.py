@@ -23,7 +23,11 @@ from behavysis.processes.format_vid import FormatVid
 from behavysis.processes.run_dlc import RunDLC
 from behavysis.processes.update_configs import UpdateConfigs
 from behavysis.pydantic_models.experiment_configs import AutoConfigs, ExperimentConfigs
-from behavysis.utils.logging_utils import get_io_obj_content, init_logger_file, init_logger_io_obj
+from behavysis.utils.logging_utils import (
+    get_io_obj_content,
+    init_logger_file,
+    init_logger_io_obj,
+)
 
 
 class Experiment:
@@ -167,7 +171,9 @@ class Experiment:
             dd[f_name] = get_io_obj_content(f_io_obj)
             # Clearing io object
             f_io_obj.truncate(0)
-        self.logger.info(f"Finished processing experiment, {self.name}, with:{f_names_ls_msg}")
+        self.logger.info(
+            f"Finished processing experiment, {self.name}, with:{f_names_ls_msg}"
+        )
         return dd
 
     #####################################################################
@@ -372,7 +378,10 @@ class Experiment:
             overwrite=overwrite,
         )
         # If there is an error or warning (indicates not to ovewrite) in logger, return early
-        if "ERROR" in dd0[Export.df2df.__name__] or "WARNING" in dd0[Export.df2df.__name__]:
+        if (
+            "ERROR" in dd0[Export.df2df.__name__]
+            or "WARNING" in dd0[Export.df2df.__name__]
+        ):
             return dd0
         # Feeding through preprocessing functions
         dd1 = self._proc_scaff(
@@ -548,7 +557,7 @@ class Experiment:
         return self._proc_scaff(
             (EvaluateVid.evaluate_vid,),
             formatted_vid_fp=self.get_fp(Folders.FORMATTED_VID),
-            keypoints_fp=self.get_fp(Folders.KEYPOINTS),  # Folders.PREPROCESSED
+            keypoints_fp=self.get_fp(Folders.PREPROCESSED),  # Folders.PREPROCESSED
             analysis_combined_fp=self.get_fp(Folders.ANALYSIS_COMBINED),
             eval_vid_fp=self.get_fp(Folders.EVALUATE_VID),
             configs_fp=self.get_fp(Folders.CONFIGS),
