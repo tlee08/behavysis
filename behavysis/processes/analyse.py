@@ -73,7 +73,9 @@ class Analyse:
         configs_filt_ls = configs.user.analyse.in_roi
         # Loading in dataframe
         keypoints_df = KeypointsDf.clean_headings(KeypointsDf.read(keypoints_fp))
-        assert keypoints_df.shape[0] > 0, "No frames in keypoints_df. Please check keypoints file."
+        assert keypoints_df.shape[0] > 0, (
+            "No frames in keypoints_df. Please check keypoints file."
+        )
         # Getting indivs list
         indivs, _ = KeypointsDf.get_indivs_bpts(keypoints_df)
         # Making analysis_df
@@ -98,9 +100,12 @@ class Analyse:
             KeypointsDf.check_bpts_exist(keypoints_df, bpts)
             KeypointsDf.check_bpts_exist(keypoints_df, roi_corners)
             # Getting average corner coordinates. Assumes arena does not move.
-            corners_i_df = pd.DataFrame([keypoints_df[(IndivCols.SINGLE.value, pt)].mean() for pt in roi_corners]).drop(
-                columns=["likelihood"]
-            )
+            corners_i_df = pd.DataFrame(
+                [
+                    keypoints_df[(IndivCols.SINGLE.value, pt)].mean()
+                    for pt in roi_corners
+                ]
+            ).drop(columns=["likelihood"])
             # Adjusting x-y to have `padding_px` dilation/erosion from the points themselves
             roi_center = corners_i_df.mean()
             for i in corners_i_df.index:
@@ -110,30 +115,44 @@ class Analyse:
                     corners_i_df.loc[i, x] - roi_center[x],
                 )
                 # Getting x, y distances so point is `padding_px` padded (away) from center
-                corners_i_df.loc[i, x] = corners_i_df.loc[i, x] + (padding_px * np.cos(theta))
-                corners_i_df.loc[i, y] = corners_i_df.loc[i, y] + (padding_px * np.sin(theta))
+                corners_i_df.loc[i, x] = corners_i_df.loc[i, x] + (
+                    padding_px * np.cos(theta)
+                )
+                corners_i_df.loc[i, y] = corners_i_df.loc[i, y] + (
+                    padding_px * np.sin(theta)
+                )
             # Making the res_df
             analysis_i_df = AnalysisDf.init_df(keypoints_df.index)
             # For each individual, getting the in-roi status
             for indiv in indivs:
                 # Getting average body center (x, y) for each individual
-                analysis_i_df[(indiv, x)] = keypoints_df.loc[:, idx[indiv, bpts, x]].mean(axis=1).values  # type: ignore
-                analysis_i_df[(indiv, y)] = keypoints_df.loc[:, idx[indiv, bpts, y]].mean(axis=1).values  # type: ignore
+                analysis_i_df[(indiv, x)] = (
+                    keypoints_df.loc[:, idx[indiv, bpts, x]].mean(axis=1).values
+                )  # type: ignore
+                analysis_i_df[(indiv, y)] = (
+                    keypoints_df.loc[:, idx[indiv, bpts, y]].mean(axis=1).values
+                )  # type: ignore
                 # Determining if the indiv body center is in the ROI
                 analysis_i_df[(indiv, roi_name)] = analysis_i_df[indiv].apply(
                     lambda pt: cls._pt_in_roi(pt, corners_i_df, logger), axis=1
                 )
             # Inverting in_roi status if is_in is False
             if not is_in:
-                analysis_i_df.loc[:, idx[:, roi_name]] = ~analysis_i_df.loc[:, idx[:, roi_name]]  # type: ignore
-            analysis_df_ls.append(analysis_i_df.loc[:, idx[:, roi_name]].astype(np.int8))  # type: ignore
+                analysis_i_df.loc[:, idx[:, roi_name]] = ~analysis_i_df.loc[
+                    :, idx[:, roi_name]
+                ]  # type: ignore
+            analysis_df_ls.append(
+                analysis_i_df.loc[:, idx[:, roi_name]].astype(np.int8)
+            )  # type: ignore
             scatter_df_ls.append(analysis_i_df)
             corners_df_ls.append(corners_i_df)
             roi_names_ls.append(roi_name)
         # Concatenating all analysis_df_ls and roi_corners_df_ls
         analysis_df = pd.concat(analysis_df_ls, axis=1)
         scatter_df = pd.concat(scatter_df_ls, axis=1)
-        corners_df = pd.concat(corners_df_ls, keys=roi_names_ls, names=["roi"]).reset_index(level="roi")
+        corners_df = pd.concat(
+            corners_df_ls, keys=roi_names_ls, names=["roi"]
+        ).reset_index(level="roi")
         # Saving analysis_df
         fbf_fp = os.path.join(dst_subdir, FBF, f"{name}.{AnalysisDf.IO}")
         AnalysisDf.write(analysis_df, fbf_fp)
@@ -160,7 +179,9 @@ class Analyse:
         return get_io_obj_content(io_obj)
 
     @classmethod
-    def _pt_in_roi(cls, pt: pd.Series, corners_df: pd.DataFrame, logger: logging.Logger) -> bool:
+    def _pt_in_roi(
+        cls, pt: pd.Series, corners_df: pd.DataFrame, logger: logging.Logger
+    ) -> bool:
         """__summary__"""
         # Counting crossings over edge in region when point is translated to the right
         crossings = 0
@@ -178,7 +199,9 @@ class Analyse:
             # Getting whether point-y is between corners-y
             y_between = (c1[y] > pt[y]) != (c2[y] > pt[y])
             # Getting whether point-x is to the left (less than) the intersection of corners-x
-            x_left_of = pt[x] < (c2[x] - c1[x]) * (pt[y] - c1[y]) / (c2[y] - c1[y]) + c1[x]
+            x_left_of = (
+                pt[x] < (c2[x] - c1[x]) * (pt[y] - c1[y]) / (c2[y] - c1[y]) + c1[x]
+            )
             if y_between and x_left_of:
                 crossings += 1
         # Odd number of crossings means point is in region
@@ -220,7 +243,7 @@ class Analyse:
                 # Adding frame image to plot
                 ax.imshow(
                     X=frame,
-                    alpha=0.3,
+                    alpha=0.5,
                 )
                 # bpts scatter plot
                 sns.scatterplot(
@@ -228,7 +251,7 @@ class Analyse:
                     x=CoordsCols.X.value,
                     y=CoordsCols.Y.value,
                     hue=roi,
-                    palette={0: "grey", 1: "green"},
+                    palette={0: "orange", 1: "green"},
                     alpha=0.3,
                     linewidth=0,
                     marker=".",
@@ -254,7 +277,7 @@ class Analyse:
                 # Setting axes characteristics
                 ax.set_title(f"{roi} - {indiv}")
                 ax.set_aspect("equal")
-                ax.invert_yaxis()
+                # ax.invert_yaxis()
         # Saving fig
         os.makedirs(os.path.dirname(dst_fp), exist_ok=True)
         fig.savefig(dst_fp)
@@ -286,7 +309,9 @@ class Analyse:
 
         # Loading in dataframe
         keypoints_df = KeypointsDf.clean_headings(KeypointsDf.read(keypoints_fp))
-        assert keypoints_df.shape[0] > 0, "No frames in keypoints_df. Please check keypoints file."
+        assert keypoints_df.shape[0] > 0, (
+            "No frames in keypoints_df. Please check keypoints file."
+        )
         # Checking body-centre bodypart exists
         KeypointsDf.check_bpts_exist(keypoints_df, bpts)
         # Getting indivs and bpts list
@@ -300,7 +325,9 @@ class Analyse:
             # Making a rolling window of 3 frames for average body-centre
             # Otherwise jitter contributes to movement
             jitter_frames = 3
-            smoothed_xy_df = keypoints_df.rolling(window=jitter_frames, min_periods=1, center=True).agg(np.nanmean)
+            smoothed_xy_df = keypoints_df.rolling(
+                window=jitter_frames, min_periods=1, center=True
+            ).agg(np.nanmean)
             # Getting changes in x-y values between frames (deltas)
             delta_x = smoothed_xy_df.loc[:, idx[indiv, bpts, "x"]].mean(axis=1).diff()  # type: ignore
             delta_y = smoothed_xy_df.loc[:, idx[indiv, bpts, "y"]].mean(axis=1).diff()  # type: ignore
@@ -357,7 +384,9 @@ class Analyse:
 
         # Loading in dataframe
         keypoints_df = KeypointsDf.clean_headings(KeypointsDf.read(keypoints_fp))
-        assert keypoints_df.shape[0] > 0, "No frames in keypoints_df. Please check keypoints file."
+        assert keypoints_df.shape[0] > 0, (
+            "No frames in keypoints_df. Please check keypoints file."
+        )
         # Checking body-centre bodypart exists
         KeypointsDf.check_bpts_exist(keypoints_df, bpts)
         # Getting indivs and bpts list
@@ -371,7 +400,9 @@ class Analyse:
             # Making a rolling window of 3 frames for average body-centre
             # Otherwise jitter contributes to movement
             jitter_frames = 3
-            smoothed_xy_df = keypoints_df.rolling(window=jitter_frames, min_periods=1, center=True).agg(np.nanmean)
+            smoothed_xy_df = keypoints_df.rolling(
+                window=jitter_frames, min_periods=1, center=True
+            ).agg(np.nanmean)
             # Getting changes in x-y values between frames (deltas)
             delta_x = smoothed_xy_df.loc[:, idx[indiv, bpts, "x"]].mean(axis=1).diff()  # type: ignore
             delta_y = smoothed_xy_df.loc[:, idx[indiv, bpts, "y"]].mean(axis=1).diff()  # type: ignore
@@ -426,7 +457,9 @@ class Analyse:
 
         # Loading in dataframe
         keypoints_df = KeypointsDf.clean_headings(KeypointsDf.read(keypoints_fp))
-        assert keypoints_df.shape[0] > 0, "No frames in keypoints_df. Please check keypoints file."
+        assert keypoints_df.shape[0] > 0, (
+            "No frames in keypoints_df. Please check keypoints file."
+        )
         # Checking body-centre bodypart exists
         KeypointsDf.check_bpts_exist(keypoints_df, bpts)
         # Getting indivs and bpts list
@@ -501,7 +534,9 @@ class Analyse:
 
         # Loading in dataframe
         keypoints_df = KeypointsDf.clean_headings(KeypointsDf.read(keypoints_fp))
-        assert keypoints_df.shape[0] > 0, "No frames in keypoints_df. Please check keypoints file."
+        assert keypoints_df.shape[0] > 0, (
+            "No frames in keypoints_df. Please check keypoints file."
+        )
         # Checking body-centre bodypart exists
         KeypointsDf.check_bpts_exist(keypoints_df, bpts)
         # Getting indivs and bpts list
@@ -523,15 +558,19 @@ class Analyse:
                 temp_df[f"{bpt}_dist"] = delta
                 # Smoothing
                 temp_df[f"{bpt}_dist"] = (
-                    temp_df[f"{bpt}_dist"].rolling(window=smoothing_frames, min_periods=1, center=True).agg(np.nanmean)
+                    temp_df[f"{bpt}_dist"]
+                    .rolling(window=smoothing_frames, min_periods=1, center=True)
+                    .agg(np.nanmean)
                 )
             # If ALL bodypoints do not leave `thresh_px`
-            analysis_df[(indiv, f_name)] = temp_df.apply(lambda x: pd.Series(np.all(x < thresh_px)), axis=1).astype(
-                np.int8
-            )
+            analysis_df[(indiv, f_name)] = temp_df.apply(
+                lambda x: pd.Series(np.all(x < thresh_px)), axis=1
+            ).astype(np.int8)
 
             # Getting start, stop, and duration of each freezing behav bout
-            freezingbouts_df = BehavScoredDf.vect2bouts_df(analysis_df[(indiv, f_name)] == 1)
+            freezingbouts_df = BehavScoredDf.vect2bouts_df(
+                analysis_df[(indiv, f_name)] == 1
+            )
             # For each freezing bout, if there is less than window_frames, tehn
             # it is not actually freezing
             for _, row in freezingbouts_df.iterrows():
