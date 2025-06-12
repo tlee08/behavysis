@@ -269,39 +269,39 @@ class AnalysisBinnedDf(DFMixin):
             bins_ls=bins_ls,
             cbins_ls=cbins_ls,
         )
-        # # Adding bout latency (time from start to first bout)
-        # latency_df_ls = np.zeros(analysis_df.shape[1], dtype="object")
-        # for i, col in enumerate(analysis_df.columns):
-        #     # Getting column vector of individual-measure
-        #     vect = analysis_df[col]
-        #     # Handling edge case where columns are empty
-        #     vect = pd.Series([0]) if vect.shape[0] == 0 else vect
-        #     # Setting columns to type float
-        #     vect = vect.astype(np.float64)
-        #     # Getting equivalent index vector
-        #     index = vect.index.get_level_values(AnalysisDf.IN.FRAME.value) / fps
-        #     # Aggregating stats (latency)
-        #     latency_df_ls[i] = (
-        #         pd.Series(
-        #             {"latency": index[vect == 1][0] if np.any(vect == 1) else np.nan},
-        #             name=col,
-        #         )
-        #         .to_frame()
-        #         .T
-        #     )
-        # # Concatenating summary_df_ls, setting index, and cleaning
-        # latency_df = pd.concat(latency_df_ls, axis=0)
-        # latency_df.index = analysis_df.columns
-        # latency_df = AnalysisSummaryDf.basic_clean(latency_df)
-        # # Concatenating latency_df to summary_df
-        # summary_df = AnalysisSummaryDf.agg_behavs(analysis_df, fps)
-        # summary_df = pd.concat([summary_df, latency_df], axis=1)
-        # summary_df = AnalysisSummaryDf.basic_clean(summary_df)
-        # # Saving new summary_df
-        # summary_fp = os.path.join(dst_dir, SUMMARY, f"{name}.{cls.IO}")
-        # summary_csv_fp = os.path.join(dst_dir, f"{SUMMARY}_csv", f"{name}.csv")
-        # AnalysisSummaryDf.write(summary_df, summary_fp)
-        # AnalysisSummaryDf.write_csv(summary_df, summary_csv_fp)
+        # Adding bout latency (time from start to first bout)
+        latency_df_ls = np.zeros(analysis_df.shape[1], dtype="object")
+        for i, col in enumerate(analysis_df.columns):
+            # Getting column vector of individual-measure
+            vect = analysis_df[col]
+            # Handling edge case where columns are empty
+            vect = pd.Series([0]) if vect.shape[0] == 0 else vect
+            # Setting columns to type float
+            vect = vect.astype(np.float64)
+            # Getting equivalent index vector
+            index = vect.index.get_level_values(AnalysisDf.IN.FRAME.value) / fps
+            # Aggregating stats (latency)
+            latency_df_ls[i] = (
+                pd.Series(
+                    {"latency": index[vect == 1][0] if np.any(vect == 1) else np.nan},
+                    name=col,
+                )
+                .to_frame()
+                .T
+            )
+        # Concatenating summary_df_ls, setting index, and cleaning
+        latency_df = pd.concat(latency_df_ls, axis=0)
+        latency_df.index = analysis_df.columns
+        latency_df = AnalysisSummaryDf.basic_clean(latency_df)
+        # Concatenating latency_df to summary_df
+        summary_df = AnalysisSummaryDf.agg_behavs(analysis_df, fps)
+        summary_df = pd.concat([summary_df, latency_df], axis=1)
+        summary_df = AnalysisSummaryDf.basic_clean(summary_df)
+        # Saving new summary_df
+        summary_fp = os.path.join(dst_dir, SUMMARY, f"{name}.{cls.IO}")
+        summary_csv_fp = os.path.join(dst_dir, f"{SUMMARY}_csv", f"{name}.csv")
+        AnalysisSummaryDf.write(summary_df, summary_fp)
+        AnalysisSummaryDf.write_csv(summary_df, summary_csv_fp)
         return outcome
 
     @classmethod

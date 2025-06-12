@@ -200,6 +200,8 @@ class Analyse:
         indivs_ls = scatter_df.columns.unique(AnalysisDf.CN.INDIVIDUALS.value)
         roi_ls = scatter_df.columns.unique(AnalysisDf.CN.MEASURES.value)
         roi_ls = roi_ls[np.isin(roi_ls, ["x", "y"], invert=True)]
+        # Making index a single level
+        scatter_df.index = scatter_df.index.get_level_values(AnalysisDf.IN.FRAME.value)
         # "Looping" ROI bounding corners (to make closed polygons)
         corners_df = pd.concat(
             [corners_df, corners_df.groupby("roi").first().reset_index()],
@@ -222,9 +224,6 @@ class Analyse:
                     X=frame,
                     alpha=0.5,
                 )
-                print(pd.DataFrame(scatter_df[indiv]))
-                print(pd.DataFrame(scatter_df[indiv]).index)
-                print(pd.DataFrame(scatter_df[indiv]).columns)
                 # bpts scatter plot
                 sns.scatterplot(
                     data=pd.DataFrame(scatter_df[indiv]),
