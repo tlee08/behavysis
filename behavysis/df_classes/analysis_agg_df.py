@@ -283,7 +283,7 @@ class AnalysisBinnedDf(DFMixin):
             # Aggregating stats (latency)
             latency_df_ls[i] = (
                 pd.Series(
-                    {"latency": index[vect == 1][0] if np.any(vect == 1) else np.nan},
+                    {"latency": index[vect == 1][0] if np.any(vect == 1) else -1},
                     name=col,
                 )
                 .to_frame()
