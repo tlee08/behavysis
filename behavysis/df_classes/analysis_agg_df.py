@@ -62,7 +62,7 @@ class AnalysisSummaryDf(DFMixin):
             # Getting column vector of individual-measure
             vect = analysis_df[col]
             # Handling edge case where columns are empty
-            vect = np.array([0]) if vect.shape[0] == 0 else vect
+            vect = pd.Series([0]) if vect.shape[0] == 0 else vect
             # Setting columns to type float
             vect = vect.astype(np.float64)
             # Aggregating stats
@@ -117,7 +117,7 @@ class AnalysisSummaryDf(DFMixin):
             # Getting bout frequency (before it is overwritten if empty)
             bout_freq = bouts.shape[0]
             # Handling edge case where bouts is empty
-            bouts = np.array([0]) if bouts.shape[0] == 0 else bouts
+            bouts = pd.Series([0]) if bouts.shape[0] == 0 else bouts
             # Setting bouts to type float
             bouts = bouts.astype(np.float64)
             # Aggregating stats
