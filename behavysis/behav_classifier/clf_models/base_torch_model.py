@@ -7,6 +7,7 @@ from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader, Dataset, TensorDataset
 from tqdm import tqdm
 
+from behavysis.utils.logging_utils import init_logger_io_obj
 from behavysis.utils.misc_utils import array2listofvect, listofvects2array
 
 
@@ -53,6 +54,7 @@ class BaseTorchModel(nn.Module):
         epochs: int,
         val_split: float,
     ):
+        logger, io_obj = init_logger_io_obj()
         # Making a 2D array of (df_index, index, y) for train test split
         index_flat = listofvects2array(index_ls, [y[index] for y, index in zip(y_ls, index_ls)])
         # Split data into training and validation sets
@@ -74,8 +76,8 @@ class BaseTorchModel(nn.Module):
             # Validate model
             vloss = self._validate(val_dl)
             # showing losses
-            print(f"epochs: {epoch + 1}/{epochs}")
-            print(f"loss: {loss:.3f}, vloss: {vloss:.3f}")
+            logger.info(f"epochs: {epoch + 1}/{epochs}")
+            logger.info(f"loss: {loss:.3f}, vloss: {vloss:.3f}")
             # Storing loss
             history.loc[epoch, "loss"] = loss
             history.loc[epoch, "vloss"] = vloss
