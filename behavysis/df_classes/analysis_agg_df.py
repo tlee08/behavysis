@@ -322,8 +322,6 @@ class AnalysisBinnedDf(DFMixin):
         _summary_
         """
         outcome = ""
-        # Making copy of analysis_df
-        analysis_df = analysis_df.copy()
         # Offsetting the frames index to start from 0
         # (i.e. when the experiment commenced, rather than when the recording started)
         index_df = analysis_df.index.to_frame(index=False)
