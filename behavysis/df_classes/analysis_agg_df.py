@@ -299,9 +299,7 @@ class AnalysisBinnedDf(DFMixin):
         summary_df = AnalysisSummaryDf.basic_clean(summary_df)
         # Saving new summary_df
         summary_fp = os.path.join(dst_dir, SUMMARY, f"{name}.{cls.IO}")
-        summary_csv_fp = os.path.join(dst_dir, f"{SUMMARY}_csv", f"{name}.csv")
         AnalysisSummaryDf.write(summary_df, summary_fp)
-        AnalysisSummaryDf.write_csv(summary_df, summary_csv_fp)
         return outcome
 
     @classmethod
@@ -328,35 +326,29 @@ class AnalysisBinnedDf(DFMixin):
         analysis_df.index = pd.MultiIndex.from_frame(index_df)
         # Summarising analysis_df
         summary_fp = os.path.join(dst_dir, SUMMARY, f"{name}.{cls.IO}")
-        summary_csv_fp = os.path.join(dst_dir, f"{SUMMARY}_csv", f"{name}.csv")
         summary_df = summary_func(analysis_df, fps)
         AnalysisSummaryDf.write(summary_df, summary_fp)
-        AnalysisSummaryDf.write_csv(summary_df, summary_csv_fp)
         # Getting timestamps index
         timestamps = analysis_df.index.get_level_values(AnalysisDf.IN.FRAME.value) / fps
         # Binning analysis_df
         for bin_sec in bins_ls:
             # Making filepaths
             binned_fp = os.path.join(dst_dir, f"{BINNED}_{bin_sec}", f"{name}.{cls.IO}")
-            binned_csv_fp = os.path.join(dst_dir, f"{BINNED}_{bin_sec}_csv", f"{name}.csv")
             binned_plot_fp = os.path.join(dst_dir, f"{BINNED}_{bin_sec}_{PLOT}", f"{name}.png")
             # Making binned df
             bins = np.arange(0, np.max(timestamps) + bin_sec, bin_sec)
             binned_df = cls.make_binned(analysis_df, fps, bins, summary_func)
             cls.write(binned_df, binned_fp)
-            cls.write_csv(binned_df, binned_csv_fp)
             # Making binned plots
             cls.make_binned_plot(binned_df, binned_plot_fp, agg_column)
         # Custom binning analysis_df
         if cbins_ls:
             # Making filepaths
             binned_fp = os.path.join(dst_dir, f"{BINNED}_{CUSTOM}", f"{name}.{cls.IO}")
-            binned_csv_fp = os.path.join(dst_dir, f"{BINNED}_{CUSTOM}_csv", f"{name}.csv")
             binned_plot_fp = os.path.join(dst_dir, f"{BINNED}_{CUSTOM}_{PLOT}", f"{name}.png")
             # Making binned df
             binned_df = cls.make_binned(analysis_df, fps, cbins_ls, summary_func)
             cls.write(binned_df, binned_fp)
-            cls.write_csv(binned_df, binned_csv_fp)
             # Making binned plots
             cls.make_binned_plot(binned_df, binned_plot_fp, agg_column)
         return outcome
