@@ -62,7 +62,7 @@ class AnalysisSummaryDf(DFMixin):
             # Getting column vector of individual-measure
             vect = analysis_df[col]
             # Handling edge case where columns are empty
-            vect = np.array([0]) if vect.shape[0] == 0 else vect
+            vect = pd.Series([0]) if vect.shape[0] == 0 else vect
             # Setting columns to type float
             vect = vect.astype(np.float64)
             # Aggregating stats
@@ -117,7 +117,7 @@ class AnalysisSummaryDf(DFMixin):
             # Getting bout frequency (before it is overwritten if empty)
             bout_freq = bouts.shape[0]
             # Handling edge case where bouts is empty
-            bouts = np.array([0]) if bouts.shape[0] == 0 else bouts
+            bouts = pd.Series([0]) if bouts.shape[0] == 0 else bouts
             # Setting bouts to type float
             bouts = bouts.astype(np.float64)
             # Aggregating stats
@@ -196,11 +196,7 @@ class AnalysisBinnedDf(DFMixin):
         _summary_
         """
         # Making binned_df long
-        binned_stacked_df = (
-            binned_df.stack(enum2tuple(AnalysisSummaryDf.IN))[agg_column]
-            .rename("value")
-            .reset_index()
-        )
+        binned_stacked_df = binned_df.stack(enum2tuple(AnalysisSummaryDf.IN))[agg_column].rename("value").reset_index()
         # Plotting line graph
         g = sns.relplot(
             data=binned_stacked_df,
@@ -279,19 +275,15 @@ class AnalysisBinnedDf(DFMixin):
             # Getting column vector of individual-measure
             vect = analysis_df[col]
             # Handling edge case where columns are empty
-            vect = np.array([0]) if vect.shape[0] == 0 else vect
+            vect = pd.Series([0]) if vect.shape[0] == 0 else vect
             # Setting columns to type float
             vect = vect.astype(np.float64)
+            # Getting equivalent index vector
+            index = vect.index.get_level_values(AnalysisDf.IN.FRAME.value) / fps
             # Aggregating stats (latency)
             latency_df_ls[i] = (
                 pd.Series(
-                    {
-                        "latency": vect[vect == 1].index.get_level_values(
-                            AnalysisDf.IN.FRAME.value
-                        )[0]
-                        if np.any(vect == 1)
-                        else np.nan
-                    },
+                    {"latency": index[vect == 1][0] if np.any(vect == 1) else np.nan},
                     name=col,
                 )
                 .to_frame()
@@ -304,7 +296,7 @@ class AnalysisBinnedDf(DFMixin):
         print(latency_df)
         print(latency_df.index)
         print(latency_df.columns)
-        latency_df = cls.basic_clean(latency_df)
+        latency_df = AnalysisSummaryDf.basic_clean(latency_df)
         print("=================")
         print(latency_df)
         print(latency_df.index)
@@ -318,7 +310,7 @@ class AnalysisBinnedDf(DFMixin):
         summary_df = pd.concat([summary_df, latency_df], axis=1)
         print("=================")
         print(summary_df)
-        summary_df = cls.basic_clean(summary_df)
+        summary_df = AnalysisSummaryDf.basic_clean(summary_df)
         print("=================")
         print(summary_df)
         print("=================")
@@ -363,12 +355,8 @@ class AnalysisBinnedDf(DFMixin):
         for bin_sec in bins_ls:
             # Making filepaths
             binned_fp = os.path.join(dst_dir, f"{BINNED}_{bin_sec}", f"{name}.{cls.IO}")
-            binned_csv_fp = os.path.join(
-                dst_dir, f"{BINNED}_{bin_sec}_csv", f"{name}.csv"
-            )
-            binned_plot_fp = os.path.join(
-                dst_dir, f"{BINNED}_{bin_sec}_{PLOT}", f"{name}.png"
-            )
+            binned_csv_fp = os.path.join(dst_dir, f"{BINNED}_{bin_sec}_csv", f"{name}.csv")
+            binned_plot_fp = os.path.join(dst_dir, f"{BINNED}_{bin_sec}_{PLOT}", f"{name}.png")
             # Making binned df
             bins = np.arange(0, np.max(timestamps) + bin_sec, bin_sec)
             binned_df = cls.make_binned(analysis_df, fps, bins, summary_func)
@@ -380,12 +368,8 @@ class AnalysisBinnedDf(DFMixin):
         if cbins_ls:
             # Making filepaths
             binned_fp = os.path.join(dst_dir, f"{BINNED}_{CUSTOM}", f"{name}.{cls.IO}")
-            binned_csv_fp = os.path.join(
-                dst_dir, f"{BINNED}_{CUSTOM}_csv", f"{name}.csv"
-            )
-            binned_plot_fp = os.path.join(
-                dst_dir, f"{BINNED}_{CUSTOM}_{PLOT}", f"{name}.png"
-            )
+            binned_csv_fp = os.path.join(dst_dir, f"{BINNED}_{CUSTOM}_csv", f"{name}.csv")
+            binned_plot_fp = os.path.join(dst_dir, f"{BINNED}_{CUSTOM}_{PLOT}", f"{name}.png")
             # Making binned df
             binned_df = cls.make_binned(analysis_df, fps, cbins_ls, summary_func)
             cls.write(binned_df, binned_fp)
