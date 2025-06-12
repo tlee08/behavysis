@@ -300,6 +300,10 @@ class AnalysisBinnedDf(DFMixin):
         # Concatenating summary_df_ls, setting index, and cleaning
         latency_df = pd.concat(latency_df_ls, axis=0)
         latency_df.index = analysis_df.columns
+        print("=================")
+        print(latency_df)
+        print(latency_df.index)
+        print(latency_df.columns)
         latency_df = cls.basic_clean(latency_df)
         print("=================")
         print(latency_df)
