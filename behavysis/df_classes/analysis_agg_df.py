@@ -280,6 +280,7 @@ class AnalysisBinnedDf(DFMixin):
             vect = vect.astype(np.float64)
             # Getting equivalent index vector
             index = vect.index.get_level_values(AnalysisDf.IN.FRAME.value) / fps
+            print(vect)
             print(index)
             print(index[vect == 1])
             # Aggregating stats (latency)
