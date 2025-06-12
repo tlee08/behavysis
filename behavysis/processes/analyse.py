@@ -222,7 +222,7 @@ class Analyse:
                     X=frame,
                     alpha=0.5,
                 )
-                print(scatter_df)
+                print(scatter_df[indiv])
                 # bpts scatter plot
                 sns.scatterplot(
                     data=pd.DataFrame(scatter_df[indiv]),
