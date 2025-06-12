@@ -299,17 +299,18 @@ class AnalysisBinnedDf(DFMixin):
             )
         # Concatenating summary_df_ls, setting index, and cleaning
         latency_df = pd.concat(latency_df_ls, axis=0)
-        print("=================")
-        print(latency_df)
         latency_df.index = analysis_df.columns
-        print(latency_df)
         print("=================")
+        print(latency_df)
         # Concatenating latency_df to summary_df
         summary_df = AnalysisSummaryDf.agg_behavs(analysis_df, fps)
+        print("=================")
+        print(summary_df)
         summary_df = pd.concat([summary_df, latency_df], axis=1)
         print("=================")
         print(summary_df)
         summary_df = cls.basic_clean(summary_df)
+        print("=================")
         print(summary_df)
         print("=================")
         # Saving new summary_df
