@@ -196,7 +196,11 @@ class AnalysisBinnedDf(DFMixin):
         _summary_
         """
         # Making binned_df long
-        binned_stacked_df = binned_df.stack(enum2tuple(AnalysisSummaryDf.IN))[agg_column].rename("value").reset_index()
+        binned_stacked_df = (
+            binned_df.stack(enum2tuple(AnalysisSummaryDf.IN))[agg_column]
+            .rename("value")
+            .reset_index()
+        )
         # Plotting line graph
         g = sns.relplot(
             data=binned_stacked_df,
@@ -258,7 +262,8 @@ class AnalysisBinnedDf(DFMixin):
         """
         _summary_
         """
-        return cls.summary_binned(
+        outcome = ""
+        outcome += cls.summary_binned(
             analysis_df=analysis_df,
             dst_dir=dst_dir,
             name=name,
@@ -268,6 +273,41 @@ class AnalysisBinnedDf(DFMixin):
             bins_ls=bins_ls,
             cbins_ls=cbins_ls,
         )
+        # Adding bout latency (time from start to first bout)
+        latency_df_ls = np.zeros(analysis_df.shape[1], dtype="object")
+        for i, col in enumerate(analysis_df.columns):
+            # Getting column vector of individual-measure
+            vect = analysis_df[col]
+            # Handling edge case where columns are empty
+            vect = np.array([0]) if vect.shape[0] == 0 else vect
+            # Setting columns to type float
+            vect = vect.astype(np.float64)
+            # Aggregating stats (latency)
+            latency_df_ls[i] = (
+                pd.Series(
+                    {
+                        "latency": vect[vect == 1].index[0]
+                        if np.any(vect == 1)
+                        else np.nan
+                    },
+                    name=col,
+                )
+                .to_frame()
+                .T
+            )
+        # Concatenating summary_df_ls, setting index, and cleaning
+        latency_df = pd.concat(latency_df_ls, axis=0)
+        latency_df.index = analysis_df.columns
+        # Concatenating latency_df to summary_df
+        summary_df = AnalysisSummaryDf.agg_behavs(analysis_df, fps)
+        summary_df = pd.concat([summary_df, latency_df], axis=1)
+        summary_df = cls.basic_clean(summary_df)
+        # Saving new summary_df
+        summary_fp = os.path.join(dst_dir, SUMMARY, f"{name}.{cls.IO}")
+        summary_csv_fp = os.path.join(dst_dir, f"{SUMMARY}_csv", f"{name}.csv")
+        AnalysisSummaryDf.write(summary_df, summary_fp)
+        AnalysisSummaryDf.write_csv(summary_df, summary_csv_fp)
+        return outcome
 
     @classmethod
     def summary_binned(
@@ -303,8 +343,12 @@ class AnalysisBinnedDf(DFMixin):
         for bin_sec in bins_ls:
             # Making filepaths
             binned_fp = os.path.join(dst_dir, f"{BINNED}_{bin_sec}", f"{name}.{cls.IO}")
-            binned_csv_fp = os.path.join(dst_dir, f"{BINNED}_{bin_sec}_csv", f"{name}.csv")
-            binned_plot_fp = os.path.join(dst_dir, f"{BINNED}_{bin_sec}_{PLOT}", f"{name}.png")
+            binned_csv_fp = os.path.join(
+                dst_dir, f"{BINNED}_{bin_sec}_csv", f"{name}.csv"
+            )
+            binned_plot_fp = os.path.join(
+                dst_dir, f"{BINNED}_{bin_sec}_{PLOT}", f"{name}.png"
+            )
             # Making binned df
             bins = np.arange(0, np.max(timestamps) + bin_sec, bin_sec)
             binned_df = cls.make_binned(analysis_df, fps, bins, summary_func)
@@ -316,8 +360,12 @@ class AnalysisBinnedDf(DFMixin):
         if cbins_ls:
             # Making filepaths
             binned_fp = os.path.join(dst_dir, f"{BINNED}_{CUSTOM}", f"{name}.{cls.IO}")
-            binned_csv_fp = os.path.join(dst_dir, f"{BINNED}_{CUSTOM}_csv", f"{name}.csv")
-            binned_plot_fp = os.path.join(dst_dir, f"{BINNED}_{CUSTOM}_{PLOT}", f"{name}.png")
+            binned_csv_fp = os.path.join(
+                dst_dir, f"{BINNED}_{CUSTOM}_csv", f"{name}.csv"
+            )
+            binned_plot_fp = os.path.join(
+                dst_dir, f"{BINNED}_{CUSTOM}_{PLOT}", f"{name}.png"
+            )
             # Making binned df
             binned_df = cls.make_binned(analysis_df, fps, cbins_ls, summary_func)
             cls.write(binned_df, binned_fp)
