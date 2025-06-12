@@ -131,9 +131,10 @@ class Analyse:
             corners_df_ls.append(corners_i_df)
             roi_names_ls.append(roi_name)
         # Concatenating all analysis_df_ls and roi_corners_df_ls
-        analysis_df = pd.concat(analysis_df_ls, axis=1)
-        scatter_df = pd.concat(scatter_df_ls, axis=1)
-        corners_df = pd.concat(corners_df_ls, keys=roi_names_ls, names=["roi"]).reset_index(level="roi")
+        analysis_df = pd.concat(analysis_df_ls, axis=1).T.drop_duplicates().T
+        scatter_df = pd.concat(scatter_df_ls, axis=1).T.drop_duplicates().T
+        corners_df = pd.concat(corners_df_ls, keys=roi_names_ls, names=["roi"]).T.drop_duplicates().T
+        corners_df = corners_df.reset_index(level="roi")
         # Saving analysis_df
         fbf_fp = os.path.join(dst_subdir, FBF, f"{name}.{AnalysisDf.IO}")
         AnalysisDf.write(analysis_df, fbf_fp)
@@ -200,8 +201,6 @@ class Analyse:
         indivs_ls = scatter_df.columns.unique(AnalysisDf.CN.INDIVIDUALS.value)
         roi_ls = scatter_df.columns.unique(AnalysisDf.CN.MEASURES.value)
         roi_ls = roi_ls[np.isin(roi_ls, ["x", "y"], invert=True)]
-        # Making index a single level
-        scatter_df.index = scatter_df.index.get_level_values(AnalysisDf.IN.FRAME.value)
         # "Looping" ROI bounding corners (to make closed polygons)
         corners_df = pd.concat(
             [corners_df, corners_df.groupby("roi").first().reset_index()],
