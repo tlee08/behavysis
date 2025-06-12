@@ -283,17 +283,12 @@ class AnalysisBinnedDf(DFMixin):
             # Setting columns to type float
             vect = vect.astype(np.float64)
             # Aggregating stats (latency)
-            print("+++++++++++++++++")
-            print(
-                vect[vect == 1].index.get_level_values(AnalysisDf.IN.FRAME.value)[0]
-                if np.any(vect == 1)
-                else np.nan
-            )
-            print("+++++++++++++++++")
             latency_df_ls[i] = (
                 pd.Series(
                     {
-                        "latency": vect[vect == 1].index.get_level_values()[0]
+                        "latency": vect[vect == 1].index.get_level_values(
+                            AnalysisDf.IN.FRAME.value
+                        )[0]
                         if np.any(vect == 1)
                         else np.nan
                     },
