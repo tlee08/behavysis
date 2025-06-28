@@ -24,7 +24,7 @@ def main() -> None:
         ),
         f"conda env create -f {os.path.join(templates_dir, 'simba.yaml')}",
     ]:
-        subprocess.run(cmd_str, shell=True, check=True)
+        subprocess.run(cmd_str, shell=True)
 
 
 if __name__ == "__main__":

@@ -8,7 +8,6 @@ channels:
 dependencies:
   - python=3.12
   - pip
-  - ipykernel
   - ffmpeg
   - hdf5
   - pip:
