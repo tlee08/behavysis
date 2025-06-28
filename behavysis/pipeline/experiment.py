@@ -171,9 +171,7 @@ class Experiment:
             dd[f_name] = get_io_obj_content(f_io_obj)
             # Clearing io object
             f_io_obj.truncate(0)
-        self.logger.info(
-            f"Finished processing experiment, {self.name}, with:{f_names_ls_msg}"
-        )
+        self.logger.info(f"Finished processing experiment, {self.name}, with:{f_names_ls_msg}")
         return dd
 
     #####################################################################
@@ -378,10 +376,7 @@ class Experiment:
             overwrite=overwrite,
         )
         # If there is an error or warning (indicates not to ovewrite) in logger, return early
-        if (
-            "ERROR" in dd0[Export.df2df.__name__]
-            or "WARNING" in dd0[Export.df2df.__name__]
-        ):
+        if "ERROR" in dd0[Export.df2df.__name__] or "WARNING" in dd0[Export.df2df.__name__]:
             return dd0
         # Feeding through preprocessing functions
         dd1 = self._proc_scaff(

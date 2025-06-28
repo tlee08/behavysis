@@ -52,7 +52,7 @@ def init_project(proj_dir: str):
 def import_experiments(proj: Project):
     proj.import_experiments()
     st.success("Experiments imported")
-    st.success(f"Experiments: \n\n{"\n".join(proj._experiments)}")
+    st.success(f"Experiments: \n\n{'\n'.join(proj._experiments)}")
 
 
 def upload_configs(configs_f):
@@ -192,7 +192,7 @@ def page_calculate_params():
     # Recalling session state variables
     proj: Project = st.session_state.get("proj", None)
     # Page description
-    st.write("Calculate the project's inherent parameters " "from the video and DLC keypoints data")
+    st.write("Calculate the project's inherent parameters from the video and DLC keypoints data")
     # List of checkboxes for each method
     st.subheader("Select Methods to Run")
     methods = get_class_methods(CalculateParams)
@@ -218,7 +218,7 @@ def page_preprocess():
     # Recalling session state variables
     proj: Project = st.session_state.get("proj", None)
     # Page description
-    st.write("Calculate the project's inherent parameters " "from the video and DLC keypoints data")
+    st.write("Calculate the project's inherent parameters from the video and DLC keypoints data")
     # List of checkboxes for each method
     st.subheader("Select Methods to Run")
     methods = get_class_methods(Preprocess)

@@ -23,9 +23,7 @@ class FeatureExtractor:
         """
         Updates project_config.ini file.
         """
-        simba_configs_fp = os.path.join(
-            simba_dir, "project_folder", "project_config.ini"
-        )
+        simba_configs_fp = os.path.join(simba_dir, "project_folder", "project_config.ini")
         # Making ConfigParser instance
         config = configparser.ConfigParser()
         # Reading in existing simba project configs
@@ -71,9 +69,7 @@ class FeatureExtractor:
         for fp in os.listdir(keypoints_dir):
             name = FeatureExtractor.get_name(fp)
             src_fp = os.path.join(keypoints_dir, f"{name}.csv")
-            dst_fp = os.path.join(
-                simba_dir, "project_folder", "csv", "input_csv", f"{name}.csv"
-            )
+            dst_fp = os.path.join(simba_dir, "project_folder", "csv", "input_csv", f"{name}.csv")
             os.makedirs(os.path.dirname(dst_fp), exist_ok=True)
             # Copying video mp4 and keypoints csv to simba project dir
             shutil.copyfile(src_fp, dst_fp)
@@ -119,9 +115,7 @@ class FeatureExtractor:
                         "fps": vid_configs["fps"],
                         "Resolution_width": vid_configs["width_px"],
                         "Resolution_height": vid_configs["height_px"],
-                        "Distance_in_mm": configs["user"]["calculate_params"][
-                            "px_per_mm"
-                        ]["dist_mm"],
+                        "Distance_in_mm": configs["user"]["calculate_params"]["px_per_mm"]["dist_mm"],
                         "pixels/mm": configs["auto"]["px_per_mm"],
                     }
                 )
@@ -148,9 +142,7 @@ class FeatureExtractor:
         The threshold is the criterion, C, multiplied by the median (or mean) of all frames.
         Any points above the threshold are set as the previously "valid" point.
         """
-        simba_configs_fp = os.path.join(
-            simba_dir, "project_folder", "project_config.ini"
-        )
+        simba_configs_fp = os.path.join(simba_dir, "project_folder", "project_config.ini")
         OutlierCorrecterMovement(config_path=simba_configs_fp).run()
         OutlierCorrecterLocation(config_path=simba_configs_fp).run()
 
@@ -159,9 +151,7 @@ class FeatureExtractor:
         """
         Skipping
         """
-        simba_configs_fp = os.path.join(
-            simba_dir, "project_folder", "project_config.ini"
-        )
+        simba_configs_fp = os.path.join(simba_dir, "project_folder", "project_config.ini")
         OutlierCorrectionSkipper(config_path=simba_configs_fp).run()
 
     #################################################
@@ -173,9 +163,7 @@ class FeatureExtractor:
         """
         Extracting features
         """
-        simba_configs_fp = os.path.join(
-            simba_dir, "project_folder", "project_config.ini"
-        )
+        simba_configs_fp = os.path.join(simba_dir, "project_folder", "project_config.ini")
         ExtractFeaturesFrom16bps(config_path=simba_configs_fp).run()
 
     #################################################

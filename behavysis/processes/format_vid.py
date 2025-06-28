@@ -42,9 +42,7 @@ class FormatVid:
     """
 
     @classmethod
-    def format_vid(
-        cls, raw_vid_fp: str, formatted_vid_fp: str, configs_fp: str, overwrite: bool
-    ) -> str:
+    def format_vid(cls, raw_vid_fp: str, formatted_vid_fp: str, configs_fp: str, overwrite: bool) -> str:
         """
         Formats the input video with the given parameters.
 
@@ -87,9 +85,7 @@ class FormatVid:
         return get_io_obj_content(io_obj)
 
     @classmethod
-    def get_vids_metadata(
-        cls, raw_vid_fp: str, formatted_vid_fp: str, configs_fp: str
-    ) -> str:
+    def get_vids_metadata(cls, raw_vid_fp: str, formatted_vid_fp: str, configs_fp: str) -> str:
         """
         Finds the video metadata/parameters for either the raw or formatted video,
         and stores this data in the experiment's config file.
@@ -207,9 +203,7 @@ def get_vid_metadata(vid_fp: str, logger: logging.Logger) -> VidMetadata:
     configs_meta = VidMetadata()
     cap = cv2.VideoCapture(vid_fp)
     if not cap.isOpened():
-        logger.warning(
-            f"The file, {vid_fp}, does not exist or is corrupted. Please check this file."
-        )
+        logger.warning(f"The file, {vid_fp}, does not exist or is corrupted. Please check this file.")
     else:
         configs_meta.height_px = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         configs_meta.width_px = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))

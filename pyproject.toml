@@ -1,63 +1,66 @@
-[tool.poetry]
+[project]
 name = "behavysis"
 version = "0.1.24"
 description = "An animal behaviour processing and analysis package"
-authors = ["BowenLab"]
-license = "GNU GPLv3"
+authors = [{ name = "BowenLab" }]
+requires-python = ">=3.12,<3.13"
 readme = "README.md"
-homepage = "https://tlee08.github.io/behavysis"
-repository = "https://github.com/tlee08/behavysis"
-documentation = "https://tlee08.github.io/behavysis"
-packages = [{ include = "behavysis" }]
+license = "GPL-3.0-or-later"
+dependencies = [
+    "pydantic>=2.7.0,<3",
+    "numpy>=1.26.4,<2",
+    "pandas>=2.2.2,<3",
+    "tables>=3.10.1,<4",
+    "pyarrow>=18.0.0,<19",
+    "scipy>=1.13.0,<2",
+    "opencv-python>=4.9.0.80,<5",
+    "seaborn>=0.13.2,<0.14",
+    "natsort>=8.4.0,<9",
+    "tqdm>=4.30.0,<5",
+    "Jinja2>=3.1.4,<4",
+    "dask[complete]>=2025.4.1,<2026",
+    "graphviz>=0.20.3,<0.21",
+    "PySide6>=6.8.0.2,<7",
+    "pyqtgraph>=0.13.7,<0.14",
+    "streamlit>=1.36.0,<2",
+    "scikit-learn>=1.4.2,<2",
+    "torch~=2.7.0",
+]
 
-[tool.poetry.dependencies]
-python = "~3.12"
-pydantic = "^2.7.0"
-numpy = "^1.26.4"
-pandas = "^2.2.2"
-tables = "^3.10.1"
-pyarrow = "^18.0.0"
-scipy = "^1.13.0"
-opencv-python = "^4.9.0.80"
-seaborn = "^0.13.2"
-natsort = "^8.4.0"
-tqdm = "^4.30.0"
-Jinja2 = "^3.1.4"
-# Multiprocessing
-dask = { extras = ["complete"], version = "^2025.4.1" }
-graphviz = "^0.20.3"
-# GUI
-PySide6 = "^6.8.0.2"
-pyqtgraph = "^0.13.7"
-streamlit = "^1.36.0"
-# Classifier
-scikit-learn = "^1.4.2"
-torch = { version = "~2.7.0", source = "torch" }
+[project.urls]
+Homepage = "https://tlee08.github.io/behavysis"
+Repository = "https://github.com/tlee08/behavysis"
+Documentation = "https://tlee08.github.io/behavysis"
 
-[tool.poetry.group.dev.dependencies]
-ruff = "^0.4.8"
-mkdocs-material = "^9.5.18"
-mkdocstrings-python = "^1.9.2"
-pytest = "^8.3.3"
-
-[[tool.poetry.source]]
-name = "torch"
-url = "https://download.pytorch.org/whl/cu128"
-priority = "explicit"
-
-[tool.poetry.scripts]
+[project.scripts]
 behavysis_init = "behavysis.scripts.init:main"
 behavysis_make_project = "behavysis.scripts.make_project:main"
 behavysis_project_gui = "behavysis.scripts.project_gui:run_script"
 behavysis_viewer = "behavysis.viewer.__main__:main"
 behavysis_make_dlc_builder = "behavysis.scripts.make_dlc_builder:main"
 
+[dependency-groups]
+dev = [
+    "ruff>=0.4.8,<0.5",
+    "mkdocs-material>=9.5.18,<10",
+    "mkdocstrings-python>=1.9.2,<2",
+    "pytest>=8.3.3,<9",
+]
+
+[[tool.uv.index]]
+name = "torch"
+url = "https://download.pytorch.org/whl/cu128"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "torch" }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [tool.ruff]
 line-length = 120
 
 [tool.ruff.format]
 docstring-code-format = true
-
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"

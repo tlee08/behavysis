@@ -71,7 +71,7 @@ class UpdateConfigs:
             logger.info("Updating all configs.")
         else:
             raise ValueError(
-                f'Invalid value "{overwrite}" passed to function. ' 'The value must be either "user", or "all".'
+                f'Invalid value "{overwrite}" passed to function. The value must be either "user", or "all".'
             )
         # Writing new configs to JSON file
         configs.write_json(configs_fp)
