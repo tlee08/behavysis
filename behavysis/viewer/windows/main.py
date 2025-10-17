@@ -10,6 +10,7 @@ pyside6-uic behavysis/viewer/ui/settings_ui.ui -o behavysis/viewer/ui/settings_u
 """
 
 from multiprocessing import Process
+import os
 
 import cv2
 import numpy as np
@@ -304,25 +305,27 @@ class MainWindow(QMainWindow):
         try:
             # Loading filenames in vid file manager
             self.file_manager.load(fp)
-
             # Reading in configs
             configs = ExperimentConfigs.read_json(self.file_manager.configs_fp)
-            # Loading data into vid, bouts, and keypoints models
+            # Loading data into vid model
             self.vid_model.load(self.file_manager.vid_fp)
-            self.bouts_model.load(self.file_manager.behavs_df_fp, configs)
-            self.keypoints_model.load(self.file_manager.dlc_df_fp, configs)
-
+            # Loading data into bouts model
+            if os.path.exists(self.file_manager.dlc_df_fp):
+                self.keypoints_model.load(self.file_manager.dlc_df_fp, configs)
+            else:
+                self.keypoints_model.load_empty()
+            # Loading data into keypoint model
+            if os.path.exists(self.file_manager.behavs_df_fp):
+                self.bouts_model.load(self.file_manager.behavs_df_fp, configs)
+            else:
+                self.bouts_model.load_empty()
             # Setting primitive attributes
-            # self.window_size_frames = 25
             self.vid_speed = 1
-            # self.focus_size_frames = 5
             self.curr_i = 0
-
             # Preparing slider
             self.ui.slider.setMaximum(self.vid_model.nframes)
             # Updating the graph_viewer with bouts data
             self.ui.graph_viewer.plot_bouts_init(self.bouts_model.bouts, configs)
-
             # Writing msg to statusbar
             self.ui.statusbar.showMessage(f"Opened video: {fp}", timeout=STATUS_MSG_TIMEOUT)
         except ValueError as e:

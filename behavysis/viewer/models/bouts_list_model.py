@@ -14,8 +14,7 @@ class BoutsListModel(QAbstractListModel):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-        self.bouts = Bouts(start=-1, stop=-1, bouts=[], bouts_struct=[])
+        self.load_empty()
 
     def data(self, index, role):
         """
@@ -48,6 +47,14 @@ class BoutsListModel(QAbstractListModel):
         # behavs_df to bouts
         self.bouts = BehavScoredDf.frames2bouts(df)
         self.layoutChanged.emit()
+    
+    def load_empty(self):
+        """
+        Load an empty dataset into the instance.
+        
+        An empty dataset is used as placeholder.
+        """
+        self.bouts = Bouts(start=-1, stop=-1, bouts=[], bouts_struct=[])
 
     def rowCount(self, index):
         """

@@ -25,7 +25,7 @@ class KeypointsModel:
     cmap: str
 
     def __init__(self):
-        self.load_from_df(KeypointsDf.init_df(pd.Series()), ExperimentConfigs())
+        self.load_empty()
 
     def load_from_df(self, keypoints_df: pd.DataFrame, configs: ExperimentConfigs):
         """
@@ -50,6 +50,14 @@ class KeypointsModel:
         except FileNotFoundError:
             pass
         self.load_from_df(df, configs)
+        
+    def load_empty(self):
+        """
+        Load an empty dataset into the instance.
+        
+        An empty dataset is used as placeholder.
+        """
+        self.load_from_df(KeypointsDf.init_df(pd.Series()), ExperimentConfigs())
 
     def annot_keypoints(self, frame: np.ndarray, frame_num: int) -> np.ndarray:
         """

@@ -43,8 +43,8 @@ class ExpFileManager:
         self._name = value
 
     def load(self, fp: str):
-        self.root_dir = os.path.split(os.path.split(fp)[0])[0]
-        self.name = os.path.splitext(os.path.split(fp)[1])[0]
+        self.root_dir = os.path.dirname(os.path.dirname(fp))
+        self.name = os.path.splitext(os.path.basename(fp))[0]
 
 
 if __name__ == "__main__":
