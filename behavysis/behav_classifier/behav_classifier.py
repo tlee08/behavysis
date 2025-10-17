@@ -32,7 +32,7 @@ from behavysis.constants import Folders
 from behavysis.df_classes.behav_classifier_df import BehavClassifierCombinedDf, BehavClassifierEvalDf
 from behavysis.df_classes.behav_df import BehavPredictedDf, BehavScoredDf, BehavValues
 from behavysis.df_classes.features_df import FeaturesDf
-from behavysis.pydantic_models.behav_classifier_configs import (
+from behavysis.models.behav_classifier_configs import (
     BehavClassifierConfigs,
 )
 from behavysis.utils.df_mixin import DFMixin

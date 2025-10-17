@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 
 from behavysis.df_classes.keypoints_df import CoordsCols, KeypointsAnnotationsDf, KeypointsDf
-from behavysis.pydantic_models.experiment_configs import ExperimentConfigs
+from behavysis.models.experiment_configs import ExperimentConfigs
 
 
 class KeypointsModel:

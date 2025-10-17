@@ -30,7 +30,7 @@ from behavysis.df_classes.keypoints_df import (
     IndivCols,
     KeypointsDf,
 )
-from behavysis.pydantic_models.experiment_configs import ExperimentConfigs
+from behavysis.models.experiment_configs import ExperimentConfigs
 from behavysis.utils.diagnostics_utils import file_exists_msg
 from behavysis.utils.logging_utils import get_io_obj_content, init_logger_io_obj
 
@@ -176,6 +176,7 @@ class Preprocess:
                     - pcutoff: float
         ```
         """
+        # TODO: have error checking for any columns that have NO points above the pcutoff (so they are all NaN)
         logger, io_obj = init_logger_io_obj()
         if not overwrite and os.path.exists(dst_fp):
             logger.warning(file_exists_msg(dst_fp))

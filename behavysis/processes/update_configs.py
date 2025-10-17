@@ -20,7 +20,7 @@ from typing import Literal
 
 from pydantic import ValidationError
 
-from behavysis.pydantic_models.experiment_configs import ExperimentConfigs
+from behavysis.models.experiment_configs import ExperimentConfigs
 from behavysis.utils.logging_utils import get_io_obj_content, init_logger_io_obj
 
 

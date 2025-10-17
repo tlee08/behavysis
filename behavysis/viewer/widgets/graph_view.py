@@ -13,8 +13,8 @@ from PySide6.QtWidgets import QApplication
 
 from behavysis.constants import VALUE2COLOR
 from behavysis.df_classes.behav_df import BehavScoredDf
-from behavysis.pydantic_models.bouts import Bouts
-from behavysis.pydantic_models.experiment_configs import ExperimentConfigs
+from behavysis.models.bouts import Bouts
+from behavysis.models.experiment_configs import ExperimentConfigs
 from behavysis.utils.qt_utils import qt2cv
 
 if TYPE_CHECKING:

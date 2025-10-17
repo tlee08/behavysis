@@ -37,7 +37,7 @@ from behavysis.df_classes.keypoints_df import (
     IndivCols,
     KeypointsDf,
 )
-from behavysis.pydantic_models.experiment_configs import ExperimentConfigs
+from behavysis.models.experiment_configs import ExperimentConfigs
 from behavysis.utils.io_utils import get_name
 from behavysis.utils.logging_utils import get_io_obj_content, init_logger_io_obj
 from behavysis.utils.misc_utils import get_func_name_in_stack
@@ -97,7 +97,7 @@ class Analyse:
             # Checking bodyparts and roi_corners exist
             KeypointsDf.check_bpts_exist(keypoints_df, bpts)
             KeypointsDf.check_bpts_exist(keypoints_df, roi_corners)
-            # Getting average corner coordinates. Assumes arena does not move.
+            # Getting average corner coordinates. This assumes ROI corners do not move.
             corners_i_df = pd.DataFrame([keypoints_df[(IndivCols.SINGLE.value, pt)].mean() for pt in roi_corners]).drop(
                 columns=["likelihood"]
             )

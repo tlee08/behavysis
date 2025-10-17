@@ -10,7 +10,7 @@ from scipy import ndimage
 from scipy.stats import mode
 
 from behavysis.df_classes.keypoints_df import FramesIN
-from behavysis.pydantic_models.bouts import Bout, Bouts, BoutStruct
+from behavysis.models.bouts import Bout, Bouts, BoutStruct
 from behavysis.utils.df_mixin import DFMixin
 from behavysis.utils.misc_utils import enum2tuple
 

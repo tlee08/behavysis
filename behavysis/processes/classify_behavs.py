@@ -17,7 +17,7 @@ from behavysis.df_classes.behav_df import (
     OutcomesPredictedCols,
 )
 from behavysis.df_classes.features_df import FeaturesDf
-from behavysis.pydantic_models.experiment_configs import ExperimentConfigs
+from behavysis.models.experiment_configs import ExperimentConfigs
 from behavysis.utils.diagnostics_utils import file_exists_msg
 from behavysis.utils.logging_utils import get_io_obj_content, init_logger_io_obj
 

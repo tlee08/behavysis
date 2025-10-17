@@ -23,8 +23,8 @@ import os
 
 import cv2
 
-from behavysis.pydantic_models.experiment_configs import ExperimentConfigs
-from behavysis.pydantic_models.processes.format_vid import VidMetadata
+from behavysis.models.experiment_configs import ExperimentConfigs
+from behavysis.models.processes.format_vid import VidMetadata
 from behavysis.utils.diagnostics_utils import file_exists_msg
 from behavysis.utils.logging_utils import (
     get_io_obj_content,

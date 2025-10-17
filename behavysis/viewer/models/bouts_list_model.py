@@ -5,8 +5,8 @@ from PySide6.QtGui import QColor
 
 from behavysis.constants import VALUE2COLOR
 from behavysis.df_classes.behav_df import BehavScoredDf
-from behavysis.pydantic_models.bouts import Bouts
-from behavysis.pydantic_models.experiment_configs import ExperimentConfigs
+from behavysis.models.bouts import Bouts
+from behavysis.models.experiment_configs import ExperimentConfigs
 
 
 class BoutsListModel(QAbstractListModel):

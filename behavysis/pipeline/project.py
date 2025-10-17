@@ -24,7 +24,7 @@ from behavysis.df_classes.analysis_collated_df import AnalysisBinnedCollatedDf, 
 from behavysis.df_classes.diagnostics_df import DiagnosticsDf
 from behavysis.pipeline.experiment import Experiment
 from behavysis.processes.run_dlc import RunDLC
-from behavysis.pydantic_models.experiment_configs import (
+from behavysis.models.experiment_configs import (
     ExperimentConfigs,
 )
 from behavysis.utils.dask_utils import cluster_process
