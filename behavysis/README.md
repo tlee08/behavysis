@@ -8,7 +8,7 @@ This is the main package containing all core modules for the Behavysis behaviora
 - `df_classes/`: DataFrame-based analysis classes
 - `pipeline/`: Project and experiment orchestration
 - `processes/`: Individual processing steps
-- `pydantic_models/`: Configuration and data validation models
+- `models/`: Configuration and data validation models
 - `scripts/`: Entry points and utility scripts
 - `utils/`: General-purpose utilities
 - `viewer/`: GUI and visualization components
