@@ -287,6 +287,9 @@ class Project:
         # If overwrite is False, filtering for only experiments that need processing
         if not overwrite:
             exp_ls = [exp for exp in exp_ls if not os.path.isfile(exp.get_fp(Folders.KEYPOINTS.value))]
+        # If the experiments list is empty, then exit here
+        if not exp_ls:
+            return
         # Running DLC on each batch of experiments with each GPU (given allocated GPU ID)
         exp_batches_ls = np.array_split(np.array(exp_ls), nprocs)
         # Starting a dask cluster

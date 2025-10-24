@@ -19,6 +19,16 @@ poetry install
 conda env create -f conda_env.yaml
 ```
 
+## Future improvements
+
+### Prompt for improvements
+
+```
+You are an expert ML engineer and architect.
+Look at this current codebase, read the READMEs and understand the code structure.
+Then assess the robustness, best-practices, modularity, and clarity of the code. What has been done well, what can be improved, and how can we improve it?
+```
+
 ## References
 
 Mathis, A., Mamidanna, P., Cury, K. M., Abe, T., Murthy, V. N., Mathis, M. W., & Bethge, M. (2018, August 20). DeepLabCut: markerless pose estimation of user-defined body parts with deep learning. Nature Neuroscience. Springer Science and Business Media LLC. http://doi.org/10.1038/s41593-018-0209-y
