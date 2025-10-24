@@ -284,9 +284,11 @@ class Project:
         nprocs = len(gputouse_ls)
         # Getting the experiments to run DLC on
         exp_ls = self.experiments
+        print(f"ABCD: {len(exp_ls)}")
         # If overwrite is False, filtering for only experiments that need processing
         if not overwrite:
             exp_ls = [exp for exp in exp_ls if not os.path.isfile(exp.get_fp(Folders.KEYPOINTS.value))]
+        print(f"ABCD: {len(exp_ls)}")
         # If the experiments list is empty, then exit here
         if not exp_ls:
             return
