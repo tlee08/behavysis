@@ -56,7 +56,9 @@ class CalculateParams:
         ```
         """
         logger, io_obj = init_logger_io_obj()
-        start_frame, stop_frame = calc_exists_from_likelihood(keypoints_fp, configs_fp, logger)
+        start_frame, stop_frame = calc_exists_from_likelihood(
+            keypoints_fp, configs_fp, logger
+        )
         # Writing to configs
         configs = ExperimentConfigs.read_json(configs_fp)
         configs.auto.start_frame = start_frame
@@ -73,6 +75,7 @@ class CalculateParams:
         Also expects the csv_fp to be a csv file,
         where the first column is the name of the video and the second column
         is the start time.
+        Also expect a header row, but it doesn't matter what the header names are.
 
         Notes
         -----
@@ -92,7 +95,9 @@ class CalculateParams:
         fps = configs.auto.formatted_vid.fps
         csv_fp = configs.get_ref(configs_filt.csv_fp)
         name = configs.get_ref(configs_filt.name)
-        assert fps != -1, "fps not yet set. Please calculate fps first with `proj.get_vid_metadata`."
+        assert fps != -1, (
+            "fps not yet set. Please calculate fps first with `proj.get_vid_metadata`."
+        )
         # Using the name of the video as the name of the experiment if not specified
         if name is None:
             name = get_name(keypoints_fp)
@@ -125,7 +130,9 @@ class CalculateParams:
 
         """
         logger, io_obj = init_logger_io_obj()
-        start_frame, stop_frame = calc_exists_from_likelihood(keypoints_fp, configs_fp, logger)
+        start_frame, stop_frame = calc_exists_from_likelihood(
+            keypoints_fp, configs_fp, logger
+        )
         # Writing to configs
         configs = ExperimentConfigs.read_json(configs_fp)
         configs.auto.stop_frame = stop_frame
@@ -159,14 +166,20 @@ class CalculateParams:
         start_frame = configs.auto.start_frame
         fps = configs.auto.formatted_vid.fps
         total_frames = configs.auto.formatted_vid.total_frames
-        assert start_frame != -1, "start_frame is None. Please calculate start_frame first."
-        assert fps != -1, "fps not yet set. Please calculate fps first with `proj.get_vid_metadata`."
+        assert start_frame != -1, (
+            "start_frame is None. Please calculate start_frame first."
+        )
+        assert fps != -1, (
+            "fps not yet set. Please calculate fps first with `proj.get_vid_metadata`."
+        )
         # Calculating stop_frame
         dur_frames = int(dur_sec * fps)
         stop_frame = start_frame + dur_frames
         # Make a warning if the use-specified dur_sec is larger than the duration of the video.
         if total_frames is None:
-            logger.warning("The length of the video itself has not been calculated yet.")
+            logger.warning(
+                "The length of the video itself has not been calculated yet."
+            )
         elif stop_frame > total_frames:
             logger.warning(
                 "The user specified dur_sec in the configs file is greater "
@@ -187,7 +200,9 @@ class CalculateParams:
         Appear/disappear is calculated from likelihood.
         """
         logger, io_obj = init_logger_io_obj()
-        start_frame, stop_frame = calc_exists_from_likelihood(keypoints_fp, configs_fp, logger)
+        start_frame, stop_frame = calc_exists_from_likelihood(
+            keypoints_fp, configs_fp, logger
+        )
         # Writing to configs
         configs = ExperimentConfigs.read_json(configs_fp)
         configs.auto.dur_frames = stop_frame - start_frame
@@ -250,7 +265,12 @@ class CalculateParams:
         pt_b_df = pt_b_df.interpolate(method="linear", axis=0).bfill().ffill()
         # Getting distance between calibration points
         # TODO: use variable names for x and y
-        dist_px = np.nanmean(np.sqrt(np.square(pt_a_df["x"] - pt_b_df["x"]) + np.square(pt_a_df["y"] - pt_b_df["y"])))
+        dist_px = np.nanmean(
+            np.sqrt(
+                np.square(pt_a_df["x"] - pt_b_df["x"])
+                + np.square(pt_a_df["y"] - pt_b_df["y"])
+            )
+        )
         # Finding pixels per mm conversion, using the given arena width and height as calibration
         px_per_mm = dist_px / dist_mm
         # Saving to configs file
@@ -260,7 +280,9 @@ class CalculateParams:
         return get_io_obj_content(io_obj)
 
 
-def calc_exists_from_likelihood(keypoints_fp: str, configs_fp: str, logger: logging.Logger) -> tuple[int, int]:
+def calc_exists_from_likelihood(
+    keypoints_fp: str, configs_fp: str, logger: logging.Logger
+) -> tuple[int, int]:
     """
     Determines the start and stop frames of the experiment based on
     when the subject "likely" entered and exited the frame of view.
@@ -288,7 +310,9 @@ def calc_exists_from_likelihood(keypoints_fp: str, configs_fp: str, logger: logg
     window_sec = configs.get_ref(configs_filt.window_sec)
     pcutoff = configs.get_ref(configs_filt.pcutoff)
     fps = configs.auto.formatted_vid.fps
-    assert fps != -1, "fps not yet set. Please calculate fps first with `proj.get_vid_metadata`."
+    assert fps != -1, (
+        "fps not yet set. Please calculate fps first with `proj.get_vid_metadata`."
+    )
     # Deriving more parameters
     window_frames = int(np.round(fps * window_sec, 0))
     # Loading dataframe
@@ -301,14 +325,22 @@ def calc_exists_from_likelihood(keypoints_fp: str, configs_fp: str, logger: logg
     indivs, _ = KeypointsDf.get_indivs_bpts(keypoints_df)
     for indiv in indivs:
         # Calculating likelihood of subject existing at each frame from median
-        lhood_df[(indiv, "current")] = keypoints_df.loc[:, idx[indiv, bpts, lhood_name]].apply(np.nanmedian, axis=1)  # type: ignore
+        lhood_df[(indiv, "current")] = keypoints_df.loc[
+            :, idx[indiv, bpts, lhood_name]
+        ].apply(np.nanmedian, axis=1)  # type: ignore
         # Calculating likelihood of subject existing over time window
-        lhood_df[(indiv, "rolling")] = lhood_df[(indiv, "current")].rolling(window_frames, center=True).agg(np.nanmean)
+        lhood_df[(indiv, "rolling")] = (
+            lhood_df[(indiv, "current")]
+            .rolling(window_frames, center=True)
+            .agg(np.nanmean)
+        )
     lhood_df.columns = pd.MultiIndex.from_tuples(lhood_df.columns)
     # Getting bool of frames where ALL indivs exist
     idx = pd.IndexSlice
     exists_vect = (lhood_df.loc[:, idx[:, "rolling"]] > pcutoff).all(axis=1)  # type: ignore
-    assert np.any(exists_vect), "The subject was not detected in any frames. Please also check the video."
+    assert np.any(exists_vect), (
+        "The subject was not detected in any frames. Please also check the video."
+    )
     # Getting when subject first and last exists in video
     start_frame = lhood_df[exists_vect].index[0]
     stop_frame = lhood_df[exists_vect].index[-1]
