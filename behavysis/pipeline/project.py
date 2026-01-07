@@ -399,6 +399,7 @@ class Project:
         # Searching through all the analysis subdir
         for analyse_subdir in os.listdir(proj_analyse_dir):
             for bin_i in bin_sizes_sec:
+                self.logger.info("Collating binned data in %s for bin size %s", analyse_subdir, str(bin_i))
                 df_ls = []
                 names_ls = []
                 for exp in self.experiments:
@@ -438,6 +439,7 @@ class Project:
             return
         # Searching through all the analysis subdir
         for analyse_subdir in os.listdir(proj_analyse_dir):
+            self.logger.info("Collating summary data in %s", analyse_subdir)
             df_ls = []
             names_ls = []
             for exp in self.experiments:
