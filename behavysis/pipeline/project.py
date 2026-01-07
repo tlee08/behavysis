@@ -454,9 +454,10 @@ class Project:
                     # Appending for concatenation
                     df_ls.append(df_i)
                     names_ls.append(exp.name)
-            # Concatenating total_df with df across columns, with experiment name to column MultiIndex
+            # Concatenating total_df with series (first across columns, then transposed to rows)
+            # with experiment name as columns (initially) then row (finally) index
             if len(df_ls) > 0:
-                df = pd.concat(df_ls, keys=names_ls, names=["experiment"], axis=0)
+                df = pd.concat(df_ls, keys=names_ls, names=["experiment"], axis=1).T
                 df = df.fillna(0)
                 AnalysisSummaryCollatedDf.write(
                     df, os.path.join(proj_analyse_dir, analyse_subdir, f"__ALL_summary.{AnalysisSummaryCollatedDf.IO}")
