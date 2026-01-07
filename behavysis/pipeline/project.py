@@ -427,10 +427,6 @@ class Project:
         Combines an analysis of all the experiments together to generate combined h5 files for:
         - The summary data. The index is (expName, indiv, measure) and columns are
         (statistics -e.g., mean).
-        
-        Dataframe structure:
-        - Rows: single index with experiment
-        - Columns MultiIndex with each different measure and summary statistic
         """
         # Initialising the process and logging description
         description = "Combining summary analysis"
@@ -448,16 +444,11 @@ class Project:
                 in_fp = os.path.join(proj_analyse_dir, analyse_subdir, "summary", f"{exp.name}.{AnalysisSummaryDf.IO}")
                 if os.path.isfile(in_fp):
                     # Reading exp summary df
-                    df_i = AnalysisSummaryDf.read(in_fp)
-                    # Converting to (ideally) a pd.Series with MultiIndex columns
-                    df_i = df_i.stack()
-                    # Appending for concatenation
-                    df_ls.append(df_i)
+                    df_ls.append(AnalysisSummaryDf.read(in_fp))
                     names_ls.append(exp.name)
-            # Concatenating total_df with series (first across columns, then transposed to rows)
-            # with experiment name as columns (initially) then row (finally) index
+            # Concatenating total_df with df across columns, with experiment name to column MultiIndex
             if len(df_ls) > 0:
-                df = pd.concat(df_ls, keys=names_ls, names=["experiment"], axis=1).T
+                df = pd.concat(df_ls, keys=names_ls, names=["experiment"], axis=0)
                 df = df.fillna(0)
                 AnalysisSummaryCollatedDf.write(
                     df, os.path.join(proj_analyse_dir, analyse_subdir, f"__ALL_summary.{AnalysisSummaryCollatedDf.IO}")
