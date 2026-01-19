@@ -1,0 +1,35 @@
+{
+  "name": "behavysis-viewer",
+  "version": "1.0.0",
+  "description": "Behavysis Viewer - React/Electron/Vite/TS",
+  "main": "dist/main/main.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "electron": "electron .",
+    "test": "vitest"
+  },
+  "dependencies": {
+    "@emotion/react": "^11.11.0",
+    "@emotion/styled": "^11.11.0",
+    "@mui/icons-material": "^5.11.16",
+    "@mui/material": "^5.11.16",
+    "apache-arrow": "^12.0.0",
+    "apexcharts": "^3.40.0",
+    "parquet-wasm": "^0.6.0",
+    "react": "^18.2.0",
+    "react-apexcharts": "^1.4.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "@vitejs/plugin-react": "^4.0.0",
+    "electron": "^24.3.0",
+    "typescript": "^5.0.0",
+    "vite": "^4.3.0",
+    "vite-plugin-electron": "^0.11.2",
+    "vitest": "^0.31.0"
+  }
+}
