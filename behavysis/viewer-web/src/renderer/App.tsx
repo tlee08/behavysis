@@ -56,19 +56,22 @@ const App: React.FC = () => {
   const [behavsFp, setBehavsFp] = useState<string | null>(null);
 
   const handleOpenConfig = async () => {
-    const fp = await window.electronAPI.openFileDialog();
-    if (!fp) return;
-    setConfigPath(fp);
+    try {
+      console.log('Opening file dialog...');
+      const fp = await window.electronAPI.openFileDialog();
+      console.log('Selected file:', fp);
+      if (!fp) return;
+      setConfigPath(fp);
 
-    // Initialize parquet-wasm
-    await initParquet();
+      // Initialize parquet-wasm
+      await initParquet();
 
-    const dir = await window.electronAPI.getDirname(fp);
-    const rootDir = await window.electronAPI.getDirname(dir);
-    const name = await window.electronAPI.getBasename(fp);
+      const dir = await window.electronAPI.getDirname(fp);
+      const rootDir = await window.electronAPI.getDirname(dir);
+      const name = await window.electronAPI.getBasename(fp);
 
-    // Load Config JSON
-    const configBuf = await window.electronAPI.readFile(fp);
+      // Load Config JSON
+      const configBuf = await window.electronAPI.readFile(fp);
     const config = JSON.parse(new TextDecoder().decode(configBuf));
     if (config.auto?.formatted_vid?.fps) setFps(config.auto.formatted_vid.fps);
 
@@ -87,18 +90,21 @@ const App: React.FC = () => {
       `${name}.parquet`,
     );
     if (await window.electronAPI.pathExists(dlcFp)) {
-      const dlcBuf = await window.electronAPI.readFile(dlcFp);
-      const table = new Table(
-        parquet.readParquet(new Uint8Array(dlcBuf)) as any,
-      );
-      const model = new KeypointsModel();
-      model.load(table, {
-        colour_level: "individuals",
-        pcutoff: config.user?.evaluate_vid?.pcutoff || 0.9,
-        radius: config.user?.evaluate_vid?.radius || 5,
-        cmap: config.user?.evaluate_vid?.cmap || "viridis",
-      });
-      setKeypointsModel(model);
+      try {
+        const dlcBuf = await window.electronAPI.readFile(dlcFp);
+        const arrowIpc = parquet.readParquet(new Uint8Array(dlcBuf));
+        const table = new Table(arrowIpc as any);
+        const model = new KeypointsModel();
+        model.load(table, {
+          colour_level: "individuals",
+          pcutoff: config.user?.evaluate_vid?.pcutoff || 0.9,
+          radius: config.user?.evaluate_vid?.radius || 5,
+          cmap: config.user?.evaluate_vid?.cmap || "viridis",
+        });
+        setKeypointsModel(model);
+      } catch (e) {
+        console.warn('Failed to load keypoints:', e);
+      }
     }
 
     // Load Bouts (Parquet or JSON)
@@ -109,12 +115,14 @@ const App: React.FC = () => {
     );
     setBehavsFp(bFp);
     if (await window.electronAPI.pathExists(bFp)) {
-      const bBuf = await window.electronAPI.readFile(bFp);
-      const table = new Table(parquet.readParquet(new Uint8Array(bBuf)) as any);
+      try {
+        const bBuf = await window.electronAPI.readFile(bFp);
+        const arrowIpc = parquet.readParquet(new Uint8Array(bBuf));
+        const table = new Table(arrowIpc as any);
 
-      // Convert Arrow Table to BoutsData
-      const bouts: Bout[] = [];
-      for (let i = 0; i < table.numRows; i++) {
+        // Convert Arrow Table to BoutsData
+        const bouts: Bout[] = [];
+        for (let i = 0; i < table.numRows; i++) {
         const row = table.get(i);
         if (row) {
           bouts.push({
@@ -133,6 +141,13 @@ const App: React.FC = () => {
         bouts,
         bouts_struct: [], // To be populated from unique behaviors
       });
+      } catch (e) {
+        console.warn('Failed to load bouts:', e);
+      }
+    }
+    } catch (error) {
+      console.error('Error opening config:', error);
+      alert('Failed to open config file: ' + (error instanceof Error ? error.message : String(error)));
     }
   };
 
