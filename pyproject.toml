@@ -3,29 +3,29 @@ name = "behavysis"
 version = "0.1.24"
 description = "An animal behaviour processing and analysis package"
 authors = [{ name = "BowenLab" }]
-requires-python = ">=3.12,<3.13"
+requires-python = ">=3.12"
 readme = "README.md"
 license = "GPL-3.0-or-later"
 dependencies = [
-    "dask[complete]>=2025.5.1",
+    "dask[complete]>=2026.1.2",
     "graphviz>=0.21",
-    "ipykernel>=6.29.5",
+    "ipykernel>=7.2.0",
     "jinja2>=3.1.6",
     "natsort>=8.4.0",
-    "numpy>=2.3.1",
-    "opencv-python>=4.11.0.86",
-    "pandas>=2.3.0",
-    "pyarrow>=20.0.0",
-    "pydantic>=2.11.7",
-    "pyqtgraph>=0.13.7",
-    "pyside6>=6.9.1",
-    "scikit-learn>=1.7.0",
-    "scipy>=1.16.0",
+    "numpy>=2.4.3",
+    "opencv-python>=4.13.0.92",
+    "pandas>=2.3.3",
+    "pyarrow>=23.0.1",
+    "pydantic>=2.12.5",
+    "pyqtgraph>=0.14.0",
+    "pyside6>=6.10.2",
+    "scikit-learn>=1.8.0",
+    "scipy>=1.17.1",
     "seaborn>=0.13.2",
-    "streamlit>=1.46.1",
-    "tables>=3.10.2",
-    "torch>=2.7.1",
-    "tqdm>=4.67.1",
+    "streamlit>=1.55.0",
+    "tables>=3.11.1",
+    "torch>=2.10.0",
+    "tqdm>=4.67.3",
 ]
 
 [project.urls]
@@ -33,28 +33,23 @@ Homepage = "https://tlee08.github.io/behavysis"
 Repository = "https://github.com/tlee08/behavysis"
 Documentation = "https://tlee08.github.io/behavysis"
 
-[project.scripts]
-behavysis_init = "behavysis.scripts.init:main"
-behavysis_make_project = "behavysis.scripts.make_project:main"
-behavysis_project_gui = "behavysis.scripts.project_gui:run_script"
-behavysis_viewer = "behavysis.viewer.__main__:main"
-behavysis_make_dlc_builder = "behavysis.scripts.make_dlc_builder:main"
-
 [dependency-groups]
 dev = [
-    "mkdocs-material>=9.6.14",
-    "mkdocstrings-python>=1.16.12",
-    "pymdown-extensions>=10.16",
-    "pytest>=8.4.1",
-    "ruff>=0.12.1",
+    "mkdocs-material>=9.7.5",
+    "mkdocstrings-python>=2.0.3",
+    "pymdown-extensions>=10.21",
+    "pytest>=9.0.2",
+    "ruff>=0.15.6",
 ]
 
+[project.scripts]
+behavysis-init = "behavysis.scripts.init:main"
+behavysis-make-project = "behavysis.scripts.make_project:main"
+behavysis-project-gui = "behavysis.scripts.project_gui:run_script"
+behavysis-viewer = "behavysis.viewer.__main__:main"
+behavysis-make-dlc-builder = "behavysis.scripts.make_dlc_builder:main"
+
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["uv_build>=0.10.11,<0.11.0"]
+build-backend = "uv_build"
 
-[tool.ruff]
-line-length = 120
-
-[tool.ruff.format]
-docstring-code-format = true
