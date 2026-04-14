@@ -1,12 +1,16 @@
-"""
-_summary_
-"""
+"""_summary_"""
 
 from typing import Any
 
 from pydantic import ConfigDict
 
-from behavysis.constants import BPTS_CENTRE, BPTS_CORNERS, BPTS_FRONT, BPTS_SIMBA, INDIVS_SIMBA
+from behavysis.constants import (
+    BPTS_CENTRE,
+    BPTS_CORNERS,
+    BPTS_FRONT,
+    BPTS_SIMBA,
+    INDIVS_SIMBA,
+)
 from behavysis.models.processes.analyse import (
     AnalyseConfigs,
     FreezingConfigs,
@@ -14,7 +18,10 @@ from behavysis.models.processes.analyse import (
     SocialDistanceConfigs,
     SpeedConfigs,
 )
-from behavysis.models.processes.calculate_params import CalculateParamsConfigs, FromLikelihoodConfigs
+from behavysis.models.processes.calculate_params import (
+    CalculateParamsConfigs,
+    FromLikelihoodConfigs,
+)
 from behavysis.models.processes.classify_behavs import ClassifyBehavConfigs
 from behavysis.models.processes.evaluate_vid import EvaluateVidConfigs
 from behavysis.models.processes.extract_features import ExtractFeaturesConfigs
@@ -55,12 +62,11 @@ class ExperimentConfigs(PydanticBaseModel):
     ref: RefConfigs = RefConfigs()
 
     def get_ref(self, val: Any) -> Any:
-        """
-        If the val is in the reference format, then
+        """If the val is in the reference format, then
         return reference value of the val if it exists in the reference store.
         Otherwise, return the val itself.
 
-        Note
+        Note:
         ----
         The reference format is `"--<ref_name>"`.
         """
@@ -69,20 +75,21 @@ class ExperimentConfigs(PydanticBaseModel):
             # Remove the '--' from the val
             val = val[2:]
             # Check if the value exists in the reference store
-            assert hasattr(self.ref, val), f"Value '{val}' can't be found in the configs reference section."
+            assert hasattr(self.ref, val), (
+                f"Value '{val}' can't be found in the configs reference section."
+            )
             return getattr(self.ref, val)
         return val
 
     def get_analysis_configs(self) -> tuple[float, float, float, float, list, list]:
-        """
-        _summary_
+        """_summary_
 
         Parameters
         ----------
         configs : Configs
             _description_
 
-        Returns
+        Returns:
         -------
         tuple[ float, float, float, float, list, list, ]
             _description_
@@ -105,12 +112,20 @@ def get_default_configs() -> ExperimentConfigs:
     return ExperimentConfigs(
         user=UserConfigs(
             format_vid=FormatVidConfigs(width_px=960, height_px=540, fps=15),
-            calculate_params=CalculateParamsConfigs(from_likelihood=FromLikelihoodConfigs(bodyparts="--bpts_simba")),
-            preprocess=PreprocessConfigs(refine_ids=RefineIdsConfigs(bodyparts="--bpts_centre")),
-            extract_features=ExtractFeaturesConfigs(individuals="--indivs_simba", bodyparts="--bpts_simba"),
+            calculate_params=CalculateParamsConfigs(
+                from_likelihood=FromLikelihoodConfigs(bodyparts="--bpts_simba")
+            ),
+            preprocess=PreprocessConfigs(
+                refine_ids=RefineIdsConfigs(bodyparts="--bpts_centre")
+            ),
+            extract_features=ExtractFeaturesConfigs(
+                individuals="--indivs_simba", bodyparts="--bpts_simba"
+            ),
             classify_behavs=[ClassifyBehavConfigs()],
             analyse=AnalyseConfigs(
-                in_roi=[InRoiConfigs(roi_corners="--bpts_corners", bodyparts="--bpts_front")],
+                in_roi=[
+                    InRoiConfigs(roi_corners="--bpts_corners", bodyparts="--bpts_front")
+                ],
                 speed=SpeedConfigs(bodyparts="--bpts_centre"),
                 social_distance=SocialDistanceConfigs(bodyparts="--bpts_centre"),
                 freezing=FreezingConfigs(bodyparts="--bpts_centre"),

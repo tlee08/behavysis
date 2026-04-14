@@ -1,5 +1,4 @@
-"""
-## GUI designer and exporting the design to Python code
+"""## GUI designer and exporting the design to Python code
 
 ```bash
 pyside6-designer
@@ -9,8 +8,8 @@ pyside6-uic behavysis/viewer/ui/settings_ui.ui -o behavysis/viewer/ui/settings_u
 ```
 """
 
-from multiprocessing import Process
 import os
+from multiprocessing import Process
 
 import cv2
 import numpy as np
@@ -182,11 +181,19 @@ class MainWindow(QMainWindow):
         # bout_inspect_model
         m = self.bout_inspect_model
         # Making bout_inspect enabled when a bout is selected
-        m.layoutChanged.connect(lambda: self.ui.bout_inspect_widget.setEnabled(m.id >= 0))
+        m.layoutChanged.connect(
+            lambda: self.ui.bout_inspect_widget.setEnabled(m.id >= 0)
+        )
         # Making bout_inspect select user-defined behavs enabled when bout "actual" is True
-        m.actual_signal.connect(lambda: self.ui.bout_inspect_view.setEnabled(m.bout.actual == 1))
+        m.actual_signal.connect(
+            lambda: self.ui.bout_inspect_view.setEnabled(m.bout.actual == 1)
+        )
         # Remaking bout's graph_viewer bar when bout's "actual" changes
-        m.actual_signal.connect(lambda: self.ui.graph_viewer.update_bar(m.id, {"brush": VALUE2COLOR[m.bout.actual]}))
+        m.actual_signal.connect(
+            lambda: self.ui.graph_viewer.update_bar(
+                m.id, {"brush": VALUE2COLOR[m.bout.actual]}
+            )
+        )
 
     def _init_conns_views(self):
         """__summary__"""
@@ -212,11 +219,19 @@ class MainWindow(QMainWindow):
         # SIGNALS AND SLOTS: VIDEO AND PLOT
         # Handle user moving slider
         self.ui.slider.sliderMoved.connect(self.set_frame)
-        self.ui.slider.sliderPressed.connect(lambda: self.set_frame(self.ui.slider.value()))
+        self.ui.slider.sliderPressed.connect(
+            lambda: self.set_frame(self.ui.slider.value())
+        )
         # Handle video buttons
-        self.ui.start_stop_btn.toggled.connect(lambda i: self.timer.stop() if i else self.timer.start())
-        self.ui.vid_back_btn.clicked.connect(lambda: self.set_frame(self.curr_i - self.vid_model.jump_size))
-        self.ui.vid_fwd_btn.clicked.connect(lambda: self.set_frame(self.curr_i + self.vid_model.jump_size))
+        self.ui.start_stop_btn.toggled.connect(
+            lambda i: self.timer.stop() if i else self.timer.start()
+        )
+        self.ui.vid_back_btn.clicked.connect(
+            lambda: self.set_frame(self.curr_i - self.vid_model.jump_size)
+        )
+        self.ui.vid_fwd_btn.clicked.connect(
+            lambda: self.set_frame(self.curr_i + self.vid_model.jump_size)
+        )
         # Handle bout-related video buttons
         self.ui.bout_replay_btn.clicked.connect(self.select_bout)
 
@@ -224,7 +239,9 @@ class MainWindow(QMainWindow):
         """__summary__"""
         # SIGNALS AND SLOTS: I/O
         # Handle opening settings and help windows
-        self.ui.action_settings.triggered.connect(lambda: toggle_window(self.settings_window))
+        self.ui.action_settings.triggered.connect(
+            lambda: toggle_window(self.settings_window)
+        )
         self.ui.action_help.triggered.connect(lambda: toggle_window(self.help_window))
         # Handle opening
         self.ui.action_open.triggered.connect(self.open)
@@ -252,14 +269,18 @@ class MainWindow(QMainWindow):
         # Handle video hot-keys
         QShortcut(Qt.Key.Key_Left, self).activated.connect(self.ui.vid_back_btn.click)
         QShortcut(Qt.Key.Key_Right, self).activated.connect(self.ui.vid_fwd_btn.click)
-        QShortcut(Qt.Key.Key_Space, self).activated.connect(self.ui.start_stop_btn.toggle)
+        QShortcut(Qt.Key.Key_Space, self).activated.connect(
+            self.ui.start_stop_btn.toggle
+        )
         QShortcut(Qt.Key.Key_K, self).activated.connect(self.ui.annot_keypts_cbx.toggle)
         # Handle bout-related hot-keys
         QShortcut(Qt.Key.Key_R, self).activated.connect(self.ui.bout_replay_btn.click)
         QShortcut(Qt.Key.Key_F, self).activated.connect(self.ui.bout_focus_btn.toggle)
         QShortcut(Qt.Key.Key_1, self).activated.connect(self.ui.is_behav_rbtn.toggle)
         QShortcut(Qt.Key.Key_2, self).activated.connect(self.ui.not_behav_rbtn.toggle)
-        QShortcut(Qt.Key.Key_3, self).activated.connect(self.ui.select_behav_rbtn.toggle)
+        QShortcut(Qt.Key.Key_3, self).activated.connect(
+            self.ui.select_behav_rbtn.toggle
+        )
 
     def _init_timer_vid(self):
         """__summary__"""
@@ -297,10 +318,14 @@ class MainWindow(QMainWindow):
     def open(self, fp: str | None = None) -> None:
         """__summary__"""
         if not fp:
-            fp = QFileDialog.getOpenFileName(self, "", "", "config file (*.json *.yaml)")[0]
+            fp = QFileDialog.getOpenFileName(
+                self, "", "", "config file (*.json *.yaml)"
+            )[0]
         # Getting corresponding experiment filenames
         if not fp:
-            self.ui.statusbar.showMessage("No video selected", timeout=STATUS_MSG_TIMEOUT)
+            self.ui.statusbar.showMessage(
+                "No video selected", timeout=STATUS_MSG_TIMEOUT
+            )
             return
         try:
             # Loading filenames in vid file manager
@@ -327,9 +352,13 @@ class MainWindow(QMainWindow):
             # Updating the graph_viewer with bouts data
             self.ui.graph_viewer.plot_bouts_init(self.bouts_model.bouts, configs)
             # Writing msg to statusbar
-            self.ui.statusbar.showMessage(f"Opened video: {fp}", timeout=STATUS_MSG_TIMEOUT)
+            self.ui.statusbar.showMessage(
+                f"Opened video: {fp}", timeout=STATUS_MSG_TIMEOUT
+            )
         except ValueError as e:
-            self.ui.statusbar.showMessage(f"Failed to open {fp}: {e}", timeout=STATUS_MSG_TIMEOUT)
+            self.ui.statusbar.showMessage(
+                f"Failed to open {fp}: {e}", timeout=STATUS_MSG_TIMEOUT
+            )
             print(e)
 
     def select_bout(self):
@@ -429,7 +458,9 @@ class MainWindow(QMainWindow):
             behavs_df = BehavScoredDf.bouts2frames(self.bouts_model.bouts)
             # Writing to file
             BehavScoredDf.write(behavs_df, fp)
-            self.ui.statusbar.showMessage(f"Saved scored behaviour frames to {fp}", timeout=STATUS_MSG_TIMEOUT)
+            self.ui.statusbar.showMessage(
+                f"Saved scored behaviour frames to {fp}", timeout=STATUS_MSG_TIMEOUT
+            )
 
     def save_bouts(self, fp=None):
         """__summary__"""
@@ -443,7 +474,9 @@ class MainWindow(QMainWindow):
         if fp:
             # Writing to json file
             self.bouts_model.bouts.write_json(fp)
-            self.ui.statusbar.showMessage(f"Saved scored behaviour bouts to {fp}", timeout=STATUS_MSG_TIMEOUT)
+            self.ui.statusbar.showMessage(
+                f"Saved scored behaviour bouts to {fp}", timeout=STATUS_MSG_TIMEOUT
+            )
 
     def export_vid(self, fp=None):
         """__summary__"""
@@ -471,7 +504,9 @@ class MainWindow(QMainWindow):
             p.join()
 
             # Displaying message
-            self.ui.statusbar.showMessage(f"Exported video to {fp}", timeout=STATUS_MSG_TIMEOUT)
+            self.ui.statusbar.showMessage(
+                f"Exported video to {fp}", timeout=STATUS_MSG_TIMEOUT
+            )
 
     @staticmethod
     def export_vid_worker(

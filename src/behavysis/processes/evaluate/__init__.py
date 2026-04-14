@@ -1,5 +1,4 @@
-"""
-Functions have the following format:
+"""Functions have the following format:
 
 Parameters
 ----------
@@ -16,12 +15,12 @@ configs_fp : str
 overwrite : bool
     Whether to overwrite the output file (if it exists).
 
-Returns
+Returns:
 -------
 str
     Description of the function's outcome.
 
-Notes
+Notes:
 -----
 Given the `dst_dir`, we save the files to `dst_dir/<func_name>/<exp_name>.<ext>`
 """
@@ -54,9 +53,7 @@ class Evaluate:
         configs_fp: str,
         overwrite: bool,
     ) -> str:
-        """
-        Make keypoints evaluation plot of likelihood of each bodypart through time.
-        """
+        """Make keypoints evaluation plot of likelihood of each bodypart through time."""
         name = get_name(dlc_fp)
         dst_dir = os.path.join(dst_dir, Evaluate.keypoints_plot.__name__)
         dst_fp = os.path.join(dst_dir, f"{name}.png")
@@ -114,9 +111,7 @@ class Evaluate:
         configs_fp: str,
         overwrite: bool,
     ) -> str:
-        """
-        Make behaviour evaluation plot of the predicted and actual behaviours through time.
-        """
+        """Make behaviour evaluation plot of the predicted and actual behaviours through time."""
         name = get_name(behavs_fp)
         dst_dir = os.path.join(dst_dir, Evaluate.behav_plot.__name__)
         dst_fp = os.path.join(dst_dir, f"{name}.png")

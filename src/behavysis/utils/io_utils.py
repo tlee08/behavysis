@@ -1,13 +1,11 @@
-"""
-Utility functions.
-"""
+"""Utility functions."""
 
 import asyncio
 import json
 import os
 import shutil
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
-from typing import Callable
 
 import joblib
 
@@ -24,8 +22,7 @@ import joblib
 
 
 def silent_remove(fp: str) -> None:
-    """
-    Removes the given file or dir if it exists.
+    """Removes the given file or dir if it exists.
     Does nothing if not.
     Does not throw any errors,
     """
@@ -39,8 +36,7 @@ def silent_remove(fp: str) -> None:
 
 
 def get_name(fp: str) -> str:
-    """
-    Given the filepath, returns the name of the file.
+    """Given the filepath, returns the name of the file.
     The name is:
     ```
     <path_to_file>/<name>.<ext>
@@ -50,9 +46,7 @@ def get_name(fp: str) -> str:
 
 
 def check_files_exist(*args: str):
-    """
-    args is dst_fp_ls
-    """
+    """Args is dst_fp_ls"""
     for dst_fp in args:
         if os.path.exists(dst_fp):
             return True
@@ -60,38 +54,32 @@ def check_files_exist(*args: str):
 
 
 def read_json(fp: str) -> dict:
-    """
-    Reads the json file at the given filepath.
-    """
-    with open(fp, "r", encoding="utf-8") as f:
+    """Reads the json file at the given filepath."""
+    with open(fp, encoding="utf-8") as f:
         return json.load(f)
 
 
 def write_json(fp: str, data: dict) -> None:
-    """
-    Writes the given data to the json file at the given filepath.
-    """
+    """Writes the given data to the json file at the given filepath."""
     os.makedirs(os.path.dirname(fp), exist_ok=True)
     with open(fp, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=4)
 
 
 def joblib_load(fp: str):
-    """
-    Load a joblib file.
-    """
+    """Load a joblib file."""
     return joblib.load(fp)
 
 
 def joblib_dump(data, fp: str):
-    """
-    Dump a joblib file.
-    """
+    """Dump a joblib file."""
     os.makedirs(os.path.dirname(fp), exist_ok=True)
     joblib.dump(data, fp)
 
 
-async def async_read(fp: str, executor: ThreadPoolExecutor, read_func: Callable) -> list:
+async def async_read(
+    fp: str, executor: ThreadPoolExecutor, read_func: Callable
+) -> list:
     """Asynchronously read a single file."""
     loop = asyncio.get_running_loop()
     return await loop.run_in_executor(executor, read_func, fp)

@@ -1,6 +1,4 @@
-"""
-__summary__
-"""
+"""__summary__"""
 
 import os
 from abc import ABC, abstractmethod
@@ -13,7 +11,11 @@ from pyqtgraph.exporters import ImageExporter
 from tqdm import trange
 
 from behavysis.df_classes.analysis_combined_df import AnalysisCombinedDf
-from behavysis.df_classes.keypoints_df import CoordsCols, KeypointsAnnotationsDf, KeypointsDf
+from behavysis.df_classes.keypoints_df import (
+    CoordsCols,
+    KeypointsAnnotationsDf,
+    KeypointsDf,
+)
 from behavysis.models.experiment_configs import ExperimentConfigs
 from behavysis.utils.diagnostics_utils import file_exists_msg
 from behavysis.utils.logging_utils import get_io_obj_content, init_logger_io_obj
@@ -37,9 +39,7 @@ class EvaluateVid:
         configs_fp: str,
         overwrite: bool,
     ) -> str:
-        """
-        Generate an annotated video with (optionally) keypoints and tracking analysis graphs.
-        """
+        """Generate an annotated video with (optionally) keypoints and tracking analysis graphs."""
         logger, io_obj = init_logger_io_obj()
         if not overwrite and os.path.exists(eval_vid_fp):
             logger.warning(file_exists_msg(eval_vid_fp))
@@ -66,17 +66,23 @@ class EvaluateVid:
         assert total_frames > 0, assert_msg % "video total frames"
 
         # Getting keypoints df
-        reserve_index = pd.Series(np.arange(configs.auto.start_frame, configs.auto.stop_frame))
+        reserve_index = pd.Series(
+            np.arange(configs.auto.start_frame, configs.auto.stop_frame)
+        )
         try:
             keypoints_df = KeypointsDf.read(keypoints_fp)
         except FileNotFoundError:
-            logger.warning("Keypoints file not found or could not be loaded.Disregarding keypoints.")
+            logger.warning(
+                "Keypoints file not found or could not be loaded.Disregarding keypoints."
+            )
             keypoints_df = KeypointsDf.init_df(reserve_index)
         # Getting analysis combined df
         try:
             analysis_df = AnalysisCombinedDf.read(analysis_combined_fp)
         except FileNotFoundError:
-            logger.warning("Analysis combined file not found or could not be loaded.Disregarding analysis.")
+            logger.warning(
+                "Analysis combined file not found or could not be loaded.Disregarding analysis."
+            )
             analysis_df = AnalysisCombinedDf.init_df(pd.Series(reserve_index))
 
         # MAKING ANNOTATED VIDEO
@@ -128,8 +134,7 @@ class EvaluateVid:
 
 
 class EvalVidFuncBase(ABC):
-    """
-    Calling the function returns the frame image (i.e. np.ndarray)
+    """Calling the function returns the frame image (i.e. np.ndarray)
     with the function applied.
     """
 
@@ -140,17 +145,14 @@ class EvalVidFuncBase(ABC):
     @abstractmethod
     def __init__(self, **kwargs):
         """Prepare function"""
-        pass
 
     @abstractmethod
     def __call__(self, frame: np.ndarray, idx: int) -> np.ndarray:
         """Run function"""
-        pass
 
 
 class Johansson(EvalVidFuncBase):
-    """
-    Making black frame, in the style of Johansson.
+    """Making black frame, in the style of Johansson.
     This means we see only the keypoints (i.e., what SimBA will see)
     """
 
@@ -170,9 +172,7 @@ class Johansson(EvalVidFuncBase):
 
 # TODO wrangle keypoints_df HERE (not in eval_vid) for encapsulation
 class Keypoints(EvalVidFuncBase):
-    """
-    Adding the keypoints (given in `row`) to the frame.
-    """
+    """Adding the keypoints (given in `row`) to the frame."""
 
     name = "keypoints"
 
@@ -191,7 +191,9 @@ class Keypoints(EvalVidFuncBase):
         self.height_output = height_input
         self.keypoints_df = KeypointsAnnotationsDf.keypoint2annotationsdf(keypoints_df)
         self.indivs_bpts_df = KeypointsAnnotationsDf.get_indivs_bpts(self.keypoints_df)
-        self.colours = KeypointsAnnotationsDf.make_colours(self.indivs_bpts_df[colour_level], cmap)
+        self.colours = KeypointsAnnotationsDf.make_colours(
+            self.indivs_bpts_df[colour_level], cmap
+        )
         self.pcutoff = pcutoff
         self.radius = radius
 
@@ -224,8 +226,7 @@ class Keypoints(EvalVidFuncBase):
 
 
 class Analysis(EvalVidFuncBase):
-    """
-    Annotates a text table in the top-left corner, with the format:
+    """Annotates a text table in the top-left corner, with the format:
     ```
             actual pred
     Behav_1   X     X
@@ -261,7 +262,9 @@ class Analysis(EvalVidFuncBase):
         self.plots_layout = pg.GraphicsLayoutWidget()
         # Getting the uniques analysis group names
         # And calculating each plot's height
-        analysis_ls = self.analysis_df.columns.unique(AnalysisCombinedDf.CN.ANALYSIS.value)
+        analysis_ls = self.analysis_df.columns.unique(
+            AnalysisCombinedDf.CN.ANALYSIS.value
+        )
         height_plot = int(np.round(self.height_output / len(analysis_ls)))
         # Making list of lists to store each plot (for "analysis")
         self.plot_arr = []
@@ -269,7 +272,9 @@ class Analysis(EvalVidFuncBase):
         for i, analysis_i in enumerate(analysis_ls):
             # Getting the uniques individual names in the analysis group
             # And calculating the width of each plot in the current row
-            indivs_ls = self.analysis_df[(analysis_i,)].columns.unique(AnalysisCombinedDf.CN.INDIVIDUALS.value)
+            indivs_ls = self.analysis_df[(analysis_i,)].columns.unique(
+                AnalysisCombinedDf.CN.INDIVIDUALS.value
+            )
             width_plot = int(np.round(self.width_output / len(indivs_ls)))
             # Making list to store each plot (for "individuals")
             plot_arr_i = []
@@ -296,7 +301,9 @@ class Analysis(EvalVidFuncBase):
                 x_line_arr_ij.setZValue(10)
                 plot_arr_ij.addItem(x_line_arr_ij)
                 # Making the corresponding colours list for each measures instance
-                colours_ls = KeypointsAnnotationsDf.make_colours(measures_vect, self.cmap)
+                colours_ls = KeypointsAnnotationsDf.make_colours(
+                    measures_vect, self.cmap
+                )
                 # Making overal plot's legend
                 legend = plot_arr_ij.addLegend()
                 for k, measures_k in enumerate(measures_vect):
@@ -352,8 +359,7 @@ class Analysis(EvalVidFuncBase):
         return plot_frame
 
     def update_plot(self, idx: int, i: int, j: int):
-        """
-        For a single plot
+        """For a single plot
         (as the plots_layout has rows (analysis) and columns (indivs)).
 
         NOTE: idx is
@@ -397,8 +403,7 @@ class Analysis(EvalVidFuncBase):
 
 
 class VidFuncsRunner:
-    """
-    Given a list of the EvalVidFuncBase funcs to run in the constructor,
+    """Given a list of the EvalVidFuncBase funcs to run in the constructor,
     it can be called as a function to convert a video frame and df index
     (corresponding to keypoints_df, behav_df, and analysis_fbf_df) to an
     "evaluation frame", which is annotated with keypoints and tiled with
@@ -423,9 +428,10 @@ class VidFuncsRunner:
     width_out: int
     height_out: int
 
-    def __init__(self, func_names: list[str], width_input: int, height_input: int, **kwargs):
-        """
-        NOTE: kwargs are the constructor parameters for
+    def __init__(
+        self, func_names: list[str], width_input: int, height_input: int, **kwargs
+    ):
+        """NOTE: kwargs are the constructor parameters for
         EvalVidFuncBase classes.
         """
         # Storing frame input dimensions

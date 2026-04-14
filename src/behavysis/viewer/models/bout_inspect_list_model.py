@@ -6,8 +6,7 @@ from behavysis.models.bouts import Bout
 
 
 class BoutInspectListModel(QAbstractListModel):
-    """
-    NOTE: bout_dict is a dict entry in bouts_dict. It is thus a pointer and editing
+    """NOTE: bout_dict is a dict entry in bouts_dict. It is thus a pointer and editing
     items in it will also edit bouts_dict.
 
     TODO: will this work for pydantic model??
@@ -21,7 +20,9 @@ class BoutInspectListModel(QAbstractListModel):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.bout = Bout(start=-1, stop=-1, dur=0, behav="nil", actual=0, user_defined={})
+        self.bout = Bout(
+            start=-1, stop=-1, dur=0, behav="nil", actual=0, user_defined={}
+        )
         self.id = -1
 
     @property
@@ -46,8 +47,7 @@ class BoutInspectListModel(QAbstractListModel):
         return list(self.bout.user_defined.items())
 
     def data(self, index, role):
-        """
-        Displays data in QListView.
+        """Displays data in QListView.
 
         This is a required function.
         """
@@ -78,12 +78,15 @@ class BoutInspectListModel(QAbstractListModel):
         self.layoutChanged.emit()
 
     def rowCount(self, index):
-        """
-        Gets number of rows for QListView.
+        """Gets number of rows for QListView.
 
         This is a required function.
         """
         return len(self.user_defined)
 
     def flags(self, index):
-        return Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsUserCheckable
+        return (
+            Qt.ItemFlag.ItemIsEnabled
+            | Qt.ItemFlag.ItemIsSelectable
+            | Qt.ItemFlag.ItemIsUserCheckable
+        )

@@ -1,6 +1,4 @@
-"""
-Utility functions.
-"""
+"""Utility functions."""
 
 from enum import Enum
 
@@ -27,10 +25,10 @@ class DiagnosticsDf(DFMixin):
 
     @classmethod
     def init_from_dd_ls(cls, dd_ls: list[dict]) -> pd.DataFrame:
-        """
-        Initialises the features dataframe from a list of dictionaries.
-        """
-        assert all("experiment" in dd for dd in dd_ls), "All dictionaries must have the 'experiment' key."
+        """Initialises the features dataframe from a list of dictionaries."""
+        assert all("experiment" in dd for dd in dd_ls), (
+            "All dictionaries must have the 'experiment' key."
+        )
         df = pd.DataFrame(dd_ls).set_index("experiment")
         df = cls.basic_clean(df)
         return df

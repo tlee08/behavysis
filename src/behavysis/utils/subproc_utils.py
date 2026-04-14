@@ -1,6 +1,4 @@
-"""
-Utility functions.
-"""
+"""Utility functions."""
 
 import os
 import subprocess
@@ -26,7 +24,9 @@ def run_subproc_fstream(cmd: list[str], fp: str, **kwargs) -> None:
 def run_subproc_str(cmd: list[str], **kwargs) -> str:
     """Run a subprocess and return the output as a string."""
     # Running the subprocess
-    with subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, **kwargs) as p:
+    with subprocess.Popen(
+        cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, **kwargs
+    ) as p:
         # Wait for the subprocess to finish
         out, err = p.communicate()
         # Error handling (returncode is not 0)
@@ -38,7 +38,9 @@ def run_subproc_str(cmd: list[str], **kwargs) -> str:
 def run_subproc_logger(cmd: list[str], logger, **kwargs) -> None:
     """Run a subprocess and stream the output to a logger."""
     # Starting the subprocess
-    with subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, **kwargs) as p:
+    with subprocess.Popen(
+        cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, **kwargs
+    ) as p:
         # Wait for the subprocess to finish
         while True:
             out = p.stdout.readline() if p.stdout else b""

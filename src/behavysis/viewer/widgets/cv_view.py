@@ -1,6 +1,4 @@
-"""
-_summary_
-"""
+"""_summary_"""
 
 import cv2
 import numpy as np
@@ -14,8 +12,7 @@ class CvView(QLabel):
     """_summary_"""
 
     def __init__(self, parent=None, **kwargs):
-        """
-        Displays cv2 images (i.e. numpy arrays).
+        """Displays cv2 images (i.e. numpy arrays).
 
         Parameters
         ----------
@@ -34,8 +31,7 @@ class CvView(QLabel):
         self.display_cv2(img_cv)
 
     def display_fp(self, fp: str):
-        """
-        Displaying image in given `fp`.
+        """Displaying image in given `fp`.
 
         Parameters
         ----------
@@ -47,8 +43,7 @@ class CvView(QLabel):
             self.display_cv2(img_cv)
 
     def display_cv2(self, img_cv: np.ndarray) -> None:
-        """
-        Display an opencv image on the widget.
+        """Display an opencv image on the widget.
         in the instance for future reference.
 
         Parameters

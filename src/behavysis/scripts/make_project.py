@@ -7,9 +7,7 @@ from behavysis.utils.template_utils import import_static_templates_script
 
 
 def main() -> None:
-    """
-    Makes a script to run a behavysis analysis project.
-    """
+    """Makes a script to run a behavysis analysis project."""
     root_dir = "."
     # Adding the script to run the pipeline
     to_continue, to_overwrite = import_static_templates_script(

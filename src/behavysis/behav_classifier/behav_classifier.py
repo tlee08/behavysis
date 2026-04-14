@@ -1,6 +1,4 @@
-"""
-_summary_
-"""
+"""_summary_"""
 
 from __future__ import annotations
 
@@ -29,14 +27,23 @@ from behavysis.behav_classifier.clf_models.clf_templates import (
     CNN1,
 )
 from behavysis.constants import Folders
-from behavysis.df_classes.behav_classifier_df import BehavClassifierCombinedDf, BehavClassifierEvalDf
+from behavysis.df_classes.behav_classifier_df import (
+    BehavClassifierCombinedDf,
+    BehavClassifierEvalDf,
+)
 from behavysis.df_classes.behav_df import BehavPredictedDf, BehavScoredDf, BehavValues
 from behavysis.df_classes.features_df import FeaturesDf
 from behavysis.models.behav_classifier_configs import (
     BehavClassifierConfigs,
 )
 from behavysis.utils.df_mixin import DFMixin
-from behavysis.utils.io_utils import async_read_files_run, get_name, joblib_dump, joblib_load, write_json
+from behavysis.utils.io_utils import (
+    async_read_files_run,
+    get_name,
+    joblib_dump,
+    joblib_load,
+    write_json,
+)
 from behavysis.utils.logging_utils import init_logger_file
 from behavysis.utils.misc_utils import array2listofvect, enum2tuple, listofvects2array
 
@@ -50,8 +57,7 @@ class GenericBehavLabels(Enum):
 
 
 class BehavClassifier:
-    """
-    BehavClassifier abstract class peforms behav classifier model preparation, training, saving,
+    """BehavClassifier abstract class peforms behav classifier model preparation, training, saving,
     evaluation, and inference.
     """
 
@@ -165,16 +171,14 @@ class BehavClassifier:
 
     @property
     def x_dir(self) -> str:
-        """
-        Returns the model's x directory.
+        """Returns the model's x directory.
         It gets the features_extracted directory from the parent Behavysis model directory.
         """
         return os.path.join(self.proj_dir, Folders.FEATURES_EXTRACTED.value)
 
     @property
     def y_dir(self) -> str:
-        """
-        Returns the model's y directory.
+        """Returns the model's y directory.
         It gets the scored_behavs directory from the parent Behavysis model directory.
         """
         return os.path.join(self.proj_dir, Folders.SCORED_BEHAVS.value)
@@ -185,11 +189,11 @@ class BehavClassifier:
 
     @classmethod
     def create_from_project_dir(cls, proj_dir: str) -> list:
-        """
-        Loading classifier from given Behavysis project directory.
-        """
+        """Loading classifier from given Behavysis project directory."""
         # Getting the list of behaviours (after wrangling column names)
-        y_df = cls.wrangle_columns_y(cls.combine_dfs(os.path.join(proj_dir, Folders.SCORED_BEHAVS.value)))
+        y_df = cls.wrangle_columns_y(
+            cls.combine_dfs(os.path.join(proj_dir, Folders.SCORED_BEHAVS.value))
+        )
         behavs_ls = y_df.columns.to_list()
         # For each behaviour, making a new BehavClassifier instance
         models_ls = [cls(proj_dir, behav) for behav in behavs_ls]
@@ -197,17 +201,14 @@ class BehavClassifier:
 
     @classmethod
     def create_from_project(cls, proj: Project) -> list[BehavClassifier]:
-        """
-        Loading classifier from given Behavysis project instance.
+        """Loading classifier from given Behavysis project instance.
         Wraps the `create_from_project_dir` method.
         """
         return cls.create_from_project_dir(proj.root_dir)
 
     @classmethod
     def load(cls, proj_dir: str, behav_name: str) -> BehavClassifier:
-        """
-        Reads the model from the expected model file.
-        """
+        """Reads the model from the expected model file."""
         # Checking that the configs file exists and is valid
         configs_fp = os.path.join(proj_dir, "behav_models", behav_name, "configs.json")
         try:
@@ -225,11 +226,13 @@ class BehavClassifier:
 
     @classmethod
     def combine_dfs(cls, src_dir):
-        """
-        Combines the data in the given directory into a single dataframe.
+        """Combines the data in the given directory into a single dataframe.
         Adds a MultiIndex level to the rows, with the values as the filenames in the directory.
         """
-        data_dict = {get_name(i): DFMixin.read(os.path.join(src_dir, i)) for i in os.listdir(os.path.join(src_dir))}
+        data_dict = {
+            get_name(i): DFMixin.read(os.path.join(src_dir, i))
+            for i in os.listdir(os.path.join(src_dir))
+        }
         df = pd.concat(data_dict.values(), axis=0, keys=data_dict.keys())
         df = BehavClassifierCombinedDf.basic_clean(df)
         return df
@@ -240,8 +243,7 @@ class BehavClassifier:
 
     @staticmethod
     def _preproc_x_fit_select_cols(x: np.ndarray) -> np.ndarray:
-        """
-        Selects only the derived features (not the x-y-l columns).
+        """Selects only the derived features (not the x-y-l columns).
 
         Used in the preprocessing pipeline.
         """
@@ -249,8 +251,7 @@ class BehavClassifier:
 
     @classmethod
     def preproc_x_fit(cls, x: np.ndarray, preproc_fp: str) -> None:
-        """
-        The preprocessing steps are:
+        """The preprocessing steps are:
         - Select only the derived features (not the x-y-l columns)
             - 2 (indivs) * 8 (bpts) * 3 (coords) = 48 (columns) before derived features
         - MinMax scaling (using previously fitted MinMaxScaler)
@@ -266,17 +267,14 @@ class BehavClassifier:
 
     @classmethod
     def preproc_x_transform(cls, x: np.ndarray, preproc_fp: str) -> np.ndarray:
-        """
-        Runs the preprocessing steps fitted from `preproc_x_fit` on the given `x` data.
-        """
+        """Runs the preprocessing steps fitted from `preproc_x_fit` on the given `x` data."""
         preproc_pipe: Pipeline = joblib_load(preproc_fp)
         x_preproc = preproc_pipe.transform(x)
         return x_preproc
 
     @classmethod
     def wrangle_columns_y(cls, y: pd.DataFrame) -> pd.DataFrame:
-        """
-        Filters the `y` dataframe to only include the `behav` column and the specific outcome columns,
+        """Filters the `y` dataframe to only include the `behav` column and the specific outcome columns,
         and rename the columns to be in the format `{behav}__{outcome}`.
         """
         # Filtering out the pred columns (in the `outcomes` level)
@@ -338,8 +336,7 @@ class BehavClassifier:
     def preproc_training(
         self,
     ) -> tuple[list[np.ndarray], list[np.ndarray], list[np.ndarray], list[np.ndarray]]:
-        """
-        Prepares the data for the training pipeline.
+        """Prepares the data for the training pipeline.
 
         Performs the following:
         - Combining dfs from x and y directories (individual experiment data).
@@ -350,7 +347,7 @@ class BehavClassifier:
         - Splits into training and test indexes.
             - The training indexes are undersampled to the ratio given in the configs.
 
-        Returns
+        Returns:
         -------
         A tuple containing four numpy arrays:
         - x_ls: list of each dataframe's input data.
@@ -359,15 +356,19 @@ class BehavClassifier:
         - index_test_ls: list of each dataframe's indexes for the testing data.
         """
         # Getting the lists of x and y dfs
-        x_fp_ls = [os.path.join(self.x_dir, i) for i in os.listdir(os.path.join(self.x_dir))]
-        y_fp_ls = [os.path.join(self.y_dir, i) for i in os.listdir(os.path.join(self.y_dir))]
+        x_fp_ls = [
+            os.path.join(self.x_dir, i) for i in os.listdir(os.path.join(self.x_dir))
+        ]
+        y_fp_ls = [
+            os.path.join(self.y_dir, i) for i in os.listdir(os.path.join(self.y_dir))
+        ]
         x_df_ls = async_read_files_run(x_fp_ls, FeaturesDf.read)
         y_df_ls = async_read_files_run(y_fp_ls, BehavScoredDf.read)
         # Formatting y dfs (selecting column and replacing UNDETERMINED with NON_BEHAV values)
         y_df_ls = [
-            y[(self.configs.behav_name, BehavScoredDf.OutcomesCols.ACTUAL.value)].replace(
-                BehavValues.UNDETERMINED.value, BehavValues.NON_BEHAV.value
-            )
+            y[
+                (self.configs.behav_name, BehavScoredDf.OutcomesCols.ACTUAL.value)
+            ].replace(BehavValues.UNDETERMINED.value, BehavValues.NON_BEHAV.value)
             for y in y_df_ls
         ]
         # Ensuring x and y dfs have the same index and are in the same row order
@@ -391,8 +392,12 @@ class BehavClassifier:
             stratify=index_flat[:, 2],
         )
         # Oversampling and undersampling ONLY on training data
-        index_train_flat = self.oversample(index_train_flat, index_train_flat[:, 2], self.configs.oversample_ratio)
-        index_train_flat = self.undersample(index_train_flat, index_train_flat[:, 2], self.configs.undersample_ratio)
+        index_train_flat = self.oversample(
+            index_train_flat, index_train_flat[:, 2], self.configs.oversample_ratio
+        )
+        index_train_flat = self.undersample(
+            index_train_flat, index_train_flat[:, 2], self.configs.undersample_ratio
+        )
         # Reshaping back to individual df index lists
         index_train_ls = array2listofvect(index_train_flat, 1)
         index_test_ls = array2listofvect(index_test_flat, 1)
@@ -403,8 +408,7 @@ class BehavClassifier:
     #################################################
 
     def pipeline_training(self) -> None:
-        """
-        Makes a classifier and saves it to the model's root directory.
+        """Makes a classifier and saves it to the model's root directory.
 
         Callable is a method from `ClfTemplates`.
         """
@@ -429,9 +433,7 @@ class BehavClassifier:
         joblib_dump(self.clf, self.clf_fp)
 
     def pipeline_training_all(self):
-        """
-        Making classifier for all available templates.
-        """
+        """Making classifier for all available templates."""
         # Saving existing clf
         clf = self.clf
         for clf_cls in CLF_TEMPLATES:
@@ -443,8 +445,7 @@ class BehavClassifier:
         self.clf = clf
 
     def pipeline_inference(self, x_df: pd.DataFrame) -> pd.DataFrame:
-        """
-        Given the unprocessed features dataframe, runs the model pipeline to make predictions.
+        """Given the unprocessed features dataframe, runs the model pipeline to make predictions.
 
         Pipeline is:
         - Preprocess `x` df. Refer to
@@ -466,8 +467,12 @@ class BehavClassifier:
         y_pred = (y_prob > self.configs.pcutoff).astype(int)
         # Making df
         pred_df = BehavPredictedDf.init_df(pd.Series(index))
-        pred_df[(self.configs.behav_name, BehavPredictedDf.OutcomesCols.PROB.value)] = y_prob
-        pred_df[(self.configs.behav_name, BehavPredictedDf.OutcomesCols.PRED.value)] = y_pred
+        pred_df[(self.configs.behav_name, BehavPredictedDf.OutcomesCols.PROB.value)] = (
+            y_prob
+        )
+        pred_df[(self.configs.behav_name, BehavPredictedDf.OutcomesCols.PRED.value)] = (
+            y_pred
+        )
         return pred_df
 
     #################################################
@@ -489,11 +494,10 @@ class BehavClassifier:
         index_ls: list[np.ndarray],
         name: str,
     ) -> tuple[pd.DataFrame, dict, Figure, Figure, Figure]:
-        """
-        Evaluates the classifier performance on the given x and y data.
+        """Evaluates the classifier performance on the given x and y data.
         Saves the `metrics_fig` and `pcutoffs_fig` to the model's root directory.
 
-        Returns
+        Returns:
         -------
         y_eval : pd.DataFrame
             Predicted behaviour classifications against the true labels.
@@ -507,17 +511,26 @@ class BehavClassifier:
         # Getting predictions
         y_true_ls = [y[index] for y, index in zip(y_ls, index_ls)]
         y_prob_ls = [
-            self.clf.predict(x=x, index=index, batch_size=self.configs.batch_size) for x, index in zip(x_ls, index_ls)
+            self.clf.predict(x=x, index=index, batch_size=self.configs.batch_size)
+            for x, index in zip(x_ls, index_ls)
         ]
         # Making eval vects
         y_true = np.concatenate(y_true_ls)
         y_prob = np.concatenate(y_prob_ls)
         y_pred = (y_prob > self.configs.pcutoff).astype(int)
         # Making eval_df
-        eval_df = BehavPredictedDf.init_df(pd.Series(np.arange(np.concatenate(index_ls).shape[0])))
-        eval_df[(self.configs.behav_name, BehavPredictedDf.OutcomesCols.PROB.value)] = y_prob
-        eval_df[(self.configs.behav_name, BehavPredictedDf.OutcomesCols.PRED.value)] = y_pred
-        eval_df[(self.configs.behav_name, BehavScoredDf.OutcomesCols.ACTUAL.value)] = y_true
+        eval_df = BehavPredictedDf.init_df(
+            pd.Series(np.arange(np.concatenate(index_ls).shape[0]))
+        )
+        eval_df[(self.configs.behav_name, BehavPredictedDf.OutcomesCols.PROB.value)] = (
+            y_prob
+        )
+        eval_df[(self.configs.behav_name, BehavPredictedDf.OutcomesCols.PRED.value)] = (
+            y_pred
+        )
+        eval_df[(self.configs.behav_name, BehavScoredDf.OutcomesCols.ACTUAL.value)] = (
+            y_true
+        )
         # Making classification report
         report_dict = self.eval_report(y_true, y_pred)
         # Making confusion matrix figure
@@ -527,7 +540,10 @@ class BehavClassifier:
         # Logistic curve
         logc_fig = self.eval_logc(y_true, y_prob)
         # Saving data and figures
-        BehavClassifierEvalDf.write(eval_df, os.path.join(self.eval_dir, f"{name}_eval.{BehavClassifierEvalDf.IO}"))
+        BehavClassifierEvalDf.write(
+            eval_df,
+            os.path.join(self.eval_dir, f"{name}_eval.{BehavClassifierEvalDf.IO}"),
+        )
         write_json(os.path.join(self.eval_dir, f"{name}_report.json"), report_dict)
         metrics_fig.savefig(os.path.join(self.eval_dir, f"{name}_confm.png"))
         pcutoffs_fig.savefig(os.path.join(self.eval_dir, f"{name}_pcutoffs.png"))
@@ -540,9 +556,7 @@ class BehavClassifier:
 
     @classmethod
     def eval_report(cls, y_true: np.ndarray, y_pred: np.ndarray) -> dict:
-        """
-        __summary__
-        """
+        """__summary__"""
         return classification_report(
             y_true=y_true,
             y_pred=y_pred,
@@ -552,9 +566,7 @@ class BehavClassifier:
 
     @classmethod
     def eval_conf_matr(cls, y_true: np.ndarray, y_pred: np.ndarray) -> Figure:
-        """
-        __summary__
-        """
+        """__summary__"""
         # Making confusion matrix
         fig, ax = plt.subplots(figsize=(7, 7))
         sns.heatmap(
@@ -573,9 +585,7 @@ class BehavClassifier:
 
     @classmethod
     def eval_metrics_pcutoffs(cls, y_true: np.ndarray, y_prob: np.ndarray) -> Figure:
-        """
-        __summary__
-        """
+        """__summary__"""
         # Getting precision, recall and accuracy for different cutoffs
         pcutoffs = np.linspace(0, 1, 101)
         # Measures
@@ -605,9 +615,7 @@ class BehavClassifier:
 
     @classmethod
     def eval_logc(cls, y_true: np.ndarray, y_prob: np.ndarray) -> Figure:
-        """
-        __summary__
-        """
+        """__summary__"""
         y_eval = pd.DataFrame(
             {
                 "y_true": y_true,
@@ -635,9 +643,7 @@ class BehavClassifier:
 
     @classmethod
     def eval_bouts(cls, y_true: np.ndarray, y_pred: np.ndarray) -> pd.DataFrame:
-        """
-        __summary__
-        """
+        """__summary__"""
         y_eval = pd.DataFrame({"y_true": y_true, "y_pred": y_pred})
         y_eval["ids"] = np.cumsum(y_eval["y_true"] != y_eval["y_true"].shift())
         # Getting the proportion of correct predictions for each bout
@@ -646,7 +652,9 @@ class BehavClassifier:
             y_eval_grouped.apply(lambda x: (x["y_pred"] == x["y_true"]).mean()),
             columns=["proportion"],
         )
-        y_eval_summary["actual_bout"] = y_eval_grouped.apply(lambda x: x["y_true"].mean())
+        y_eval_summary["actual_bout"] = y_eval_grouped.apply(
+            lambda x: x["y_true"].mean()
+        )
         y_eval_summary["bout_len"] = y_eval_grouped.apply(lambda x: x.shape[0])
         y_eval_summary = y_eval_summary.sort_values("proportion")
         # # Making figure

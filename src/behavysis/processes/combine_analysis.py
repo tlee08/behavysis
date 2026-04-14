@@ -22,8 +22,7 @@ class CombineAnalysis:
         configs_fp: str,
         overwrite: bool,
     ) -> str:
-        """
-        Concatenates across columns the frame-by-frame dataframes for all analysis subdirectories
+        """Concatenates across columns the frame-by-frame dataframes for all analysis subdirectories
         and saves this in a single dataframe.
         """
         logger, io_obj = init_logger_io_obj()
@@ -32,14 +31,22 @@ class CombineAnalysis:
             return get_io_obj_content(io_obj)
         name = get_name(configs_fp)
         # For each analysis subdir, combining fbf files
-        analysis_subdir_ls = [i for i in os.listdir(analysis_dir) if os.path.isdir(os.path.join(analysis_dir, i))]
+        analysis_subdir_ls = [
+            i
+            for i in os.listdir(analysis_dir)
+            if os.path.isdir(os.path.join(analysis_dir, i))
+        ]
         # If no analysis files, then return warning and don't make df
         if len(analysis_subdir_ls) == 0:
             logger.warning("no analysis fbf files made. Run `exp.analyse` first")
             return get_io_obj_content(io_obj)
         # Reading in each fbf analysis df
         comb_df_ls = [
-            AnalysisDf.read(os.path.join(analysis_dir, analysis_subdir, FBF, f"{name}.{AnalysisDf.IO}"))
+            AnalysisDf.read(
+                os.path.join(
+                    analysis_dir, analysis_subdir, FBF, f"{name}.{AnalysisDf.IO}"
+                )
+            )
             for analysis_subdir in analysis_subdir_ls
         ]
         # Making combined df from list of dfs

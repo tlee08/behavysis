@@ -1,19 +1,19 @@
-"""
-_summary_
-"""
+"""_summary_"""
 
 import cv2
 import numpy as np
 import pandas as pd
 
-from behavysis.df_classes.keypoints_df import CoordsCols, KeypointsAnnotationsDf, KeypointsDf
+from behavysis.df_classes.keypoints_df import (
+    CoordsCols,
+    KeypointsAnnotationsDf,
+    KeypointsDf,
+)
 from behavysis.models.experiment_configs import ExperimentConfigs
 
 
 class KeypointsModel:
-    """
-    _summary_
-    """
+    """_summary_"""
 
     raw_dlc_df: pd.DataFrame
     keypoints_df: pd.DataFrame
@@ -28,8 +28,7 @@ class KeypointsModel:
         self.load_empty()
 
     def load_from_df(self, keypoints_df: pd.DataFrame, configs: ExperimentConfigs):
-        """
-        load in the raw DLC dataframe and set the configurations, from
+        """Load in the raw DLC dataframe and set the configurations, from
         the given dlc_fp and configs.
         """
         # Configs
@@ -41,7 +40,9 @@ class KeypointsModel:
         # Keypoints dataframe
         self.keypoints_df = KeypointsAnnotationsDf.keypoint2annotationsdf(keypoints_df)
         self.indivs_bpts_df = KeypointsAnnotationsDf.get_indivs_bpts(self.keypoints_df)
-        self.colours = KeypointsAnnotationsDf.make_colours(self.indivs_bpts_df[self.colour_level], self.cmap)
+        self.colours = KeypointsAnnotationsDf.make_colours(
+            self.indivs_bpts_df[self.colour_level], self.cmap
+        )
 
     def load(self, fp: str, configs: ExperimentConfigs):
         df = KeypointsDf.init_df(pd.Series())
@@ -50,18 +51,16 @@ class KeypointsModel:
         except FileNotFoundError:
             pass
         self.load_from_df(df, configs)
-        
+
     def load_empty(self):
-        """
-        Load an empty dataset into the instance.
-        
+        """Load an empty dataset into the instance.
+
         An empty dataset is used as placeholder.
         """
         self.load_from_df(KeypointsDf.init_df(pd.Series()), ExperimentConfigs())
 
     def annot_keypoints(self, frame: np.ndarray, frame_num: int) -> np.ndarray:
-        """
-        Adding the keypoints (given in frame number) to the frame and returning the annotated frame.
+        """Adding the keypoints (given in frame number) to the frame and returning the annotated frame.
 
         Parameters
         ----------
@@ -70,7 +69,7 @@ class KeypointsModel:
         frame_num : int
             index (i.e. frame number) in DLC dataframe.
 
-        Returns
+        Returns:
         -------
         np.ndarray
             cv2 frame array.

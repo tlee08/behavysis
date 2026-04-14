@@ -1,11 +1,10 @@
-"""
-_summary_
-"""
+"""_summary_"""
 
 import functools
 import os
 import re
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 import dask
 import numpy as np
@@ -20,13 +19,16 @@ from behavysis.constants import (
     Folders,
 )
 from behavysis.df_classes.analysis_agg_df import AnalysisBinnedDf, AnalysisSummaryDf
-from behavysis.df_classes.analysis_collated_df import AnalysisBinnedCollatedDf, AnalysisSummaryCollatedDf
+from behavysis.df_classes.analysis_collated_df import (
+    AnalysisBinnedCollatedDf,
+    AnalysisSummaryCollatedDf,
+)
 from behavysis.df_classes.diagnostics_df import DiagnosticsDf
-from behavysis.pipeline.experiment import Experiment
-from behavysis.processes.run_dlc import RunDLC
 from behavysis.models.experiment_configs import (
     ExperimentConfigs,
 )
+from behavysis.pipeline.experiment import Experiment
+from behavysis.processes.run_dlc import RunDLC
 from behavysis.utils.dask_utils import cluster_process
 from behavysis.utils.io_utils import get_name
 from behavysis.utils.logging_utils import init_logger_file
@@ -34,10 +36,9 @@ from behavysis.utils.multiproc_utils import get_gpu_ids
 
 
 class Project:
-    """
-    A project is used to process and analyse many experiments at the same time.
+    """A project is used to process and analyse many experiments at the same time.
 
-    Attributes
+    Attributes:
     ----------
         root_dir : str
             The filepath of the project directory. Can be relative to
@@ -55,8 +56,7 @@ class Project:
     nprocs: int
 
     def __init__(self, root_dir: str) -> None:
-        """
-        Make a Project instance.
+        """Make a Project instance.
 
         Parameters
         ----------
@@ -81,10 +81,9 @@ class Project:
 
     @property
     def experiments(self) -> list[Experiment]:
-        """
-        Gets the ordered list of Experiment instances in the Project.
+        """Gets the ordered list of Experiment instances in the Project.
 
-        Returns
+        Returns:
         -------
         list[Experiment]
             The list of all Experiment instances stored in the Project instance.
@@ -92,35 +91,35 @@ class Project:
         return [self._experiments[i] for i in natsorted(self._experiments)]
 
     def get_experiment(self, name: str) -> Experiment:
-        """
-        Gets the experiment with the given name
+        """Gets the experiment with the given name
 
         Parameters
         ----------
         name : str
             The experiment name.
 
-        Returns
+        Returns:
         -------
         Experiment
             The experiment.
 
-        Raises
+        Raises:
         ------
         ValueError
             Experiment with the given name does not exist.
         """
         if name in self._experiments:
             return self._experiments[name]
-        raise ValueError(f'Experiment with the name "{name}" does not exist in the project.')
+        raise ValueError(
+            f'Experiment with the name "{name}" does not exist in the project.'
+        )
 
     #####################################################################
     #               PROJECT PROCESSING SCAFFOLD METHODS
     #####################################################################
 
     def _proc_scaff_mp(self, method: Callable, *args: Any, **kwargs: Any) -> list[dict]:
-        """
-        Processes an experiment with the given `Experiment` method and records
+        """Processes an experiment with the given `Experiment` method and records
         the diagnostics of the process in a MULTI-PROCESSING way.
 
         Parameters
@@ -128,7 +127,7 @@ class Project:
         method : Callable
             The `Experiment` class method to run.
 
-        Notes
+        Notes:
         -----
         Can call any `Experiment` methods instance.
         Effectively, `method` gets called with:
@@ -140,14 +139,15 @@ class Project:
         # Starting a dask cluster
         with cluster_process(LocalCluster(n_workers=self.nprocs, threads_per_worker=1)):
             # Preparing all experiments for execution
-            f_d_ls = [dask.delayed(method)(exp, *args, **kwargs) for exp in self.experiments]  # type: ignore
+            f_d_ls = [
+                dask.delayed(method)(exp, *args, **kwargs) for exp in self.experiments
+            ]  # type: ignore
             # Executing in parallel
             dd_ls = list(dask.compute(*f_d_ls))  # type: ignore
         return dd_ls
 
     def _proc_scaff_sp(self, method: Callable, *args: Any, **kwargs: Any) -> list[dict]:
-        """
-        Processes an experiment with the given `Experiment` method and records
+        """Processes an experiment with the given `Experiment` method and records
         the diagnostics of the process in a SINGLE-PROCESSING way.
 
         Parameters
@@ -155,7 +155,7 @@ class Project:
         method : Callable
             The experiment `Experiment` class method to run.
 
-        Notes
+        Notes:
         -----
         Can call any `Experiment` instance method.
         Effectively, `method` gets called with:
@@ -168,9 +168,7 @@ class Project:
         return [method(exp, *args, **kwargs) for exp in self.experiments]
 
     def _proc_scaff(self, method: Callable, *args: Any, **kwargs: Any) -> None:
-        """
-        Runs the given method on all experiments in the project.
-        """
+        """Runs the given method on all experiments in the project."""
         # Choosing whether to run the scaffold function in single or multi-processing mode
         if self.nprocs == 1:
             scaffold_func = self._proc_scaff_sp
@@ -185,7 +183,10 @@ class Project:
             # Processing all experiments
             df = DiagnosticsDf.init_from_dd_ls(dd_ls)
             # Updating the diagnostics file at each step
-            DiagnosticsDf.write(df, os.path.join(self.root_dir, DIAGNOSTICS_DIR, f"{method.__name__}.csv"))
+            DiagnosticsDf.write(
+                df,
+                os.path.join(self.root_dir, DIAGNOSTICS_DIR, f"{method.__name__}.csv"),
+            )
             # Finishing
             self.logger.info(f"Finished running {method.__name__} for all experiments")
 
@@ -194,8 +195,7 @@ class Project:
     #####################################################################
 
     def import_experiment(self, name: str) -> bool:
-        """
-        Adds an experiment with the given name to the .experiments dict.
+        """Adds an experiment with the given name to the .experiments dict.
         The key of this experiment in the `self.experiments` dict is "dir/name".
         If the experiment already exists in the project, it is not added.
 
@@ -204,7 +204,7 @@ class Project:
         name : str
             The experiment name.
 
-        Returns
+        Returns:
         -------
         bool
             Whether the experiment was imported or not.
@@ -216,8 +216,7 @@ class Project:
         return False
 
     def import_experiments(self) -> None:
-        """
-        Add all experiments in the project folder to the experiments dict.
+        """Add all experiments in the project folder to the experiments dict.
         The key of each experiment in the .experiments dict is "name".
         Refer to Project.addExperiment() for details about how each experiment is added.
         """
@@ -245,14 +244,19 @@ class Project:
         exp_ls_msg = "".join([f"\n    - {exp.name}" for exp in self.experiments])
         self.logger.info(f"Experiments imported:{exp_ls_msg}")
         # Constructing dd_df from dd_dict
-        dd_df = DiagnosticsDf.init_df(pd.Series(np.unique(np.concatenate(list(dd_dict.values())))))
+        dd_df = DiagnosticsDf.init_df(
+            pd.Series(np.unique(np.concatenate(list(dd_dict.values()))))
+        )
         # Setting each (experiment, folder) pair to True if the file exists
         for folder in dd_dict:
             dd_df[folder] = False
             for exp_name in dd_dict[folder]:
                 dd_df.loc[exp_name, folder] = True
         # Saving the diagnostics DataFrame
-        DiagnosticsDf.write(dd_df, os.path.join(self.root_dir, DIAGNOSTICS_DIR, "import_experiments.csv"))
+        DiagnosticsDf.write(
+            dd_df,
+            os.path.join(self.root_dir, DIAGNOSTICS_DIR, "import_experiments.csv"),
+        )
 
     #####################################################################
     #         BATCH PROCESSING WRAPPING EXPERIMENT METHODS
@@ -268,8 +272,7 @@ class Project:
         self._proc_scaff(Experiment.get_vid_metadata)
 
     def run_dlc(self, gputouse: int | None = None, overwrite: bool = False) -> None:
-        """
-        Batch processing corresponding to
+        """Batch processing corresponding to
         [behavysis.pipeline.experiment.Experiment.run_dlc][]
 
         Uses a multiprocessing pool to run DLC on each batch of experiments with each GPU
@@ -287,7 +290,11 @@ class Project:
         exp_ls = self.experiments
         # If overwrite is False, filtering for only experiments that need processing
         if not overwrite:
-            exp_ls = [exp for exp in exp_ls if not os.path.isfile(exp.get_fp(Folders.KEYPOINTS.value))]
+            exp_ls = [
+                exp
+                for exp in exp_ls
+                if not os.path.isfile(exp.get_fp(Folders.KEYPOINTS.value))
+            ]
         # Running DLC on each batch of experiments with each GPU (given allocated GPU ID)
         exp_batches_ls = np.array_split(np.array(exp_ls), nprocs)
         # Starting a dask cluster
@@ -295,7 +302,9 @@ class Project:
             # Preparing all experiments for execution
             f_d_ls = [
                 dask.delayed(RunDLC.ma_dlc_run_batch)(  # type: ignore
-                    vid_fp_ls=[exp.get_fp(Folders.FORMATTED_VID.value) for exp in exp_batch],
+                    vid_fp_ls=[
+                        exp.get_fp(Folders.FORMATTED_VID.value) for exp in exp_batch
+                    ],
                     keypoints_dir=os.path.join(self.root_dir, Folders.KEYPOINTS.value),
                     configs_dir=os.path.join(self.root_dir, Folders.CONFIGS.value),
                     gputouse=gputouse,
@@ -313,19 +322,27 @@ class Project:
         # Saving the auto fields of the configs of all experiments in the diagnostics folder
         self._proc_scaff(Experiment.collate_auto_configs)
         f_name = Experiment.collate_auto_configs.__name__
-        auto_configs_df = DiagnosticsDf.read(os.path.join(self.root_dir, DIAGNOSTICS_DIR, f"{f_name}.csv"))
+        auto_configs_df = DiagnosticsDf.read(
+            os.path.join(self.root_dir, DIAGNOSTICS_DIR, f"{f_name}.csv")
+        )
         # Making and saving histogram plots of the numerical auto fields
         # NOTE: NOT including string frequencies, only numerical
-        auto_configs_df = auto_configs_df.loc[:, auto_configs_df.apply(pd.api.types.is_numeric_dtype)]
+        auto_configs_df = auto_configs_df.loc[
+            :, auto_configs_df.apply(pd.api.types.is_numeric_dtype)
+        ]
         g = sns.FacetGrid(
-            data=auto_configs_df.fillna(-1).melt(var_name="measure", value_name="value"),
+            data=auto_configs_df.fillna(-1).melt(
+                var_name="measure", value_name="value"
+            ),
             col="measure",
             sharex=False,
             col_wrap=4,
         )
         g.map(sns.histplot, "value", bins=10)
         g.set_titles("{col_name}")
-        g.savefig(os.path.join(self.root_dir, DIAGNOSTICS_DIR, "collate_auto_configs.png"))
+        g.savefig(
+            os.path.join(self.root_dir, DIAGNOSTICS_DIR, "collate_auto_configs.png")
+        )
         g.figure.clf()
 
     def preprocess(self, funcs: tuple[Callable, ...], overwrite: bool) -> None:
@@ -369,8 +386,7 @@ class Project:
     #####################################################################
 
     def collate_analysis(self) -> None:
-        """
-        Combines an analysis of all the experiments together to generate combined files for:
+        """Combines an analysis of all the experiments together to generate combined files for:
         - Each binned data. The index is (bin) and columns are (expName, indiv, measure).
         - The summary data. The index is (expName, indiv, measure) and columns are
         (statistics -e.g., mean).
@@ -380,8 +396,7 @@ class Project:
         self._analyse_collate_summary()
 
     def _analyse_collate_binned(self) -> None:
-        """
-        Combines an analysis of all the experiments together to generate combined h5 files for:
+        """Combines an analysis of all the experiments together to generate combined h5 files for:
         - Each binned data. The index is (bin) and columns are (expName, indiv, measure).
         """
         # Initialising the process and logging description
@@ -390,7 +405,9 @@ class Project:
         # AGGREGATING BINNED DATA
         # NOTE: need a more robust way of getting the list of bin sizes
         proj_analyse_dir = os.path.join(self.root_dir, ANALYSIS_DIR)
-        configs = ExperimentConfigs.read_json(self.experiments[0].get_fp(Folders.CONFIGS.value))
+        configs = ExperimentConfigs.read_json(
+            self.experiments[0].get_fp(Folders.CONFIGS.value)
+        )
         bin_sizes_sec = configs.get_ref(configs.user.analyse.bins_sec)
         bin_sizes_sec = np.append(bin_sizes_sec, "custom")
         # Checking that the analysis directory exists
@@ -399,12 +416,19 @@ class Project:
         # Searching through all the analysis subdir
         for analyse_subdir in os.listdir(proj_analyse_dir):
             for bin_i in bin_sizes_sec:
-                self.logger.info("Collating binned data in %s for bin size %s", analyse_subdir, str(bin_i))
+                self.logger.info(
+                    "Collating binned data in %s for bin size %s",
+                    analyse_subdir,
+                    str(bin_i),
+                )
                 df_ls = []
                 names_ls = []
                 for exp in self.experiments:
                     in_fp = os.path.join(
-                        proj_analyse_dir, analyse_subdir, f"binned_{bin_i}", f"{exp.name}.{AnalysisBinnedDf.IO}"
+                        proj_analyse_dir,
+                        analyse_subdir,
+                        f"binned_{bin_i}",
+                        f"{exp.name}.{AnalysisBinnedDf.IO}",
                     )
                     if os.path.isfile(in_fp):
                         df_ls.append(AnalysisBinnedDf.read(in_fp))
@@ -416,16 +440,22 @@ class Project:
                     AnalysisBinnedCollatedDf.write(
                         df,
                         os.path.join(
-                            proj_analyse_dir, analyse_subdir, f"__ALL_binned_{bin_i}.{AnalysisBinnedCollatedDf.IO}"
+                            proj_analyse_dir,
+                            analyse_subdir,
+                            f"__ALL_binned_{bin_i}.{AnalysisBinnedCollatedDf.IO}",
                         ),
                     )
                     AnalysisBinnedCollatedDf.write_csv(
-                        df, os.path.join(proj_analyse_dir, analyse_subdir, f"__ALL_binned_{bin_i}.csv")
+                        df,
+                        os.path.join(
+                            proj_analyse_dir,
+                            analyse_subdir,
+                            f"__ALL_binned_{bin_i}.csv",
+                        ),
                     )
 
     def _analyse_collate_summary(self) -> None:
-        """
-        Combines an analysis of all the experiments together to generate combined h5 files for:
+        """Combines an analysis of all the experiments together to generate combined h5 files for:
         - The summary data. The index is (expName, indiv, measure) and columns are
         (statistics -e.g., mean).
         """
@@ -443,7 +473,12 @@ class Project:
             df_ls = []
             names_ls = []
             for exp in self.experiments:
-                in_fp = os.path.join(proj_analyse_dir, analyse_subdir, "summary", f"{exp.name}.{AnalysisSummaryDf.IO}")
+                in_fp = os.path.join(
+                    proj_analyse_dir,
+                    analyse_subdir,
+                    "summary",
+                    f"{exp.name}.{AnalysisSummaryDf.IO}",
+                )
                 if os.path.isfile(in_fp):
                     # Reading exp summary df
                     df_ls.append(AnalysisSummaryDf.read(in_fp))
@@ -453,8 +488,14 @@ class Project:
                 df = pd.concat(df_ls, keys=names_ls, names=["experiment"], axis=0)
                 df = df.fillna(0)
                 AnalysisSummaryCollatedDf.write(
-                    df, os.path.join(proj_analyse_dir, analyse_subdir, f"__ALL_summary.{AnalysisSummaryCollatedDf.IO}")
+                    df,
+                    os.path.join(
+                        proj_analyse_dir,
+                        analyse_subdir,
+                        f"__ALL_summary.{AnalysisSummaryCollatedDf.IO}",
+                    ),
                 )
                 AnalysisSummaryCollatedDf.write_csv(
-                    df, os.path.join(proj_analyse_dir, analyse_subdir, "__ALL_summary.csv")
+                    df,
+                    os.path.join(proj_analyse_dir, analyse_subdir, "__ALL_summary.csv"),
                 )

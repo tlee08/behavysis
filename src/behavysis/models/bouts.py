@@ -1,8 +1,4 @@
-"""
-_summary_
-"""
-
-from typing import Dict
+"""_summary_"""
 
 from behavysis.utils.pydantic_base_model import PydanticBaseModel
 
@@ -13,7 +9,7 @@ class Bout(PydanticBaseModel):
     dur: int
     behav: str
     actual: int
-    user_defined: Dict[str, int]
+    user_defined: dict[str, int]
 
 
 class BoutStruct(PydanticBaseModel):

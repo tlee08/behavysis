@@ -1,6 +1,4 @@
-"""
-_summary_
-"""
+"""_summary_"""
 
 import logging
 import os
@@ -39,8 +37,7 @@ class ExtractFeatures:
         configs_fp: str,
         overwrite: bool,
     ) -> str:
-        """
-        Extracting features from preprocessed keypoints dataframe using SimBA
+        """Extracting features from preprocessed keypoints dataframe using SimBA
         processes.
 
         Parameters
@@ -54,7 +51,7 @@ class ExtractFeatures:
         overwrite : bool
             Whether to overwrite the dst_fp file (if it exists).
 
-        Returns
+        Returns:
         -------
         str
             The outcome of the process.
@@ -69,7 +66,9 @@ class ExtractFeatures:
         configs_dir = os.path.dirname(configs_fp)
         simba_in_dir = os.path.join(CACHE_DIR, f"input_{cpid}")
         simba_dir = os.path.join(CACHE_DIR, f"simba_proj_{cpid}")
-        simba_features_dir = os.path.join(simba_dir, "project_folder", "csv", "features_extracted")
+        simba_features_dir = os.path.join(
+            simba_dir, "project_folder", "csv", "features_extracted"
+        )
         simba_features_fp = os.path.join(simba_features_dir, f"{name}.csv")
         # Removing temp folders (preemptively)
         silent_remove(simba_in_dir)
@@ -101,9 +100,10 @@ class ExtractFeatures:
 #####################################################################
 
 
-def select_cols(keypoints_df: pd.DataFrame, configs_fp: str, logger: logging.Logger) -> pd.DataFrame:
-    """
-    Selecting given keypoints columns to input to SimBA.
+def select_cols(
+    keypoints_df: pd.DataFrame, configs_fp: str, logger: logging.Logger
+) -> pd.DataFrame:
+    """Selecting given keypoints columns to input to SimBA.
 
     Parameters
     ----------
@@ -112,7 +112,7 @@ def select_cols(keypoints_df: pd.DataFrame, configs_fp: str, logger: logging.Log
     configs_fp : str
         Configs dict.
 
-    Returns
+    Returns:
     -------
     pd.DataFrame
         Keypoints dataframe with selected columns.
@@ -139,8 +139,7 @@ def run_simba_subproc(
     cpid: int,
     logger: logging.Logger,
 ) -> None:
-    """
-    Running the custom SimBA script to take the prepared keypoints dataframe as input and
+    """Running the custom SimBA script to take the prepared keypoints dataframe as input and
     create the features extracted dataframe.
 
     A custom SimBA script must be run in a separate custom conda environment because SimBA

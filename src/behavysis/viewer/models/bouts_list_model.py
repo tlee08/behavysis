@@ -17,8 +17,7 @@ class BoutsListModel(QAbstractListModel):
         self.load_empty()
 
     def data(self, index, role):
-        """
-        Displays data in QListView.
+        """Displays data in QListView.
 
         This is a required function.
         """
@@ -47,29 +46,30 @@ class BoutsListModel(QAbstractListModel):
         # behavs_df to bouts
         self.bouts = BehavScoredDf.frames2bouts(df)
         self.layoutChanged.emit()
-    
+
     def load_empty(self):
-        """
-        Load an empty dataset into the instance.
-        
+        """Load an empty dataset into the instance.
+
         An empty dataset is used as placeholder.
         """
         self.bouts = Bouts(start=-1, stop=-1, bouts=[], bouts_struct=[])
 
     def rowCount(self, index):
-        """
-        Gets number of rows for QListView.
+        """Gets number of rows for QListView.
 
         This is a required function.
         """
         return len(self.bouts.bouts)
 
     def flags(self, index):
-        return Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsUserCheckable
+        return (
+            Qt.ItemFlag.ItemIsEnabled
+            | Qt.ItemFlag.ItemIsSelectable
+            | Qt.ItemFlag.ItemIsUserCheckable
+        )
 
 
 def serialiser(i):
     if isinstance(i, np.integer):
         return int(i)
-    else:
-        return i
+    return i

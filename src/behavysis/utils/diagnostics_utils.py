@@ -1,5 +1,3 @@
-from typing import Optional
-
 import numpy as np
 
 DIAGNOSTICS_SUCCESS_MESSAGES = (
@@ -25,15 +23,11 @@ DIAGNOSTICS_SUCCESS_MESSAGES = (
 
 
 def success_msg() -> str:
-    """
-    Return a random positive message :)
-    """
+    """Return a random positive message :)"""
     return f"SUCCESS: {np.random.choice(DIAGNOSTICS_SUCCESS_MESSAGES)}\n"
 
 
-def file_exists_msg(fp: Optional[str] = None) -> str:
-    """
-    Return a warning message.
-    """
+def file_exists_msg(fp: str | None = None) -> str:
+    """Return a warning message."""
     fp_str = f", {fp}, " if fp else " "
     return f"Output file{fp_str}already exists - not overwriting file.To overwrite, specify `overwrite=True`."

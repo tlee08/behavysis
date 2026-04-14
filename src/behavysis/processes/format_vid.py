@@ -1,5 +1,4 @@
-"""
-Functions have the following format:
+"""Functions have the following format:
 
 Parameters
 ----------
@@ -37,14 +36,13 @@ from behavysis.utils.subproc_utils import run_subproc_console
 
 
 class FormatVid:
-    """
-    Class for formatting videos based on given parameters.
-    """
+    """Class for formatting videos based on given parameters."""
 
     @classmethod
-    def format_vid(cls, raw_vid_fp: str, formatted_vid_fp: str, configs_fp: str, overwrite: bool) -> str:
-        """
-        Formats the input video with the given parameters.
+    def format_vid(
+        cls, raw_vid_fp: str, formatted_vid_fp: str, configs_fp: str, overwrite: bool
+    ) -> str:
+        """Formats the input video with the given parameters.
 
         Parameters
         ----------
@@ -57,7 +55,7 @@ class FormatVid:
         overwrite : bool
             Whether to overwrite the output file (if it exists).
 
-        Returns
+        Returns:
         -------
         str
             Description of the function's outcome.
@@ -85,9 +83,10 @@ class FormatVid:
         return get_io_obj_content(io_obj)
 
     @classmethod
-    def get_vids_metadata(cls, raw_vid_fp: str, formatted_vid_fp: str, configs_fp: str) -> str:
-        """
-        Finds the video metadata/parameters for either the raw or formatted video,
+    def get_vids_metadata(
+        cls, raw_vid_fp: str, formatted_vid_fp: str, configs_fp: str
+    ) -> str:
+        """Finds the video metadata/parameters for either the raw or formatted video,
         and stores this data in the experiment's config file.
 
         Parameters
@@ -99,7 +98,7 @@ class FormatVid:
         configs_fp : str
             The JSON configs filepath.
 
-        Returns
+        Returns:
         -------
         str
             Description of the function's outcome.
@@ -147,8 +146,8 @@ def ffmpeg_process_vid(
     filters = []
     if width_px or height_px:
         # Setting width and height (if one is None)
-        width_px = width_px if width_px else -1
-        height_px = height_px if height_px else -1
+        width_px = width_px or -1
+        height_px = height_px or -1
         # Constructing downsample filter in cmd
         filters.append(f"scale={width_px}:{height_px}")
         logger.debug(f"Downsampling to {width_px} x {height_px}.")
@@ -187,15 +186,14 @@ def ffmpeg_process_vid(
 
 
 def get_vid_metadata(vid_fp: str, logger: logging.Logger) -> VidMetadata:
-    """
-    Finds the video metadata/parameters for either the raw or formatted video.
+    """Finds the video metadata/parameters for either the raw or formatted video.
 
     Parameters
     ----------
     fp : str
         The video filepath.
 
-    Returns
+    Returns:
     -------
     VidMetadata
         Object containing video metadata.
@@ -203,7 +201,9 @@ def get_vid_metadata(vid_fp: str, logger: logging.Logger) -> VidMetadata:
     configs_meta = VidMetadata()
     cap = cv2.VideoCapture(vid_fp)
     if not cap.isOpened():
-        logger.warning(f"The file, {vid_fp}, does not exist or is corrupted. Please check this file.")
+        logger.warning(
+            f"The file, {vid_fp}, does not exist or is corrupted. Please check this file."
+        )
     else:
         configs_meta.height_px = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         configs_meta.width_px = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))

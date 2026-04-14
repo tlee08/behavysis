@@ -11,8 +11,7 @@ LOG_IO_OBJ_FORMAT = "%(levelname)s - %(message)s"
 
 
 def add_console_handler(logger: logging.Logger, level: int = logging.INFO) -> None:
-    """
-    If logger does not have a console handler,
+    """If logger does not have a console handler,
     create a console handler and add it to the logger.
 
     Returns nothing as the console handler is always sys,stderr.
@@ -30,8 +29,7 @@ def add_console_handler(logger: logging.Logger, level: int = logging.INFO) -> No
 
 
 def add_log_file_handler(logger: logging.Logger, level: int = logging.DEBUG) -> str:
-    """
-    If logger does not have a file handler,
+    """If logger does not have a file handler,
     create a file handler and add it to the logger.
 
     Returns the log filepath.
@@ -51,9 +49,10 @@ def add_log_file_handler(logger: logging.Logger, level: int = logging.DEBUG) -> 
     return file_handler.baseFilename
 
 
-def add_io_obj_handler(logger: logging.Logger, level: int = logging.INFO) -> io.StringIO:
-    """
-    If logger does not have a StringIO handler,
+def add_io_obj_handler(
+    logger: logging.Logger, level: int = logging.INFO
+) -> io.StringIO:
+    """If logger does not have a StringIO handler,
     create a StringIO handler and add it to the logger.
 
     Returns the StringIO object.
@@ -78,8 +77,7 @@ def init_logger(
     file_level: int | None = None,
     io_obj_level: int | None = None,
 ) -> logging.Logger:
-    """
-    Setup logging configuration.
+    """Setup logging configuration.
 
     For each of the following levels,
     if the level argument is not None,
@@ -105,8 +103,7 @@ def init_logger_console(
     name: str | None = None,
     console_level: int = logging.INFO,
 ) -> logging.Logger:
-    """
-    Logs to:
+    """Logs to:
     - console
     """
     return init_logger(
@@ -120,8 +117,7 @@ def init_logger_file(
     console_level: int = logging.INFO,
     file_level: int = logging.DEBUG,
 ) -> logging.Logger:
-    """
-    Logs to:
+    """Logs to:
     - console
     - file (<cache_dir>/debug.log)
     """
@@ -138,8 +134,7 @@ def init_logger_io_obj(
     file_level: int = logging.DEBUG,
     io_obj_level: int = logging.INFO,
 ) -> tuple[logging.Logger, io.StringIO]:
-    """
-    Logs to:
+    """Logs to:
     - console
     - file (<cache_dir>/debug.log)
     - io.StringIO object (returned)
@@ -155,8 +150,7 @@ def init_logger_io_obj(
 
 
 def get_io_obj_content(io_obj: io.IOBase) -> str:
-    """
-    Reads and returns the content from the IOBase object.
+    """Reads and returns the content from the IOBase object.
     Also restores cursor position of the object.
     """
     cursor = io_obj.tell()

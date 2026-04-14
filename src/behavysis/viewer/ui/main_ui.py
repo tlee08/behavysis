@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 ################################################################################
 ## Form generated from reading UI file 'main_ui.ui'
 ##
@@ -31,12 +29,14 @@ from behavysis.viewer.widgets.cv_view import CvView
 from behavysis.viewer.widgets.graph_view import GraphView
 
 
-class Ui_MainWindow(object):
+class Ui_MainWindow:
     def setupUi(self, MainWindow):
         if not MainWindow.objectName():
             MainWindow.setObjectName("MainWindow")
         MainWindow.resize(683, 496)
-        sizePolicy = QSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Preferred)
+        sizePolicy = QSizePolicy(
+            QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Preferred
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(MainWindow.sizePolicy().hasHeightForWidth())
@@ -231,10 +231,14 @@ class Ui_MainWindow(object):
 
         self.graph_viewer = GraphView(self.centralwidget)
         self.graph_viewer.setObjectName("graph_viewer")
-        sizePolicy2 = QSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Preferred)
+        sizePolicy2 = QSizePolicy(
+            QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Preferred
+        )
         sizePolicy2.setHorizontalStretch(0)
         sizePolicy2.setVerticalStretch(0)
-        sizePolicy2.setHeightForWidth(self.graph_viewer.sizePolicy().hasHeightForWidth())
+        sizePolicy2.setHeightForWidth(
+            self.graph_viewer.sizePolicy().hasHeightForWidth()
+        )
         self.graph_viewer.setSizePolicy(sizePolicy2)
         self.graph_viewer.setMinimumSize(QSize(10, 0))
         self.graph_viewer.setStyleSheet("background-color: rgb(255, 80, 68);")
@@ -289,30 +293,60 @@ class Ui_MainWindow(object):
     # setupUi
 
     def retranslateUi(self, MainWindow):
-        MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", "MainWindow", None))
+        MainWindow.setWindowTitle(
+            QCoreApplication.translate("MainWindow", "MainWindow", None)
+        )
         self.action_open.setText(QCoreApplication.translate("MainWindow", "Open", None))
-        self.action_settings.setText(QCoreApplication.translate("MainWindow", "Settings", None))
-        self.actionClose.setText(QCoreApplication.translate("MainWindow", "Close", None))
+        self.action_settings.setText(
+            QCoreApplication.translate("MainWindow", "Settings", None)
+        )
+        self.actionClose.setText(
+            QCoreApplication.translate("MainWindow", "Close", None)
+        )
         self.action_quit.setText(QCoreApplication.translate("MainWindow", "Quit", None))
         self.action_save.setText(QCoreApplication.translate("MainWindow", "Save", None))
-        self.action_save_as_bouts.setText(QCoreApplication.translate("MainWindow", "Save as bouts", None))
-        self.action_save_as_frames.setText(QCoreApplication.translate("MainWindow", "Save as", None))
-        self.action_export_video.setText(QCoreApplication.translate("MainWindow", "Export video", None))
+        self.action_save_as_bouts.setText(
+            QCoreApplication.translate("MainWindow", "Save as bouts", None)
+        )
+        self.action_save_as_frames.setText(
+            QCoreApplication.translate("MainWindow", "Save as", None)
+        )
+        self.action_export_video.setText(
+            QCoreApplication.translate("MainWindow", "Export video", None)
+        )
         self.action_help.setText(QCoreApplication.translate("MainWindow", "Help", None))
         self.vid_viewer.setText("")
-        self.start_stop_btn.setText(QCoreApplication.translate("MainWindow", "start/stop", None))
-        self.bout_replay_btn.setText(QCoreApplication.translate("MainWindow", "replay bout", None))
+        self.start_stop_btn.setText(
+            QCoreApplication.translate("MainWindow", "start/stop", None)
+        )
+        self.bout_replay_btn.setText(
+            QCoreApplication.translate("MainWindow", "replay bout", None)
+        )
         self.vid_back_btn.setText(QCoreApplication.translate("MainWindow", "<5s", None))
         self.vid_fwd_btn.setText(QCoreApplication.translate("MainWindow", ">5s", None))
-        self.bout_inspect_header.setText(QCoreApplication.translate("MainWindow", "Behaviour Inspector", None))
+        self.bout_inspect_header.setText(
+            QCoreApplication.translate("MainWindow", "Behaviour Inspector", None)
+        )
         self.behav_rbtns_group.setTitle("")
-        self.is_behav_rbtn.setText(QCoreApplication.translate("MainWindow", "IS behav", None))
-        self.not_behav_rbtn.setText(QCoreApplication.translate("MainWindow", "NOT behav", None))
-        self.select_behav_rbtn.setText(QCoreApplication.translate("MainWindow", "Not sure..", None))
-        self.bout_focus_btn.setText(QCoreApplication.translate("MainWindow", "focus on bout", None))
-        self.annot_keypts_cbx.setText(QCoreApplication.translate("MainWindow", "Show Keypoints", None))
+        self.is_behav_rbtn.setText(
+            QCoreApplication.translate("MainWindow", "IS behav", None)
+        )
+        self.not_behav_rbtn.setText(
+            QCoreApplication.translate("MainWindow", "NOT behav", None)
+        )
+        self.select_behav_rbtn.setText(
+            QCoreApplication.translate("MainWindow", "Not sure..", None)
+        )
+        self.bout_focus_btn.setText(
+            QCoreApplication.translate("MainWindow", "focus on bout", None)
+        )
+        self.annot_keypts_cbx.setText(
+            QCoreApplication.translate("MainWindow", "Show Keypoints", None)
+        )
         self.menu_file.setTitle(QCoreApplication.translate("MainWindow", "File", None))
         self.menu_save.setTitle(QCoreApplication.translate("MainWindow", "Save", None))
-        self.menu_export.setTitle(QCoreApplication.translate("MainWindow", "Export", None))
+        self.menu_export.setTitle(
+            QCoreApplication.translate("MainWindow", "Export", None)
+        )
 
     # retranslateUi

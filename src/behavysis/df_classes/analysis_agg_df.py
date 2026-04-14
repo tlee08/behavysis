@@ -1,6 +1,6 @@
 import os
+from collections.abc import Callable
 from enum import Enum
-from typing import Callable
 
 import numpy as np
 import pandas as pd
@@ -43,8 +43,7 @@ class AnalysisSummaryDf(DFMixin):
 
     @classmethod
     def agg_quantitative(cls, analysis_df: pd.DataFrame, fps: float) -> pd.DataFrame:
-        """
-        Generates the summarised data across the entire period, including mean,
+        """Generates the summarised data across the entire period, including mean,
         std, min, Q1, median, Q3, and max.
         Used for quantitative numeric data.
 
@@ -91,8 +90,7 @@ class AnalysisSummaryDf(DFMixin):
 
     @classmethod
     def agg_behavs(cls, analysis_df: pd.DataFrame, fps: float) -> pd.DataFrame:
-        """
-        Generates the summarised data across the entire period, including number of bouts,
+        """Generates the summarised data across the entire period, including number of bouts,
         and mean, std, min, Q1, median, Q3, and max duration of bouts.
         Used for boolean behavs classification data.
 
@@ -100,7 +98,8 @@ class AnalysisSummaryDf(DFMixin):
         ----------
         analysis_df : pd.DataFrame
             _description_
-        Returns
+
+        Returns:
         -------
         str
             The outcome string.
@@ -161,8 +160,7 @@ class AnalysisBinnedDf(DFMixin):
         bins_: list,
         summary_func: Callable[[pd.DataFrame, float], pd.DataFrame],
     ) -> pd.DataFrame:
-        """
-        Generates the binned data and line graph for the given analysis_df, and given bin_sec.
+        """Generates the binned data and line graph for the given analysis_df, and given bin_sec.
         The aggregated statistics are very similar to the summary data.
         """
         # For each column, displays the mean of each binned group.
@@ -176,10 +174,12 @@ class AnalysisBinnedDf(DFMixin):
         bin_sec = pd.cut(x=timestamps, bins=bins, labels=bins[1:], include_lowest=True)  # type: ignore
         grouped_df = analysis_df.groupby(bin_sec)
         binned_df = grouped_df.apply(
-            lambda x: summary_func(x, fps)
-            .unstack(enum2tuple(AnalysisSummaryDf.IN))
-            .reorder_levels(enum2list(cls.CN))
-            .sort_index(level=enum2tuple(AnalysisSummaryDf.IN))
+            lambda x: (
+                summary_func(x, fps)
+                .unstack(enum2tuple(AnalysisSummaryDf.IN))
+                .reorder_levels(enum2list(cls.CN))
+                .sort_index(level=enum2tuple(AnalysisSummaryDf.IN))
+            )
         )
         # Cleaning (sets index and column names) and checking
         binned_df = cls.basic_clean(binned_df)
@@ -192,11 +192,13 @@ class AnalysisBinnedDf(DFMixin):
         dst_fp: str,
         agg_column: str,
     ):
-        """
-        _summary_
-        """
+        """_summary_"""
         # Making binned_df long
-        binned_stacked_df = binned_df.stack(enum2tuple(AnalysisSummaryDf.IN))[agg_column].rename("value").reset_index()
+        binned_stacked_df = (
+            binned_df.stack(enum2tuple(AnalysisSummaryDf.IN))[agg_column]
+            .rename("value")
+            .reset_index()
+        )
         # Plotting line graph
         g = sns.relplot(
             data=binned_stacked_df,
@@ -231,9 +233,7 @@ class AnalysisBinnedDf(DFMixin):
         bins_ls: list,
         cbins_ls: list,
     ) -> str:
-        """
-        _summary_
-        """
+        """_summary_"""
         return cls.summary_binned(
             analysis_df=analysis_df,
             dst_dir=dst_dir,
@@ -255,9 +255,7 @@ class AnalysisBinnedDf(DFMixin):
         bins_ls: list,
         cbins_ls: list,
     ) -> str:
-        """
-        _summary_
-        """
+        """_summary_"""
         outcome = ""
         outcome += cls.summary_binned(
             analysis_df=analysis_df,
@@ -314,9 +312,7 @@ class AnalysisBinnedDf(DFMixin):
         bins_ls: list,
         cbins_ls: list,
     ) -> str:
-        """
-        _summary_
-        """
+        """_summary_"""
         outcome = ""
         # Offsetting the frames index to start from 0
         # (i.e. when the experiment commenced, rather than when the recording started)
@@ -334,7 +330,9 @@ class AnalysisBinnedDf(DFMixin):
         for bin_sec in bins_ls:
             # Making filepaths
             binned_fp = os.path.join(dst_dir, f"{BINNED}_{bin_sec}", f"{name}.{cls.IO}")
-            binned_plot_fp = os.path.join(dst_dir, f"{BINNED}_{bin_sec}_{PLOT}", f"{name}.png")
+            binned_plot_fp = os.path.join(
+                dst_dir, f"{BINNED}_{bin_sec}_{PLOT}", f"{name}.png"
+            )
             # Making binned df
             bins = np.arange(0, np.max(timestamps) + bin_sec, bin_sec)
             binned_df = cls.make_binned(analysis_df, fps, bins, summary_func)
@@ -345,7 +343,9 @@ class AnalysisBinnedDf(DFMixin):
         if cbins_ls:
             # Making filepaths
             binned_fp = os.path.join(dst_dir, f"{BINNED}_{CUSTOM}", f"{name}.{cls.IO}")
-            binned_plot_fp = os.path.join(dst_dir, f"{BINNED}_{CUSTOM}_{PLOT}", f"{name}.png")
+            binned_plot_fp = os.path.join(
+                dst_dir, f"{BINNED}_{CUSTOM}_{PLOT}", f"{name}.png"
+            )
             # Making binned df
             binned_df = cls.make_binned(analysis_df, fps, cbins_ls, summary_func)
             cls.write(binned_df, binned_fp)

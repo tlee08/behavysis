@@ -1,12 +1,9 @@
-"""
-_summary_
-"""
+"""_summary_"""
 
 import numpy as np
 import pandas as pd
-import torch.nn as nn
-import torch.optim as optim
 from sklearn.ensemble import RandomForestClassifier
+from torch import nn, optim
 
 from .base_torch_model import BaseTorchModel
 
@@ -14,8 +11,7 @@ from .base_torch_model import BaseTorchModel
 
 
 class RF1(RandomForestClassifier):
-    """
-    x features is (samples, features).
+    """x features is (samples, features).
     y outcome is (samples, class).
     """
 
@@ -29,7 +25,14 @@ class RF1(RandomForestClassifier):
         )
         self.window_frames = 0
 
-    def fit(self, x_ls: list[np.ndarray], y_ls: list[np.ndarray], index_ls: list[np.ndarray], *args, **kwargs):
+    def fit(
+        self,
+        x_ls: list[np.ndarray],
+        y_ls: list[np.ndarray],
+        index_ls: list[np.ndarray],
+        *args,
+        **kwargs,
+    ):
         # Filtering data
         x_ls = [x[index] for x, index in zip(x_ls, index_ls)]
         y_ls = [y[index] for y, index in zip(y_ls, index_ls)]
@@ -49,8 +52,7 @@ class RF1(RandomForestClassifier):
 
 
 class DNN1(BaseTorchModel):
-    """
-    x features is (samples, window, features).
+    """x features is (samples, window, features).
     y outcome is (samples, class).
     """
 
@@ -85,8 +87,7 @@ class DNN1(BaseTorchModel):
 
 
 class DNN2(BaseTorchModel):
-    """
-    x features is (samples, window, features).
+    """x features is (samples, window, features).
     y outcome is (samples, class).
     """
 
@@ -121,8 +122,7 @@ class DNN2(BaseTorchModel):
 
 
 class DNN3(BaseTorchModel):
-    """
-    x features is (samples, window, features).
+    """x features is (samples, window, features).
     y outcome is (samples, class).
     """
 
@@ -163,8 +163,7 @@ class DNN3(BaseTorchModel):
 
 
 class CNN1(BaseTorchModel):
-    """
-    x features is (samples, window, features).
+    """x features is (samples, window, features).
     y outcome is (samples, class).
     """
 
@@ -208,8 +207,7 @@ class CNN1(BaseTorchModel):
 
 
 class CNN2(BaseTorchModel):
-    """
-    x features is (samples, window, features).
+    """x features is (samples, window, features).
     y outcome is (samples, class).
     """
 

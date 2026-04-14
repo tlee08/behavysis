@@ -55,8 +55,7 @@ class Export:
         configs_fp: str,
         overwrite: bool,
     ) -> str:
-        """
-        Converts a predicted_behavs df to a scored_behavs df.
+        """Converts a predicted_behavs df to a scored_behavs df.
         Namely:
         - Adds an "actual" column to the df. All predicted positive BEHAV frames are set to UNDETERMINED.
         - Adds user_defined columns to the df and sets all values to 0 (NON_BEHAV).
@@ -80,7 +79,9 @@ class Export:
             bouts_struct.append(BoutStruct(behav=behav_name, user_defined=user_defined))
         # Getting scored behavs df from predicted behavs df and bouts_struct
         behavs_predicted_df = BehavPredictedDf.read(src_fp)
-        behavs_scored_df = BehavScoredDf.predicted2scored(behavs_predicted_df, bouts_struct)
+        behavs_scored_df = BehavScoredDf.predicted2scored(
+            behavs_predicted_df, bouts_struct
+        )
         BehavScoredDf.write(behavs_scored_df, dst_fp)
         logger.info("predicted_behavs to scored_behavs.")
         return get_io_obj_content(io_obj)

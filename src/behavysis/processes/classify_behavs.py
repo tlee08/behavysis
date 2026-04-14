@@ -1,6 +1,4 @@
-"""
-Classify Behaviours
-"""
+"""Classify Behaviours"""
 
 import logging
 import os
@@ -34,8 +32,7 @@ class ClassifyBehavs:
         configs_fp: str,
         overwrite: bool,
     ) -> str:
-        """
-        Given model config files in the BehavClassifier format, generates beahviour predidctions
+        """Given model config files in the BehavClassifier format, generates beahviour predidctions
         on the given extracted features dataframe.
 
         Parameters
@@ -49,12 +46,12 @@ class ClassifyBehavs:
         overwrite : bool
             Whether to overwrite the output file (if it exists).
 
-        Returns
+        Returns:
         -------
         str
             Description of the function's outcome.
 
-        Notes
+        Notes:
         -----
         The config file must contain the following parameters:
         ```
@@ -82,7 +79,11 @@ class ClassifyBehavs:
             proj_dir = configs.get_ref(model_config.proj_dir)
             behav_name = configs.get_ref(model_config.behav_name)
             behav_model = BehavClassifier.load(proj_dir, behav_name)
-            pcutoff = get_pcutoff(configs.get_ref(model_config.pcutoff), behav_model.configs.pcutoff, logger)
+            pcutoff = get_pcutoff(
+                configs.get_ref(model_config.pcutoff),
+                behav_model.configs.pcutoff,
+                logger,
+            )
             min_window_secs = configs.get_ref(model_config.min_empty_window_secs)
             min_window_frames = int(np.round(min_window_secs * fps))
             # Running the clf pipeline
@@ -93,7 +94,9 @@ class ClassifyBehavs:
             # Using pcutoff to get binary predictions
             behav_df_i[pred_col] = (behav_df_i[prob_col] > pcutoff).astype(int)
             # Filling in small non-behav bouts
-            behav_df_i[pred_col] = merge_bouts(behav_df_i[pred_col], min_window_frames, logger)
+            behav_df_i[pred_col] = merge_bouts(
+                behav_df_i[pred_col], min_window_frames, logger
+            )
             # Adding model predictions df to list
             behavs_df_ls.append(behav_df_i)
             # Logging outcome
@@ -109,8 +112,7 @@ class ClassifyBehavs:
 
 
 def get_pcutoff(pcutoff: float, model_pcutoff: float, logger: logging.Logger) -> float:
-    """
-    Check if the pcutoff is valid.
+    """Check if the pcutoff is valid.
 
     Also check if the pcutoff is the special value `-1`, in which case
     `model_pcutoff` is used.
@@ -130,9 +132,10 @@ def get_pcutoff(pcutoff: float, model_pcutoff: float, logger: logging.Logger) ->
     return pcutoff
 
 
-def merge_bouts(vect: pd.Series, min_window_frames: int, logger: logging.Logger) -> pd.Series:
-    """
-    For a given pd.Series, `vect`,
+def merge_bouts(
+    vect: pd.Series, min_window_frames: int, logger: logging.Logger
+) -> pd.Series:
+    """For a given pd.Series, `vect`,
     if the time between two bouts is less than `min_window_frames`, then merging
     the two bouts together by filling in the short `non-behav` period with `is-behav`.
 
@@ -143,7 +146,7 @@ def merge_bouts(vect: pd.Series, min_window_frames: int, logger: logging.Logger)
     min_window_frames : int
         _description_
 
-    Returns
+    Returns:
     -------
     pd.DataFrame
         A scored_behavs dataframe, with the merged bouts.
@@ -154,5 +157,7 @@ def merge_bouts(vect: pd.Series, min_window_frames: int, logger: logging.Logger)
     # For each non-behav bout, if less than min_window_frames, then call it a behav
     for _, row in nonbouts_df.iterrows():
         if row[BoutCols.DUR.value] < min_window_frames:
-            vect.loc[row[BoutCols.START.value] : row[BoutCols.STOP.value]] = BehavValues.BEHAV.value  # type: ignore
+            vect.loc[row[BoutCols.START.value] : row[BoutCols.STOP.value]] = (
+                BehavValues.BEHAV.value
+            )  # type: ignore
     return vect

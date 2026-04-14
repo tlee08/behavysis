@@ -1,5 +1,4 @@
-"""
-This package is used to interprets and interprets lab mice behaviour using computer vision.
+"""This package is used to interprets and interprets lab mice behaviour using computer vision.
 The package allows users to perform the entire analytics pipeline from raw lab footage to
 interpretable plotted and tabulated data for different analysises. This pipeline includes:
 

@@ -1,5 +1,4 @@
-"""
-Functions have the following format:
+"""Functions have the following format:
 
 Parameters
 ----------
@@ -15,7 +14,7 @@ gputouse : int
 overwrite : bool
     Whether to overwrite the output file (if it exists).
 
-Returns
+Returns:
 -------
 str
     The outcome of the process.
@@ -51,9 +50,7 @@ class RunDLC:
         gputouse: int | None,
         overwrite: bool,
     ) -> str:
-        """
-        Running custom DLC script to generate a DLC keypoints dataframe from a single video.
-        """
+        """Running custom DLC script to generate a DLC keypoints dataframe from a single video."""
         logger, io_obj = init_logger_io_obj()
         if not overwrite and os.path.exists(keypoints_fp):
             logger.warning(file_exists_msg(keypoints_fp))
@@ -71,11 +68,13 @@ class RunDLC:
         if not os.path.isfile(model_fp):
             raise ValueError(
                 f'The given model_fp file does not exist: "{model_fp}".\n'
-                + 'Check this file and specify a DLC ".yaml" config file.'
+                'Check this file and specify a DLC ".yaml" config file.'
             )
 
         # Running the DLC subprocess (in a separate conda env)
-        run_dlc_subproc(model_fp, [formatted_vid_fp], temp_dlc_dir, CACHE_DIR, gputouse, logger)
+        run_dlc_subproc(
+            model_fp, [formatted_vid_fp], temp_dlc_dir, CACHE_DIR, gputouse, logger
+        )
 
         # Exporting the h5 to chosen file format
         export2df(formatted_vid_fp, temp_dlc_dir, keypoints_dir, logger)
@@ -91,9 +90,7 @@ class RunDLC:
         gputouse: int | None,
         overwrite: bool,
     ) -> str:
-        """
-        Running custom DLC script to generate a DLC keypoints dataframe from a single video.
-        """
+        """Running custom DLC script to generate a DLC keypoints dataframe from a single video."""
         logger, io_obj = init_logger_io_obj()
 
         # Specifying the GPU to use and making the output directory
@@ -107,7 +104,9 @@ class RunDLC:
             vid_fp_ls = [
                 vid_fp
                 for vid_fp in vid_fp_ls
-                if not os.path.exists(os.path.join(keypoints_dir, f"{get_name(vid_fp)}.{KeypointsDf.IO}"))
+                if not os.path.exists(
+                    os.path.join(keypoints_dir, f"{get_name(vid_fp)}.{KeypointsDf.IO}")
+                )
             ]
 
         # If there are no videos to process, return
@@ -132,7 +131,7 @@ class RunDLC:
         # Assertion: the config.yaml file must exist.
         assert os.path.isfile(model_fp), (
             f'The given model_fp file does not exist: "{model_fp}".\n'
-            + 'Check this file and specify a DLC ".yaml" config file.'
+            'Check this file and specify a DLC ".yaml" config file.'
         )
 
         # Running the DLC subprocess (in a separate conda env)
@@ -153,8 +152,7 @@ def run_dlc_subproc(
     gputouse: int | None,
     logger: logging.Logger,
 ) -> None:
-    """
-    Running the DLC subprocess in a separate process (i.e. separate conda env).
+    """Running the DLC subprocess in a separate process (i.e. separate conda env).
 
     NOTE: any dlc processing error for each video that occur during the subprocess
     will be logged to the console and the process will continue to the next video.
@@ -188,16 +186,14 @@ def run_dlc_subproc(
 
 
 def export2df(name: str, src_dir: str, dst_dir: str, logger: logging.Logger) -> None:
-    """
-    __summary__
-    """
+    """__summary__"""
     name = get_name(name)
     # Get the corresponding .h5 filename
     name_fp_ls = [i for i in os.listdir(src_dir) if re.search(rf"^{name}DLC.*\.h5$", i)]
     if len(name_fp_ls) == 0:
         logger.warning(f"No .h5 file found for {name}.")
         return
-    elif len(name_fp_ls) == 1:
+    if len(name_fp_ls) == 1:
         name_fp = os.path.join(src_dir, name_fp_ls[0])
         # Reading the .h5 file
         # NOTE: may need DLC_HDF_KEY

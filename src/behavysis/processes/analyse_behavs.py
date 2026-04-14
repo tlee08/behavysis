@@ -22,9 +22,7 @@ class AnalyseBehavs:
         dst_dir: str,
         configs_fp: str,
     ) -> str:
-        """
-        Takes a behavs dataframe and generates a summary and binned version of the data.
-        """
+        """Takes a behavs dataframe and generates a summary and binned version of the data."""
         logger, io_obj = init_logger_io_obj()
         f_name = get_func_name_in_stack()
         name = get_name(behavs_fp)
@@ -35,7 +33,9 @@ class AnalyseBehavs:
         # Loading in dataframe
         behavs_df = BehavScoredDf.read(behavs_fp)
         # Setting all na and undetermined behav to non-behav
-        behavs_df = behavs_df.fillna(0).replace(BehavValues.UNDETERMINED.value, BehavValues.NON_BEHAV.value)
+        behavs_df = behavs_df.fillna(0).replace(
+            BehavValues.UNDETERMINED.value, BehavValues.NON_BEHAV.value
+        )
         # Getting the behaviour names and each user_defined for the behaviour
         # Not incl. the `pred` or `prob` (`prob` shouldn't be here anyway) columns
         columns = np.isin(

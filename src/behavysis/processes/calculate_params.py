@@ -1,5 +1,4 @@
-"""
-Functions have the following format:
+"""Functions have the following format:
 
 Parameters
 ----------
@@ -8,7 +7,7 @@ keypoints_fp : str
 configs_fp : str
     The experiment's JSON configs file.
 
-Returns
+Returns:
 -------
 str
     The outcome of the process.
@@ -35,15 +34,14 @@ class CalculateParams:
         keypoints_fp: str,
         configs_fp: str,
     ) -> str:
-        """
-        Determines the starting frame of the experiment based on
+        """Determines the starting frame of the experiment based on
         when the subject "likely" entered the frame of view.
 
         This is done by looking at a sliding window of time. If the median likelihood of the subject
         existing in each frame across the sliding window is greater than the defined pcutoff, then
         the determine this as the start time.
 
-        Notes
+        Notes:
         -----
         The config file must contain the following parameters:
         ```
@@ -67,8 +65,7 @@ class CalculateParams:
 
     @staticmethod
     def start_frame_from_csv(keypoints_fp: str, configs_fp: str) -> str:
-        """
-        Reads the start time of the experiment from a given CSV file
+        """Reads the start time of the experiment from a given CSV file
         (filepath specified in config file).
 
         Expects value to be in seconds (so will convert to frames).
@@ -77,7 +74,7 @@ class CalculateParams:
         is the start time.
         Also expect a header row, but it doesn't matter what the header names are.
 
-        Notes
+        Notes:
         -----
         The config file must contain the following parameters:
         ```
@@ -120,8 +117,7 @@ class CalculateParams:
 
     @staticmethod
     def stop_frame_from_likelihood(keypoints_fp: str, configs_fp: str) -> str:
-        """
-        Determines the starting frame of the experiment based on
+        """Determines the starting frame of the experiment based on
         when the subject "likely" entered the frame of view.
 
         This is done by looking at a sliding window of time. If the median likelihood of the subject
@@ -141,14 +137,13 @@ class CalculateParams:
 
     @staticmethod
     def stop_frame_from_dur(keypoints_fp: str, configs_fp: str) -> str:
-        """
-        Calculates the end time according to the following equation:
+        """Calculates the end time according to the following equation:
 
         ```
         stop_frame = start_frame + experiment_duration
         ```
 
-        Notes
+        Notes:
         -----
         The config file must contain the following parameters:
         ```
@@ -194,8 +189,7 @@ class CalculateParams:
 
     @staticmethod
     def dur_frames_from_likelihood(keypoints_fp: str, configs_fp: str) -> str:
-        """
-        Calculates the duration in seconds, from the time the specified bodyparts appeared
+        """Calculates the duration in seconds, from the time the specified bodyparts appeared
         to the time they disappeared.
         Appear/disappear is calculated from likelihood.
         """
@@ -211,8 +205,7 @@ class CalculateParams:
 
     @staticmethod
     def px_per_mm(keypoints_fp: str, configs_fp: str) -> str:
-        """
-        Calculates the pixels per mm conversion for the video.
+        """Calculates the pixels per mm conversion for the video.
 
         This is done by averaging the (x, y) coordinates of each corner,
         finding the average x difference for the widths in pixels and y distance
@@ -223,7 +216,7 @@ class CalculateParams:
         the px to mm
         conversion.
 
-        Notes
+        Notes:
         -----
         The config file must contain the following parameters:
         ```
@@ -283,15 +276,14 @@ class CalculateParams:
 def calc_exists_from_likelihood(
     keypoints_fp: str, configs_fp: str, logger: logging.Logger
 ) -> tuple[int, int]:
-    """
-    Determines the start and stop frames of the experiment based on
+    """Determines the start and stop frames of the experiment based on
     when the subject "likely" entered and exited the frame of view.
 
     This is done by looking at a sliding window of time. If the median likelihood of the subject
     existing in each frame across the sliding window is greater than the defined pcutoff, then
     the determine this as the start time.
 
-    Notes
+    Notes:
     -----
     The config file must contain the following parameters:
     ```

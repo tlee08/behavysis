@@ -1,6 +1,4 @@
-"""
-Utility functions.
-"""
+"""Utility functions."""
 
 from enum import Enum
 

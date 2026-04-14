@@ -1,5 +1,4 @@
-"""
-Functions have the following format:
+"""Functions have the following format:
 
 Parameters
 ----------
@@ -10,7 +9,7 @@ default_configs_fp : str
 overwrite : str, optional
     How to update the config files
 
-Returns
+Returns:
 -------
 str
     Description of the function's outcome.
@@ -33,8 +32,7 @@ class UpdateConfigs:
         default_configs_fp: str,
         overwrite: Literal["user", "all"],
     ) -> str:
-        """
-        Initialises the config files with the given `default_configs`.
+        """Initialises the config files with the given `default_configs`.
         The different types of overwriting are:
         - "user": Only the user parameters are updated.
         - "all": All parameters are updated.
@@ -48,7 +46,7 @@ class UpdateConfigs:
         overwrite : Literal["user", "all"]
             Specifies how to update the config files.
 
-        Returns
+        Returns:
         -------
         str
             Description of the function's outcome.

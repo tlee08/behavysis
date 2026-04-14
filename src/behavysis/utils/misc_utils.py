@@ -1,7 +1,8 @@
 import inspect
+from collections.abc import Iterable
 from enum import EnumType
 from importlib.util import find_spec
-from typing import Any, Iterable
+from typing import Any
 
 import numpy as np
 
@@ -35,24 +36,18 @@ def enum2list(my_enum: EnumType) -> list[Any]:
 
 
 def const2iter(x: Any, n: int) -> Iterable[Any]:
-    """
-    Iterates the object, `x`, `n` times.
-    """
+    """Iterates the object, `x`, `n` times."""
     for _ in range(n):
         yield x
 
 
 def const2list(x: Any, n: int) -> list[Any]:
-    """
-    Iterates the list, `ls`, `n` times.
-    """
+    """Iterates the list, `ls`, `n` times."""
     return [x for _ in range(n)]
 
 
 def dictlists2listdicts(my_dict):
-    """
-    Converts a dict of lists to a list of dicts.
-    """
+    """Converts a dict of lists to a list of dicts."""
     # Asserting that all values (lists) have same size
     n = len(list(my_dict.values())[0])
     for i in my_dict.values():
@@ -62,9 +57,7 @@ def dictlists2listdicts(my_dict):
 
 
 def listdicts2dictlists(my_list):
-    """
-    Converts a list of dicts to a dict of lists.
-    """
+    """Converts a list of dicts to a dict of lists."""
     # Asserting that each dict has the same keys
     keys = my_list[0].keys()
     for i in my_list:
@@ -74,8 +67,7 @@ def listdicts2dictlists(my_list):
 
 
 def listofvects2array(*list_of_vects):
-    """
-    Converts a set of a list of vectors to a numpy array.
+    """Converts a set of a list of vectors to a numpy array.
 
     ```
     *list_of_vects = [
@@ -122,15 +114,12 @@ def listofvects2array(*list_of_vects):
 
 
 def array2listofvect(arr, vect_index):
-    """
-    inverse of listofvects2array, except chooses only one of the vects
-    """
+    """Inverse of listofvects2array, except chooses only one of the vects"""
     return [arr[arr[:, 0] == i, vect_index] for i in np.sort(np.unique(arr[:, 0]))]
 
 
 def get_func_name_in_stack(levels_back: int = 1) -> str:
-    """
-    Returns the name of the function that called this function.
+    """Returns the name of the function that called this function.
     This is useful for debugging and dynamically changing function behavior
     (e.g. getting attributes according to the functions name).
 
@@ -141,17 +130,17 @@ def get_func_name_in_stack(levels_back: int = 1) -> str:
         0 is the function itself ("get_func_name_in_stack"), 1 is the function it's called from, etc.
         Default is 1 (i.e. the function that called this function).
 
-    Returns
+    Returns:
     -------
     str
         The name of the function at the given stack level. If the level is out of range, returns an empty string.
 
-    Notes
+    Notes:
     -----
     If this function is called from the main script (i.e. no function),
     it will return an empty string.
 
-    Examples
+    Examples:
     --------
     Where `levels_back = 0`
     ```

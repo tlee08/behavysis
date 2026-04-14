@@ -1,6 +1,4 @@
-"""
-Utility functions.
-"""
+"""Utility functions."""
 
 import os
 from enum import EnumType
@@ -57,8 +55,7 @@ class DFMixin:
 
     @classmethod
     def read(cls, fp: str) -> pd.DataFrame:
-        """
-        Default dataframe read method.
+        """Default dataframe read method.
         Based on `IO` class attribute.
         """
         methods = {
@@ -106,8 +103,7 @@ class DFMixin:
 
     @classmethod
     def write(cls, df: pd.DataFrame, fp: str) -> None:
-        """
-        Default dataframe read method based on IO attribute.
+        """Default dataframe read method based on IO attribute.
         Based on `IO` class attribute.
         """
         methods = {
@@ -127,8 +123,7 @@ class DFMixin:
 
     @classmethod
     def init_df(cls, index: pd.Series | pd.Index) -> pd.DataFrame:
-        """
-        # TODO: write better docstring
+        """# TODO: write better docstring
         Returning a frame-by-frame analysis_df with the frame number (according to original video)
         as the MultiIndex index, relative to the first element of frame_vect.
         Note that that the frame number can thus begin on a non-zero number.
@@ -138,7 +133,7 @@ class DFMixin:
         frame_vect : pd.Series | pd.Index
             _description_
 
-        Returns
+        Returns:
         -------
         pd.DataFrame
             _description_
@@ -152,8 +147,7 @@ class DFMixin:
 
     @classmethod
     def basic_clean(cls, df: pd.DataFrame) -> pd.DataFrame:
-        """
-        Basic cleaning of the dataframe. Includes:
+        """Basic cleaning of the dataframe. Includes:
         - Setting the index and column names (if they are specified)
         - Sorting the index
 
@@ -189,7 +183,9 @@ class DFMixin:
         assert isinstance(df, pd.DataFrame), "The dataframe must be a pandas DataFrame."
         # Checking there are no null values
         if not cls.NULLABLE:
-            assert not df.isnull().values.any(), "The dataframe contains null values but it should not."
+            assert not df.isnull().values.any(), (
+                "The dataframe contains null values but it should not."
+            )
         # Checking that the index levels are correct
         if cls.IN:
             cls.check_IN(df, cls.IN)
@@ -205,7 +201,9 @@ class DFMixin:
             levels = enum2tuple(levels)
         elif isinstance(levels, str):  # If str
             levels = (levels,)
-        assert df.index.names == levels, f"The index levels are incorrect. Expected {levels} but got {df.index.names}."
+        assert df.index.names == levels, (
+            f"The index levels are incorrect. Expected {levels} but got {df.index.names}."
+        )
 
     @classmethod
     def check_CN(cls, df: pd.DataFrame, levels: EnumType | tuple[str] | str) -> None:

@@ -16,14 +16,14 @@ from simba.utils.config_creator import ProjectConfigCreator
 
 
 class FeatureExtractor:
-    """__summary__"""
+    """__summary__."""
 
     @staticmethod
     def simba_update_configs(simba_dir, update_dict):
-        """
-        Updates project_config.ini file.
-        """
-        simba_configs_fp = os.path.join(simba_dir, "project_folder", "project_config.ini")
+        """Updates project_config.ini file."""
+        simba_configs_fp = os.path.join(
+            simba_dir, "project_folder", "project_config.ini"
+        )
         # Making ConfigParser instance
         config = configparser.ConfigParser()
         # Reading in existing simba project configs
@@ -40,8 +40,7 @@ class FeatureExtractor:
 
     @staticmethod
     def simba_make_proj(proj_dir, behavs_ls):
-        """
-        Pose number is from:
+        """Pose number is from:
             - https://github.com/sgoldenlab/simba/blob/master/simba/pose_configurations/configuration_names/pose_config_names.csv
             - https://github.com/sgoldenlab/simba/blob/master/simba/pose_configurations/bp_names/bp_names.csv
         2 animals; 16 body-parts
@@ -62,14 +61,15 @@ class FeatureExtractor:
 
     @staticmethod
     def simba_import_files(simba_dir, keypoints_dir):
-        """
-        Keypoints csv must already be in simba csv readable format.
+        """Keypoints csv must already be in simba csv readable format.
         Similar to simba.import_multiple_dlc_tracking_csv_file()
         """
         for fp in os.listdir(keypoints_dir):
             name = FeatureExtractor.get_name(fp)
             src_fp = os.path.join(keypoints_dir, f"{name}.csv")
-            dst_fp = os.path.join(simba_dir, "project_folder", "csv", "input_csv", f"{name}.csv")
+            dst_fp = os.path.join(
+                simba_dir, "project_folder", "csv", "input_csv", f"{name}.csv"
+            )
             os.makedirs(os.path.dirname(dst_fp), exist_ok=True)
             # Copying video mp4 and keypoints csv to simba project dir
             shutil.copyfile(src_fp, dst_fp)
@@ -80,9 +80,7 @@ class FeatureExtractor:
 
     @staticmethod
     def simba_set_dims(simba_dir, configs_dir):
-        """
-        Similar to `simba.set_video_parameters()` but gets specific vals from each config file.
-        """
+        """Similar to `simba.set_video_parameters()` but gets specific vals from each config file."""
         # simba_configs_fp = os.path.join(
         #     simba_dir, "project_folder", "project_config.ini"
         # )
@@ -105,7 +103,7 @@ class FeatureExtractor:
             name = FeatureExtractor.get_name(fp)
             # Getting configs JSON
             configs_fp = os.path.join(configs_dir, f"{name}.json")
-            with open(configs_fp, "r", encoding="utf-8") as f:
+            with open(configs_fp, encoding="utf-8") as f:
                 configs = json.load(f)
             vid_configs = configs["auto"]["formatted_vid"]
             row = (
@@ -115,7 +113,9 @@ class FeatureExtractor:
                         "fps": vid_configs["fps"],
                         "Resolution_width": vid_configs["width_px"],
                         "Resolution_height": vid_configs["height_px"],
-                        "Distance_in_mm": configs["user"]["calculate_params"]["px_per_mm"]["dist_mm"],
+                        "Distance_in_mm": configs["user"]["calculate_params"][
+                            "px_per_mm"
+                        ]["dist_mm"],
                         "pixels/mm": configs["auto"]["px_per_mm"],
                     }
                 )
@@ -135,23 +135,24 @@ class FeatureExtractor:
 
     @staticmethod
     def simba_run_outlier_correction(simba_dir):
-        """
-        Movement and location criterion is from nose to tail-base of each mouse.
+        """Movement and location criterion is from nose to tail-base of each mouse.
         Movement is delta of points between frames.
         Location is delta of points.
         The threshold is the criterion, C, multiplied by the median (or mean) of all frames.
         Any points above the threshold are set as the previously "valid" point.
         """
-        simba_configs_fp = os.path.join(simba_dir, "project_folder", "project_config.ini")
+        simba_configs_fp = os.path.join(
+            simba_dir, "project_folder", "project_config.ini"
+        )
         OutlierCorrecterMovement(config_path=simba_configs_fp).run()
         OutlierCorrecterLocation(config_path=simba_configs_fp).run()
 
     @staticmethod
     def simba_skip_outlier_correction(simba_dir):
-        """
-        Skipping
-        """
-        simba_configs_fp = os.path.join(simba_dir, "project_folder", "project_config.ini")
+        """Skipping"""
+        simba_configs_fp = os.path.join(
+            simba_dir, "project_folder", "project_config.ini"
+        )
         OutlierCorrectionSkipper(config_path=simba_configs_fp).run()
 
     #################################################
@@ -160,10 +161,10 @@ class FeatureExtractor:
 
     @staticmethod
     def simba_extract_features(simba_dir):
-        """
-        Extracting features
-        """
-        simba_configs_fp = os.path.join(simba_dir, "project_folder", "project_config.ini")
+        """Extracting features"""
+        simba_configs_fp = os.path.join(
+            simba_dir, "project_folder", "project_config.ini"
+        )
         ExtractFeaturesFrom16bps(config_path=simba_configs_fp).run()
 
     #################################################
@@ -172,8 +173,7 @@ class FeatureExtractor:
 
     @staticmethod
     def simba_label_scoring(scored_fp, features_fp, targets_inserted_fp, behavs_ls):
-        """
-        Adding behaviour labels to features_extracted csv.
+        """Adding behaviour labels to features_extracted csv.
         DEPRICATED: store behav frame outcomes in different df.
         """
         # Reading in features_extracted csv
@@ -190,8 +190,7 @@ class FeatureExtractor:
 
     @staticmethod
     def get_name(fp: str) -> str:
-        """
-        Given the filepath, returns the name of the file.
+        """Given the filepath, returns the name of the file.
         The name is:
         ```
         <path_to_file>/<name>.<ext>
@@ -201,8 +200,7 @@ class FeatureExtractor:
 
 
 def main() -> None:
-    """
-    Batch processes a BA_Project (without using the BA_project_env - simBA doesn't work with it)
+    """Batch processes a BA_Project (without using the BA_project_env - simBA doesn't work with it)
 
     Assumes input is column-selected csv, and output is csv in simba_proj >> features_extracted dir.
     """

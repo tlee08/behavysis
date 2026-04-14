@@ -5,8 +5,7 @@ from behavysis.utils.misc_utils import get_module_dir
 
 
 def main() -> None:
-    """
-    Sets up the behavysis environment.
+    """Sets up the behavysis environment.
     - Installs DEEPLABCUT conda env
     - Installs SimBA conda env
     """

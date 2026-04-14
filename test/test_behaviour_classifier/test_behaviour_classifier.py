@@ -40,7 +40,9 @@ def test_training_dataloaders():
     )
 
     # Test 1: raw ds dl
-    train_ds = MemoizedTimeSeriesDataset(x=x, y=y, index=index, window_frames=window_frames)
+    train_ds = MemoizedTimeSeriesDataset(
+        x=x, y=y, index=index, window_frames=window_frames
+    )
     check_windows(train_ds, orig_ds, window_frames)
 
     # Test 2: with BaseTorchModel's fit_loader

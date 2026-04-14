@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 ################################################################################
 ## Form generated from reading UI file 'settings_ui.ui'
 ##
@@ -12,7 +10,7 @@ from PySide6.QtCore import QCoreApplication, QMetaObject
 from PySide6.QtWidgets import QDialogButtonBox, QFormLayout, QLabel, QLineEdit, QWidget
 
 
-class Ui_SettingsWindow(object):
+class Ui_SettingsWindow:
     def setupUi(self, SettingsWindow):
         if not SettingsWindow.objectName():
             SettingsWindow.setObjectName("SettingsWindow")
@@ -112,16 +110,25 @@ class Ui_SettingsWindow(object):
                 None,
             )
         )
-        self.window_size_lb.setText(QCoreApplication.translate("SettingsWindow", "Viewed secs", None))
-        self.focus_size_lb.setText(QCoreApplication.translate("SettingsWindow", "Focus padding secs", None))
-        self.vid_speed_lb.setText(QCoreApplication.translate("SettingsWindow", "x Speed", None))
-        self.vid_width_lb.setText(QCoreApplication.translate("SettingsWindow", "Width", None))
-        SettingsWindow.setTabText(
-            SettingsWindow.indexOf(self.general_tab), QCoreApplication.translate("SettingsWindow", "General", None)
+        self.window_size_lb.setText(
+            QCoreApplication.translate("SettingsWindow", "Viewed secs", None)
+        )
+        self.focus_size_lb.setText(
+            QCoreApplication.translate("SettingsWindow", "Focus padding secs", None)
+        )
+        self.vid_speed_lb.setText(
+            QCoreApplication.translate("SettingsWindow", "x Speed", None)
+        )
+        self.vid_width_lb.setText(
+            QCoreApplication.translate("SettingsWindow", "Width", None)
         )
         SettingsWindow.setTabText(
-            SettingsWindow.indexOf(self.tab_2), QCoreApplication.translate("SettingsWindow", "Tab 2", None)
+            SettingsWindow.indexOf(self.general_tab),
+            QCoreApplication.translate("SettingsWindow", "General", None),
         )
-        pass
+        SettingsWindow.setTabText(
+            SettingsWindow.indexOf(self.tab_2),
+            QCoreApplication.translate("SettingsWindow", "Tab 2", None),
+        )
 
     # retranslateUi

@@ -1,10 +1,9 @@
-"""
-_summary_
-"""
+"""_summary_"""
 
 import os
 import traceback
-from typing import Any, Callable, Dict
+from collections.abc import Callable
+from typing import Any
 
 import numpy as np
 
@@ -13,6 +12,7 @@ from behavysis.constants import (
     FileExts,
     Folders,
 )
+from behavysis.models.experiment_configs import AutoConfigs, ExperimentConfigs
 from behavysis.processes.analyse_behavs import AnalyseBehavs
 from behavysis.processes.classify_behavs import ClassifyBehavs
 from behavysis.processes.combine_analysis import CombineAnalysis
@@ -22,7 +22,6 @@ from behavysis.processes.extract_features import ExtractFeatures
 from behavysis.processes.format_vid import FormatVid
 from behavysis.processes.run_dlc import RunDLC
 from behavysis.processes.update_configs import UpdateConfigs
-from behavysis.models.experiment_configs import AutoConfigs, ExperimentConfigs
 from behavysis.utils.logging_utils import (
     get_io_obj_content,
     init_logger_file,
@@ -31,8 +30,7 @@ from behavysis.utils.logging_utils import (
 
 
 class Experiment:
-    """
-    Behavysis Pipeline class for a single experiment.
+    """Behavysis Pipeline class for a single experiment.
 
     Encompasses the entire process including:
     - Raw mp4 file import.
@@ -49,7 +47,7 @@ class Experiment:
     root_dir : str
         _description_
 
-    Raises
+    Raises:
     ------
     ValueError
         ValueError: `root_dir` does not exist or `name` does not exist in the `root_dir` folder.
@@ -58,9 +56,7 @@ class Experiment:
     logger = init_logger_file()
 
     def __init__(self, name: str, root_dir: str) -> None:
-        """
-        Make a Experiment instance.
-        """
+        """Make a Experiment instance."""
         # Assertion: root_dir mus† exist
         if not os.path.isdir(root_dir):
             raise ValueError(
@@ -84,20 +80,19 @@ class Experiment:
     #####################################################################
 
     def get_fp(self, _folder: Folders | str) -> str:
-        """
-        Returns the experiment's file path from the given folder.
+        """Returns the experiment's file path from the given folder.
 
         Parameters
         ----------
         folder_str : str
             The folder to return the experiment document's filepath for.
 
-        Returns
+        Returns:
         -------
         str
             The experiment document's filepath.
 
-        Raises
+        Raises:
         ------
         ValueError
             ValueError: Folder name is not valid. Refer to Folders Enum for valid folder names.
@@ -130,8 +125,7 @@ class Experiment:
         *args: Any,
         **kwargs: Any,
     ) -> dict[str, str]:
-        """
-        All processing runs through here.
+        """All processing runs through here.
         This method ensures that the stdout and diagnostics dict are correctly generated.
 
         Parameters
@@ -139,12 +133,12 @@ class Experiment:
         funcs : tuple[Callable, ...]
             List of functions.
 
-        Returns
+        Returns:
         -------
         dict[str, str]
             Diagnostics dictionary, with description of each function's outcome.
 
-        Notes
+        Notes:
         -----
         Each func in `funcs` is called in the form:
         ```
@@ -171,7 +165,9 @@ class Experiment:
             dd[f_name] = get_io_obj_content(f_io_obj)
             # Clearing io object
             f_io_obj.truncate(0)
-        self.logger.info(f"Finished processing experiment, {self.name}, with:{f_names_ls_msg}")
+        self.logger.info(
+            f"Finished processing experiment, {self.name}, with:{f_names_ls_msg}"
+        )
         return dd
 
     #####################################################################
@@ -179,8 +175,7 @@ class Experiment:
     #####################################################################
 
     def update_configs(self, default_configs_fp: str, overwrite: str) -> dict:
-        """
-        Initialises the JSON config files with the given configurations in `configs`.
+        """Initialises the JSON config files with the given configurations in `configs`.
         It can be specified whether or not to overwrite existing configuration values.
 
         Parameters
@@ -193,7 +188,7 @@ class Experiment:
             If `set`, all parameters in `configs` are set in the config files (overwriting).
             If `reset`, the config files are completely replaced by `configs`.
 
-        Returns
+        Returns:
         -------
         dict
             Diagnostics dictionary, with description of each function's outcome.
@@ -210,8 +205,7 @@ class Experiment:
     #####################################################################
 
     def format_vid(self, overwrite: bool) -> dict:
-        """
-        Formats the video with ffmpeg to fit the formatted configs (e.g. fps and resolution_px).
+        """Formats the video with ffmpeg to fit the formatted configs (e.g. fps and resolution_px).
         Once the formatted video is produced, the configs dict and *configs.json file are
         updated with the formatted video's metadata.
 
@@ -222,12 +216,12 @@ class Experiment:
         overwrite : bool
             Whether to overwrite the output file (if it exists).
 
-        Returns
+        Returns:
         -------
         dict
             Diagnostics dictionary, with description of each function's outcome.
 
-        Notes
+        Notes:
         -----
         Can call any methods from `FormatVid`.
         """
@@ -240,15 +234,14 @@ class Experiment:
         )
 
     def get_vid_metadata(self) -> dict:
-        """
-        Gets the video metadata for the raw and formatted video files.
+        """Gets the video metadata for the raw and formatted video files.
 
         Parameters
         ----------
         overwrite : bool
             _description_
 
-        Returns
+        Returns:
         -------
         dict
             _description_
@@ -265,8 +258,7 @@ class Experiment:
     #####################################################################
 
     def run_dlc(self, gputouse: int | None, overwrite: bool) -> dict:
-        """
-        Run the DLC model on the formatted video to generate a DLC annotated video
+        """Run the DLC model on the formatted video to generate a DLC annotated video
         and DLC h5 file for all experiments.
 
         Parameters
@@ -276,12 +268,12 @@ class Experiment:
         overwrite : bool
             Whether to overwrite the output file (if it exists).
 
-        Returns
+        Returns:
         -------
         dict
             Diagnostics dictionary, with description of each function's outcome.
 
-        Notes
+        Notes:
         -----
         Can call any methods from `RunDLC`.
         """
@@ -295,8 +287,7 @@ class Experiment:
         )
 
     def calculate_parameters(self, funcs: tuple[Callable, ...]) -> dict:
-        """
-        A pipeline to calculate the parameters of the keypoints file, which will
+        """A pipeline to calculate the parameters of the keypoints file, which will
         assist in preprocessing the keypoints data.
 
         Parameters
@@ -304,12 +295,12 @@ class Experiment:
         funcs : tuple[Callable, ...]
             _description_
 
-        Returns
+        Returns:
         -------
         Dict
             Diagnostics dictionary, with description of each function's outcome.
 
-        Notes
+        Notes:
         -----
         Can call any methods from `CalculateParams`.
         """
@@ -319,10 +310,8 @@ class Experiment:
             configs_fp=self.get_fp(Folders.CONFIGS),
         )
 
-    def collate_auto_configs(self) -> Dict:
-        """
-        Collates the auto-configs of the experiment into the main configs file.
-        """
+    def collate_auto_configs(self) -> dict:
+        """Collates the auto-configs of the experiment into the main configs file."""
         dd = {"experiment": self.name}
         # Reading the experiment's configs file
         f_logger, f_io_obj = init_logger_io_obj()
@@ -345,8 +334,7 @@ class Experiment:
         return dd
 
     def preprocess(self, funcs: tuple[Callable, ...], overwrite: bool) -> dict:
-        """
-        A preprocessing pipeline method to convert raw keypoints data into preprocessed
+        """A preprocessing pipeline method to convert raw keypoints data into preprocessed
         keypoints data that is ready for ML analysis.
         All functs passed in must have the format func(df, dict) -> df. Possible funcs
         are given in preprocessing.py
@@ -359,12 +347,12 @@ class Experiment:
         overwrite : bool
             Whether to overwrite the output file (if it exists).
 
-        Returns
+        Returns:
         -------
         dict
             Diagnostics dictionary, with description of each function's outcome.
 
-        Notes
+        Notes:
         -----
         Can call any methods from `Preprocess`.
         """
@@ -376,7 +364,10 @@ class Experiment:
             overwrite=overwrite,
         )
         # If there is an error or warning (indicates not to ovewrite) in logger, return early
-        if "ERROR" in dd0[Export.df2df.__name__] or "WARNING" in dd0[Export.df2df.__name__]:
+        if (
+            "ERROR" in dd0[Export.df2df.__name__]
+            or "WARNING" in dd0[Export.df2df.__name__]
+        ):
             return dd0
         # Feeding through preprocessing functions
         dd1 = self._proc_scaff(
@@ -393,8 +384,7 @@ class Experiment:
     #####################################################################
 
     def extract_features(self, overwrite: bool) -> dict:
-        """
-        Extracts features from the preprocessed dlc file to generate many more features.
+        """Extracts features from the preprocessed dlc file to generate many more features.
         This dataframe of derived features will be input for a ML classifier to detect
         particularly trained behaviours.
 
@@ -403,7 +393,7 @@ class Experiment:
         overwrite : bool
             Whether to overwrite the output file (if it exists).
 
-        Returns
+        Returns:
         -------
         dict
             Diagnostics dictionary, with description of each function's outcome.
@@ -417,8 +407,7 @@ class Experiment:
         )
 
     def classify_behavs(self, overwrite: bool) -> dict:
-        """
-        Given model config files in the BehavClassifier format, generates beahviour predidctions
+        """Given model config files in the BehavClassifier format, generates beahviour predidctions
         on the given extracted features dataframe.
 
         Parameters
@@ -426,7 +415,7 @@ class Experiment:
         overwrite : bool
             Whether to overwrite the output file (if it exists).
 
-        Returns
+        Returns:
         -------
         dict
             Diagnostics dictionary, with description of each function's outcome.
@@ -440,15 +429,14 @@ class Experiment:
         )
 
     def export_behavs(self, overwrite: bool) -> dict:
-        """
-        _summary_
+        """_summary_
 
         Parameters
         ----------
         overwrite : bool
             _description_
 
-        Returns
+        Returns:
         -------
         dict
             _description_
@@ -467,8 +455,7 @@ class Experiment:
     #####################################################################
 
     def analyse(self, funcs: tuple[Callable, ...]) -> dict:
-        """
-        An ML pipeline method to analyse the preprocessed DLC data.
+        """An ML pipeline method to analyse the preprocessed DLC data.
         Possible funcs are given in analysis.py.
         The preprocessed data is saved to the project's analysis folder.
 
@@ -477,12 +464,12 @@ class Experiment:
         funcs : tuple[Callable, ...]
             _description_
 
-        Returns
+        Returns:
         -------
         dict
             Diagnostics dictionary, with description of each function's outcome.
 
-        Notes
+        Notes:
         -----
         Can call any methods from `Analyse`.
         """
@@ -495,17 +482,16 @@ class Experiment:
         )
 
     def analyse_behavs(self) -> dict:
-        """
-        An ML pipeline method to analyse the preprocessed DLC data.
+        """An ML pipeline method to analyse the preprocessed DLC data.
         Possible funcs are given in analysis.py.
         The preprocessed data is saved to the project's analysis folder.
 
-        Returns
+        Returns:
         -------
         dict
             Diagnostics dictionary, with description of each function's outcome.
 
-        Notes
+        Notes:
         -----
         Can call any methods from `Analyse`.
         """
@@ -517,9 +503,7 @@ class Experiment:
         )
 
     def combine_analysis(self) -> dict:
-        """
-        Combine the experiment's analysis in each fbf into a single df
-        """
+        """Combine the experiment's analysis in each fbf into a single df"""
         # TODO: make new subfolder called combined_analysis and make ONLY(??) fbf analysis.
         return self._proc_scaff(
             (CombineAnalysis.combine_analysis,),
@@ -534,8 +518,7 @@ class Experiment:
     #####################################################################
 
     def evaluate_vid(self, overwrite: bool) -> dict:
-        """
-        Evaluating preprocessed DLC data and scored_behavs data.
+        """Evaluating preprocessed DLC data and scored_behavs data.
 
         Parameters
         ----------
@@ -544,7 +527,7 @@ class Experiment:
         overwrite : bool
             Whether to overwrite the output file (if it exists).
 
-        Returns
+        Returns:
         -------
         dict
             Diagnostics dictionary, with description of each function's outcome.
@@ -560,8 +543,7 @@ class Experiment:
         )
 
     def export2csv(self, src_dir: str, dst_dir: str, overwrite: bool) -> dict:
-        """
-        _summary_
+        """_summary_
 
         Parameters
         ----------
@@ -570,7 +552,7 @@ class Experiment:
         dst_dir : str
             _description_
 
-        Returns
+        Returns:
         -------
         dict
             _description_

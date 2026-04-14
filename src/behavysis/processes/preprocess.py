@@ -1,5 +1,4 @@
-"""
-Functions have the following format:
+"""Functions have the following format:
 
 Parameters
 ----------
@@ -12,7 +11,7 @@ configs_fp : str
 overwrite : bool
     Whether to overwrite the output file (if it exists).
 
-Returns
+Returns:
 -------
 str
     Description of the function's outcome.
@@ -39,9 +38,10 @@ class Preprocess:
     """_summary_"""
 
     @classmethod
-    def start_stop_trim(cls, src_fp: str, dst_fp: str, configs_fp: str, overwrite: bool) -> str:
-        """
-        Filters the rows of a DLC formatted dataframe to include only rows within the start
+    def start_stop_trim(
+        cls, src_fp: str, dst_fp: str, configs_fp: str, overwrite: bool
+    ) -> str:
+        """Filters the rows of a DLC formatted dataframe to include only rows within the start
         and end time of the experiment, given a corresponding configs dict.
 
         Parameters
@@ -56,12 +56,12 @@ class Preprocess:
             If True, overwrite the output file if it already exists. If False, skip processing
             if the output file already exists.
 
-        Returns
+        Returns:
         -------
         str
             An outcome message indicating the result of the trimming process.
 
-        Notes
+        Notes:
         -----
         The config file must contain the following parameters:
         ```
@@ -88,12 +88,13 @@ class Preprocess:
         return get_io_obj_content(io_obj)
 
     @classmethod
-    def interpolate_stationary(cls, src_fp: str, dst_fp: str, configs_fp: str, overwrite: bool) -> str:
-        """
-        If the point detection (above a certain threshold) is below a certain proportion, then the x and y coordinates are set to the given values (usually corners).
+    def interpolate_stationary(
+        cls, src_fp: str, dst_fp: str, configs_fp: str, overwrite: bool
+    ) -> str:
+        """If the point detection (above a certain threshold) is below a certain proportion, then the x and y coordinates are set to the given values (usually corners).
         Otherwise, does nothing (encouraged to run Preprocess.interpolate afterwards).
 
-        Notes
+        Notes:
         -----
         The config file must contain the following parameters:
         ```
@@ -139,12 +140,17 @@ class Preprocess:
             x = x * width_px
             y = y * height_px
             # Getting "is_detected" for each frame for the bodypart
-            is_detected = keypoints_df[(scorer, "single", bodypart, CoordsCols.LIKELIHOOD.value)] >= pcutoff
+            is_detected = (
+                keypoints_df[(scorer, "single", bodypart, CoordsCols.LIKELIHOOD.value)]
+                >= pcutoff
+            )
             # If the bodypart is detected in less than the given proportion of the video, then set the x and y coordinates to the given values
             if is_detected.mean() < pcutoff_all:
                 keypoints_df[(scorer, "single", bodypart, CoordsCols.X.value)] = x
                 keypoints_df[(scorer, "single", bodypart, CoordsCols.Y.value)] = y
-                keypoints_df[(scorer, "single", bodypart, CoordsCols.LIKELIHOOD.value)] = pcutoff
+                keypoints_df[
+                    (scorer, "single", bodypart, CoordsCols.LIKELIHOOD.value)
+                ] = pcutoff
                 logger.info(
                     f"{bodypart} is detected in less than {pcutoff_all} of the video."
                     f" Setting x and y coordinates to ({x}, {y})."
@@ -159,14 +165,15 @@ class Preprocess:
         return get_io_obj_content(io_obj)
 
     @classmethod
-    def interpolate(cls, src_fp: str, dst_fp: str, configs_fp: str, overwrite: bool) -> str:
-        """
-        "Smooths" out noticeable jitter of points, where the likelihood (and accuracy) of
+    def interpolate(
+        cls, src_fp: str, dst_fp: str, configs_fp: str, overwrite: bool
+    ) -> str:
+        """ "Smooths" out noticeable jitter of points, where the likelihood (and accuracy) of
         a point's coordinates are low (e.g., when the subject's head goes out of view). It
         does this by linearly interpolating the frames of a body part that are below a given
         likelihood pcutoff.
 
-        Notes
+        Notes:
         -----
         The config file must contain the following parameters:
         ```
@@ -191,11 +198,20 @@ class Preprocess:
         # Setting low-likelihood points to Nan to later interpolate
         for scorer, indiv, bp in unique_cols:
             # Imputing Nan likelihood points with 0
-            keypoints_df[(scorer, indiv, bp, CoordsCols.LIKELIHOOD.value)].fillna(value=0, inplace=True)
+            keypoints_df[(scorer, indiv, bp, CoordsCols.LIKELIHOOD.value)].fillna(
+                value=0, inplace=True
+            )
             # Setting x and y coordinates of points that have low likelihood to Nan
-            to_remove = keypoints_df[(scorer, indiv, bp, CoordsCols.LIKELIHOOD.value)] < configs_filt.pcutoff
-            keypoints_df.loc[to_remove, (scorer, indiv, bp, CoordsCols.X.value)] = np.nan
-            keypoints_df.loc[to_remove, (scorer, indiv, bp, CoordsCols.Y.value)] = np.nan
+            to_remove = (
+                keypoints_df[(scorer, indiv, bp, CoordsCols.LIKELIHOOD.value)]
+                < configs_filt.pcutoff
+            )
+            keypoints_df.loc[to_remove, (scorer, indiv, bp, CoordsCols.X.value)] = (
+                np.nan
+            )
+            keypoints_df.loc[to_remove, (scorer, indiv, bp, CoordsCols.Y.value)] = (
+                np.nan
+            )
         # linearly interpolating Nan x and y points.
         # Also backfilling points at the start.
         # Also forward filling points at the end.
@@ -207,12 +223,13 @@ class Preprocess:
         return get_io_obj_content(io_obj)
 
     @classmethod
-    def refine_ids(cls, src_fp: str, dst_fp: str, configs_fp: str, overwrite: bool) -> str:
-        """
-        Ensures that the identity is correctly tracked for maDLC.
+    def refine_ids(
+        cls, src_fp: str, dst_fp: str, configs_fp: str, overwrite: bool
+    ) -> str:
+        """Ensures that the identity is correctly tracked for maDLC.
         Assumes interpolate_points has already been run.
 
-        Notes
+        Notes:
         -----
         The config file must contain the following parameters:
         ```
@@ -257,11 +274,17 @@ class Preprocess:
         # Checking that bodyparts are all valid
         KeypointsDf.check_bpts_exist(keypoints_df, bpts)
         # Calculating the distances between the averaged bodycentres and the marking
-        mark_dists_df = get_mark_dists_df(keypoints_df, marked, unmarked, [marking], bpts, logger)
+        mark_dists_df = get_mark_dists_df(
+            keypoints_df, marked, unmarked, [marking], bpts, logger
+        )
         # Getting "to_switch" decision series for each frame
-        switch_df = get_id_switch_df(mark_dists_df, window_frames, marked, unmarked, logger)
+        switch_df = get_id_switch_df(
+            mark_dists_df, window_frames, marked, unmarked, logger
+        )
         # Updating df with the switched values
-        switched_keypoints_df = switch_identities(keypoints_df, switch_df[metric], marked, unmarked, logger)
+        switched_keypoints_df = switch_identities(
+            keypoints_df, switch_df[metric], marked, unmarked, logger
+        )
         KeypointsDf.write(switched_keypoints_df, dst_fp)
         return get_io_obj_content(io_obj)
 
@@ -274,8 +297,7 @@ def get_mark_dists_df(
     bpts: list[str],
     logger: logging.Logger,
 ) -> pd.DataFrame:
-    """
-    _summary_
+    """_summary_
 
     Parameters
     ----------
@@ -286,7 +308,7 @@ def get_mark_dists_df(
     indivs : list[str]
         _description_
 
-    Returns
+    Returns:
     -------
     pd.DataFrame
         _description_
@@ -297,17 +319,27 @@ def get_mark_dists_df(
     for coord in [CoordsCols.X.value, CoordsCols.Y.value]:
         idx = pd.IndexSlice
         # Getting the coordinates of the colour marking in each frame
-        mark_dists_df[("mark", coord)] = keypoints_df.loc[:, idx[l0, IndivCols.SINGLE.value, mark_pts, coord]].mean(  # type: ignore
+        mark_dists_df[("mark", coord)] = keypoints_df.loc[
+            :, idx[l0, IndivCols.SINGLE.value, mark_pts, coord]
+        ].mean(  # type: ignore
             axis=1
         )
         for indiv in indivs:
             # Getting the coordinates of each individual (average of the given bodyparts list)
-            mark_dists_df[(indiv, coord)] = keypoints_df.loc[:, idx[l0, indiv, bpts, coord]].mean(axis=1)  # type: ignore
+            mark_dists_df[(indiv, coord)] = keypoints_df.loc[
+                :, idx[l0, indiv, bpts, coord]
+            ].mean(axis=1)  # type: ignore
     # Getting the Euclidean distance between each mouse and the colour marking in each frame
     for indiv in indivs:
         mark_dists_df[(indiv, "dist")] = np.sqrt(
-            np.square(mark_dists_df[(indiv, CoordsCols.X.value)] - mark_dists_df[("mark", CoordsCols.X.value)])
-            + np.square(mark_dists_df[(indiv, CoordsCols.Y.value)] - mark_dists_df[("mark", CoordsCols.Y.value)])
+            np.square(
+                mark_dists_df[(indiv, CoordsCols.X.value)]
+                - mark_dists_df[("mark", CoordsCols.X.value)]
+            )
+            + np.square(
+                mark_dists_df[(indiv, CoordsCols.Y.value)]
+                - mark_dists_df[("mark", CoordsCols.Y.value)]
+            )
         )
     # Formatting columns as a MultiIndex
     mark_dists_df.columns = pd.MultiIndex.from_tuples(mark_dists_df.columns)
@@ -321,8 +353,7 @@ def get_id_switch_df(
     unmarked: str,
     logger: logging.Logger,
 ) -> pd.DataFrame:
-    """
-    Calculating different metrics for whether to swap the mice identities, depending
+    """Calculating different metrics for whether to swap the mice identities, depending
     on the current distance, rolling decision, and average binned decision.
 
     Parameters
@@ -336,32 +367,46 @@ def get_id_switch_df(
     unmarked : str
         _description_
 
-    Returns
+    Returns:
     -------
     pd.DataFrame
         _description_
     """
     switch_df = pd.DataFrame(index=mark_dists_df.index)
     #   - Current decision
-    switch_df["current"] = mark_dists_df[(marked, "dist")] > mark_dists_df[(unmarked, "dist")]
+    switch_df["current"] = (
+        mark_dists_df[(marked, "dist")] > mark_dists_df[(unmarked, "dist")]
+    )
     #   - Decision rolling
     switch_df["rolling"] = (
-        switch_df["current"].rolling(window_frames, min_periods=1).apply(lambda x: x.mode()[0]).map({1: True, 0: False})
+        switch_df["current"]
+        .rolling(window_frames, min_periods=1)
+        .apply(lambda x: x.mode()[0])
+        .map({1: True, 0: False})
     )
     #   - Decision binned
-    bins = np.arange(switch_df.index.min(), switch_df.index.max() + window_frames, window_frames)
+    bins = np.arange(
+        switch_df.index.min(), switch_df.index.max() + window_frames, window_frames
+    )
     df_switch_x = pd.DataFrame()
-    df_switch_x["bins"] = pd.Series(pd.cut(switch_df.index, bins=bins, labels=bins[1:], include_lowest=True))
+    df_switch_x["bins"] = pd.Series(
+        pd.cut(switch_df.index, bins=bins, labels=bins[1:], include_lowest=True)
+    )
     df_switch_x["current"] = switch_df["current"]
-    switch_df["binned"] = df_switch_x.groupby("bins")["current"].transform(lambda x: x.mode())
+    switch_df["binned"] = df_switch_x.groupby("bins")["current"].transform(
+        lambda x: x.mode()
+    )
     return switch_df
 
 
 def switch_identities(
-    keypoints_df: pd.DataFrame, is_switch: pd.Series, marked_indiv: str, unmarked_indiv: str, logger: logging.Logger
+    keypoints_df: pd.DataFrame,
+    is_switch: pd.Series,
+    marked_indiv: str,
+    unmarked_indiv: str,
+    logger: logging.Logger,
 ) -> pd.DataFrame:
-    """
-    _summary_
+    """_summary_
 
     Parameters
     ----------
@@ -374,7 +419,7 @@ def switch_identities(
     unmarked : str
         _description_
 
-    Returns
+    Returns:
     -------
     pd.DataFrame
         _description_
@@ -390,6 +435,8 @@ def switch_identities(
             row[header, marked] = temp
         return row
 
-    keypoints_df = keypoints_df.apply(lambda row: _f(row, marked_indiv, unmarked_indiv), axis=1)
+    keypoints_df = keypoints_df.apply(
+        lambda row: _f(row, marked_indiv, unmarked_indiv), axis=1
+    )
     keypoints_df = keypoints_df.drop(columns="isSwitch")
     return keypoints_df

@@ -1,6 +1,4 @@
-"""
-Utility functions.
-"""
+"""Utility functions."""
 
 import os
 
@@ -14,29 +12,27 @@ class PydanticBaseModel(BaseModel):
 
     @classmethod
     def read_json(cls, fp: str):
-        """
-        Returns the config model from the specified JSON config file.
+        """Returns the config model from the specified JSON config file.
 
         Parameters
         ----------
         fp : str
             Filepath of the JSON config file.
 
-        Notes
+        Notes:
         -----
         This class method reads the contents of the JSON config file located at `fp` and
         returns the config model.
 
-        Example
+        Example:
         -------
         >>> config = ConfigModel.read_json("/path/to/config.json")
         """
-        with open(fp, "r", encoding="utf-8") as f:
+        with open(fp, encoding="utf-8") as f:
             return cls.model_validate_json(f.read())
 
     def write_json(self, fp: str) -> None:
-        """
-        Writes the given configs model to the configs file (i.e. hence updating the file).
+        """Writes the given configs model to the configs file (i.e. hence updating the file).
 
         Makes the directory if it doesn't exist.
 
@@ -65,13 +61,14 @@ class PydanticBaseModel(BaseModel):
     def validate_attr_closed_set(v, closed_set):
         """Validate that the attribute is in the given closed set."""
         if v not in closed_set:
-            raise ValueError(f"Invalid value: {v}.\nOption must be one of: {', '.join(closed_set)}")
+            raise ValueError(
+                f"Invalid value: {v}.\nOption must be one of: {', '.join(closed_set)}"
+            )
         return v
 
     @classmethod
     def get_field_names(cls) -> list[tuple[str, ...]]:
-        """
-        Returns the nested field names of the class as
+        """Returns the nested field names of the class as
         a list of tuples.
         Each tuple is a nested field name combination.
 

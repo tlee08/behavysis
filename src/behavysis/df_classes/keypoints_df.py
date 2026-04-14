@@ -1,6 +1,4 @@
-"""
-Utility functions.
-"""
+"""Utility functions."""
 
 from enum import Enum
 
@@ -40,8 +38,7 @@ class KeypointsDf(DFMixin):
 
     @classmethod
     def check_bpts_exist(cls, df: pd.DataFrame, bodyparts: list) -> None:
-        """
-        _summary_
+        """_summary_
 
         Parameters
         ----------
@@ -50,7 +47,7 @@ class KeypointsDf(DFMixin):
         bodyparts : list
             _description_
 
-        Raises
+        Raises:
         ------
         ValueError
             _description_
@@ -58,15 +55,16 @@ class KeypointsDf(DFMixin):
         # Checking that the bodyparts are all valid (i.e. there are no missing bodyparts)
         bpts_not_exist = np.isin(bodyparts, df.columns.unique("bodyparts"), invert=True)
         if bpts_not_exist.any():
-            bpts_ls_msg = "".join([f"\n    - {bpt}" for bpt in np.array(bodyparts)[bpts_not_exist]])
+            bpts_ls_msg = "".join(
+                [f"\n    - {bpt}" for bpt in np.array(bodyparts)[bpts_not_exist]]
+            )
             raise ValueError(
                 f"Some bodyparts in the config file are missing from the dataframe. They are:{bpts_ls_msg}"
             )
 
     @classmethod
     def get_indivs_bpts(cls, df: pd.DataFrame) -> tuple[list[str], list[str]]:
-        """
-        Returns a tuple of the individuals (only animals, not "single" or "processed"), and tuple of
+        """Returns a tuple of the individuals (only animals, not "single" or "processed"), and tuple of
         the multi-animal bodyparts.
 
         Parameters
@@ -74,7 +72,7 @@ class KeypointsDf(DFMixin):
         df : pd.DataFrame
             Keypoints pd.DataFrame.
 
-        Returns
+        Returns:
         -------
         tuple[list[str], list[str]]
             `(indivs_ls, bpts_ls)` tuples. It is recommended to unpack these vals.
@@ -95,8 +93,7 @@ class KeypointsDf(DFMixin):
 
     @classmethod
     def clean_headings(cls, df: pd.DataFrame) -> pd.DataFrame:
-        """
-        Drops the "scorer" level in the column
+        """Drops the "scorer" level in the column
         header of the dataframe. This makes subsequent processing easier.
 
         Parameters
@@ -104,12 +101,12 @@ class KeypointsDf(DFMixin):
         df : pd.DataFrame
             Keypoints pd.DataFrame.
 
-        Returns
+        Returns:
         -------
         pd.DataFrame
             Keypoints pd.DataFrame.
 
-        Notes
+        Notes:
         -----
         Does not return a dataframe with the same KeypointsDf schema
         (it is missing the SCORER column level).
@@ -118,18 +115,26 @@ class KeypointsDf(DFMixin):
         # Keeping only the "individuals", "bodyparts", and "coords" levels
         # (i.e. dropping "scorer" level)
         columns = df.columns.to_frame(index=False)
-        columns = columns[[cls.CN.INDIVIDUALS.value, cls.CN.BODYPARTS.value, cls.CN.COORDS.value]]
+        columns = columns[
+            [cls.CN.INDIVIDUALS.value, cls.CN.BODYPARTS.value, cls.CN.COORDS.value]
+        ]
         df.columns = pd.MultiIndex.from_frame(columns)
         return df
 
     @classmethod
-    def resolution_scale_df(cls, df: pd.DataFrame, width_x_scale: float, height_y_scale: float) -> pd.DataFrame:
+    def resolution_scale_df(
+        cls, df: pd.DataFrame, width_x_scale: float, height_y_scale: float
+    ) -> pd.DataFrame:
         scaled_df = cls.basic_clean(df)
         idx = pd.IndexSlice
         # Scaling width coords
-        scaled_df[CoordsCols.X.value] = scaled_df.loc[:, idx[:, :, :, CoordsCols.X.value]] * width_x_scale  # type: ignore
+        scaled_df[CoordsCols.X.value] = (
+            scaled_df.loc[:, idx[:, :, :, CoordsCols.X.value]] * width_x_scale
+        )  # type: ignore
         # Scaling height coords
-        scaled_df[CoordsCols.Y.value] = scaled_df.loc[:, idx[:, :, :, CoordsCols.Y.value]] * height_y_scale  # type: ignore
+        scaled_df[CoordsCols.Y.value] = (
+            scaled_df.loc[:, idx[:, :, :, CoordsCols.Y.value]] * height_y_scale
+        )  # type: ignore
         return cls.basic_clean(scaled_df)
 
 
@@ -143,8 +148,7 @@ class KeypointsAnnotationsDf(DFMixin):
 
     @classmethod
     def keypoint2annotationsdf(cls, keypoints_df: pd.DataFrame) -> pd.DataFrame:
-        """
-        Converts a keypoint to an attributes dataframe, which combines the column headings to:
+        """Converts a keypoint to an attributes dataframe, which combines the column headings to:
         `individual_bodypart_coord`.
 
         Helpful for faster column indexing and processing.
@@ -154,7 +158,7 @@ class KeypointsAnnotationsDf(DFMixin):
         keypoint : pd.DataFrame
             A keypoint.
 
-        Returns
+        Returns:
         -------
         pd.DataFrame
             An attributes dataframe.
@@ -169,41 +173,53 @@ class KeypointsAnnotationsDf(DFMixin):
         df = df.loc[:, columns]
         # Rounding and converting to correct dtypes - "x" and "y" values are ints
         xy_columns = df.columns[
-            df.columns.get_level_values(KeypointsDf.CN.COORDS.value).isin([CoordsCols.X.value, CoordsCols.Y.value])
+            df.columns.get_level_values(KeypointsDf.CN.COORDS.value).isin(
+                [CoordsCols.X.value, CoordsCols.Y.value]
+            )
         ]
         df[xy_columns] = df[xy_columns].round(0).astype(int)
         # Changing the columns MultiIndex to a single-level index. For speedup
-        df.columns = [f"{indiv}_{bpt}_{coord}" for scorer, indiv, bpt, coord in df.columns]
+        df.columns = [
+            f"{indiv}_{bpt}_{coord}" for scorer, indiv, bpt, coord in df.columns
+        ]
         return cls.basic_clean(df)
 
     @classmethod
     def get_indivs_bpts(cls, df: pd.DataFrame) -> pd.DataFrame:
-        """
-        Returns a tuple of the unique (indiv, bpt) pairs.
+        """Returns a tuple of the unique (indiv, bpt) pairs.
 
         Parameters
         ----------
         df : pd.DataFrame
             Keypoints pd.DataFrame.
 
-        Returns
+        Returns:
         -------
         tuple[list[str], list[str]]
             `(indivs_ls, bpts_ls)` tuples. It is recommended to unpack these vals.
         """
         df = cls.basic_clean(df)
         if df.columns.shape[0] == 0:
-            return pd.DataFrame(columns=[KeypointsDf.CN.INDIVIDUALS.value, KeypointsDf.CN.BODYPARTS.value])
-        indivs_bpts_df = df.columns.to_frame(index=False)[cls.CN.ATTRIBUTES.value].str.split("_", expand=True)
+            return pd.DataFrame(
+                columns=[
+                    KeypointsDf.CN.INDIVIDUALS.value,
+                    KeypointsDf.CN.BODYPARTS.value,
+                ]
+            )
+        indivs_bpts_df = df.columns.to_frame(index=False)[
+            cls.CN.ATTRIBUTES.value
+        ].str.split("_", expand=True)
         indivs_bpts_df = indivs_bpts_df.iloc[:, :2]
-        indivs_bpts_df.columns = [KeypointsDf.CN.INDIVIDUALS.value, KeypointsDf.CN.BODYPARTS.value]
+        indivs_bpts_df.columns = [
+            KeypointsDf.CN.INDIVIDUALS.value,
+            KeypointsDf.CN.BODYPARTS.value,
+        ]
         indivs_bpts_df = indivs_bpts_df.drop_duplicates().reset_index(drop=True)
         return indivs_bpts_df
 
     @classmethod
     def make_colours(cls, category_vals: pd.Series, cmap: str) -> np.ndarray:
-        """
-        Makes a list of colours for each bodypart instance.
+        """Makes a list of colours for each bodypart instance.
 
         Parameters
         ----------
@@ -212,12 +228,12 @@ class KeypointsAnnotationsDf(DFMixin):
         cmap : str
             _description_
 
-        Returns
+        Returns:
         -------
         list
             _description_
 
-        Example
+        Example:
         -------
         ```
         [1,2,4,2,3,1,5]

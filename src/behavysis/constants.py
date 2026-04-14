@@ -1,6 +1,4 @@
-"""
-_summary_
-"""
+"""_summary_"""
 
 import os
 import pathlib
@@ -86,7 +84,14 @@ BPTS_SIMBA = [
     "TailTip4",
 ]
 
-BPTS_CENTRE = ["LeftFlankMid", "BodyCentre", "RightFlankMid", "LeftFlankRear", "RightFlankRear", "TailBase1"]
+BPTS_CENTRE = [
+    "LeftFlankMid",
+    "BodyCentre",
+    "RightFlankMid",
+    "LeftFlankRear",
+    "RightFlankRear",
+    "TailBase1",
+]
 
 BPTS_FRONT = ["LeftEar", "RightEar", "Nose", "BodyCentre"]
 

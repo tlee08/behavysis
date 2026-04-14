@@ -1,6 +1,4 @@
-"""
-Utility functions.
-"""
+"""Utility functions."""
 
 from enum import Enum
 
@@ -51,9 +49,7 @@ class BehavDf(DFMixin):
 
     @classmethod
     def check_df(cls, df: pd.DataFrame) -> None:
-        """
-        Checking the dataframe.
-        """
+        """Checking the dataframe."""
         super().check_df(df)
         cls.check_outcomes_cols(df)
 
@@ -70,7 +66,9 @@ class BehavDf(DFMixin):
                     assert (
                         behav,
                         outcome,
-                    ) in columns, f"Expected {outcome} column for {behav}.\nThe columns in the df are: {columns}"
+                    ) in columns, (
+                        f"Expected {outcome} column for {behav}.\nThe columns in the df are: {columns}"
+                    )
 
 
 class BehavPredictedDf(BehavDf):
@@ -109,10 +107,10 @@ class BehavScoredDf(BehavDf):
     ###############################################################################################
 
     @classmethod
-    def import_boris_tsv(cls, fp: str, behavs_ls: list[str], start_frame: int, stop_frame: int) -> pd.DataFrame:
-        """
-        Importing Boris TSV file.
-        """
+    def import_boris_tsv(
+        cls, fp: str, behavs_ls: list[str], start_frame: int, stop_frame: int
+    ) -> pd.DataFrame:
+        """Importing Boris TSV file."""
         # Making df structure
         df = cls.init_df(pd.Series(np.arange(start_frame, stop_frame)))
         # Reading in corresponding BORIS tsv file
@@ -137,21 +135,27 @@ class BehavScoredDf(BehavDf):
             if behav not in behavs_ls:
                 continue
             # Status is either "START" (of behaviour) or "STOP"
-            val = BehavValues.BEHAV.value if status == "START" else BehavValues.NON_BEHAV.value
+            val = (
+                BehavValues.BEHAV.value
+                if status == "START"
+                else BehavValues.NON_BEHAV.value
+            )
             # Updating the classification in the scored df
             df.loc[frame:, (behav, cls.OutcomesCols.ACTUAL.value)] = val
             df.loc[frame:, (behav, cls.OutcomesCols.PRED.value)] = val
         return df
 
     @classmethod
-    def update_behav(cls, df: pd.DataFrame, old_behav: str, new_behav: str) -> pd.DataFrame:
-        """
-        Update the given behaviour name (old_behav) with a new name (new_behav).
-        """
+    def update_behav(
+        cls, df: pd.DataFrame, old_behav: str, new_behav: str
+    ) -> pd.DataFrame:
+        """Update the given behaviour name (old_behav) with a new name (new_behav)."""
         # Getting columns
         columns = df.columns.to_frame(index=False)
         # Updating the behaviour column
-        columns[cls.CN.BEHAVS.value] = columns[cls.CN.BEHAVS.value].replace(old_behav, new_behav)
+        columns[cls.CN.BEHAVS.value] = columns[cls.CN.BEHAVS.value].replace(
+            old_behav, new_behav
+        )
         # Setting the new columns
         df.columns = pd.MultiIndex.from_frame(columns)
         return df
@@ -162,9 +166,7 @@ class BehavScoredDf(BehavDf):
 
     @classmethod
     def get_bouts_struct_from_df(cls, df: pd.DataFrame) -> list[BoutStruct]:
-        """
-        Returns the list BoutStruct objects from the given BehavDf's columns.
-        """
+        """Returns the list BoutStruct objects from the given BehavDf's columns."""
         bouts_struct = []
         for behav in df.columns.unique(cls.CN.BEHAVS.value):
             bouts_struct.append(
@@ -180,10 +182,10 @@ class BehavScoredDf(BehavDf):
         return bouts_struct
 
     @classmethod
-    def predicted2scored(cls, df: pd.DataFrame, bouts_struct: list[BoutStruct] | None = None) -> pd.DataFrame:
-        """
-        Convert a predicted behaviours dataframe to a scored behaviours dataframe.
-        """
+    def predicted2scored(
+        cls, df: pd.DataFrame, bouts_struct: list[BoutStruct] | None = None
+    ) -> pd.DataFrame:
+        """Convert a predicted behaviours dataframe to a scored behaviours dataframe."""
         # TODO: bouts struct need to include user_defined as well
         # If behav_outcomes_ls is None, then initialising it from df
         bouts_struct = bouts_struct or cls.get_bouts_struct_from_df(df)
@@ -194,11 +196,13 @@ class BehavScoredDf(BehavDf):
             behav = bout_struct.behav
             user_defined = bout_struct.user_defined
             # Adding pred column
-            scored_df[(behav, cls.OutcomesCols.PRED.value)] = df[(behav, cls.OutcomesCols.PRED.value)].values
+            scored_df[(behav, cls.OutcomesCols.PRED.value)] = df[
+                (behav, cls.OutcomesCols.PRED.value)
+            ].values
             # Adding actual column and behav is set to undetermined
-            scored_df[(behav, cls.OutcomesCols.ACTUAL.value)] = scored_df[(behav, cls.OutcomesCols.PRED.value)].replace(
-                BehavValues.BEHAV.value, BehavValues.UNDETERMINED.value
-            )
+            scored_df[(behav, cls.OutcomesCols.ACTUAL.value)] = scored_df[
+                (behav, cls.OutcomesCols.PRED.value)
+            ].replace(BehavValues.BEHAV.value, BehavValues.UNDETERMINED.value)
             # Adding user_defined columns and setting values to 0
             for user_defined_i in user_defined:
                 scored_df[(behav, user_defined_i)] = BehavValues.NON_BEHAV.value
@@ -214,8 +218,7 @@ class BehavScoredDf(BehavDf):
         cls,
         vect: pd.Series,
     ) -> pd.DataFrame:
-        """
-        Will return a dataframe with the start and stop indexes of each contiguous set of
+        """Will return a dataframe with the start and stop indexes of each contiguous set of
         positive/true values (i.e. a bout).
 
         Parameters
@@ -223,7 +226,7 @@ class BehavScoredDf(BehavDf):
         vect : pd.Series
             Expects a vector of booleans
 
-        Returns
+        Returns:
         -------
         pd.DataFrame
             _description_
@@ -238,33 +241,42 @@ class BehavScoredDf(BehavDf):
         start = np.flatnonzero(~z[:-1] & z[1:])
         stop = np.flatnonzero(z[:-1] & ~z[1:]) - 1
         # Making dataframe
-        bouts_df = pd.DataFrame({BoutCols.START.value: start, BoutCols.STOP.value: stop}) + offset
-        bouts_df[BoutCols.DUR.value] = bouts_df[BoutCols.STOP.value] - bouts_df[BoutCols.START.value] + 1
+        bouts_df = (
+            pd.DataFrame({BoutCols.START.value: start, BoutCols.STOP.value: stop})
+            + offset
+        )
+        bouts_df[BoutCols.DUR.value] = (
+            bouts_df[BoutCols.STOP.value] - bouts_df[BoutCols.START.value] + 1
+        )
         return bouts_df
 
     @classmethod
     def frames2bouts(cls, df: pd.DataFrame) -> Bouts:
-        """
-        Frames df to bouts model object.
-        """
+        """Frames df to bouts model object."""
         # Getting bouts_ls
         bouts_ls = []
         # For each behaviour
         for behav in df.columns.unique(cls.CN.BEHAVS.value):
             behav_df = df[behav]
             # Getting start-stop of each bout
-            bouts_df = cls.vect2bouts_df(behav_df[cls.OutcomesCols.PRED.value] == BehavValues.BEHAV.value)
+            bouts_df = cls.vect2bouts_df(
+                behav_df[cls.OutcomesCols.PRED.value] == BehavValues.BEHAV.value
+            )
             # For each bout (i.e. start-stop pair)
             for _, row in bouts_df.iterrows():
                 # Getting only the frames in the current bout
-                bout_frames_df = behav_df.loc[row[BoutCols.START.value] : row[BoutCols.STOP.value]]
+                bout_frames_df = behav_df.loc[
+                    row[BoutCols.START.value] : row[BoutCols.STOP.value]
+                ]
                 # Making bout object
                 bout = Bout(
                     start=row[BoutCols.START.value],
                     stop=row[BoutCols.STOP.value],
                     dur=row[BoutCols.DUR.value],
                     behav=behav,
-                    actual=int(mode(bout_frames_df[cls.OutcomesCols.ACTUAL.value]).mode),
+                    actual=int(
+                        mode(bout_frames_df[cls.OutcomesCols.ACTUAL.value]).mode
+                    ),
                     user_defined={},
                 )
                 # Storing user_defined column names in bout object
@@ -282,9 +294,7 @@ class BehavScoredDf(BehavDf):
 
     @classmethod
     def bouts2frames(cls, bouts: Bouts) -> pd.DataFrame:
-        """
-        Bouts model object to frames df.
-        """
+        """Bouts model object to frames df."""
         # Making dataframe
         df = cls.init_df(pd.Series(np.arange(bouts.start, bouts.stop)))
         # Making columns (for each behaviour, and for pred, actual, and user_defined)
@@ -296,8 +306,12 @@ class BehavScoredDf(BehavDf):
                 df[(behav, user_defined_i)] = BehavValues.NON_BEHAV.value
         # Filling in all user_defined columns for each behaviour
         for bout in bouts.bouts:
-            df.loc[bout.start : bout.stop, (bout.behav, cls.OutcomesCols.PRED.value)] = BehavValues.BEHAV.value
-            df.loc[bout.start : bout.stop, (bout.behav, cls.OutcomesCols.ACTUAL.value)] = bout.actual
+            df.loc[
+                bout.start : bout.stop, (bout.behav, cls.OutcomesCols.PRED.value)
+            ] = BehavValues.BEHAV.value
+            df.loc[
+                bout.start : bout.stop, (bout.behav, cls.OutcomesCols.ACTUAL.value)
+            ] = bout.actual
             # Filling in user_defined columns
             for k, v in bout.user_defined.items():
                 df.loc[bout.start : bout.stop, (bout.behav, k)] = v
@@ -305,7 +319,9 @@ class BehavScoredDf(BehavDf):
         return df
 
     @classmethod
-    def fps_scale_df(cls, df: pd.DataFrame, src_fps: float, dst_fps: float) -> pd.DataFrame:
+    def fps_scale_df(
+        cls, df: pd.DataFrame, src_fps: float, dst_fps: float
+    ) -> pd.DataFrame:
         fps_scale = dst_fps / src_fps
         df = cls.basic_clean(df)
         columns = df.columns

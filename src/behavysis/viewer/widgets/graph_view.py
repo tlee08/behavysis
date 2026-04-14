@@ -73,7 +73,9 @@ class GraphView(PlotWidget):
         self.addItem(self.time_marker_line)
         # Plotting bouts as bars
         behavs_ls_i, behavs_cat = pd.factorize(behavs_ls)
-        for i, (start, stop, behav, actual) in enumerate(zip(start_ls, stop_ls, behavs_ls_i, actual_ls)):
+        for i, (start, stop, behav, actual) in enumerate(
+            zip(start_ls, stop_ls, behavs_ls_i, actual_ls)
+        ):
             # Making bar item
             bar_ = BarGraphItem(
                 x0=start,
@@ -83,7 +85,9 @@ class GraphView(PlotWidget):
                 brush=mkBrush(color=VALUE2COLOR[actual]),
             )
             # Adding double click event
-            bar_.mouseDoubleClickEvent = lambda event, id_=i: self._on_bar_double_click(event, id_)
+            bar_.mouseDoubleClickEvent = lambda event, id_=i: self._on_bar_double_click(
+                event, id_
+            )
             # Storing in bars dict
             self.bars[i] = bar_
             # Adding to plot
