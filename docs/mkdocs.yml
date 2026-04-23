@@ -19,6 +19,12 @@ markdown_extensions:
   - md_in_html
   - toc:
       permalink: true
+  # Mermaid diagrams
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
   # Python Markdown Extensions
   - pymdownx.arithmatex:
       generic: true
