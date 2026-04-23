@@ -32,7 +32,9 @@ class ClassifyBehavs:
         configs_fp: str,
         overwrite: bool,
     ) -> str:
-        """Given model config files in the BehavClassifier format, generates beahviour predidctions
+        """Classify behaviour.
+
+        Given model config files in the BehavClassifier format, generates beahviour predidctions
         on the given extracted features dataframe.
 
         Parameters
@@ -127,7 +129,8 @@ def get_pcutoff(pcutoff: float, model_pcutoff: float, logger: logging.Logger) ->
         )
         return model_pcutoff
     assert 0 <= pcutoff <= 1, (
-        f"pcutoff in configs must be between 0 and 1, or the special value -1.\nInstead it has value: {pcutoff}"
+        "pcutoff in configs must be between 0 and 1, or the special value -1.\n"
+        f"Instead it has value: {pcutoff}"
     )
     return pcutoff
 
@@ -135,7 +138,9 @@ def get_pcutoff(pcutoff: float, model_pcutoff: float, logger: logging.Logger) ->
 def merge_bouts(
     vect: pd.Series, min_window_frames: int, logger: logging.Logger
 ) -> pd.Series:
-    """For a given pd.Series, `vect`,
+    """Merge bouts.
+
+    For a given pd.Series, `vect`,
     if the time between two bouts is less than `min_window_frames`, then merging
     the two bouts together by filling in the short `non-behav` period with `is-behav`.
 

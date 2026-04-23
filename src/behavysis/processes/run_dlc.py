@@ -1,4 +1,4 @@
-"""Functions have the following format:
+"""Functions have the following format.
 
 Parameters
 ----------
@@ -39,7 +39,7 @@ DLC_HDF_KEY = "data"
 
 
 class RunDLC:
-    """_summary_"""
+    """_summary_."""
 
     @classmethod
     def ma_dlc_run_single(

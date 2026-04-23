@@ -127,7 +127,7 @@ def select_cols(
     # Selecting given columns
     idx = pd.IndexSlice
     coords = enum2list(CoordsCols)
-    keypoints_df = keypoints_df.loc[:, idx[:, indivs, bpts, coords]]  # type: ignore
+    keypoints_df = keypoints_df.loc[:, idx[:, indivs, bpts, coords]]
     return keypoints_df
 
 
@@ -139,7 +139,9 @@ def run_simba_subproc(
     cpid: int,
     logger: logging.Logger,
 ) -> None:
-    """Running the custom SimBA script to take the prepared keypoints dataframe as input and
+    """Run custom SimBA script to extract features from keypoints.
+
+    Running the custom SimBA script to take the prepared keypoints dataframe as input and
     create the features extracted dataframe.
 
     A custom SimBA script must be run in a separate custom conda environment because SimBA
