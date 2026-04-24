@@ -1,160 +1,137 @@
-import io
+"""Clean logging system for behavysis following the cellcounter pattern."""
 import logging
-import os
-import sys
+import logging.handlers
+from dataclasses import dataclass, field
+from datetime import datetime
+from enum import Enum
+from pathlib import Path
+from typing import Optional
 
 from behavysis.constants import CACHE_DIR
-from behavysis.utils.misc_utils import get_func_name_in_stack
 
 LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-LOG_IO_OBJ_FORMAT = "%(levelname)s - %(message)s"
 
 
-def add_console_handler(logger: logging.Logger, level: int = logging.INFO) -> None:
-    """If logger does not have a console handler,
-    create a console handler and add it to the logger.
+class LogLevel(Enum):
+    """Log level enumeration."""
+    DEBUG = logging.DEBUG
+    INFO = logging.INFO
+    WARNING = logging.WARNING
+    ERROR = logging.ERROR
+    CRITICAL = logging.CRITICAL
 
-    Returns nothing as the console handler is always sys,stderr.
+
+@dataclass
+class ProcessResult:
+    """Structured result container for process function diagnostics.
+    
+    Replaces the previous StringIO-based logging approach with a cleaner,
+    structured result object.
     """
-    # Checking if logger has a console handler
-    for handler in logger.handlers:
-        if isinstance(handler, logging.StreamHandler):
-            if handler.stream == sys.stderr:
-                return
-    # Adding console handler
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(level)
-    console_handler.setFormatter(logging.Formatter(LOG_FORMAT))
-    logger.addHandler(console_handler)
+    process_name: str
+    success: bool = True
+    error_message: str = ""
+    logs: list[str] = field(default_factory=list)
+    start_time: datetime = field(default_factory=datetime.now)
+    end_time: Optional[datetime] = None
+
+    def add_log(self, level: LogLevel, message: str) -> None:
+        """Add a log entry to the result."""
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        self.logs.append(f"{timestamp} - {level.name} - {message}")
+
+    def mark_complete(self, success: bool = True, error_message: str = "") -> None:
+        """Mark the process as complete."""
+        self.end_time = datetime.now()
+        self.success = success
+        self.error_message = error_message
+
+    @property
+    def duration(self) -> float:
+        """Get process duration in seconds."""
+        end = self.end_time or datetime.now()
+        return (end - self.start_time).total_seconds()
+
+    def to_dict(self) -> dict:
+        """Convert to dictionary for serialization."""
+        return {
+            "process_name": self.process_name,
+            "start_time": self.start_time.isoformat(),
+            "end_time": self.end_time.isoformat() if self.end_time else None,
+            "success": self.success,
+            "error_message": self.error_message,
+            "logs": "\n".join(self.logs) if self.logs else "",
+            "duration": self.duration
+        }
 
 
-def add_log_file_handler(logger: logging.Logger, level: int = logging.DEBUG) -> str:
-    """If logger does not have a file handler,
-    create a file handler and add it to the logger.
+def setup_logging(
+    level: LogLevel = LogLevel.INFO,
+    log_file: Optional[Path | str] = None,
+    project_name: Optional[str] = None,
+) -> None:
+    """Configure logging once at application startup.
 
-    Returns the log filepath.
+    After calling this, use: logger = logging.getLogger(__name__)
+
+    Parameters
+    ----------
+    level : LogLevel
+        Minimum log level for console output
+    log_file : Path | str | None
+        Optional custom log file path. If None and project_name is provided,
+        uses ~/.behavysis/{project_name}/debug.log
+    project_name : str | None
+        Optional project name for project-specific logging
+
+    Returns
+    -------
+    None
     """
-    log_fp = os.path.join(CACHE_DIR, "debug.log")
-    # Checking if logger has a file handler
-    for handler in logger.handlers:
-        if isinstance(handler, logging.FileHandler):
-            if handler.baseFilename == log_fp:
-                return handler.baseFilename
-    # Adding file handler
-    os.makedirs(os.path.dirname(log_fp), exist_ok=True)
-    file_handler = logging.FileHandler(log_fp, mode="a")
-    file_handler.setLevel(level)
-    file_handler.setFormatter(logging.Formatter(LOG_FORMAT))
-    logger.addHandler(file_handler)
-    return file_handler.baseFilename
+    root = logging.getLogger("behavysis")
+    if root.handlers:  # if already configured
+        return
 
+    # Set logging levels and formatter
+    root.setLevel(logging.DEBUG)
+    formatter = logging.Formatter(LOG_FORMAT)
 
-def add_io_obj_handler(
-    logger: logging.Logger, level: int = logging.INFO
-) -> io.StringIO:
-    """If logger does not have a StringIO handler,
-    create a StringIO handler and add it to the logger.
+    # Console handler
+    ch = logging.StreamHandler()
+    ch.setLevel(level.value)
+    ch.setFormatter(formatter)
+    root.addHandler(ch)
 
-    Returns the StringIO object.
-    """
-    # Checking if logger has a StringIO handler
-    for handler in logger.handlers:
-        if isinstance(handler, logging.StreamHandler):
-            if isinstance(handler.stream, io.StringIO):
-                return handler.stream
-    # Adding StringIO handler
-    io_obj = io.StringIO()
-    io_obj_handler = logging.StreamHandler(io_obj)
-    io_obj_handler.setLevel(level)
-    io_obj_handler.setFormatter(logging.Formatter(LOG_IO_OBJ_FORMAT))
-    logger.addHandler(io_obj_handler)
-    return io_obj
+    # File handler (with rotation)
+    if log_file is None:
+        if project_name:
+            log_dir = CACHE_DIR / project_name
+        else:
+            log_dir = CACHE_DIR
+        log_file = log_dir / "debug.log"
+    else:
+        log_file = Path(log_file)
 
-
-def init_logger(
-    name: str | None = None,
-    console_level: int | None = None,
-    file_level: int | None = None,
-    io_obj_level: int | None = None,
-) -> logging.Logger:
-    """Setup logging configuration.
-
-    For each of the following levels,
-    if the level argument is not None,
-    then add the handler with that level:
-    - console
-    - file (<cache_dir>/debug.log)
-    - io.StringIO object
-    """
-    # Creating logger
-    logger = logging.getLogger(name or get_func_name_in_stack(2))
-    logger.setLevel(logging.DEBUG)
-    # Adding handlers
-    if console_level is not None:
-        add_console_handler(logger, console_level)
-    if file_level is not None:
-        add_log_file_handler(logger, file_level)
-    if io_obj_level is not None:
-        add_io_obj_handler(logger, io_obj_level)
-    return logger
-
-
-def init_logger_console(
-    name: str | None = None,
-    console_level: int = logging.INFO,
-) -> logging.Logger:
-    """Logs to:
-    - console
-    """
-    return init_logger(
-        name=name or get_func_name_in_stack(2),
-        console_level=console_level,
+    log_file.parent.mkdir(parents=True, exist_ok=True)
+    fh = logging.handlers.RotatingFileHandler(
+        log_file, maxBytes=10_000_000, backupCount=3
     )
+    fh.setLevel(logging.DEBUG)
+    fh.setFormatter(formatter)
+    root.addHandler(fh)
 
 
-def init_logger_file(
-    name: str | None = None,
-    console_level: int = logging.INFO,
-    file_level: int = logging.DEBUG,
-) -> logging.Logger:
-    """Logs to:
-    - console
-    - file (<cache_dir>/debug.log)
+def get_logger(name: str) -> logging.Logger:
+    """Get a logger with the given name.
+
+    Parameters
+    ----------
+    name : str
+        Logger name (typically __name__)
+
+    Returns
+    -------
+    logging.Logger
+        Configured logger instance
     """
-    return init_logger(
-        name=name or get_func_name_in_stack(2),
-        console_level=console_level,
-        file_level=file_level,
-    )
-
-
-def init_logger_io_obj(
-    name: str | None = None,
-    console_level: int = logging.INFO,
-    file_level: int = logging.DEBUG,
-    io_obj_level: int = logging.INFO,
-) -> tuple[logging.Logger, io.StringIO]:
-    """Logs to:
-    - console
-    - file (<cache_dir>/debug.log)
-    - io.StringIO object (returned)
-    """
-    logger = init_logger(
-        name=name or get_func_name_in_stack(2),
-        console_level=console_level,
-        file_level=file_level,
-        io_obj_level=io_obj_level,
-    )
-    io_obj = add_io_obj_handler(logger)
-    return logger, io_obj
-
-
-def get_io_obj_content(io_obj: io.IOBase) -> str:
-    """Reads and returns the content from the IOBase object.
-    Also restores cursor position of the object.
-    """
-    cursor = io_obj.tell()
-    io_obj.seek(0)
-    msg = io_obj.read()
-    io_obj.seek(cursor)
-    return msg
+    return logging.getLogger(f"behavysis.{name}")

@@ -1,5 +1,6 @@
 """_summary_"""
 
+import logging
 import os
 import traceback
 from collections.abc import Callable
@@ -22,11 +23,9 @@ from behavysis.processes.extract_features import ExtractFeatures
 from behavysis.processes.format_vid import FormatVid
 from behavysis.processes.run_dlc import RunDLC
 from behavysis.processes.update_configs import UpdateConfigs
-from behavysis.utils.logging_utils import (
-    get_io_obj_content,
-    init_logger_file,
-    init_logger_io_obj,
-)
+from behavysis.utils.logging_utils import ProcessResult, LogLevel
+
+logger = logging.getLogger(__name__)
 
 
 class Experiment:
@@ -52,8 +51,6 @@ class Experiment:
     ValueError
         ValueError: `root_dir` does not exist or `name` does not exist in the `root_dir` folder.
     """
-
-    logger = init_logger_file()
 
     def __init__(self, name: str, root_dir: str) -> None:
         """Make a Experiment instance."""
@@ -146,26 +143,25 @@ class Experiment:
         ```
         """
         f_names_ls_msg = "".join([f"\n    - {f.__name__}" for f in funcs])
-        self.logger.info(f"Processing experiment, {self.name}, with:{f_names_ls_msg}")
+        logger.info(f"Processing experiment, {self.name}, with:{f_names_ls_msg}")
         # Setting up diagnostics dict
         dd = {"experiment": self.name}
         # Running functions and saving outcome to diagnostics dict
         for f in funcs:
             f_name = f.__name__
-            # Getting logger and corresponding io object
-            f_logger, f_io_obj = init_logger_io_obj(f_name)
+            # Create a ProcessResult to capture diagnostics
+            result = ProcessResult(process_name=f_name)
             # Running each func and saving outcome
             try:
                 f(*args, **kwargs)
-                # f_logger.info(success_msg())
+                result.mark_complete(success=True)
             except Exception as e:
-                f_logger.error(e)
-                self.logger.debug(traceback.format_exc())
+                result.add_log(LogLevel.ERROR, str(e))
+                logger.debug(traceback.format_exc())
+                result.mark_complete(success=False, error_message=str(e))
             # Adding to diagnostics dict
-            dd[f_name] = get_io_obj_content(f_io_obj)
-            # Clearing io object
-            f_io_obj.truncate(0)
-        self.logger.info(
+            dd[f_name] = "\n".join(result.logs) if result.logs else ""
+        logger.info(
             f"Finished processing experiment, {self.name}, with:{f_names_ls_msg}"
         )
         return dd
@@ -313,16 +309,18 @@ class Experiment:
     def collate_auto_configs(self) -> dict:
         """Collates the auto-configs of the experiment into the main configs file."""
         dd = {"experiment": self.name}
+        # Create a ProcessResult to capture diagnostics
+        result = ProcessResult(process_name="reading_configs")
         # Reading the experiment's configs file
-        f_logger, f_io_obj = init_logger_io_obj()
         try:
             configs = ExperimentConfigs.read_json(self.get_fp(Folders.CONFIGS))
-            f_logger.debug("Reading configs file.")
-            # f_logger.info(success_msg())
-            dd["reading_configs"] = get_io_obj_content(f_io_obj)
+            result.add_log(LogLevel.DEBUG, "Reading configs file.")
+            result.mark_complete(success=True)
+            dd["reading_configs"] = "\n".join(result.logs)
         except FileNotFoundError:
-            f_logger.error("no configs file found.")
-            dd["reading_configs"] = get_io_obj_content(f_io_obj)
+            result.add_log(LogLevel.ERROR, "no configs file found.")
+            result.mark_complete(success=False, error_message="no configs file found.")
+            dd["reading_configs"] = "\n".join(result.logs)
             return dd
         # Getting all the auto fields from the configs file
         configs_auto_field_keys = AutoConfigs.get_field_names()

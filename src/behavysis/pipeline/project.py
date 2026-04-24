@@ -31,7 +31,8 @@ from behavysis.pipeline.experiment import Experiment
 from behavysis.processes.run_dlc import RunDLC
 from behavysis.utils.dask_utils import cluster_process
 from behavysis.utils.io_utils import get_name
-from behavysis.utils.logging_utils import init_logger_file
+from behavysis.utils.logging_utils import setup_logging, get_logger
+
 from behavysis.utils.multiproc_utils import get_gpu_ids
 
 
@@ -49,7 +50,7 @@ class Project:
             The number of processes to use for multiprocessing.
     """
 
-    logger = init_logger_file()
+    logger = get_logger(__name__)
 
     root_dir: str
     _experiments: dict[str, Experiment]
@@ -74,6 +75,9 @@ class Project:
         self.root_dir = os.path.abspath(root_dir)
         self._experiments = {}
         self.nprocs = 4
+        # Setup logging for this project
+        project_name = os.path.basename(self.root_dir)
+        setup_logging(project_name=project_name)
 
     #####################################################################
     # GETTER METHODS
