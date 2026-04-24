@@ -38,8 +38,6 @@ from behavysis.df_classes.keypoints_df import (
 )
 from behavysis.models.experiment_configs import ExperimentConfigs
 from behavysis.utils.io_utils import get_name
-from behavysis.utils.logging_utils import get_io_obj_content, init_logger_io_obj
-from behavysis.utils.misc_utils import get_func_name_in_stack
 
 ###################################################################################################
 #               ANALYSIS API FUNCS
@@ -60,10 +58,9 @@ class Analyse:
 
         Points are `padding_px` padded (away) from center.
         """
-        logger, io_obj = init_logger_io_obj()
-        f_name = get_func_name_in_stack()
+        logger = logging.getLogger(__name__)
         name = get_name(keypoints_fp)
-        dst_subdir = os.path.join(dst_dir, f_name)
+        dst_subdir = os.path.join(dst_dir, __name__.split(".")[-1])
         # Calculating the deltas (changes in body position) between each frame for the subject
         configs = ExperimentConfigs.read_json(configs_fp)
         fps, _, _, px_per_mm, bins_ls, cbins_ls = configs.get_analysis_configs()
@@ -177,7 +174,7 @@ class Analyse:
             bins_ls,
             cbins_ls,
         )
-        return get_io_obj_content(io_obj)
+        return ""
 
     @classmethod
     def _pt_in_roi(
@@ -292,10 +289,9 @@ class Analyse:
         configs_fp: str,
     ) -> str:
         """Determines the speed of the subject in each frame."""
-        logger, io_obj = init_logger_io_obj()
-        f_name = get_func_name_in_stack()
+        logger = logging.getLogger(__name__)
         name = get_name(keypoints_fp)
-        dst_subdir = os.path.join(dst_dir, f_name)
+        dst_subdir = os.path.join(dst_dir, __name__.split(".")[-1])
         # Calculating the deltas (changes in body position) between each frame for the subject
         configs = ExperimentConfigs.read_json(configs_fp)
         fps, _, _, px_per_mm, bins_ls, cbins_ls = configs.get_analysis_configs()
@@ -352,7 +348,7 @@ class Analyse:
             bins_ls,
             cbins_ls,
         )
-        return get_io_obj_content(io_obj)
+        return ""
 
     @classmethod
     def distance(
@@ -366,10 +362,9 @@ class Analyse:
 
         Very similar to speed, except not scaled by time (fps).
         """
-        logger, io_obj = init_logger_io_obj()
-        f_name = get_func_name_in_stack()
+        logger = logging.getLogger(__name__)
         name = get_name(keypoints_fp)
-        dst_subdir = os.path.join(dst_dir, f_name)
+        dst_subdir = os.path.join(dst_dir, __name__.split(".")[-1])
         # Calculating the deltas (changes in body position) between each frame for the subject
         configs = ExperimentConfigs.read_json(configs_fp)
         fps, _, _, px_per_mm, bins_ls, cbins_ls = configs.get_analysis_configs()
@@ -426,7 +421,7 @@ class Analyse:
             bins_ls,
             cbins_ls,
         )
-        return get_io_obj_content(io_obj)
+        return ""
 
     @classmethod
     def social_distance(
@@ -437,10 +432,9 @@ class Analyse:
         configs_fp: str,
     ) -> str:
         """Determines the speed of the subject in each frame."""
-        logger, io_obj = init_logger_io_obj()
-        f_name = get_func_name_in_stack()
+        logger = logging.getLogger(__name__)
         name = get_name(keypoints_fp)
-        dst_subdir = os.path.join(dst_dir, f_name)
+        dst_subdir = os.path.join(dst_dir, __name__.split(".")[-1])
         # Calculating the deltas (changes in body position) between each frame for the subject
         configs = ExperimentConfigs.read_json(configs_fp)
         fps, _, _, px_per_mm, bins_ls, cbins_ls = configs.get_analysis_configs()
@@ -492,7 +486,7 @@ class Analyse:
             bins_ls,
             cbins_ls,
         )
-        return get_io_obj_content(io_obj)
+        return ""
 
     @classmethod
     def freezing(
@@ -509,10 +503,9 @@ class Analyse:
 
         NOTE: method is "greedy" because it looks at a freezing bout from earliest possible frame.
         """
-        logger, io_obj = init_logger_io_obj()
-        f_name = get_func_name_in_stack()
+        logger = logging.getLogger(__name__)
         name = get_name(keypoints_fp)
-        dst_subdir = os.path.join(dst_dir, f_name)
+        dst_subdir = os.path.join(dst_dir, __name__.split(".")[-1])
         # Calculating the deltas (changes in body position) between each frame for the subject
         configs = ExperimentConfigs.read_json(configs_fp)
         fps, _, _, px_per_mm, bins_ls, cbins_ls = configs.get_analysis_configs()
@@ -557,19 +550,19 @@ class Analyse:
                     .agg(np.nanmean)
                 )
             # If ALL bodypoints do not leave `thresh_px`
-            analysis_df[(indiv, f_name)] = temp_df.apply(
+            analysis_df[(indiv, "freezing")] = temp_df.apply(
                 lambda x: pd.Series(np.all(x < thresh_px)), axis=1
             ).astype(np.int8)
 
             # Getting start, stop, and duration of each freezing behav bout
             freezingbouts_df = BehavScoredDf.vect2bouts_df(
-                analysis_df[(indiv, f_name)] == 1
+                analysis_df[(indiv, "freezing")] == 1
             )
             # For each freezing bout, if there is less than window_frames, tehn
             # it is not actually freezing
             for _, row in freezingbouts_df.iterrows():
                 if row["dur"] < window_frames:
-                    analysis_df.loc[row["start"] : row["stop"], (indiv, f_name)] = 0
+                    analysis_df.loc[row["start"] : row["stop"], (indiv, "freezing")] = 0
         # Saving analysis_df
         fbf_fp = os.path.join(dst_subdir, FBF, f"{name}.{AnalysisDf.IO}")
         AnalysisDf.write(analysis_df, fbf_fp)
@@ -583,4 +576,4 @@ class Analyse:
             bins_ls,
             cbins_ls,
         )
-        return get_io_obj_content(io_obj)
+        return ""

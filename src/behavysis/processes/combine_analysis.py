@@ -6,7 +6,6 @@ from behavysis.df_classes.analysis_combined_df import AnalysisCombinedDf
 from behavysis.df_classes.analysis_df import FBF, AnalysisDf
 from behavysis.utils.diagnostics_utils import file_exists_msg
 from behavysis.utils.io_utils import get_name
-from behavysis.utils.logging_utils import get_io_obj_content, init_logger_io_obj
 
 ###################################################################################################
 #               ANALYSIS API FUNCS
@@ -25,10 +24,10 @@ class CombineAnalysis:
         """Concatenates across columns the frame-by-frame dataframes for all analysis subdirectories
         and saves this in a single dataframe.
         """
-        logger, io_obj = init_logger_io_obj()
+        logger = logging.getLogger(__name__)
         if not overwrite and os.path.exists(analysis_combined_fp):
             logger.warning(file_exists_msg(analysis_combined_fp))
-            return get_io_obj_content(io_obj)
+            return ""
         name = get_name(configs_fp)
         # For each analysis subdir, combining fbf files
         analysis_subdir_ls = [
@@ -39,7 +38,7 @@ class CombineAnalysis:
         # If no analysis files, then return warning and don't make df
         if len(analysis_subdir_ls) == 0:
             logger.warning("no analysis fbf files made. Run `exp.analyse` first")
-            return get_io_obj_content(io_obj)
+            return ""
         # Reading in each fbf analysis df
         comb_df_ls = [
             AnalysisDf.read(
@@ -58,4 +57,4 @@ class CombineAnalysis:
         )
         # Writing to file
         AnalysisCombinedDf.write(comb_df, analysis_combined_fp)
-        return get_io_obj_content(io_obj)
+        return ""

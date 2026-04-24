@@ -25,11 +25,6 @@ import cv2
 from behavysis.models.experiment_configs import ExperimentConfigs
 from behavysis.models.processes.format_vid import VidMetadata
 from behavysis.utils.diagnostics_utils import file_exists_msg
-from behavysis.utils.logging_utils import (
-    get_io_obj_content,
-    init_logger_console,
-    init_logger_io_obj,
-)
 from behavysis.utils.subproc_utils import run_subproc_console
 
 # TODO: Maybe separate format_vid and get_vids_metadata into separate classes and processes
@@ -60,10 +55,10 @@ class FormatVid:
         str
             Description of the function's outcome.
         """
-        logger, io_obj = init_logger_io_obj()
+        logger = logging.getLogger(__name__)
         if not overwrite and os.path.exists(formatted_vid_fp):
             logger.warning(file_exists_msg(formatted_vid_fp))
-            return get_io_obj_content(io_obj)
+            return ""
         # Finding all necessary config parameters for video formatting
         configs = ExperimentConfigs.read_json(configs_fp)
         configs_filt = configs.user.format_vid
@@ -80,7 +75,7 @@ class FormatVid:
             overwrite=overwrite,
         )
         cls.get_vids_metadata(raw_vid_fp, formatted_vid_fp, configs_fp)
-        return get_io_obj_content(io_obj)
+        return ""
 
     @classmethod
     def get_vids_metadata(
@@ -103,14 +98,14 @@ class FormatVid:
         str
             Description of the function's outcome.
         """
-        logger, io_obj = init_logger_io_obj()
+        logger = logging.getLogger(__name__)
         # Saving video metadata to configs dict
         configs = ExperimentConfigs.read_json(configs_fp)
         configs.auto.raw_vid = get_vid_metadata(raw_vid_fp, logger)
         configs.auto.formatted_vid = get_vid_metadata(formatted_vid_fp, logger)
         logger.info("Video metadata stored in config file.")
         configs.write_json(configs_fp)
-        return get_io_obj_content(io_obj)
+        return ""
 
 
 def ffmpeg_process_vid(
@@ -126,7 +121,7 @@ def ffmpeg_process_vid(
 ) -> None:
     """__summary__"""
     if not logger:
-        logger = init_logger_console()
+        logger = logging.getLogger(__name__)
     if not overwrite and os.path.exists(dst_fp):
         logger.warning(file_exists_msg(dst_fp))
         return

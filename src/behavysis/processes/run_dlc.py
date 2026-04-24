@@ -31,7 +31,6 @@ from behavysis.df_classes.keypoints_df import CoordsCols, KeypointsDf
 from behavysis.models.experiment_configs import ExperimentConfigs
 from behavysis.utils.diagnostics_utils import file_exists_msg
 from behavysis.utils.io_utils import get_name, silent_remove
-from behavysis.utils.logging_utils import get_io_obj_content, init_logger_io_obj
 from behavysis.utils.subproc_utils import run_subproc_console
 from behavysis.utils.template_utils import save_template
 
@@ -51,10 +50,10 @@ class RunDLC:
         overwrite: bool,
     ) -> str:
         """Running custom DLC script to generate a DLC keypoints dataframe from a single video."""
-        logger, io_obj = init_logger_io_obj()
+        logger = logging.getLogger(__name__)
         if not overwrite and os.path.exists(keypoints_fp):
             logger.warning(file_exists_msg(keypoints_fp))
-            return get_io_obj_content(io_obj)
+            return ""
         # Getting model_fp
         configs = ExperimentConfigs.read_json(configs_fp)
         model_fp = configs.get_ref(configs.user.run_dlc.model_fp)
@@ -80,7 +79,7 @@ class RunDLC:
         export2df(formatted_vid_fp, temp_dlc_dir, keypoints_dir, logger)
         silent_remove(temp_dlc_dir)
 
-        return get_io_obj_content(io_obj)
+        return ""
 
     @staticmethod
     def ma_dlc_run_batch(
@@ -91,7 +90,7 @@ class RunDLC:
         overwrite: bool,
     ) -> str:
         """Running custom DLC script to generate a DLC keypoints dataframe from a single video."""
-        logger, io_obj = init_logger_io_obj()
+        logger = logging.getLogger(__name__)
 
         # Specifying the GPU to use and making the output directory
         # Making output directories
@@ -111,7 +110,7 @@ class RunDLC:
 
         # If there are no videos to process, return
         if len(vid_fp_ls) == 0:
-            return get_io_obj_content(io_obj)
+            return ""
 
         # Getting the DLC model config path
         # Getting the names of the files that need processing
@@ -141,7 +140,7 @@ class RunDLC:
         for vid_fp in vid_fp_ls:
             export2df(vid_fp, temp_dlc_dir, keypoints_dir, logger)
         silent_remove(temp_dlc_dir)
-        return get_io_obj_content(io_obj)
+        return ""
 
 
 def run_dlc_subproc(

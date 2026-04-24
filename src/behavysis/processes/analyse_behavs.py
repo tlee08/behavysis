@@ -7,8 +7,6 @@ from behavysis.df_classes.analysis_df import FBF, AnalysisDf
 from behavysis.df_classes.behav_df import BehavScoredDf, BehavValues
 from behavysis.models.experiment_configs import ExperimentConfigs
 from behavysis.utils.io_utils import get_name
-from behavysis.utils.logging_utils import get_io_obj_content, init_logger_io_obj
-from behavysis.utils.misc_utils import get_func_name_in_stack
 
 ###################################################################################################
 #               ANALYSIS API FUNCS
@@ -23,10 +21,9 @@ class AnalyseBehavs:
         configs_fp: str,
     ) -> str:
         """Takes a behavs dataframe and generates a summary and binned version of the data."""
-        logger, io_obj = init_logger_io_obj()
-        f_name = get_func_name_in_stack()
+        logger = logging.getLogger(__name__)
         name = get_name(behavs_fp)
-        dst_subdir = os.path.join(dst_dir, f_name)
+        dst_subdir = os.path.join(dst_dir, "analyse_behavs")
         # Calculating the deltas (changes in body position) between each frame for the subject
         configs = ExperimentConfigs.read_json(configs_fp)
         fps, _, _, _, bins_ls, cbins_ls = configs.get_analysis_configs()
@@ -57,4 +54,4 @@ class AnalyseBehavs:
             bins_ls,
             cbins_ls,
         )
-        return get_io_obj_content(io_obj)
+        return ""

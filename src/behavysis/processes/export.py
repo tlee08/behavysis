@@ -9,7 +9,6 @@ from behavysis.models.bouts import BoutStruct
 from behavysis.models.experiment_configs import ExperimentConfigs
 from behavysis.utils.df_mixin import DFMixin
 from behavysis.utils.diagnostics_utils import file_exists_msg
-from behavysis.utils.logging_utils import get_io_obj_content, init_logger_io_obj
 
 
 class Export:
@@ -21,14 +20,14 @@ class Export:
         overwrite: bool,
     ) -> str:
         """__summary__"""
-        logger, io_obj = init_logger_io_obj()
+        logger = logging.getLogger(__name__)
         if not overwrite and os.path.exists(dst_fp):
             logger.warning(file_exists_msg(dst_fp))
-            return get_io_obj_content(io_obj)
+            return ""
         df = DFMixin.read(src_fp)
         DFMixin.write(df, dst_fp)
         logger.info("df to df")
-        return get_io_obj_content(io_obj)
+        return ""
 
     @classmethod
     def df2csv(
@@ -38,14 +37,14 @@ class Export:
         overwrite: bool,
     ) -> str:
         """__summary__"""
-        logger, io_obj = init_logger_io_obj()
+        logger = logging.getLogger(__name__)
         if not overwrite and os.path.exists(dst_fp):
             logger.warning(file_exists_msg(dst_fp))
-            return get_io_obj_content(io_obj)
+            return ""
         df = DFMixin.read(src_fp)
         DFMixin.write_csv(df, dst_fp)
         logger.info("exported df to csv")
-        return get_io_obj_content(io_obj)
+        return ""
 
     @classmethod
     def predictedbehavs2scoredbehavs(
@@ -60,10 +59,10 @@ class Export:
         - Adds an "actual" column to the df. All predicted positive BEHAV frames are set to UNDETERMINED.
         - Adds user_defined columns to the df and sets all values to 0 (NON_BEHAV).
         """
-        logger, io_obj = init_logger_io_obj()
+        logger = logging.getLogger(__name__)
         if not overwrite and os.path.exists(dst_fp):
             logger.warning(file_exists_msg(dst_fp))
-            return get_io_obj_content(io_obj)
+            return ""
         # Reading the configs file
         configs = ExperimentConfigs.read_json(configs_fp)
         models_ls = configs.user.classify_behavs
@@ -84,7 +83,7 @@ class Export:
         )
         BehavScoredDf.write(behavs_scored_df, dst_fp)
         logger.info("predicted_behavs to scored_behavs.")
-        return get_io_obj_content(io_obj)
+        return ""
 
     @classmethod
     def boris2behav(
@@ -95,10 +94,10 @@ class Export:
         behavs_ls: list[str],
         overwrite: bool,
     ) -> str:
-        logger, io_obj = init_logger_io_obj()
+        logger = logging.getLogger(__name__)
         if not overwrite and os.path.exists(dst_fp):
             logger.warning(file_exists_msg(dst_fp))
-            return get_io_obj_content(io_obj)
+            return ""
         # Reading the configs file
         configs = ExperimentConfigs.read_json(configs_fp)
         start_frame = configs.get_ref(configs.auto.start_frame)
@@ -107,4 +106,4 @@ class Export:
         df = BehavScoredDf.import_boris_tsv(src_fp, behavs_ls, start_frame, stop_frame)
         BehavScoredDf.write(df, dst_fp)
         logger.info("boris tsv to behav")
-        return get_io_obj_content(io_obj)
+        return ""

@@ -31,7 +31,6 @@ from behavysis.df_classes.keypoints_df import (
 )
 from behavysis.models.experiment_configs import ExperimentConfigs
 from behavysis.utils.diagnostics_utils import file_exists_msg
-from behavysis.utils.logging_utils import get_io_obj_content, init_logger_io_obj
 
 
 class Preprocess:
@@ -72,10 +71,10 @@ class Preprocess:
                     - stop_frame: int
         ```
         """
-        logger, io_obj = init_logger_io_obj()
+        logger = logging.getLogger(__name__)
         if not overwrite and os.path.exists(dst_fp):
             logger.warning(file_exists_msg(dst_fp))
-            return get_io_obj_content(io_obj)
+            return ""
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
         start_frame = configs.auto.start_frame
@@ -85,7 +84,7 @@ class Preprocess:
         # Trimming dataframe between start and stop frames
         keypoints_df = keypoints_df.loc[start_frame:stop_frame, :]
         KeypointsDf.write(keypoints_df, dst_fp)
-        return get_io_obj_content(io_obj)
+        return ""
 
     @classmethod
     def interpolate_stationary(
@@ -110,10 +109,10 @@ class Preprocess:
                     ]
         ```
         """
-        logger, io_obj = init_logger_io_obj()
+        logger = logging.getLogger(__name__)
         if not overwrite and os.path.exists(dst_fp):
             logger.warning(file_exists_msg(dst_fp))
-            return get_io_obj_content(io_obj)
+            return ""
         # Getting necessary config parameters list
         configs = ExperimentConfigs.read_json(configs_fp)
         configs_filt_ls = configs.user.preprocess.interpolate_stationary
@@ -162,7 +161,7 @@ class Preprocess:
                 )
         # Saving
         KeypointsDf.write(keypoints_df, dst_fp)
-        return get_io_obj_content(io_obj)
+        return ""
 
     @classmethod
     def interpolate(
@@ -184,10 +183,10 @@ class Preprocess:
         ```
         """
         # TODO: have error checking for any columns that have NO points above the pcutoff (so they are all NaN)
-        logger, io_obj = init_logger_io_obj()
+        logger = logging.getLogger(__name__)
         if not overwrite and os.path.exists(dst_fp):
             logger.warning(file_exists_msg(dst_fp))
-            return get_io_obj_content(io_obj)
+            return ""
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
         configs_filt = configs.user.preprocess.interpolate
@@ -220,7 +219,7 @@ class Preprocess:
         # if df.isnull().values.any() then the entire column is nan (log warning)
         # keypoints_df = keypoints_df.fillna(0)
         KeypointsDf.write(keypoints_df, dst_fp)
-        return get_io_obj_content(io_obj)
+        return ""
 
     @classmethod
     def refine_ids(
@@ -243,10 +242,10 @@ class Preprocess:
                     - metric: ["current", "rolling", "binned"]
         ```
         """
-        logger, io_obj = init_logger_io_obj()
+        logger = logging.getLogger(__name__)
         if not overwrite and os.path.exists(dst_fp):
             logger.warning(file_exists_msg(dst_fp))
-            return get_io_obj_content(io_obj)
+            return ""
         # Reading file
         keypoints_df = KeypointsDf.read(src_fp)
         # Getting necessary config parameters
@@ -286,7 +285,7 @@ class Preprocess:
             keypoints_df, switch_df[metric], marked, unmarked, logger
         )
         KeypointsDf.write(switched_keypoints_df, dst_fp)
-        return get_io_obj_content(io_obj)
+        return ""
 
 
 def get_mark_dists_df(

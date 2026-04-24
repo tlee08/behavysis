@@ -11,7 +11,6 @@ from behavysis.df_classes.keypoints_df import CoordsCols, KeypointsDf
 from behavysis.models.experiment_configs import ExperimentConfigs
 from behavysis.utils.diagnostics_utils import file_exists_msg
 from behavysis.utils.io_utils import get_name, silent_remove
-from behavysis.utils.logging_utils import get_io_obj_content, init_logger_io_obj
 from behavysis.utils.misc_utils import enum2list
 from behavysis.utils.multiproc_utils import get_cpid
 from behavysis.utils.subproc_utils import run_subproc_console
@@ -56,10 +55,10 @@ class ExtractFeatures:
         str
             The outcome of the process.
         """
-        logger, io_obj = init_logger_io_obj()
+        logger = logging.getLogger(__name__)
         if not overwrite and os.path.exists(features_fp):
             logger.warning(file_exists_msg(features_fp))
-            return get_io_obj_content(io_obj)
+            return ""
         # Getting directory and file paths
         name = get_name(keypoints_fp)
         cpid = get_cpid()
@@ -92,7 +91,7 @@ class ExtractFeatures:
         # Removing temp folders
         silent_remove(simba_in_dir)
         silent_remove(simba_dir)
-        return get_io_obj_content(io_obj)
+        return ""
 
 
 #####################################################################

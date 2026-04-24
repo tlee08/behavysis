@@ -17,7 +17,6 @@ from behavysis.df_classes.behav_df import (
 from behavysis.df_classes.features_df import FeaturesDf
 from behavysis.models.experiment_configs import ExperimentConfigs
 from behavysis.utils.diagnostics_utils import file_exists_msg
-from behavysis.utils.logging_utils import get_io_obj_content, init_logger_io_obj
 
 # TODO: handle reading the model file whilst in multiprocessing
 # TODO: auto-remove anything with only 1 frame of behaviour (probably a spike)
@@ -61,10 +60,10 @@ class ClassifyBehavs:
         ```
         Where the `models` list is a list of `model_config.json` filepaths.
         """
-        logger, io_obj = init_logger_io_obj()
+        logger = logging.getLogger(__name__)
         if not overwrite and os.path.exists(behavs_fp):
             logger.warning(file_exists_msg(behavs_fp))
-            return get_io_obj_content(io_obj)
+            return ""
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
         fps = configs.auto.formatted_vid.fps
@@ -103,12 +102,12 @@ class ClassifyBehavs:
             logger.info(f"Completed {behav_name} classification.")
         # If no models were run, then return outcome
         if len(behavs_df_ls) == 0:
-            return get_io_obj_content(io_obj)
+            return ""
         # Concatenating predictions to a single dataframe
         behavs_df = pd.concat(behavs_df_ls, axis=1)
         # Saving behav_preds df
         BehavPredictedDf.write(behavs_df, behavs_fp)
-        return get_io_obj_content(io_obj)
+        return ""
 
 
 def get_pcutoff(pcutoff: float, model_pcutoff: float, logger: logging.Logger) -> float:

@@ -25,7 +25,6 @@ from behavysis.df_classes.keypoints_df import (
 )
 from behavysis.models.experiment_configs import ExperimentConfigs
 from behavysis.utils.io_utils import get_name
-from behavysis.utils.logging_utils import get_io_obj_content, init_logger_io_obj
 
 
 class CalculateParams:
@@ -53,7 +52,7 @@ class CalculateParams:
                     - pcutoff: float
         ```
         """
-        logger, io_obj = init_logger_io_obj()
+        logger = logging.getLogger(__name__)
         start_frame, stop_frame = calc_exists_from_likelihood(
             keypoints_fp, configs_fp, logger
         )
@@ -61,7 +60,7 @@ class CalculateParams:
         configs = ExperimentConfigs.read_json(configs_fp)
         configs.auto.start_frame = start_frame
         configs.write_json(configs_fp)
-        return get_io_obj_content(io_obj)
+        return ""
 
     @staticmethod
     def start_frame_from_csv(keypoints_fp: str, configs_fp: str) -> str:
@@ -85,7 +84,7 @@ class CalculateParams:
                     - name: None | str
         ```
         """
-        logger, io_obj = init_logger_io_obj()
+        logger = logging.getLogger(__name__)
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
         configs_filt = configs.user.calculate_params.start_frame_from_csv
@@ -113,7 +112,7 @@ class CalculateParams:
         configs = ExperimentConfigs.read_json(configs_fp)
         configs.auto.start_frame = start_frame
         configs.write_json(configs_fp)
-        return get_io_obj_content(io_obj)
+        return ""
 
     @staticmethod
     def stop_frame_from_likelihood(keypoints_fp: str, configs_fp: str) -> str:
@@ -125,7 +124,7 @@ class CalculateParams:
         the determine this as the start time.
 
         """
-        logger, io_obj = init_logger_io_obj()
+        logger = logging.getLogger(__name__)
         start_frame, stop_frame = calc_exists_from_likelihood(
             keypoints_fp, configs_fp, logger
         )
@@ -133,7 +132,7 @@ class CalculateParams:
         configs = ExperimentConfigs.read_json(configs_fp)
         configs.auto.stop_frame = stop_frame
         configs.write_json(configs_fp)
-        return get_io_obj_content(io_obj)
+        return ""
 
     @staticmethod
     def stop_frame_from_dur(keypoints_fp: str, configs_fp: str) -> str:
@@ -153,7 +152,7 @@ class CalculateParams:
                     - dur_sec: float
         ```
         """
-        logger, io_obj = init_logger_io_obj()
+        logger = logging.getLogger(__name__)
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
         configs_filt = configs.user.calculate_params.stop_frame_from_dur
@@ -185,7 +184,7 @@ class CalculateParams:
         configs = ExperimentConfigs.read_json(configs_fp)
         configs.auto.stop_frame = stop_frame
         configs.write_json(configs_fp)
-        return get_io_obj_content(io_obj)
+        return ""
 
     @staticmethod
     def dur_frames_from_likelihood(keypoints_fp: str, configs_fp: str) -> str:
@@ -193,7 +192,7 @@ class CalculateParams:
         to the time they disappeared.
         Appear/disappear is calculated from likelihood.
         """
-        logger, io_obj = init_logger_io_obj()
+        logger = logging.getLogger(__name__)
         start_frame, stop_frame = calc_exists_from_likelihood(
             keypoints_fp, configs_fp, logger
         )
@@ -201,7 +200,7 @@ class CalculateParams:
         configs = ExperimentConfigs.read_json(configs_fp)
         configs.auto.dur_frames = stop_frame - start_frame
         configs.write_json(configs_fp)
-        return get_io_obj_content(io_obj)
+        return ""
 
     @staticmethod
     def px_per_mm(keypoints_fp: str, configs_fp: str) -> str:
@@ -228,7 +227,7 @@ class CalculateParams:
                     - dist_mm: float
         ```
         """
-        logger, io_obj = init_logger_io_obj()
+        logger = logging.getLogger(__name__)
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
         configs_filt = configs.user.calculate_params.px_per_mm
@@ -270,7 +269,7 @@ class CalculateParams:
         configs = ExperimentConfigs.read_json(configs_fp)
         configs.auto.px_per_mm = px_per_mm
         configs.write_json(configs_fp)
-        return get_io_obj_content(io_obj)
+        return ""
 
 
 def calc_exists_from_likelihood(

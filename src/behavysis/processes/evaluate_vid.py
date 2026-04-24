@@ -18,7 +18,6 @@ from behavysis.df_classes.keypoints_df import (
 )
 from behavysis.models.experiment_configs import ExperimentConfigs
 from behavysis.utils.diagnostics_utils import file_exists_msg
-from behavysis.utils.logging_utils import get_io_obj_content, init_logger_io_obj
 from behavysis.utils.qt_utils import qt2cv
 
 ###################################################################################################
@@ -40,10 +39,10 @@ class EvaluateVid:
         overwrite: bool,
     ) -> str:
         """Generate an annotated video with (optionally) keypoints and tracking analysis graphs."""
-        logger, io_obj = init_logger_io_obj()
+        logger = logging.getLogger(__name__)
         if not overwrite and os.path.exists(eval_vid_fp):
             logger.warning(file_exists_msg(eval_vid_fp))
-            return get_io_obj_content(io_obj)
+            return ""
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
         configs_filt = configs.user.evaluate_vid
@@ -125,7 +124,7 @@ class EvaluateVid:
         # Release video objects
         formatted_vid_cap.release()
         eval_vid_cap.release()
-        return get_io_obj_content(io_obj)
+        return ""
 
 
 ###################################################################################################
