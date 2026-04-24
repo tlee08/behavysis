@@ -1,202 +1,489 @@
-# Analysing a Folder of Experiments
+# How to Run a Complete Analysis
 
-All outcomes for experiment processing is stored in csv files in the `proj_dir/diagnostics` folder. These files store the outcome and process description (i.e. error explanations) of all experiments.
+This guide walks you through a complete behavior analysis workflow, from raw videos to final results.
 
-## Loading in all relevant packages
+!!! tip "Prerequisites"
+    - behavysis installed and working
+    - Project folder created with videos ([Setup Tutorial](../tutorials/setup.md))
+    - Configuration file prepared ([Config Tutorial](../tutorials/configs_json.md))
+    - DeepLabCut model available
+
+---
+
+## Overview
+
+This workflow processes videos through the complete pipeline:
+
+```mermaid
+graph LR
+    A[Raw Videos] --> B[Format Videos]
+    B --> C[Run DeepLabCut]
+    C --> D[Calculate Parameters]
+    D --> E[Preprocess]
+    E --> F[Extract Features]
+    F --> G[Classify Behaviors]
+    G --> H[Analyze]
+    H --> I[Combine Results]
+    I --> J[Evaluate Videos]
+```
+
+Not all steps are required — you can customize based on your needs.
+
+---
+
+## Step 0: Project Setup
+
+First, let's set up and verify the project:
 
 ```python
 from behavysis import Project
 from behavysis.processes import *
-```
 
-## Making the project and importing all experiments
-
-The directory path of the project must be specified and must contain the experiment files you wish to analyse in a particular folder structure.
-
-For more information on how to structure a project directory, please see [setup][].
-
-For more information on how a `Experiment` works, please see [behavysis.pipeline.project.Project][].
-
-```python
-# Defining the project's folder
-proj_dir = "./project"
-# Initialising the project
+# Initialize project
+proj_dir = "./my_project"
 proj = Project(proj_dir)
-# Importing all the experiments (from the project folder)
-proj.importExperiments()
+
+# Import experiments (scans 1_raw_vid/ folder)
+proj.import_experiments()
+print(f"Found {len(proj.experiments)} experiments")
+for exp in proj.experiments:
+    print(f"  - {exp.name}")
 ```
 
-## Checking all imported experiments
+Expected output:
+```
+Found 5 experiments:
+  - mouse_A_day1
+  - mouse_A_day2
+  - mouse_B_day1
+  - mouse_B_day2
+  - mouse_B_day3
+```
 
-To see all imported experiments, see the `proj_dir/diagnostics/importExperiments.csv` file that has been generated.
+!!! success "Pro Tip"
+    Check `my_project/0_diagnostics/import_experiments.csv` to see which files were found.
 
-## Updating the configurations for all experiments
+---
 
-If you would like the configurations (which are stored in config files) to be updated new parameters, define the JSON style of configuration parameters you would like to add and run the following lines.
+## Step 1: Update Configurations
 
-For more information about how a configurations file works, please see [here][configs-json-file].
+Apply your default configuration to all experiments:
 
 ```python
-# Defining the default configs json path
-configs_fp = "path/to/default_configs.json"
-# Overwriting the configs
+# Update all experiment configs
 proj.update_configs(
-    configs_fp,
-    overwrite="user",
+    default_configs_fp="./default_config.json",
+    overwrite="user"  # Only update user-defined parameters
 )
 ```
 
-## Get Animal Keypoints in Videos
+???+ note "What This Does"
+    For each experiment, this creates/updates the JSON config file in `0_configs/` with your specified parameters.
 
-The following code processes and analyses all experiments that have been imported into a project. This is similar to analysing a single experiment.
+---
 
-### Downsample videos
+## Step 2: Format Videos
 
-Formatting the raw mp4 videos so it can be fed through the DLC pose estimation algorithm.
+Standardize raw videos (resolution, frame rate):
 
 ```python
-proj.format_vid(
-    (
-        FormatVid.format_vid,
-        FormatVid.get_vid_metadata,
+# Format all videos
+proj.format_vid(overwrite=True)
+```
+
+!!! warning "Time Required"
+    This can take 1-5 minutes per video depending on file size. Progress is logged.
+
+### What Happens
+
+- Reads videos from `1_raw_vid/`
+- Resizes to configured resolution (e.g., 960×540)
+- Adjusts frame rate (e.g., 15 FPS)
+- Saves to `2_formatted_vid/`
+- Updates config with actual video metadata
+
+### Verification
+
+Check that formatted videos were created:
+
+```python
+import os
+formatted_dir = os.path.join(proj_dir, "2_formatted_vid")
+print(f"Formatted videos: {os.listdir(formatted_dir)}")
+```
+
+---
+
+## Step 3: Run DeepLabCut
+
+Run pose estimation to detect body parts:
+
+```python
+# Run DLC on all videos
+# gputouse: GPU ID (None = use all available GPUs)
+proj.run_dlc(gputouse=None, overwrite=True)
+```
+
+!!! warning "GPU Required"
+    DeepLabCut requires a GPU for reasonable speed. CPU-only is extremely slow.
+
+!!! tip "Multi-GPU"
+    If you have multiple GPUs, behavysis automatically distributes videos across them.
+
+### What Happens
+
+- Processes formatted videos through DLC model
+- Generates keypoints files in `3_keypoints/`
+- Contains X, Y coordinates + confidence for each body part, every frame
+
+### Output Files
+
+```
+3_keypoints/
+├── mouse_A_day1.parquet  # Pose data
+├── mouse_A_day2.parquet
+└── ...
+```
+
+---
+
+## Step 4: Calculate Parameters
+
+Calculate experiment-specific parameters:
+
+```python
+# Calculate start frame, stop frame, and pixels-per-mm
+proj.calculate_parameters((
+    CalculateParams.start_frame,
+    CalculateParams.stop_frame,
+    CalculateParams.px_per_mm,
+))
+
+# Optional: Also calculate experiment duration
+proj.calculate_parameters((
+    CalculateParams.start_frame,
+    CalculateParams.stop_frame,
+    CalculateParams.exp_dur,
+    CalculateParams.px_per_mm,
+))
+```
+
+### What These Calculate
+
+| Function | Calculates |
+|----------|-----------|
+| `start_frame` | First frame with detected animal |
+| `stop_frame` | Last frame of experiment |
+| `exp_dur` | Experiment duration |
+| `px_per_mm` | Pixel-to-millimeter conversion |
+
+### Review Auto-Calculated Values
+
+```python
+# Collate auto-configs across all experiments
+proj.collate_auto_configs()
+```
+
+This creates a CSV file in `0_diagnostics/` showing all auto-calculated values. Check for anomalies before proceeding.
+
+---
+
+## Step 5: Preprocess
+
+Clean the keypoint data:
+
+```python
+# Preprocess all experiments
+proj.preprocess(
+    funcs=(
+        Preprocess.start_stop_trim,    # Trim to experiment duration
+        Preprocess.interpolate,         # Fill missing data points
+        Preprocess.refine_ids,          # Fix animal ID swaps (multi-animal)
     ),
-    overwrite=True,
+    overwrite=True
 )
 ```
 
-### Run Keypoints detection (DeepLabCut)
+### What Happens
 
-Running the DLC pose estimation algorithm on the formatted mp4 files.
+- Reads from `3_keypoints/`
+- Applies each preprocessing function in sequence
+- Saves cleaned data to `4_preprocessed/`
 
-!!! Note
+!!! note "Customize for Your Data"
+    Not using multi-animal? Remove `Preprocess.refine_ids`.
 
-    Make sure to change the `user.run_dlc.model_fp`
-    to the DeepLabCut model's config file you'd like to use.
+---
+
+## Step 6: Extract Features (Optional)
+
+If using behavior classifiers, extract features:
 
 ```python
-proj.run_dlc(
-    gputouse=None,
-    overwrite=True,
-)
+# Extract features for ML classification
+proj.extract_features(overwrite=True)
 ```
 
-### Calculating Inherent Parameters from Keypoints
+### What This Calculates
 
-Calculating relevant parameters to store in the `auto` section of the config file. The calculations performed are:
+- Velocities and accelerations
+- Distances between body parts
+- Distances to arena features
+- Bounding box metrics
+- Angles and rotations
+
+Output saved to `5_features_extracted/`.
+
+---
+
+## Step 7: Classify Behaviors (Optional)
+
+If you have trained behavior classifiers:
 
 ```python
-proj.calculate_params(
-    (
-        CalculateParams.start_frame,
-        CalculateParams.stop_frame,
-        CalculateParams.exp_dur,
-        CalculateParams.px_per_mm,
+# Run behavior classifiers
+proj.classify_behavs(overwrite=True)
+
+# Export for behavysis_viewer
+proj.export_behavs(overwrite=True)
+```
+
+!!! note "Skip This Step?"
+    If you don't have trained classifiers, you can still run quantitative analyses (thigmotaxis, speed, etc.) without this step.
+
+---
+
+## Step 8: Run Analyses
+
+Calculate quantitative behavioral measures:
+
+```python
+# Run analyses
+proj.analyse(
+    funcs=(
+        Analyse.thigmotaxis,         # Wall-hugging
+        Analyse.center_crossing,     # Center zone entries
+        Analyse.in_roi,              # Time in regions of interest
+        Analyse.speed,               # Movement speed
+        Analyse.social_distance,     # Animal proximity (multi-animal)
+        Analyse.freezing,            # Immobility detection
     )
 )
 ```
 
-And see a collation of all experiments' inherent parameters to spot any anomolies before continuing
+### Analysis Outputs
 
-```python
-proj.collate_configs_auto()
+Results are saved to `8_analysis/[analysis_type]/`:
+
+```
+8_analysis/
+├── thigmotaxis/
+│   ├── binned_30/           # Per-bin results (30 sec bins)
+│   ├── binned_60/         # Per-bin results (60 sec bins)
+│   └── summary/           # Overall statistics
+├── speed/
+│   └── ...
+└── ...
 ```
 
-### Postprocessing
+Each file contains:
+- **Binned data**: Time-series of measurements
+- **Summary**: Overall statistics (mean, std, total, etc.)
 
-Preprocessing the DLC csv data and output the preprocessed data to a `preprocessed_csv.<exp_name>.csv` file. The preprocessings performed are:
+---
+
+## Step 9: Combine Results
+
+Combine results across all experiments:
 
 ```python
+# Combine all individual analyses
+for exp in proj.experiments:
+    exp.combine_analysis()
+
+# Or collate across experiments
+proj.collate_analysis()
+```
+
+### Output
+
+Creates files in `8_analysis/[analysis_type]/` with `__ALL_` prefix:
+
+- `__ALL_binned_60.csv` — Combined time-binned data
+- `__ALL_summary.csv` — Combined summary statistics
+
+---
+
+## Step 10: Generate Evaluation Videos
+
+Create annotated videos for visual validation:
+
+```python
+# Generate evaluation videos
+proj.evaluate_vid(overwrite=True)
+```
+
+### What This Creates
+
+Videos in `10_evaluate_vid/` with overlaid:
+- Body part keypoints
+- Predicted behaviors (if classifiers run)
+- Analysis traces
+
+---
+
+## Step 11: Export to CSV
+
+Data is stored in efficient binary formats (.parquet, .feather). Export to CSV for easy reading:
+
+```python
+# Export scored behaviors to CSV
+proj.export2csv(
+    src_dir="7_scored_behavs",
+    dst_dir="./csv_exports",
+    overwrite=True
+)
+
+# Export analysis results
+proj.export2csv(
+    src_dir="8_analysis",
+    dst_dir="./csv_exports",
+    overwrite=True
+)
+```
+
+---
+
+## Complete Workflow Script
+
+Here's a complete script you can adapt:
+
+```python
+#!/usr/bin/env python
+"""
+Complete behavysis analysis workflow.
+Run this after setting up your project and configuration.
+"""
+
+import os
+from behavysis import Project
+from behavysis.processes import *
+
+# Configuration
+PROJ_DIR = "./my_project"
+DEFAULT_CONFIG = "./default_config.json"
+
+# Initialize project
+print("=== Initializing Project ===")
+proj = Project(PROJ_DIR)
+proj.import_experiments()
+print(f"Found {len(proj.experiments)} experiments\n")
+
+# Update configurations
+print("=== Updating Configurations ===")
+proj.update_configs(DEFAULT_CONFIG, overwrite="user")
+
+# Format videos
+print("\n=== Formatting Videos ===")
+proj.format_vid(overwrite=True)
+
+# Run DeepLabCut
+print("\n=== Running DeepLabCut ===")
+proj.run_dlc(gputouse=None, overwrite=True)
+
+# Calculate parameters
+print("\n=== Calculating Parameters ===")
+proj.calculate_parameters((
+    CalculateParams.start_frame,
+    CalculateParams.stop_frame,
+    CalculateParams.px_per_mm,
+))
+
+# Review auto-calculated parameters
+print("\n=== Reviewing Auto-Parameters ===")
+proj.collate_auto_configs()
+
+# Preprocess
+print("\n=== Preprocessing ===")
 proj.preprocess(
-    (
+    funcs=(
         Preprocess.start_stop_trim,
         Preprocess.interpolate,
-        Preprocess.refine_ids,
     ),
-    overwrite=overwrite,
+    overwrite=True
 )
-```
 
-## Make Simple Analysis
+# (Optional) Extract features and classify behaviors
+# print("\n=== Extracting Features ===")
+# proj.extract_features(overwrite=True)
+# print("\n=== Classifying Behaviors ===")
+# proj.classify_behavs(overwrite=True)
+# proj.export_behavs(overwrite=True)
 
-Analysing the preprocessed csv data to extract useful analysis and results. The analyses performed are:
+# Run analyses
+print("\n=== Running Analyses ===")
+proj.analyse((
+    Analyse.thigmotaxis,
+    Analyse.speed,
+    Analyse.center_crossing,
+))
 
-```python
-proj.analyse(
-    (
-        Analyse.thigmotaxis,
-        Analyse.center_crossing,
-        Analyse.in_roi,
-        Analyse.speed,
-        Analyse.social_distance,
-        Analyse.freezing,
-    )
+# Combine results
+print("\n=== Combining Results ===")
+proj.collate_analysis()
+
+# Generate evaluation videos
+print("\n=== Generating Evaluation Videos ===")
+proj.evaluate_vid(overwrite=True)
+
+# Export to CSV
+print("\n=== Exporting to CSV ===")
+os.makedirs("./csv_exports", exist_ok=True)
+proj.export2csv(
+    src_dir="8_analysis",
+    dst_dir="./csv_exports",
+    overwrite=True
 )
+
+print("\n=== Analysis Complete ===")
+print(f"Results in: {os.path.join(PROJ_DIR, '8_analysis')}")
+print(f"CSV exports in: ./csv_exports")
 ```
 
-## Automated Behaviour Detection
+---
 
-### Extracting Features
+## Resuming Interrupted Work
 
-Extracting derivative features from keypoints.
-For example - speed, bounding ellipse size, distance between points, etc.
+If processing is interrupted, behavysis can skip completed steps:
 
 ```python
-proj.extract_features(overwrite)
+# Only process missing videos
+proj.format_vid(overwrite=False)
+
+# Or force reprocess specific steps
+proj.preprocess(funcs=(Preprocess.interpolate,), overwrite=True)
 ```
 
-### Running Behaviour Classifiers
+---
 
-!!! Note
+## Troubleshooting
 
-    Make sure to change the `user.classify_behaviours` list
-    to the behaviours classifiers you'd like to use.
+### "No experiments found"
 
-```python
-proj.classify_behaviours(overwrite)
-```
+Check that videos are in `1_raw_vid/` with `.mp4` extension.
 
-### Exporting the Behaviour Detection Results
+### "DLC model not found"
 
-Exports to such a format, where
-a) `behavysis_viewer` can load it and perform semi-automated analysis, and
-b) after semi-automated verification, can be used to make a new/improve
-a current behaviour classifier
-(with [behavysis.behav_classifier.behav_classifier.BehavClassifier][])
+Verify `user.run_dlc.model_fp` in your config points to the correct `config.yaml`.
 
-```python
-proj.export_behaviours(overwrite)
-```
+### Missing analysis outputs
 
-### Analyse Behaviours
+Check diagnostics files in `0_diagnostics/` for error messages.
 
-Similar to [simple analysis][make-simple-analysis], which calculates each experiment's
-a) the overall summary, and
-b) binned summary.
+---
 
-```python
-proj.behav_analyse()
-```
+## Next Steps
 
-## Export any Tables
-
-Tables are stored as `.feather` files.
-
-To export these to csv files, run the following:
-
-```python
-proj.export_feather("7_scored_behavs", "/path/to/csv_out")
-```
-
-## Evaluate
-
-Evaluates keypoints and behaviours accuracy by making annotated experiment videos.
-
-```python
-proj.evaluate(
-    (
-        Evaluate.eval_vid,
-        Evaluate.keypoints_plot,
-    ),
-    overwrite=overwrite,
-)
-```
+- Train [behavior classifiers](train.md) for automated behavior detection
+- Learn about [diagnostics](../tutorials/diagnostics_messages.md)
+- Explore the [API Reference](../reference/behavysis.md)
