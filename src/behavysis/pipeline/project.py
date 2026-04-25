@@ -1,6 +1,8 @@
 """_summary_"""
 
 import functools
+import json
+import logging
 import os
 import re
 from collections.abc import Callable
@@ -31,9 +33,10 @@ from behavysis.pipeline.experiment import Experiment
 from behavysis.processes.run_dlc import RunDLC
 from behavysis.utils.dask_utils import cluster_process
 from behavysis.utils.io_utils import get_name
-from behavysis.utils.logging_utils import setup_logging, get_logger
-
+from behavysis.utils.logging_utils import setup_logging
 from behavysis.utils.multiproc_utils import get_gpu_ids
+
+logger = logging.getLogger(__name__)
 
 
 class Project:
@@ -49,8 +52,6 @@ class Project:
         nprocs : int
             The number of processes to use for multiprocessing.
     """
-
-    logger = get_logger(__name__)
 
     root_dir: str
     _experiments: dict[str, Experiment]
@@ -180,19 +181,25 @@ class Project:
             scaffold_func = self._proc_scaff_mp
         # Running the scaffold function
         # Starting
-        self.logger.info(f"Running {method.__name__} for all experiments.")
+        logger.info(f"Running {method.__name__} for all experiments.")
         # Running
         dd_ls = scaffold_func(method, *args, **kwargs)
         if len(dd_ls) > 0:
             # Processing all experiments
             df = DiagnosticsDf.init_from_dd_ls(dd_ls)
-            # Updating the diagnostics file at each step
+            # Save diagnostics as CSV (for human review) and JSON (for machines)
+            diagnostics_dir = os.path.join(self.root_dir, DIAGNOSTICS_DIR)
+            os.makedirs(diagnostics_dir, exist_ok=True)
             DiagnosticsDf.write(
                 df,
-                os.path.join(self.root_dir, DIAGNOSTICS_DIR, f"{method.__name__}.csv"),
+                os.path.join(diagnostics_dir, f"{method.__name__}.csv"),
             )
+            # Also save as JSON for structured diagnostics
+            json_path = os.path.join(diagnostics_dir, f"{method.__name__}.json")
+            with open(json_path, "w") as jf:
+                json.dump(dd_ls, jf, indent=2, default=str)
             # Finishing
-            self.logger.info(f"Finished running {method.__name__} for all experiments")
+            logger.info(f"Finished running {method.__name__} for all experiments")
 
     #####################################################################
     #               IMPORT EXPERIMENTS METHODS
@@ -224,7 +231,7 @@ class Project:
         The key of each experiment in the .experiments dict is "name".
         Refer to Project.addExperiment() for details about how each experiment is added.
         """
-        self.logger.info(f"Searching project folder: {self.root_dir}")
+        logger.info(f"Searching project folder: {self.root_dir}")
         # Storing file existences in {folder1: [file1, file2, ...], ...} format
         dd_dict = {}
         # Adding all experiments within given project dir
@@ -243,10 +250,10 @@ class Project:
                     self.import_experiment(name)
                     dd_dict[f.value].append(name)
                 except ValueError as e:  # do not add invalid files
-                    self.logger.info(f"failed: {f.value}    --    {fp_name}: {e}")
+                    logger.info(f"failed: {f.value}    --    {fp_name}: {e}")
         # Logging outcome of imported and failed experiments
         exp_ls_msg = "".join([f"\n    - {exp.name}" for exp in self.experiments])
-        self.logger.info(f"Experiments imported:{exp_ls_msg}")
+        logger.info(f"Experiments imported:{exp_ls_msg}")
         # Constructing dd_df from dd_dict
         dd_df = DiagnosticsDf.init_df(
             pd.Series(np.unique(np.concatenate(list(dd_dict.values()))))
@@ -405,7 +412,7 @@ class Project:
         """
         # Initialising the process and logging description
         description = "Combining binned analysis"
-        self.logger.info("%s...", description)
+        logger.info("%s...", description)
         # AGGREGATING BINNED DATA
         # NOTE: need a more robust way of getting the list of bin sizes
         proj_analyse_dir = os.path.join(self.root_dir, ANALYSIS_DIR)
@@ -420,7 +427,7 @@ class Project:
         # Searching through all the analysis subdir
         for analyse_subdir in os.listdir(proj_analyse_dir):
             for bin_i in bin_sizes_sec:
-                self.logger.info(
+                logger.info(
                     "Collating binned data in %s for bin size %s",
                     analyse_subdir,
                     str(bin_i),
@@ -465,7 +472,7 @@ class Project:
         """
         # Initialising the process and logging description
         description = "Combining summary analysis"
-        self.logger.info("%s...", description)
+        logger.info("%s...", description)
         # AGGREGATING SUMMARY DATA
         proj_analyse_dir = os.path.join(self.root_dir, ANALYSIS_DIR)
         # Checking that the analysis directory exists
@@ -473,7 +480,7 @@ class Project:
             return
         # Searching through all the analysis subdir
         for analyse_subdir in os.listdir(proj_analyse_dir):
-            self.logger.info("Collating summary data in %s", analyse_subdir)
+            logger.info("Collating summary data in %s", analyse_subdir)
             df_ls = []
             names_ls = []
             for exp in self.experiments:

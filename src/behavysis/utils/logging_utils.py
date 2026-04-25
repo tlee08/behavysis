@@ -105,9 +105,9 @@ def setup_logging(
     # File handler (with rotation)
     if log_file is None:
         if project_name:
-            log_dir = CACHE_DIR / project_name
+            log_dir = Path(CACHE_DIR) / project_name
         else:
-            log_dir = CACHE_DIR
+            log_dir = Path(CACHE_DIR)
         log_file = log_dir / "debug.log"
     else:
         log_file = Path(log_file)

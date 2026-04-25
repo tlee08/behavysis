@@ -44,8 +44,11 @@ from behavysis.utils.io_utils import (
     joblib_load,
     write_json,
 )
-from behavysis.utils.logging_utils import init_logger_file
+import logging
+
 from behavysis.utils.misc_utils import array2listofvect, enum2tuple, listofvects2array
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from behavysis.pipeline.project import Project
@@ -60,8 +63,6 @@ class BehavClassifier:
     """BehavClassifier abstract class peforms behav classifier model preparation, training, saving,
     evaluation, and inference.
     """
-
-    logger = init_logger_file()
 
     _proj_dir: str
     _behav_name: str
@@ -78,10 +79,10 @@ class BehavClassifier:
         # Trying to load configs (or making new)
         try:
             configs = BehavClassifierConfigs.read_json(self.configs_fp)
-            self.logger.debug("Loaded existing configs")
+            logger.debug("Loaded existing configs")
         except FileNotFoundError:
             configs = BehavClassifierConfigs()
-            self.logger.debug("Made new model configs")
+            logger.debug("Made new model configs")
         # Setting and saving configs
         configs.proj_dir = self._proj_dir
         configs.behav_name = self._behav_name
@@ -89,10 +90,10 @@ class BehavClassifier:
         # Trying to load classifier (or making new)
         try:
             self.clf = joblib_load(self.clf_fp)
-            self.logger.debug("Loaded existing classifier")
+            logger.debug("Loaded existing classifier")
         except FileNotFoundError:
             self.clf = CNN1()
-            self.logger.debug("Made new classifier")
+            logger.debug("Made new classifier")
 
     #################################################
     #            GETTER AND SETTERS
@@ -116,12 +117,12 @@ class BehavClassifier:
         if isinstance(clf, str):
             clf_name = clf
             self._clf = joblib_load(os.path.join(self.clfs_dir, clf, "classifier.sav"))
-            self.logger.debug(f"Loaded classifier: {clf_name}")
+            logger.debug(f"Loaded classifier: {clf_name}")
         # If a BaseTorchModel, then setting
         else:
             clf_name = type(clf).__name__
             self._clf = clf
-            self.logger.debug(f"Initialised classifier: {clf_name}")
+            logger.debug(f"Initialised classifier: {clf_name}")
         # Updating in configs
         configs = self.configs
         configs.clf_struct = clf_name
@@ -146,7 +147,7 @@ class BehavClassifier:
                 return
         except FileNotFoundError:
             pass
-        self.logger.debug("Configs have changed. Updating model configs on disk")
+        logger.debug("Configs have changed. Updating model configs on disk")
         configs.write_json(self.configs_fp)
 
     @property
@@ -412,7 +413,7 @@ class BehavClassifier:
 
         Callable is a method from `ClfTemplates`.
         """
-        self.logger.info(f"Training {self.configs.clf_struct}")
+        logger.info(f"Training {self.configs.clf_struct}")
         # Preparing data
         x_ls, y_ls, index_train_ls, index_test_ls = self.preproc_training()
         # Training the model
