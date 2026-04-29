@@ -57,7 +57,7 @@ class Analyse:
         Points are `padding_px` padded (away) from center.
         """
         name = get_name(keypoints_fp)
-        dst_subdir = os.path.join(dst_dir, __name__.split(".")[-1])
+        dst_subdir = os.path.join(dst_dir, "in_roi")
         # Calculating the deltas (changes in body position) between each frame for the subject
         configs = ExperimentConfigs.read_json(configs_fp)
         fps, _, _, px_per_mm, bins_ls, cbins_ls = configs.get_analysis_configs()
@@ -287,7 +287,7 @@ class Analyse:
     ) -> str:
         """Determines the speed of the subject in each frame."""
         name = get_name(keypoints_fp)
-        dst_subdir = os.path.join(dst_dir, __name__.split(".")[-1])
+        dst_subdir = os.path.join(dst_dir, "speed")
         # Calculating the deltas (changes in body position) between each frame for the subject
         configs = ExperimentConfigs.read_json(configs_fp)
         fps, _, _, px_per_mm, bins_ls, cbins_ls = configs.get_analysis_configs()
@@ -359,7 +359,7 @@ class Analyse:
         Very similar to speed, except not scaled by time (fps).
         """
         name = get_name(keypoints_fp)
-        dst_subdir = os.path.join(dst_dir, __name__.split(".")[-1])
+        dst_subdir = os.path.join(dst_dir, "distance")
         # Calculating the deltas (changes in body position) between each frame for the subject
         configs = ExperimentConfigs.read_json(configs_fp)
         fps, _, _, px_per_mm, bins_ls, cbins_ls = configs.get_analysis_configs()
@@ -428,7 +428,7 @@ class Analyse:
     ) -> str:
         """Determines the speed of the subject in each frame."""
         name = get_name(keypoints_fp)
-        dst_subdir = os.path.join(dst_dir, __name__.split(".")[-1])
+        dst_subdir = os.path.join(dst_dir, "social_distance")
         # Calculating the deltas (changes in body position) between each frame for the subject
         configs = ExperimentConfigs.read_json(configs_fp)
         fps, _, _, px_per_mm, bins_ls, cbins_ls = configs.get_analysis_configs()
@@ -498,7 +498,7 @@ class Analyse:
         NOTE: method is "greedy" because it looks at a freezing bout from earliest possible frame.
         """
         name = get_name(keypoints_fp)
-        dst_subdir = os.path.join(dst_dir, __name__.split(".")[-1])
+        dst_subdir = os.path.join(dst_dir, "freezing")
         # Calculating the deltas (changes in body position) between each frame for the subject
         configs = ExperimentConfigs.read_json(configs_fp)
         fps, _, _, px_per_mm, bins_ls, cbins_ls = configs.get_analysis_configs()
