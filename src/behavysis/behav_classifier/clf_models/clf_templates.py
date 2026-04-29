@@ -1,4 +1,4 @@
-"""_summary_."""
+"""Classifier templates for behavioral classification models."""
 
 import numpy as np
 import pandas as pd

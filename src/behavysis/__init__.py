@@ -8,8 +8,6 @@ interpretable plotted and tabulated data for different analysises. This pipeline
 - Extracting meaningful data analysis from the preprocessed coordinates file
 """
 
-import warnings
-
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -44,3 +42,17 @@ sns.set_theme(style=PLOT_STYLE)
 
 plt.rcParams["figure.dpi"] = PLOT_DPI
 plt.rcParams["savefig.dpi"] = PLOT_DPI
+
+
+#####################################################################
+#          IMPORTING CLASSES
+#####################################################################
+
+__all__ = [
+    "Analyse",
+    "BehavClassifier",
+    "CalculateParams",
+    "Export",
+    "Preprocess",
+    "Project",
+]

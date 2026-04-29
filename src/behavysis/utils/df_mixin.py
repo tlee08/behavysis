@@ -1,7 +1,8 @@
-"""Utility functions."""
+"""DataFrame mixin class providing unified read/write operations with schema validation."""
 
 from enum import EnumType
 from pathlib import Path
+from typing import Callable
 
 import pandas as pd
 
@@ -10,12 +11,31 @@ from behavysis.utils.misc_utils import enum2tuple
 
 
 class DFMixin:
-    """__summary."""
+    """Mixin providing read/write operations for DataFrames with schema validation.
+
+    Subclasses define schema via IN (index names) and CN (column names) enums.
+    All I/O operations validate schema and ensure consistent formatting.
+    """
 
     NULLABLE = True
     IN = None
     CN = None
     IO = DF_IO_FORMAT
+
+    # Dispatch tables for I/O operations
+    _READERS: dict[str, Callable] = {
+        "csv": pd.read_csv,
+        "h5": pd.read_hdf,
+        "feather": pd.read_feather,
+        "parquet": pd.read_parquet,
+    }
+
+    _WRITERS: dict[str, Callable] = {
+        "csv": pd.DataFrame.to_csv,
+        "h5": lambda df, fp: df.to_hdf(fp, key="data", mode="w"),
+        "feather": pd.DataFrame.to_feather,
+        "parquet": pd.DataFrame.to_parquet,
+    }
 
     ###############################################################################################
     # DF Read Functions
@@ -23,53 +43,58 @@ class DFMixin:
 
     @classmethod
     def read_csv(cls, fp: Path) -> pd.DataFrame:
-        """Reading dataframe csv file."""
+        """Read dataframe from CSV file."""
         df = pd.read_csv(
             fp,
             index_col=list(range(len(enum2tuple(cls.IN) if cls.IN else (None,)))),
             header=list(range(len(enum2tuple(cls.CN) if cls.CN else (None,)))),
         )
-        df = cls.basic_clean(df)
-        return df
+        return cls.basic_clean(df)
 
     @classmethod
     def read_h5(cls, fp: Path) -> pd.DataFrame:
-        """Reading dataframe h5 file."""
+        """Read dataframe from HDF5 file."""
         df = pd.DataFrame(pd.read_hdf(fp, mode="r"))
-        df = cls.basic_clean(df)
-        return df
+        return cls.basic_clean(df)
 
     @classmethod
     def read_feather(cls, fp: Path) -> pd.DataFrame:
-        """Reading dataframe feather file."""
+        """Read dataframe from Feather file."""
         df = pd.read_feather(fp)
-        df = cls.basic_clean(df)
-        return df
+        return cls.basic_clean(df)
 
     @classmethod
     def read_parquet(cls, fp: Path) -> pd.DataFrame:
-        """Reading dataframe parquet file."""
+        """Read dataframe from Parquet file."""
         df = pd.read_parquet(fp)
-        df = cls.basic_clean(df)
-        return df
+        return cls.basic_clean(df)
 
     @classmethod
     def read(cls, fp: Path) -> pd.DataFrame:
-        """Default dataframe read method.
+        """Read dataframe using the format specified by IO attribute.
 
-        Based on `IO` class attribute.
+        Parameters
+        ----------
+        fp : Path
+            File path to read from.
+
+        Returns
+        -------
+        pd.DataFrame
+            Loaded dataframe with validated schema.
+
+        Raises
+        ------
+        AssertionError
+            If IO format is not supported.
         """
-        methods = {
-            "csv": cls.read_csv,
-            "h5": cls.read_h5,
-            "feather": cls.read_feather,
-            "parquet": cls.read_parquet,
-        }
-        assert cls.IO in methods, (
-            f"File type, {cls.IO}, not supported.\n"
-            f"Supported IO types are: {list(methods.keys())}."
-        )
-        return methods[cls.IO](fp)
+        if cls.IO not in cls._READERS:
+            msg = (
+                f"File type, {cls.IO}, not supported.\n"
+                f"Supported IO types are: {list(cls._READERS.keys())}."
+            )
+            raise AssertionError(msg)
+        return cls._READERS[cls.IO](fp)
 
     ###############################################################################################
     # DF Write Functions
@@ -77,47 +102,55 @@ class DFMixin:
 
     @classmethod
     def write_csv(cls, df: pd.DataFrame, fp: Path) -> None:
-        """Writing dataframe to csv file."""
+        """Write dataframe to CSV file."""
         df = cls.basic_clean(df)
         fp.parent.mkdir(parents=True, exist_ok=True)
         df.to_csv(fp)
 
     @classmethod
     def write_h5(cls, df: pd.DataFrame, fp: Path) -> None:
-        """Writing dataframe h5 file."""
+        """Write dataframe to HDF5 file."""
         df = cls.basic_clean(df)
         fp.parent.mkdir(parents=True, exist_ok=True)
         df.to_hdf(fp, key="data", mode="w")
 
     @classmethod
     def write_feather(cls, df: pd.DataFrame, fp: Path) -> None:
-        """Writing dataframe feather file."""
+        """Write dataframe to Feather file."""
         df = cls.basic_clean(df)
         fp.parent.mkdir(parents=True, exist_ok=True)
         df.to_feather(fp)
 
     @classmethod
     def write_parquet(cls, df: pd.DataFrame, fp: Path) -> None:
-        """Writing dataframe parquet file."""
+        """Write dataframe to Parquet file."""
         df = cls.basic_clean(df)
         fp.parent.mkdir(parents=True, exist_ok=True)
         df.to_parquet(fp)
 
     @classmethod
     def write(cls, df: pd.DataFrame, fp: Path) -> None:
-        """Default dataframe read method based on IO attribute.
-        Based on `IO` class attribute.
+        """Write dataframe using the format specified by IO attribute.
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            Dataframe to write.
+        fp : Path
+            File path to write to.
+
+        Raises
+        ------
+        AssertionError
+            If IO format is not supported.
         """
-        methods = {
-            "csv": cls.write_csv,
-            "h5": cls.write_h5,
-            "feather": cls.write_feather,
-            "parquet": cls.write_parquet,
-        }
-        assert cls.IO in methods, (
-            f"File type, {cls.IO}, not supported.\nSupported IO types are: {list(methods.keys())}."
-        )
-        return methods[cls.IO](df, fp)
+        if cls.IO not in cls._WRITERS:
+            msg = (
+                f"File type, {cls.IO}, not supported.\n"
+                f"Supported IO types are: {list(cls._WRITERS.keys())}."
+            )
+            raise AssertionError(msg)
+        cls._WRITERS[cls.IO](df, fp)
 
     ###############################################################################################
     # DF init functions
@@ -125,20 +158,17 @@ class DFMixin:
 
     @classmethod
     def init_df(cls, index: pd.Series | pd.Index) -> pd.DataFrame:
-        """# TODO: write better docstring
-        Returning a frame-by-frame analysis_df with the frame number (according to original video)
-        as the MultiIndex index, relative to the first element of frame_vect.
-        Note that that the frame number can thus begin on a non-zero number.
+        """Initialize empty dataframe with schema-defined index and column structure.
 
         Parameters
         ----------
-        frame_vect : pd.Series | pd.Index
-            _description_
+        index : pd.Series | pd.Index
+            Index values for the new dataframe.
 
-        Returns:
+        Returns
         -------
         pd.DataFrame
-            _description_
+            Empty dataframe with proper MultiIndex structure.
         """
         IN = enum2tuple(cls.IN) if cls.IN else None
         CN = enum2tuple(cls.CN) if cls.CN else None
@@ -147,13 +177,26 @@ class DFMixin:
             columns=pd.MultiIndex.from_tuples((), names=CN),
         )
 
+    ###############################################################################################
+    # DF Validation Functions
+    ###############################################################################################
+
     @classmethod
     def basic_clean(cls, df: pd.DataFrame) -> pd.DataFrame:
-        """Basic cleaning of the dataframe. Includes:
-        - Setting the index and column names (if they are specified)
-        - Sorting the index.
+        """Clean and validate dataframe structure.
 
-        Also checks that the df structure is as expected with `check_df`.
+        Sets index/column names from schema and sorts both axes.
+        Validates structure with check_df.
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            Dataframe to clean.
+
+        Returns
+        -------
+        pd.DataFrame
+            Cleaned dataframe with validated structure.
         """
         if cls.IN:
             assert df.index.nlevels == len(enum2tuple(cls.IN)), (
@@ -174,13 +217,20 @@ class DFMixin:
         cls.check_df(df)
         return df
 
-    ###############################################################################################
-    # DF Check functions
-    ###############################################################################################
-
     @classmethod
     def check_df(cls, df: pd.DataFrame) -> None:
-        """__summary__."""
+        """Validate dataframe structure matches schema.
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            Dataframe to validate.
+
+        Raises
+        ------
+        AssertionError
+            If dataframe doesn't match expected schema.
+        """
         # Checking that df is a DataFrame
         assert isinstance(df, pd.DataFrame), "The dataframe must be a pandas DataFrame."
         # Checking there are no null values
@@ -190,31 +240,31 @@ class DFMixin:
             )
         # Checking that the index levels are correct
         if cls.IN:
-            cls.check_IN(df, cls.IN)
+            cls._check_levels(df.index, cls.IN, "index")
         # Checking that the column levels are correct
         if cls.CN:
-            cls.check_CN(df, cls.CN)
+            cls._check_levels(df.columns, cls.CN, "columns")
 
     @classmethod
-    def check_IN(cls, df: pd.DataFrame, levels: EnumType | tuple[str] | str) -> None:
-        """__summary__."""
+    def _check_levels(
+        cls, obj: pd.Index | pd.MultiIndex, levels: EnumType | tuple[str] | str, name: str
+    ) -> None:
+        """Validate that index/column levels match expected names.
+
+        Parameters
+        ----------
+        obj : pd.Index | pd.MultiIndex
+            Index or columns to validate.
+        levels : EnumType | tuple[str] | str
+            Expected level names.
+        name : str
+            Name for error messages ("index" or "columns").
+        """
         # Converting `levels` to a tuple
         if isinstance(levels, EnumType):  # If Enum
             levels = enum2tuple(levels)
         elif isinstance(levels, str):  # If str
             levels = (levels,)
-        assert df.index.names == levels, (
-            f"The index levels are incorrect. Expected {levels} but got {df.index.names}."
-        )
-
-    @classmethod
-    def check_CN(cls, df: pd.DataFrame, levels: EnumType | tuple[str] | str) -> None:
-        """__summary__."""
-        # Converting `levels` to a tuple
-        if isinstance(levels, EnumType):  # If Enum
-            levels = enum2tuple(levels)
-        elif isinstance(levels, str):  # If str
-            levels = (levels,)
-        assert df.columns.names == levels, (
-            f"The column levels are incorrect. Expected {levels} but got {df.columns.names}."
+        assert obj.names == levels, (
+            f"The {name} levels are incorrect. Expected {levels} but got {obj.names}."
         )

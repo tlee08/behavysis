@@ -1,4 +1,4 @@
-"""_summary_."""
+"""Experiment configuration models for the behavysis pipeline."""
 
 from typing import Any
 
@@ -28,6 +28,17 @@ from behavysis.models.processes.extract_features import ExtractFeaturesConfigs
 from behavysis.models.processes.format_vid import FormatVidConfigs, VidMetadata
 from behavysis.models.processes.preprocess import PreprocessConfigs, RefineIdsConfigs
 from behavysis.models.processes.run_dlc import RunDlcConfigs
+
+
+class AnalysisConfigs(BaseModel):
+    """Validated analysis configuration parameters."""
+
+    fps: float
+    width_px: float
+    height_px: float
+    px_per_mm: float
+    bins_sec: list
+    custom_bins_sec: list
 
 
 class UserConfigs(BaseModel):
@@ -73,13 +84,20 @@ class ExperimentConfigs(BaseModel):
     ref: RefConfigs = RefConfigs()
 
     def get_ref(self, val: Any) -> Any:
-        """If the val is in the reference format, then
-        return reference value of the val if it exists in the reference store.
-        Otherwise, return the val itself.
+        """Resolve reference values from the ref section.
 
-        Note:
-        ----
-        The reference format is `"--<ref_name>"`.
+        If val is in reference format (`"--<ref_name>"`), returns the
+        referenced value from the ref section. Otherwise returns val unchanged.
+
+        Parameters
+        ----------
+        val : Any
+            Value to resolve, potentially a reference string.
+
+        Returns
+        -------
+        Any
+            Resolved value or original val if not a reference.
         """
         # Check if the value is in the reference format
         if isinstance(val, str) and val.startswith("--"):
@@ -92,30 +110,30 @@ class ExperimentConfigs(BaseModel):
             return getattr(self.ref, val)
         return val
 
-    def get_analysis_configs(self) -> tuple[float, float, float, float, list, list]:
-        """_summary_.
+    def get_analysis_configs(self) -> "AnalysisConfigs":
+        """Get validated analysis configuration parameters.
 
-        Parameters
-        ----------
-        configs : Configs
-            _description_
-
-        Returns:
+        Returns
         -------
-        tuple[ float, float, float, float, list, list, ]
-            _description_
+        AnalysisConfigs
+            Pydantic model containing fps, dimensions, scale, and bin sizes.
+
+        Raises
+        ------
+        AssertionError
+            If required video metadata or px_per_mm not set.
         """
         assert self.auto.formatted_vid.fps > 0
         assert self.auto.formatted_vid.width_px > 0
         assert self.auto.formatted_vid.height_px > 0
         assert self.auto.px_per_mm > 0
-        return (
-            float(self.auto.formatted_vid.fps),
-            float(self.auto.formatted_vid.width_px),
-            float(self.auto.formatted_vid.height_px),
-            float(self.auto.px_per_mm),
-            list(self.get_ref(self.user.analyse.bins_sec)),
-            list(self.get_ref(self.user.analyse.custom_bins_sec)),
+        return AnalysisConfigs(
+            fps=float(self.auto.formatted_vid.fps),
+            width_px=float(self.auto.formatted_vid.width_px),
+            height_px=float(self.auto.formatted_vid.height_px),
+            px_per_mm=float(self.auto.px_per_mm),
+            bins_sec=list(self.get_ref(self.user.analyse.bins_sec)),
+            custom_bins_sec=list(self.get_ref(self.user.analyse.custom_bins_sec)),
         )
 
 

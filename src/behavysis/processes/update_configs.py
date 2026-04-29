@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 
 
 class UpdateConfigs:
-    """_summary_."""
+    """Configuration file management for experiments."""
 
     @staticmethod
     def update_configs(

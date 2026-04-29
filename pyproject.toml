@@ -71,7 +71,6 @@ ignore = [
     "S101",
     "ANN002",
     "ANN003",
-    "PIE796",
 ]
 fixable = ["ALL"]
 unfixable = []

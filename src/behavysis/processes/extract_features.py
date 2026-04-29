@@ -1,4 +1,4 @@
-"""_summary_."""
+"""Feature extraction from preprocessed keypoints using SimBA."""
 
 import logging
 import os
@@ -202,7 +202,7 @@ def run_simba_subproc(
 
 
 def export2df(in_fp: Path, dst_fp: Path, index: pd.Index) -> None:
-    """__summary__."""
+    """Export SimBA features CSV to project dataframe format."""
     features_df = FeaturesDf.read_csv(in_fp)
     # Setting index to the same as the preprocessed preprocessed df
     features_df = features_df.set_index(index)

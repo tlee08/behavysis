@@ -36,7 +36,7 @@ logger = logging.getLogger(__name__)
 
 
 class Preprocess:
-    """_summary_."""
+    """Keypoint data preprocessing methods for DLC output."""
 
     @classmethod
     def start_stop_trim(
@@ -286,21 +286,25 @@ def get_mark_dists_df(
     mark_pts: list[str],
     bpts: list[str],
 ) -> pd.DataFrame:
-    """_summary_.
+    """Calculate distances between individuals and marking for identity refinement.
 
     Parameters
     ----------
-    df : pd.DataFrame
-        _description_
-    marking : str
-        _description_
-    indivs : list[str]
-        _description_
+    keypoints_df : pd.DataFrame
+        Keypoints dataframe with coordinates.
+    marked_indiv : str
+        Name of marked individual.
+    unmarked_indiv : str
+        Name of unmarked individual.
+    mark_pts : list[str]
+        Marking bodypoints.
+    bpts : list[str]
+        Bodypoints to average for distance calculation.
 
-    Returns:
+    Returns
     -------
     pd.DataFrame
-        _description_
+        DataFrame with distances to marking for each individual.
     """
     l0 = keypoints_df.columns.unique(0)[0]
     mark_dists_df = pd.DataFrame(index=keypoints_df.index)
@@ -341,24 +345,23 @@ def get_id_switch_df(
     marked: str,
     unmarked: str,
 ) -> pd.DataFrame:
-    """Calculating different metrics for whether to swap the mice identities, depending
-    on the current distance, rolling decision, and average binned decision.
+    """Calculate identity switch decisions using current, rolling, and binned metrics.
 
     Parameters
     ----------
-    df_aggr : pd.DataFrame
-        _description_
+    mark_dists_df : pd.DataFrame
+        DataFrame with distances to marking for each individual.
     window_frames : int
-        _description_
+        Window size in frames for rolling/binned calculations.
     marked : str
-        _description_
+        Name of marked individual.
     unmarked : str
-        _description_
+        Name of unmarked individual.
 
-    Returns:
+    Returns
     -------
     pd.DataFrame
-        _description_
+        DataFrame with 'current', 'rolling', and 'binned' switch decisions.
     """
     switch_df = pd.DataFrame(index=mark_dists_df.index)
     #   - Current decision
@@ -393,23 +396,23 @@ def switch_identities(
     marked_indiv: str,
     unmarked_indiv: str,
 ) -> pd.DataFrame:
-    """_summary_.
+    """Swap individual identities in keypoints dataframe where is_switch is True.
 
     Parameters
     ----------
-    df : pd.DataFrame
-        _description_
-    isSwitch : pd.Series
-        _description_
-    marked : str
-        _description_
-    unmarked : str
-        _description_
+    keypoints_df : pd.DataFrame
+        Keypoints dataframe with individual columns.
+    is_switch : pd.Series
+        Boolean series indicating which frames need identity swap.
+    marked_indiv : str
+        Name of marked individual.
+    unmarked_indiv : str
+        Name of unmarked individual.
 
-    Returns:
+    Returns
     -------
     pd.DataFrame
-        _description_
+        Keypoints dataframe with swapped identities.
     """
     keypoints_df = keypoints_df.copy()
     header = keypoints_df.columns.unique(0)[0]

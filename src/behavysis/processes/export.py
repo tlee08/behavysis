@@ -22,7 +22,7 @@ class Export:
         dst_fp: Path,
         overwrite: bool,
     ) -> None:
-        """__summary__."""
+        """Convert dataframe between formats based on file extensions."""
         if not overwrite and dst_fp.exists():
             logger.warning(file_exists_msg(dst_fp))
             return
@@ -37,7 +37,7 @@ class Export:
         dst_fp: Path,
         overwrite: bool,
     ) -> None:
-        """__summary__."""
+        """Export dataframe to CSV format."""
         if not overwrite and dst_fp.exists():
             logger.warning(file_exists_msg(dst_fp))
             return

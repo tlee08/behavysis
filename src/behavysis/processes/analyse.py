@@ -60,7 +60,7 @@ class Analyse:
         dst_subdir = dst_dir / "in_roi"
         # Calculating the deltas (changes in body position) between each frame for the subject
         configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
-        fps, _, _, px_per_mm, bins_ls, cbins_ls = configs.get_analysis_configs()
+        analysis_configs = configs.get_analysis_configs()
         start_frame = configs.auto.start_frame
         configs_filt_ls = configs.user.analyse.in_roi
         # Loading in dataframe
@@ -87,7 +87,7 @@ class Analyse:
             padding_mm = configs.get_ref(configs_filt.padding_mm)
             roi_corners = configs.get_ref(configs_filt.roi_corners)
             # Calculating more parameters
-            padding_px = padding_mm / px_per_mm
+            padding_px = padding_mm / analysis_configs.px_per_mm
             # Checking bodyparts and roi_corners exist
             KeypointsDf.check_bpts_exist(keypoints_df, bpts)
             KeypointsDf.check_bpts_exist(keypoints_df, roi_corners)
@@ -167,9 +167,9 @@ class Analyse:
             analysis_df,
             dst_subdir,
             name,
-            fps,
-            bins_ls,
-            cbins_ls,
+            analysis_configs.fps,
+            analysis_configs.bins_sec,
+            analysis_configs.custom_bins_sec,
         )
 
     @classmethod
@@ -178,7 +178,7 @@ class Analyse:
         pt: pd.Series,
         corners_df: pd.DataFrame,
     ) -> bool:
-        """__summary__."""
+        """Check if point is inside polygon using ray casting algorithm."""
         # Counting crossings over edge in region when point is translated to the right
         crossings = 0
         # To loop back to the first point at the end
@@ -291,12 +291,12 @@ class Analyse:
         dst_subdir = dst_dir / "speed"
         # Calculating the deltas (changes in body position) between each frame for the subject
         configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
-        fps, _, _, px_per_mm, bins_ls, cbins_ls = configs.get_analysis_configs()
+        analysis_configs = configs.get_analysis_configs()
         configs_filt = configs.user.analyse.speed
         bpts = configs.get_ref(configs_filt.bodyparts)
         smoothing_sec = configs.get_ref(configs_filt.smoothing_sec)
         # Calculating more parameters
-        smoothing_frames = int(smoothing_sec * fps)
+        smoothing_frames = int(smoothing_sec * analysis_configs.fps)
 
         # Loading in dataframe
         keypoints_df = KeypointsDf.clean_headings(KeypointsDf.read(keypoints_fp))
@@ -324,7 +324,9 @@ class Analyse:
             delta_y = smoothed_xy_df.loc[:, idx[indiv, bpts, "y"]].mean(axis=1).diff()  # type: ignore
             delta = np.array(np.sqrt(np.power(delta_x, 2) + np.power(delta_y, 2)))
             # Storing speed (raw and smoothed)
-            analysis_df[(indiv, "SpeedMMperSec")] = (delta / px_per_mm) * fps
+            analysis_df[(indiv, "SpeedMMperSec")] = (
+                delta / analysis_configs.px_per_mm
+            ) * analysis_configs.fps
             analysis_df[(indiv, "SpeedMMperSecSmoothed")] = (
                 analysis_df[(indiv, "SpeedMMperSec")]
                 .rolling(window=smoothing_frames, min_periods=1, center=True)
@@ -341,9 +343,9 @@ class Analyse:
             analysis_df,
             dst_subdir,
             name,
-            fps,
-            bins_ls,
-            cbins_ls,
+            analysis_configs.fps,
+            analysis_configs.bins_sec,
+            analysis_configs.custom_bins_sec,
         )
 
     @classmethod
@@ -362,12 +364,12 @@ class Analyse:
         dst_subdir = dst_dir / "distance"
         # Calculating the deltas (changes in body position) between each frame for the subject
         configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
-        fps, _, _, px_per_mm, bins_ls, cbins_ls = configs.get_analysis_configs()
+        analysis_configs = configs.get_analysis_configs()
         configs_filt = configs.user.analyse.speed
         bpts = configs.get_ref(configs_filt.bodyparts)
         smoothing_sec = configs.get_ref(configs_filt.smoothing_sec)
         # Calculating more parameters
-        smoothing_frames = int(smoothing_sec * fps)
+        smoothing_frames = int(smoothing_sec * analysis_configs.fps)
 
         # Loading in dataframe
         keypoints_df = KeypointsDf.clean_headings(KeypointsDf.read(keypoints_fp))
@@ -395,7 +397,7 @@ class Analyse:
             delta_y = smoothed_xy_df.loc[:, idx[indiv, bpts, "y"]].mean(axis=1).diff()  # type: ignore
             delta = np.array(np.sqrt(np.power(delta_x, 2) + np.power(delta_y, 2)))
             # Storing speed (raw and smoothed)
-            analysis_df[(indiv, "DistMM")] = delta / px_per_mm
+            analysis_df[(indiv, "DistMM")] = delta / analysis_configs.px_per_mm
             analysis_df[(indiv, "DistMMSmoothed")] = (
                 analysis_df[(indiv, "DistMM")]
                 .rolling(window=smoothing_frames, min_periods=1, center=True)
@@ -412,9 +414,9 @@ class Analyse:
             analysis_df,
             dst_subdir,
             name,
-            fps,
-            bins_ls,
-            cbins_ls,
+            analysis_configs.fps,
+            analysis_configs.bins_sec,
+            analysis_configs.custom_bins_sec,
         )
 
     @classmethod
@@ -430,12 +432,12 @@ class Analyse:
         dst_subdir = dst_dir / "social_distance"
         # Calculating the deltas (changes in body position) between each frame for the subject
         configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
-        fps, _, _, px_per_mm, bins_ls, cbins_ls = configs.get_analysis_configs()
+        analysis_configs = configs.get_analysis_configs()
         configs_filt = configs.user.analyse.social_distance
         bpts = configs.get_ref(configs_filt.bodyparts)
         smoothing_sec = configs.get_ref(configs_filt.smoothing_sec)
         # Calculating more parameters
-        smoothing_frames = int(smoothing_sec * fps)
+        smoothing_frames = int(smoothing_sec * analysis_configs.fps)
 
         # Loading in dataframe
         keypoints_df = KeypointsDf.clean_headings(KeypointsDf.read(keypoints_fp))
@@ -460,7 +462,9 @@ class Analyse:
         dist_y = (keypoints_df.loc[:, idx_b] - keypoints_df.loc[:, idx_b]).mean(axis=1)  # type: ignore
         dist = np.array(np.sqrt(np.power(dist_x, 2) + np.power(dist_y, 2)))
         # Adding mm distance to saved analysis_df table
-        analysis_df[(f"{indiv_a}_{indiv_b}", "DistMM")] = dist / px_per_mm
+        analysis_df[(f"{indiv_a}_{indiv_b}", "DistMM")] = (
+            dist / analysis_configs.px_per_mm
+        )
         analysis_df[(f"{indiv_a}_{indiv_b}", "DistMMSmoothed")] = (
             analysis_df[(f"{indiv_a}_{indiv_b}", "DistMM")]
             .rolling(window=smoothing_frames, min_periods=1, center=True)
@@ -475,9 +479,9 @@ class Analyse:
             analysis_df,
             dst_subdir,
             name,
-            fps,
-            bins_ls,
-            cbins_ls,
+            analysis_configs.fps,
+            analysis_configs.bins_sec,
+            analysis_configs.custom_bins_sec,
         )
 
     @classmethod
@@ -499,16 +503,16 @@ class Analyse:
         dst_subdir = dst_dir / "freezing"
         # Calculating the deltas (changes in body position) between each frame for the subject
         configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
-        fps, _, _, px_per_mm, bins_ls, cbins_ls = configs.get_analysis_configs()
+        analysis_configs = configs.get_analysis_configs()
         configs_filt = configs.user.analyse.freezing
         bpts = configs.get_ref(configs_filt.bodyparts)
         thresh_mm = configs.get_ref(configs_filt.thresh_mm)
         smoothing_sec = configs.get_ref(configs_filt.smoothing_sec)
         window_sec = configs.get_ref(configs_filt.window_sec)
         # Calculating more parameters
-        thresh_px = thresh_mm / px_per_mm
-        smoothing_frames = int(smoothing_sec * fps)
-        window_frames = int(np.round(fps * window_sec, 0))
+        thresh_px = thresh_mm / analysis_configs.px_per_mm
+        smoothing_frames = int(smoothing_sec * analysis_configs.fps)
+        window_frames = int(np.round(analysis_configs.fps * window_sec, 0))
 
         # Loading in dataframe
         keypoints_df = KeypointsDf.clean_headings(KeypointsDf.read(keypoints_fp))
@@ -563,7 +567,7 @@ class Analyse:
             analysis_df,
             dst_subdir,
             name,
-            fps,
-            bins_ls,
-            cbins_ls,
+            analysis_configs.fps,
+            analysis_configs.bins_sec,
+            analysis_configs.custom_bins_sec,
         )

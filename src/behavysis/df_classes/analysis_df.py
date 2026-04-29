@@ -12,7 +12,7 @@ class AnalysisCN(Enum):
 
 
 class AnalysisDf(DFMixin):
-    """__summary__."""
+    """Frame-by-frame analysis results with individual and measure columns."""
 
     NULLABLE = False
     IN = FramesIN

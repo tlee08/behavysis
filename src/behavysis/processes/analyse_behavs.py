@@ -24,7 +24,7 @@ class AnalyseBehavs:
         dst_subdir = dst_dir / "analyse_behavs"
         # Calculating the deltas (changes in body position) between each frame for the subject
         configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
-        fps, _, _, _, bins_ls, cbins_ls = configs.get_analysis_configs()
+        analysis_configs = configs.get_analysis_configs()
         # Loading in dataframe
         behavs_df = BehavScoredDf.read(behavs_fp)
         # Setting all na and undetermined behav to non-behav
@@ -48,7 +48,7 @@ class AnalyseBehavs:
             behavs_df,
             dst_subdir,
             name,
-            fps,
-            bins_ls,
-            cbins_ls,
+            analysis_configs.fps,
+            analysis_configs.bins_sec,
+            analysis_configs.custom_bins_sec,
         )

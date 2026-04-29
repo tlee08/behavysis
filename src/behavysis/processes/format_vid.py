@@ -27,13 +27,16 @@ from behavysis.models.processes.format_vid import VidMetadata
 from behavysis.utils.diagnostics_utils import file_exists_msg
 from behavysis.utils.subproc_utils import run_subproc_console
 
-# TODO: Maybe separate format_vid and get_vids_metadata into separate classes and processes
-
 logger = logging.getLogger(__name__)
 
 
 class FormatVid:
-    """Class for formatting videos based on given parameters."""
+    """Video formatting and metadata extraction for the pipeline.
+
+    Provides methods to:
+    - Format videos with ffmpeg (resize, trim, change fps)
+    - Extract and store video metadata in configs
+    """
 
     @classmethod
     def format_vid(
@@ -84,22 +87,16 @@ class FormatVid:
     def get_vids_metadata(
         cls, raw_vid_fp: Path, formatted_vid_fp: Path, configs_fp: Path
     ) -> None:
-        """Finds the video metadata/parameters for either the raw or formatted video,
-        and stores this data in the experiment's config file.
+        """Extract metadata from raw and formatted videos, store in configs.
 
         Parameters
         ----------
-        raw_fp : str
-            The input video filepath.
-        formatted_fp : str
-            The output video filepath.
-        configs_fp : str
-            The JSON configs filepath.
-
-        Returns:
-        -------
-        str
-            Description of the function's outcome.
+        raw_vid_fp : Path
+            Raw video filepath.
+        formatted_vid_fp : Path
+            Formatted video filepath.
+        configs_fp : Path
+            JSON configs filepath to update with metadata.
         """
         # Saving video metadata to configs dict
         configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
@@ -119,7 +116,27 @@ def ffmpeg_process_vid(
     stop_sec: None | float = None,
     overwrite: bool = False,
 ) -> None:
-    """__summary__."""
+    """Process video with ffmpeg to resize, trim, and change frame rate.
+
+    Parameters
+    ----------
+    in_fp : Path
+        Input video filepath.
+    dst_fp : Path
+        Output video filepath.
+    width_px : int, optional
+        Target width in pixels. -1 auto-calculates from height.
+    height_px : int, optional
+        Target height in pixels. -1 auto-calculates from width.
+    fps : int, optional
+        Target frame rate.
+    start_sec : float, optional
+        Start time in seconds for trimming.
+    stop_sec : float, optional
+        Stop time in seconds for trimming.
+    overwrite : bool
+        Whether to overwrite existing output file.
+    """
     # Constructing ffmpeg command
     cmd = ["ffmpeg"]
 

@@ -6,6 +6,8 @@ from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
+from joblib import dump, load
+
 
 def silent_remove(fp: Path) -> None:
     """Removes the given file or dir if it exists.
@@ -56,3 +58,13 @@ async def async_read_files(fp_ls: list[Path], read_func: Callable) -> list:
 def async_read_files_run(fp_ls: list[Path], read_func: Callable) -> list:
     """Asynchronously read a list of files and return a list of numpy arrays."""
     return asyncio.run(async_read_files(fp_ls, read_func))
+
+
+def joblib_dump(obj, fp: Path) -> None:
+    """Serialize object to file using joblib."""
+    dump(obj, fp)
+
+
+def joblib_load(fp: Path):
+    """Load serialized object from file using joblib."""
+    return load(fp)

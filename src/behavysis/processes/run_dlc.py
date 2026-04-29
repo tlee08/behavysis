@@ -41,7 +41,7 @@ DLC_HDF_KEY = "data"
 
 
 class RunDLC:
-    """_summary_."""
+    """DeepLabCut model execution for pose estimation on videos."""
 
     @classmethod
     def ma_dlc_run_single(
@@ -179,7 +179,7 @@ def run_dlc_subproc(
 
 
 def export2df(name: str, src_dir: Path, dst_dir: Path) -> None:
-    """__summary__."""
+    """Export DLC h5 output to project dataframe format."""
     # Get the corresponding .h5 filename
     name_fp_ls = [
         i for i in src_dir.iterdir() if re.search(rf"^{name}DLC.*\.h5$", i.name)

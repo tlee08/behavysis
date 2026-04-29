@@ -25,6 +25,7 @@ from behavysis.df_classes.analysis_collated_df import (
     AnalysisBinnedCollatedDf,
     AnalysisSummaryCollatedDf,
 )
+from behavysis.df_classes.diagnostics_df import DiagnosticsDf
 from behavysis.models.experiment_configs import ExperimentConfigs
 from behavysis.pipeline.experiment import Experiment
 from behavysis.processes.run_dlc import RunDLC
@@ -107,7 +108,6 @@ class Project:
         """Import all experiments from the project folder."""
         logger.info(f"Searching project folder: {self.root_dir}")
         dd_dict: dict[str, list[str]] = {}
-
         for f in Folders:
             folder = self.root_dir / f.value
             dd_dict[f.value] = []
@@ -122,22 +122,16 @@ class Project:
                     dd_dict[f.value].append(name)
                 except ValueError as e:
                     logger.info(f"Failed: {f.value} - {fp_name.name}: {e}")
-
         exp_ls_msg = "".join([f"\n    - {exp.name}" for exp in self.experiments])
         logger.info(f"Experiments imported:{exp_ls_msg}")
-
         all_names = np.unique(np.concatenate(list(dd_dict.values())))
         df = pd.DataFrame(index=all_names)
         for folder, names in dd_dict.items():
             df[folder] = df.index.isin(names)
-        from behavysis.df_classes.diagnostics_df import DiagnosticsDf
-
         DiagnosticsDf.write(
             df,
             self.root_dir / DIAGNOSTICS_DIR / "import_experiments.csv",
         )
-
-    # Batch processing methods
 
     def update_configs(self, default_configs_fp: Path, overwrite: str) -> None:
         self._run_and_save_diagnostics(
