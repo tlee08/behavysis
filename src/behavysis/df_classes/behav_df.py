@@ -131,7 +131,7 @@ class BehavScoredDf(BehavDf):
             df[(behav, cls.OutcomesCols.ACTUAL.value)] = BehavValues.NON_BEHAV.value
             df[(behav, cls.OutcomesCols.PRED.value)] = BehavValues.NON_BEHAV.value
         # Setting the classification values from the BORIS file
-        for ind, row in df_boris.iterrows():
+        for _ind, row in df_boris.iterrows():
             # Getting corresponding frame of this event point
             behav = row["Behavior"]
             frame = row["Image index"]

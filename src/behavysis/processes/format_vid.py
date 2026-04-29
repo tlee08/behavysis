@@ -119,7 +119,7 @@ def ffmpeg_process_vid(
     stop_sec: None | float = None,
     overwrite: bool = False,
 ) -> None:
-    """__summary__"""
+    """__summary__."""
     # Constructing ffmpeg command
     cmd = ["ffmpeg"]
 

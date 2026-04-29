@@ -178,7 +178,7 @@ class Analyse:
         pt: pd.Series,
         corners_df: pd.DataFrame,
     ) -> bool:
-        """__summary__"""
+        """__summary__."""
         # Counting crossings over edge in region when point is translated to the right
         crossings = 0
         # To loop back to the first point at the end

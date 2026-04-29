@@ -1,4 +1,4 @@
-"""_summary_"""
+"""_summary_."""
 
 import logging
 import os
@@ -172,7 +172,7 @@ def run_simba_subproc(
         "-n",
         "simba",
         "python",
-        script_fp,
+        str(script_fp),
     ]
     run_subproc_console(cmd)
     silent_remove(script_fp)
@@ -202,7 +202,7 @@ def run_simba_subproc(
 
 
 def export2df(in_fp: Path, dst_fp: Path, index: pd.Index) -> None:
-    """__summary__"""
+    """__summary__."""
     features_df = FeaturesDf.read_csv(in_fp)
     # Setting index to the same as the preprocessed preprocessed df
     features_df = features_df.set_index(index)

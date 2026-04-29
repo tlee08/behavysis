@@ -1,4 +1,4 @@
-"""## GUI designer and exporting the design to Python code
+"""## GUI designer and exporting the design to Python code.
 
 ```bash
 pyside6-designer
@@ -39,7 +39,7 @@ from behavysis.viewer.windows.settings import SettingsWindow
 
 
 class MainWindow(QMainWindow):
-    """__summary__"""
+    """__summary__."""
 
     ui: Ui_MainWindow
     preferences_window: SettingsWindow
@@ -57,7 +57,7 @@ class MainWindow(QMainWindow):
     bouts_model: BoutsListModel
     bout_inspect_model: BoutInspectListModel
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         # Instatiating QMainWindow
         super().__init__(*args, **kwargs)
 
@@ -105,24 +105,24 @@ class MainWindow(QMainWindow):
 
     @property
     def window_size_frames(self) -> int:
-        """__summary__"""
+        """__summary__."""
         return self._window_size_frames
 
     @window_size_frames.setter
     def window_size_frames(self, window_size_frames: int) -> None:
-        """__summary__"""
+        """__summary__."""
         self._window_size_frames = window_size_frames
         # Updating the frame plot with new viewable window size
         self.update_frame_plot()
 
     @property
     def vid_speed(self) -> int:
-        """__summary__"""
+        """__summary__."""
         return self._vid_speed
 
     @vid_speed.setter
     def vid_speed(self, vid_speed: int) -> None:
-        """__summary__"""
+        """__summary__."""
         self._vid_speed = vid_speed
         # Updating the timer with the new fps speed
         viewer_fps = self.vid_speed * self.vid_model.fps
@@ -130,26 +130,26 @@ class MainWindow(QMainWindow):
 
     @property
     def focus_size_frames(self) -> int:
-        """__summary__"""
+        """__summary__."""
         return self._focus_size_frames
 
     @focus_size_frames.setter
     def focus_size_frames(self, focus_size_frames: int) -> None:
-        """__summary__"""
+        """__summary__."""
         self._focus_size_frames = focus_size_frames
 
     ####################################################################
     # INITIALIZATION METHODS
     ####################################################################
 
-    def _init_vid_graph_widgets(self):
-        """__summary__"""
+    def _init_vid_graph_widgets(self) -> None:
+        """__summary__."""
         # Initialising video viewer and graph viewer
         self.ui.vid_viewer.main = self
         self.ui.graph_viewer.main = self
 
-    def _init_models(self):
-        """__summary__"""
+    def _init_models(self) -> None:
+        """__summary__."""
         # Init file manager
         self.file_manager = ExpFileManager()
         # Init vid and keypoints models
@@ -164,16 +164,16 @@ class MainWindow(QMainWindow):
         self._focus_size_frames = 5
         self.curr_i = 0
 
-    def _init_model_views(self):
-        """__summary__"""
+    def _init_model_views(self) -> None:
+        """__summary__."""
         # MODEL VIEWS
         # Linking BoutsModel
         self.ui.bouts_view.setModel(self.bouts_model)
         # Linking BoutInspectModel
         self.ui.bout_inspect_view.setModel(self.bout_inspect_model)
 
-    def _init_conns_models(self):
-        """__summary__"""
+    def _init_conns_models(self) -> None:
+        """__summary__."""
         # SIGNALS AND SLOTS: MODELS
         # bouts_model
         m = self.bouts_model
@@ -195,8 +195,8 @@ class MainWindow(QMainWindow):
             )
         )
 
-    def _init_conns_views(self):
-        """__summary__"""
+    def _init_conns_views(self) -> None:
+        """__summary__."""
         # SIGNALS AND SLOTS: VIEWS
         # bouts_view
         v = self.ui.bouts_view.selectionModel()
@@ -205,8 +205,8 @@ class MainWindow(QMainWindow):
         v = self.ui.bout_inspect_view.selectionModel()
         v.selectionChanged.connect(v.clearSelection)
 
-    def _init_conns_scoring(self):
-        """__summary__"""
+    def _init_conns_scoring(self) -> None:
+        """__summary__."""
         # SIGNALS AND SLOTS: SCORING BOUT
         # Choosing is_actual bout
         for k, v in self.rbtns.items():
@@ -214,8 +214,8 @@ class MainWindow(QMainWindow):
         # Choosing specific behaviours
         # NOTE: already done in bout_inspect_model.setData, when CheckStateRole changes.
 
-    def _init_conns_vid(self):
-        """__summary__"""
+    def _init_conns_vid(self) -> None:
+        """__summary__."""
         # SIGNALS AND SLOTS: VIDEO AND PLOT
         # Handle user moving slider
         self.ui.slider.sliderMoved.connect(self.set_frame)
@@ -235,8 +235,8 @@ class MainWindow(QMainWindow):
         # Handle bout-related video buttons
         self.ui.bout_replay_btn.clicked.connect(self.select_bout)
 
-    def _init_conns_io(self):
-        """__summary__"""
+    def _init_conns_io(self) -> None:
+        """__summary__."""
         # SIGNALS AND SLOTS: I/O
         # Handle opening settings and help windows
         self.ui.action_settings.triggered.connect(
@@ -254,8 +254,8 @@ class MainWindow(QMainWindow):
         # Handle open/closing windows
         self.ui.action_quit.triggered.connect(self.close)
 
-    def _init_conns_shortcuts(self):
-        """__summary__"""
+    def _init_conns_shortcuts(self) -> None:
+        """__summary__."""
         # SLOTS AND SIGNALS: KEYBOARD SHORTCUTS
         self.ui.action_open.setShortcut(QKeySequence.StandardKey.Open)
         self.ui.action_save.setShortcut(QKeySequence.StandardKey.Save)
@@ -263,8 +263,8 @@ class MainWindow(QMainWindow):
         self.ui.action_settings.setShortcut(Qt.Key.Key_P)
         self.ui.action_help.setShortcut(Qt.Key.Key_H)
 
-    def _init_conns_hotkeys(self):
-        """__summary__"""
+    def _init_conns_hotkeys(self) -> None:
+        """__summary__."""
         # SLOTS AND SIGNALS: HOTKEYS
         # Handle video hot-keys
         QShortcut(Qt.Key.Key_Left, self).activated.connect(self.ui.vid_back_btn.click)
@@ -282,8 +282,8 @@ class MainWindow(QMainWindow):
             self.ui.select_behav_rbtn.toggle
         )
 
-    def _init_timer_vid(self):
-        """__summary__"""
+    def _init_timer_vid(self) -> None:
+        """__summary__."""
         # TIMERS AND THREADS
         # Making timer to play video
         self.timer = QTimer(self)
@@ -293,14 +293,14 @@ class MainWindow(QMainWindow):
     # SLOTS
     ####################################################################
 
-    def resize_viewer(self, width, height):
-        """__summary__"""
+    def resize_viewer(self, width, height) -> None:
+        """__summary__."""
         self.ui.vid_viewer.setFixedSize(width, height)
         self.ui.graph_viewer.setFixedWidth(width)
         self.ui.slider.setFixedWidth(width)
 
-    def closeEvent(self, event):
-        """__summary__"""
+    def closeEvent(self, event) -> None:
+        """__summary__."""
         # Perform actions when the window is about to close
         reply = QMessageBox.question(
             self,
@@ -316,7 +316,7 @@ class MainWindow(QMainWindow):
             event.ignore()
 
     def open(self, fp: str | None = None) -> None:
-        """__summary__"""
+        """__summary__."""
         if not fp:
             fp = QFileDialog.getOpenFileName(
                 self, "", "", "config file (*.json *.yaml)"
@@ -363,8 +363,8 @@ class MainWindow(QMainWindow):
             )
             print(e)
 
-    def select_bout(self):
-        """__summary__"""
+    def select_bout(self) -> None:
+        """__summary__."""
         # Getting selected bout QIndex (if there exists one)
         if len(self.ui.bouts_view.selectedIndexes()) > 0:
             # Getting selected bout QIndex
@@ -390,8 +390,8 @@ class MainWindow(QMainWindow):
     #     # Jumping to that bout in bouts_view list
     #     self.ui.bouts_view.scrollTo(idx)
 
-    def update_frame(self):
-        """__summary__"""
+    def update_frame(self) -> None:
+        """__summary__."""
         # If bout_focus_btn is checked AND video is past the current bout's end,
         # then pause (i.e., don't update the frame)
         if self.ui.bout_focus_btn.isChecked():
@@ -408,7 +408,7 @@ class MainWindow(QMainWindow):
             self.curr_i += 1
 
     def update_frame_vid(self):
-        """__summary__"""
+        """__summary__."""
         # Reading in next frame
         ret, frame = self.vid_model.read()
         if ret:
@@ -420,16 +420,16 @@ class MainWindow(QMainWindow):
             self.ui.vid_viewer.display_cv2(frame)
         return ret
 
-    def update_frame_plot(self):
-        """__summary__"""
+    def update_frame_plot(self) -> None:
+        """__summary__."""
         self.ui.graph_viewer.plot_update(
             self.curr_i / self.vid_model.fps,
             xmin=(self.curr_i - self.window_size_frames) / self.vid_model.fps,
             xmax=(self.curr_i + self.window_size_frames) / self.vid_model.fps,
         )
 
-    def set_frame(self, frame_num):
-        """__summary__"""
+    def set_frame(self, frame_num) -> None:
+        """__summary__."""
         # Setting curr_frame value
         self.curr_i = np.clip(frame_num, 0, self.vid_model.nframes - 1)
         # Setting video to new frame
@@ -437,17 +437,17 @@ class MainWindow(QMainWindow):
         # Updating video and plot view
         self.update_frame()
 
-    def toggle_actual_rbtns(self, r: bool, value: int):
-        """__summary__"""
+    def toggle_actual_rbtns(self, r: bool, value: int) -> None:
+        """__summary__."""
         if r:
             self.bout_inspect_model.actual = value
 
-    def save(self):
-        """__summary__"""
+    def save(self) -> None:
+        """__summary__."""
         self.save_frames(self.file_manager.behavs_df_fp)
 
-    def save_frames(self, fp=None):
-        """__summary__"""
+    def save_frames(self, fp=None) -> None:
+        """__summary__."""
         if not fp:
             fp = QFileDialog.getSaveFileName(
                 self,
@@ -464,8 +464,8 @@ class MainWindow(QMainWindow):
                 f"Saved scored behaviour frames to {fp}", timeout=STATUS_MSG_TIMEOUT
             )
 
-    def save_bouts(self, fp: Path | None = None):
-        """__summary__"""
+    def save_bouts(self, fp: Path | None = None) -> None:
+        """__summary__."""
         if not fp:
             fp = QFileDialog.getSaveFileName(
                 self,
@@ -480,8 +480,8 @@ class MainWindow(QMainWindow):
                 f"Saved scored behaviour bouts to {fp}", timeout=STATUS_MSG_TIMEOUT
             )
 
-    def export_vid(self, fp=None):
-        """__summary__"""
+    def export_vid(self, fp=None) -> None:
+        """__summary__."""
         if not fp:
             fp = QFileDialog.getSaveFileName(
                 self,
@@ -517,7 +517,7 @@ class MainWindow(QMainWindow):
         w: int,
         h: int,
         window_size: int,
-    ):
+    ) -> None:
         """Annotating video with keypoints and scored behaviours loop."""
         # Need to make QApplication for graph_viewer
         app = QApplication()

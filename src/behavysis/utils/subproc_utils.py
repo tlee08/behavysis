@@ -65,7 +65,8 @@ def run_subproc_console(cmd: list[str], **kwargs) -> None:
         p.wait()
         # Error handling (returncode is not 0)
         if p.returncode:
-            raise ValueError("Subprocess failed to run.")
+            msg = "Subprocess failed to run."
+            raise ValueError(msg)
 
 
 def run_subproc_simple(cmd_str) -> None:

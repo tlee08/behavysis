@@ -16,7 +16,7 @@ class HelpWindow(QDialog):
     # ui: Ui_TabWidget
     main: MainWindow
 
-    def __init__(self, main: MainWindow, *args, **kwargs):
+    def __init__(self, main: MainWindow, *args, **kwargs) -> None:
         # Instatiating QMainWindow
         super().__init__(*args, **kwargs)
 
@@ -48,15 +48,15 @@ class HelpWindow(QDialog):
         # Connecting signals and slots
         self._init_conns()
 
-    def _add_label(self, text: str):
+    def _add_label(self, text: str) -> None:
         label = QLabel(text)
         self.layout.addWidget(label)
 
-    def _init_conns(self):
+    def _init_conns(self) -> None:
         # SIGNALS AND SLOTS
         # Close signals
         QShortcut(Qt.Key.Key_Escape, self).activated.connect(self.cancel)
         QShortcut(Qt.Key.Key_H, self).activated.connect(self.cancel)
 
-    def cancel(self):
+    def cancel(self) -> None:
         toggle_window(self)

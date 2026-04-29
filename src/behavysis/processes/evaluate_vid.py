@@ -32,11 +32,11 @@ class EvaluateVid:
         eval_vid_fp: Path,
         configs_fp: Path,
         overwrite: bool,
-    ) -> str:
+    ) -> None:
         """Generate an annotated video with (optionally) keypoints and tracking analysis graphs."""
         if not overwrite and eval_vid_fp.exists():
             logger.warning(file_exists_msg(eval_vid_fp))
-            return ""
+            return
         # Getting necessary config parameters
         configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
         configs_filt = configs.user.evaluate_vid
@@ -119,7 +119,6 @@ class EvaluateVid:
         formatted_vid_cap.release()
         eval_vid_cap.release()
         logger.info(f"Evaluated video saved to {eval_vid_fp}")
-        return ""
 
 
 ###################################################################################################
@@ -137,22 +136,22 @@ class EvalVidFuncBase(ABC):
     height_output: int
 
     @abstractmethod
-    def __init__(self, **kwargs):
-        """Prepare function"""
+    def __init__(self, **kwargs) -> None:
+        """Prepare function."""
 
     @abstractmethod
     def __call__(self, frame: np.ndarray, idx: int) -> np.ndarray:
-        """Run function"""
+        """Run function."""
 
 
 class Johansson(EvalVidFuncBase):
     """Making black frame, in the style of Johansson.
-    This means we see only the keypoints (i.e., what SimBA will see)
+    This means we see only the keypoints (i.e., what SimBA will see).
     """
 
     name = "johansson"
 
-    def __init__(self, width_input: int, height_input: int, **kwargs):
+    def __init__(self, width_input: int, height_input: int, **kwargs) -> None:
         self.width_output = width_input
         self.heigth_output = height_input
 
@@ -180,7 +179,7 @@ class Keypoints(EvalVidFuncBase):
         pcutoff,
         radius,
         **kwargs,
-    ):
+    ) -> None:
         self.width_output = width_input
         self.height_output = height_input
         self.keypoints_df = KeypointsAnnotationsDf.keypoint2annotationsdf(keypoints_df)
@@ -239,7 +238,7 @@ class Analysis(EvalVidFuncBase):
         padding: int,
         fps: float,
         **kwargs,
-    ):
+    ) -> None:
         # TODO make aspect-ratio-weighted value for w_i.
         # Maybe have custom configs value `w_h_ratio`
         self.width_output = width_input
@@ -352,7 +351,7 @@ class Analysis(EvalVidFuncBase):
             height_plot_start += plot_frame_ij.shape[0]
         return plot_frame
 
-    def update_plot(self, idx: int, i: int, j: int):
+    def update_plot(self, idx: int, i: int, j: int) -> None:
         """For a single plot
         (as the plots_layout has rows (analysis) and columns (indivs)).
 
@@ -424,7 +423,7 @@ class VidFuncsRunner:
 
     def __init__(
         self, func_names: list[str], width_input: int, height_input: int, **kwargs
-    ):
+    ) -> None:
         """NOTE: kwargs are the constructor parameters for
         EvalVidFuncBase classes.
         """

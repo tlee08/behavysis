@@ -16,13 +16,13 @@ def make_x_y_dfs(nrows, ncols):
     return x, y
 
 
-def check_windows(ds_windows, ds_orig, window_frames):
-    for i, (a, b) in enumerate(zip(ds_windows, ds_orig)):
+def check_windows(ds_windows, ds_orig, window_frames) -> None:
+    for _i, (a, b) in enumerate(zip(ds_windows, ds_orig, strict=False)):
         assert np.all(np.isclose(a[0][:, window_frames], b[0].numpy()))
         assert np.all(np.isclose(a[1], b[1].numpy()))
 
 
-def test_training_dataloaders():
+def test_training_dataloaders() -> None:
     # Parameters
     nrows = 100
     ncols = 546
@@ -52,7 +52,7 @@ def test_training_dataloaders():
     check_windows(train_ds, orig_ds, window_frames)
 
 
-def test_inference_dataloaders():
+def test_inference_dataloaders() -> None:
     # Parameters
     nrows = 100
     ncols = 546

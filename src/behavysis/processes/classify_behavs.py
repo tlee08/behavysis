@@ -1,4 +1,4 @@
-"""Classify Behaviours"""
+"""Classify Behaviours."""
 
 import logging
 from pathlib import Path

@@ -16,6 +16,7 @@ str
 """
 
 import logging
+from pathlib import Path
 from typing import Literal
 
 from pydantic import ValidationError
@@ -26,7 +27,7 @@ logger = logging.getLogger(__name__)
 
 
 class UpdateConfigs:
-    """_summary_"""
+    """_summary_."""
 
     @staticmethod
     def update_configs(
@@ -71,8 +72,7 @@ class UpdateConfigs:
             configs = default_configs
             logger.info("Updating all configs.")
         else:
-            raise ValueError(
-                f'Invalid value "{overwrite}" passed to function. The value must be either "user", or "all".'
-            )
+            msg = f'Invalid value "{overwrite}" passed to function. The value must be either "user", or "all".'
+            raise ValueError(msg)
         # Writing new configs to JSON file
         configs_fp.write_text(configs.model_dump_json(indent=2))

@@ -10,7 +10,7 @@ interpretable plotted and tabulated data for different analysises. This pipeline
 
 import warnings
 
-import matplotlib
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import seaborn as sns
 
@@ -38,7 +38,7 @@ setup_logging()
 #####################################################################
 
 # Makes graphs non-interactive (saves memory)
-matplotlib.use("Agg")  # QtAgg
+mpl.use("Agg")  # QtAgg
 
 sns.set_theme(style=PLOT_STYLE)
 

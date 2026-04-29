@@ -38,7 +38,7 @@ class KeypointsDf(DFMixin):
 
     @classmethod
     def check_bpts_exist(cls, df: pd.DataFrame, bodyparts: list) -> None:
-        """_summary_
+        """_summary_.
 
         Parameters
         ----------
@@ -58,9 +58,8 @@ class KeypointsDf(DFMixin):
             bpts_ls_msg = "".join(
                 [f"\n    - {bpt}" for bpt in np.array(bodyparts)[bpts_not_exist]]
             )
-            raise ValueError(
-                f"Some bodyparts in the config file are missing from the dataframe. They are:{bpts_ls_msg}"
-            )
+            msg = f"Some bodyparts in the config file are missing from the dataframe. They are:{bpts_ls_msg}"
+            raise ValueError(msg)
 
     @classmethod
     def get_indivs_bpts(cls, df: pd.DataFrame) -> tuple[list[str], list[str]]:

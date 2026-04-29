@@ -11,7 +11,7 @@ def get_cpid() -> int:
 
 
 def get_gpu_ids():
-    """Gets list of GPU IDs from nvidia-smi"""
+    """Gets list of GPU IDs from nvidia-smi."""
     try:
         smi_output = subprocess.check_output(
             ["nvidia-smi", "-L"], universal_newlines=True
@@ -31,7 +31,7 @@ def get_best_gpu(gputouse: None | int = None) -> str:
     - If `gputouse` is given, then return that GPU ID
         - If the given `gputouse` is not in the list, then raises an error
     - If `gputouse` is NOT given, then return the first GPU ID
-        - If there are no GPUs available, then return None
+        - If there are no GPUs available, then return None.
 
     Returns the best GPU ID in the form of PyTorch device string.
     """

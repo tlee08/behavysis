@@ -10,7 +10,7 @@ from behavysis.utils.misc_utils import enum2tuple
 
 
 class DFMixin:
-    """__summary"""
+    """__summary."""
 
     NULLABLE = True
     IN = None
@@ -151,7 +151,7 @@ class DFMixin:
     def basic_clean(cls, df: pd.DataFrame) -> pd.DataFrame:
         """Basic cleaning of the dataframe. Includes:
         - Setting the index and column names (if they are specified)
-        - Sorting the index
+        - Sorting the index.
 
         Also checks that the df structure is as expected with `check_df`.
         """
@@ -180,7 +180,7 @@ class DFMixin:
 
     @classmethod
     def check_df(cls, df: pd.DataFrame) -> None:
-        """__summary__"""
+        """__summary__."""
         # Checking that df is a DataFrame
         assert isinstance(df, pd.DataFrame), "The dataframe must be a pandas DataFrame."
         # Checking there are no null values
@@ -197,7 +197,7 @@ class DFMixin:
 
     @classmethod
     def check_IN(cls, df: pd.DataFrame, levels: EnumType | tuple[str] | str) -> None:
-        """__summary__"""
+        """__summary__."""
         # Converting `levels` to a tuple
         if isinstance(levels, EnumType):  # If Enum
             levels = enum2tuple(levels)
@@ -209,7 +209,7 @@ class DFMixin:
 
     @classmethod
     def check_CN(cls, df: pd.DataFrame, levels: EnumType | tuple[str] | str) -> None:
-        """__summary__"""
+        """__summary__."""
         # Converting `levels` to a tuple
         if isinstance(levels, EnumType):  # If Enum
             levels = enum2tuple(levels)

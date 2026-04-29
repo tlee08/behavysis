@@ -1,4 +1,4 @@
-"""_summary_"""
+"""_summary_."""
 
 from typing import Any
 
@@ -36,7 +36,7 @@ class UserConfigs(BaseModel):
     calculate_params: CalculateParamsConfigs = CalculateParamsConfigs()
     preprocess: PreprocessConfigs = PreprocessConfigs()
     extract_features: ExtractFeaturesConfigs = ExtractFeaturesConfigs()
-    classify_behavs: list[ClassifyBehavConfigs] = list()
+    classify_behavs: list[ClassifyBehavConfigs] = []
     analyse: AnalyseConfigs = AnalyseConfigs()
     evaluate_vid: EvaluateVidConfigs = EvaluateVidConfigs()
 
@@ -57,7 +57,7 @@ class AutoConfigs(BaseModel):
         for name, type_ in cls.__annotations__.items():
             if hasattr(type_, "__annotations__"):
                 for subfield in type_.get_field_names():
-                    fields.append((name,) + subfield)
+                    fields.append((name, *subfield))
             else:
                 fields.append((name,))
         return fields
@@ -93,7 +93,7 @@ class ExperimentConfigs(BaseModel):
         return val
 
     def get_analysis_configs(self) -> tuple[float, float, float, float, list, list]:
-        """_summary_
+        """_summary_.
 
         Parameters
         ----------

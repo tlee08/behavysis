@@ -1,3 +1,5 @@
+import contextlib
+
 import numpy as np
 import pandas as pd
 from PySide6.QtCore import QAbstractListModel, Qt
@@ -12,7 +14,7 @@ from behavysis.models.experiment_configs import ExperimentConfigs
 class BoutsListModel(QAbstractListModel):
     bouts: Bouts
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.load_empty()
 
@@ -28,26 +30,25 @@ class BoutsListModel(QAbstractListModel):
         # Displays background colour
         if role == Qt.ItemDataRole.BackgroundRole:
             return QColor(VALUE2COLOR[bout.actual])
+        return None
 
-    def setData(self, index, value, role):
+    def setData(self, index, value, role) -> bool:
         # Updates checkbox
         # if role == Qt.ItemDataRole.CheckStateRole:
         #     self.bouts_df[index.row()][3] = value
         # self.dataChanged.emit(index, index)
         return True
 
-    def load(self, fp: str, configs: ExperimentConfigs):
+    def load(self, fp: str, configs: ExperimentConfigs) -> None:
         # Loading behaviour data
         df = BehavScoredDf.init_df(pd.Series())
-        try:
+        with contextlib.suppress(FileNotFoundError):
             df = BehavScoredDf.read(fp)
-        except FileNotFoundError:
-            pass
         # behavs_df to bouts
         self.bouts = BehavScoredDf.frames2bouts(df)
         self.layoutChanged.emit()
 
-    def load_empty(self):
+    def load_empty(self) -> None:
         """Load an empty dataset into the instance.
 
         An empty dataset is used as placeholder.

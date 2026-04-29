@@ -35,4 +35,4 @@ class AnalyseConfigs(BaseModel):
     speed: SpeedConfigs = SpeedConfigs()
     social_distance: SocialDistanceConfigs = SocialDistanceConfigs()
     freezing: FreezingConfigs = FreezingConfigs()
-    in_roi: list[InRoiConfigs] = list()
+    in_roi: list[InRoiConfigs] = []

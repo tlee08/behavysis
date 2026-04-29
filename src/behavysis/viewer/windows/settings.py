@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 from typing import TYPE_CHECKING
 
 from PySide6.QtCore import Qt
@@ -17,7 +18,7 @@ class SettingsWindow(QTabWidget):
     ui: Ui_SettingsWindow
     main: MainWindow
 
-    def __init__(self, main: MainWindow, *args, **kwargs):
+    def __init__(self, main: MainWindow, *args, **kwargs) -> None:
         # Instatiating QMainWindow
         super().__init__(*args, **kwargs)
 
@@ -34,7 +35,7 @@ class SettingsWindow(QTabWidget):
         # Connecting signals and slots
         self._init_conns()
 
-    def _init_conns(self):
+    def _init_conns(self) -> None:
         # SIGNALS AND SLOTS: PREFERENCES
         # Save signals
         self.ui.confirm_dbtn.accepted.connect(self.save)
@@ -44,16 +45,16 @@ class SettingsWindow(QTabWidget):
         QShortcut(Qt.Key.Key_Escape, self).activated.connect(self.cancel)
         QShortcut(Qt.Key.Key_P, self).activated.connect(self.cancel)
 
-    def cancel(self):
+    def cancel(self) -> None:
         toggle_window(self)
 
-    def save(self):
+    def save(self) -> None:
         self.set_vid_size()
         self.set_fps()
         self.set_window_size()
         self.set_focus_size()
 
-    def set_vid_size(self):
+    def set_vid_size(self) -> None:
         width_str = self.ui.vid_width_le.text()
         if width_str.isnumeric():
             width = int(width_str)
@@ -61,14 +62,12 @@ class SettingsWindow(QTabWidget):
             # Setting new vid_viewer and plot_viewer dimensions
             self.main.resize_viewer(width, height)
 
-    def set_fps(self):
+    def set_fps(self) -> None:
         vid_speed_str = self.ui.vid_speed_le.text()
-        try:
+        with contextlib.suppress(ValueError):
             self.main.vid_speed = int(vid_speed_str)
-        except ValueError:
-            pass
 
-    def set_window_size(self):
+    def set_window_size(self) -> None:
         window_size_sec_str = self.ui.window_size_le.text()
         try:
             secs = float(window_size_sec_str)
@@ -76,7 +75,7 @@ class SettingsWindow(QTabWidget):
         except ValueError:
             pass
 
-    def set_focus_size(self):
+    def set_focus_size(self) -> None:
         focus_size_sec_str = self.ui.focus_size_le.text()
         try:
             secs = float(focus_size_sec_str)

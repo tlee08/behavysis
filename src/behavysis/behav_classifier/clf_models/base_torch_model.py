@@ -20,7 +20,7 @@ class BaseTorchModel(nn.Module):
     window_frames: int
     _device: torch.device
 
-    def __init__(self, nfeatures: int, window_frames: int):
+    def __init__(self, nfeatures: int, window_frames: int) -> None:
         super().__init__()
         # Storing the input dimensions
         self.nfeatures = nfeatures
@@ -32,7 +32,7 @@ class BaseTorchModel(nn.Module):
         return self._device
 
     @device.setter
-    def device(self, device):
+    def device(self, device) -> None:
         # Setting the device
         self._device = device
         # Updating the model to the device
@@ -44,7 +44,7 @@ class BaseTorchModel(nn.Module):
         if self.optimizer:
             self.optimizer = optim.Adam(self.parameters())
 
-    def device_to_gpu(self):
+    def device_to_gpu(self) -> None:
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     def fit(
@@ -58,7 +58,7 @@ class BaseTorchModel(nn.Module):
     ):
         # Making a 2D array of (df_index, index, y) for train test split
         index_flat = listofvects2array(
-            index_ls, [y[index] for y, index in zip(y_ls, index_ls)]
+            index_ls, [y[index] for y, index in zip(y_ls, index_ls, strict=False)]
         )
         # Split data into training and validation sets
         index_train_flat, index_val_flat = train_test_split(
@@ -117,7 +117,7 @@ class BaseTorchModel(nn.Module):
         return loss
 
     def _validate(self, dl: DataLoader) -> float:
-        """Calculating loss across an entire dataset (i.e. dataloader)"""
+        """Calculating loss across an entire dataset (i.e. dataloader)."""
         # Running inference (also returns corresponding actual labels)
         p, y = self._inference(dl)
         # Calculating the loss
@@ -137,7 +137,7 @@ class BaseTorchModel(nn.Module):
         # Making data loaders
         dl = self.predict_loader(x, index, batch_size=batch_size)
         # Running inference
-        p, y = self._inference(dl)
+        p, _y = self._inference(dl)
         # Converting probabilities to numpy array
         p = p.cpu().numpy()
         # Flattening to 1D array
@@ -221,14 +221,16 @@ class TimeSeriesDataset(Dataset):
         y_ls: list[np.ndarray],
         index_ls: list[np.ndarray],
         window_frames: int,
-    ):
+    ) -> None:
         # Asserting x, and y sizes are equal
-        assert np.all([x.shape[0] == y.shape[0] for x, y in zip(x_ls, y_ls)])
+        assert np.all(
+            [x.shape[0] == y.shape[0] for x, y in zip(x_ls, y_ls, strict=False)]
+        )
         # Asserting indices are a valid range (between 0 and x.shape[0])
         assert np.all(
             [
                 np.all(index >= 0) and np.all(index < x.shape[0])
-                for x, index in zip(x_ls, index_ls)
+                for x, index in zip(x_ls, index_ls, strict=False)
             ]
         )
         # Padding x dfs (for frames on either side)
@@ -245,7 +247,7 @@ class TimeSeriesDataset(Dataset):
         # Making 2D array of (df_index, i)
         self.index_flat = listofvects2array(index_ls)
 
-    def __len__(self):
+    def __len__(self) -> int:
         return self.index_flat.shape[0]
 
     def __getitem__(self, index: int):
@@ -278,7 +280,7 @@ class MemoizedTimeSeriesDataset(TimeSeriesDataset):
         y_ls: list[np.ndarray],
         index_ls: list[np.ndarray],
         window_frames: int,
-    ):
+    ) -> None:
         super().__init__(x_ls, y_ls, index_ls, window_frames)
         # For memoization
         self.memo = {}

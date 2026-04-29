@@ -11,7 +11,7 @@ from PySide6.QtWidgets import QDialogButtonBox, QFormLayout, QLabel, QLineEdit, 
 
 
 class Ui_SettingsWindow:
-    def setupUi(self, SettingsWindow):
+    def setupUi(self, SettingsWindow) -> None:
         if not SettingsWindow.objectName():
             SettingsWindow.setObjectName("SettingsWindow")
         SettingsWindow.resize(270, 222)
@@ -95,7 +95,7 @@ class Ui_SettingsWindow:
 
     # setupUi
 
-    def retranslateUi(self, SettingsWindow):
+    def retranslateUi(self, SettingsWindow) -> None:
         self.vid_header_lb.setText(
             QCoreApplication.translate(
                 "SettingsWindow",

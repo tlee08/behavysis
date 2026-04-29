@@ -1,4 +1,6 @@
-"""_summary_"""
+"""_summary_."""
+
+import contextlib
 
 import cv2
 import numpy as np
@@ -13,7 +15,7 @@ from behavysis.models.experiment_configs import ExperimentConfigs
 
 
 class KeypointsModel:
-    """_summary_"""
+    """_summary_."""
 
     raw_dlc_df: pd.DataFrame
     keypoints_df: pd.DataFrame
@@ -24,10 +26,12 @@ class KeypointsModel:
     colour_level: str
     cmap: str
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.load_empty()
 
-    def load_from_df(self, keypoints_df: pd.DataFrame, configs: ExperimentConfigs):
+    def load_from_df(
+        self, keypoints_df: pd.DataFrame, configs: ExperimentConfigs
+    ) -> None:
         """Load in the raw DLC dataframe and set the configurations, from
         the given dlc_fp and configs.
         """
@@ -44,15 +48,13 @@ class KeypointsModel:
             self.indivs_bpts_df[self.colour_level], self.cmap
         )
 
-    def load(self, fp: str, configs: ExperimentConfigs):
+    def load(self, fp: str, configs: ExperimentConfigs) -> None:
         df = KeypointsDf.init_df(pd.Series())
-        try:
+        with contextlib.suppress(FileNotFoundError):
             df = KeypointsDf.read(fp)
-        except FileNotFoundError:
-            pass
         self.load_from_df(df, configs)
 
-    def load_empty(self):
+    def load_empty(self) -> None:
         """Load an empty dataset into the instance.
 
         An empty dataset is used as placeholder.

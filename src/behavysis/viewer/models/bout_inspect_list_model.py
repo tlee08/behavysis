@@ -17,7 +17,7 @@ class BoutInspectListModel(QAbstractListModel):
 
     actual_signal = Signal()
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
 
         self.bout = Bout(
@@ -61,9 +61,10 @@ class BoutInspectListModel(QAbstractListModel):
         # Displays background colour
         if role == Qt.ItemDataRole.BackgroundRole:
             return QColor(VALUE2COLOR[behav_val])
+        return None
 
-    def setData(self, index, value, role):
-        behav_name, behav_val = self.user_defined[index.row()]
+    def setData(self, index, value, role) -> bool:
+        behav_name, _behav_val = self.user_defined[index.row()]
         # Updates checkbox
         if role == Qt.ItemDataRole.CheckStateRole:
             value = CHECKSTATE2VALUE[value]
@@ -71,7 +72,7 @@ class BoutInspectListModel(QAbstractListModel):
         self.dataChanged.emit(index, index)
         return True
 
-    def load(self, bout: Bout, id_: int):
+    def load(self, bout: Bout, id_: int) -> None:
         self.bout = bout
         self.id = id_
         # For QListView

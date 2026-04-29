@@ -28,5 +28,5 @@ class RefineIdsConfigs(BaseModel):
 
 class PreprocessConfigs(BaseModel):
     interpolate: InterpolateConfigs = InterpolateConfigs()
-    interpolate_stationary: list[InterpolateStationaryConfigs] = list()
+    interpolate_stationary: list[InterpolateStationaryConfigs] = []
     refine_ids: RefineIdsConfigs = RefineIdsConfigs()

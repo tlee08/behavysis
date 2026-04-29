@@ -46,7 +46,8 @@ class Project:
     def __init__(self, root_dir: str | Path) -> None:
         root_dir = Path(root_dir)
         if not root_dir.is_dir():
-            raise ValueError(f'The folder "{root_dir}" does not exist.')
+            msg = f'The folder "{root_dir}" does not exist.'
+            raise ValueError(msg)
         self.root_dir = root_dir.resolve()
         self._experiments = {}
         self.nprocs = 4
@@ -61,7 +62,8 @@ class Project:
     def get_experiment(self, name: str) -> Experiment:
         if name in self._experiments:
             return self._experiments[name]
-        raise ValueError(f'Experiment "{name}" does not exist in the project.')
+        msg = f'Experiment "{name}" does not exist in the project.'
+        raise ValueError(msg)
 
     def _run_parallel(self, method: Callable, *args: Any, **kwargs: Any) -> list[Any]:
         """Run a method on all experiments in parallel."""
@@ -172,7 +174,7 @@ class Project:
                     gputouse=gpu,
                     overwrite=overwrite,
                 )
-                for gpu, batch in zip(gputouse_ls, exp_batches)
+                for gpu, batch in zip(gputouse_ls, exp_batches, strict=False)
             ]
             list(dask.compute(*delayed_tasks))
 
@@ -250,7 +252,7 @@ class Project:
         configs = ExperimentConfigs.model_validate_json(
             self.experiments[0].get_fp(Folders.CONFIGS).read_text()
         )
-        bin_sizes = list(configs.get_ref(configs.user.analyse.bins_sec)) + ["custom"]
+        bin_sizes = [*list(configs.get_ref(configs.user.analyse.bins_sec)), "custom"]
 
         for subdir in proj_analyse_dir.iterdir():
             if not subdir.is_dir():

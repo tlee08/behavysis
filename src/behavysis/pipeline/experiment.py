@@ -37,19 +37,21 @@ class Experiment:
     def __init__(self, name: str, root_dir: str | Path) -> None:
         root_dir = Path(root_dir)
         if not root_dir.is_dir():
-            raise ValueError(
+            msg = (
                 f'Cannot find the project folder "{root_dir}". '
                 "Please specify a folder that exists."
             )
+            raise ValueError(msg)
         self.name = name
         self.root_dir = root_dir.resolve()
         file_exists_ls = [self.get_fp(f).is_file() for f in Folders]
         if not np.any(file_exists_ls):
             folders_ls_msg = "".join([f"\n    - {f.value}" for f in Folders])
-            raise ValueError(
+            msg = (
                 f'No files named "{name}" exist in "{root_dir}".\n'
                 f"Please specify a file in one of these folders:{folders_ls_msg}"
             )
+            raise ValueError(msg)
 
     def get_fp(self, folder: Folders | str) -> Path:
         """Returns the experiment's file path from the given folder."""
@@ -58,9 +60,8 @@ class Experiment:
                 folder = Folders(folder)
             except ValueError:
                 valid = "".join([f"\n    - {f.value}" for f in Folders])
-                raise ValueError(
-                    f"{folder} is not a valid folder. Valid folders:{valid}"
-                )
+                msg = f"{folder} is not a valid folder. Valid folders:{valid}"
+                raise ValueError(msg)
         file_ext: FileExts = getattr(FileExts, folder.name)
         return self.root_dir / folder.value / f"{self.name}.{file_ext.value}"
 

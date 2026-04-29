@@ -51,7 +51,7 @@ def make_dlc_df_for_dur(sections_params_ls, columns):
     return dlc_df
 
 
-def test_start_frame():
+def test_start_frame() -> None:
     # Defining testing params
     fps = 15
     before_size = 500
@@ -81,7 +81,7 @@ def test_start_frame():
     dlc_df.to_parquet(dlc_df_io_in)
 
     # Testing start_frame func
-    output = CalculateParams.start_frame_from_likelihood(dlc_df_io_in, configs_io)
+    CalculateParams.start_frame_from_likelihood(dlc_df_io_in, configs_io)
 
     # Getting updated configs
     configs = ExperimentConfigs.model_validate_json(configs_io.read_text())
@@ -91,7 +91,7 @@ def test_start_frame():
     assert np.abs(configs.auto.start_frame - before_size) < 10
 
 
-def test_stop_frame():
+def test_stop_frame() -> None:
     # Defining testing params
     fps = 15
     start_frame = 500
@@ -123,7 +123,7 @@ def test_stop_frame():
     dlc_df.to_parquet(dlc_df_io_in)
 
     # Testing start_frame func
-    output = CalculateParams.stop_frame_from_dur(dlc_df_io_in, configs_io)
+    CalculateParams.stop_frame_from_dur(dlc_df_io_in, configs_io)
 
     # Getting updated configs
     configs = ExperimentConfigs.model_validate_json(configs_io.read_text())
@@ -133,7 +133,7 @@ def test_stop_frame():
     assert configs.auto.stop_frame == start_frame + dur_sec * fps
 
 
-def test_exp_dur():
+def test_exp_dur() -> None:
     # Defining testing params
     fps = 15
     before_size = 500
@@ -165,7 +165,7 @@ def test_exp_dur():
     dlc_df.to_parquet(dlc_df_io_in)
 
     # Testing start_frame func
-    output = CalculateParams.dur_frames_from_likelihood(dlc_df_io_in, configs_io)
+    CalculateParams.dur_frames_from_likelihood(dlc_df_io_in, configs_io)
 
     # Getting updated configs
     configs = ExperimentConfigs.model_validate_json(configs_io.read_text())

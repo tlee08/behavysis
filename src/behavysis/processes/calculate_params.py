@@ -55,7 +55,7 @@ class CalculateParams:
                     - pcutoff: float
         ```
         """
-        start_frame, stop_frame = calc_exists_from_likelihood(keypoints_fp, configs_fp)
+        start_frame, _stop_frame = calc_exists_from_likelihood(keypoints_fp, configs_fp)
         # Writing to configs
         configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
         configs.auto.start_frame = start_frame
@@ -121,7 +121,7 @@ class CalculateParams:
         the determine this as the start time.
 
         """
-        start_frame, stop_frame = calc_exists_from_likelihood(keypoints_fp, configs_fp)
+        _start_frame, stop_frame = calc_exists_from_likelihood(keypoints_fp, configs_fp)
         # Writing to configs
         configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
         configs.auto.stop_frame = stop_frame

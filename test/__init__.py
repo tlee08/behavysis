@@ -1,4 +1,4 @@
-"""_summary_
+"""_summary_.
 
 ```
 pytest --log-cli-level=INFO

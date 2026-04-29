@@ -146,7 +146,7 @@ class AnalysisSummaryDf(DFMixin):
 
 
 class AnalysisBinnedDf(DFMixin):
-    """__summary__"""
+    """__summary__."""
 
     NULLABLE = False
     IN = AnalysisBinnedIN
@@ -191,8 +191,8 @@ class AnalysisBinnedDf(DFMixin):
         binned_df: pd.DataFrame,
         dst_fp: Path,
         agg_column: str,
-    ):
-        """_summary_"""
+    ) -> None:
+        """_summary_."""
         # Making binned_df long
         binned_stacked_df = (
             binned_df.stack(enum2tuple(AnalysisSummaryDf.IN))[agg_column]
@@ -233,7 +233,7 @@ class AnalysisBinnedDf(DFMixin):
         bins_ls: list,
         cbins_ls: list,
     ) -> None:
-        """_summary_"""
+        """_summary_."""
         return cls.summary_binned(
             analysis_df=analysis_df,
             dst_dir=dst_dir,
@@ -255,7 +255,7 @@ class AnalysisBinnedDf(DFMixin):
         bins_ls: list,
         cbins_ls: list,
     ) -> None:
-        """_summary_"""
+        """_summary_."""
         cls.summary_binned(
             analysis_df=analysis_df,
             dst_dir=dst_dir,
@@ -310,7 +310,7 @@ class AnalysisBinnedDf(DFMixin):
         bins_ls: list,
         cbins_ls: list,
     ) -> None:
-        """_summary_"""
+        """_summary_."""
         # Offsetting the frames index to start from 0
         # (i.e. when the experiment commenced, rather than when the recording started)
         index_df = analysis_df.index.to_frame(index=False)

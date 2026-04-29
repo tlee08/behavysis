@@ -5,7 +5,7 @@ from PySide6.QtWidgets import QApplication
 from behavysis.viewer.windows.main import MainWindow
 
 
-def main():
+def main() -> None:
     app = QApplication(sys.argv)
 
     window = MainWindow()

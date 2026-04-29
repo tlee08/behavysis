@@ -36,7 +36,7 @@ logger = logging.getLogger(__name__)
 
 
 class Preprocess:
-    """_summary_"""
+    """_summary_."""
 
     @classmethod
     def start_stop_trim(
@@ -118,9 +118,8 @@ class Preprocess:
         width_px = configs.auto.formatted_vid.width_px
         height_px = configs.auto.formatted_vid.height_px
         if width_px is None or height_px is None:
-            raise ValueError(
-                "Width and height must be provided in the formatted video. Try running FormatVid.format_vid."
-            )
+            msg = "Width and height must be provided in the formatted video. Try running FormatVid.format_vid."
+            raise ValueError(msg)
         # Reading file
         keypoints_df = KeypointsDf.read(src_fp)
         # Getting the scorer name
@@ -193,8 +192,10 @@ class Preprocess:
         # Setting low-likelihood points to Nan to later interpolate
         for scorer, indiv, bp in unique_cols:
             # Imputing Nan likelihood points with 0
-            keypoints_df[(scorer, indiv, bp, CoordsCols.LIKELIHOOD.value)].fillna(
-                value=0, inplace=True
+            keypoints_df[(scorer, indiv, bp, CoordsCols.LIKELIHOOD.value)] = (
+                keypoints_df[(scorer, indiv, bp, CoordsCols.LIKELIHOOD.value)].fillna(
+                    value=0
+                )
             )
             # Setting x and y coordinates of points that have low likelihood to Nan
             to_remove = (
@@ -261,9 +262,8 @@ class Preprocess:
             (marking, "bodyparts"),
         ]:
             if column not in keypoints_df.columns.unique(level):
-                raise ValueError(
-                    f'The marking value in the config file, "{column}", is not a column name in the DLC file.'
-                )
+                msg = f'The marking value in the config file, "{column}", is not a column name in the DLC file.'
+                raise ValueError(msg)
         # Checking that bodyparts are all valid
         KeypointsDf.check_bpts_exist(keypoints_df, bpts)
         # Calculating the distances between the averaged bodycentres and the marking
@@ -286,7 +286,7 @@ def get_mark_dists_df(
     mark_pts: list[str],
     bpts: list[str],
 ) -> pd.DataFrame:
-    """_summary_
+    """_summary_.
 
     Parameters
     ----------
@@ -393,7 +393,7 @@ def switch_identities(
     marked_indiv: str,
     unmarked_indiv: str,
 ) -> pd.DataFrame:
-    """_summary_
+    """_summary_.
 
     Parameters
     ----------

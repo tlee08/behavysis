@@ -27,7 +27,7 @@ def const2list(x: Any, n: int) -> list[Any]:
 def dictlists2listdicts(my_dict):
     """Converts a dict of lists to a list of dicts."""
     # Asserting that all values (lists) have same size
-    n = len(list(my_dict.values())[0])
+    n = len(next(iter(my_dict.values())))
     for i in my_dict.values():
         assert len(i) == n
     # Making list of dicts
@@ -74,7 +74,7 @@ def listofvects2array(*list_of_vects):
     # Assert that all vects across the set have the same length
     if len(list_of_vects) == 0:
         return np.zeros(shape=(0, 0))
-    for list_of_vects_i in zip(*list_of_vects):
+    for list_of_vects_i in zip(*list_of_vects, strict=False):
         if len(list_of_vects_i) == 0:
             continue
         for v in list_of_vects_i[1:]:
@@ -85,12 +85,12 @@ def listofvects2array(*list_of_vects):
     return np.concatenate(
         [
             np.stack((np.repeat(i, vects[0]), *vects[1:]), axis=1)
-            for i, vects in enumerate(zip(lengths_ls, *list_of_vects))
+            for i, vects in enumerate(zip(lengths_ls, *list_of_vects, strict=False))
         ],
         axis=0,
     )
 
 
 def array2listofvect(arr, vect_index):
-    """Inverse of listofvects2array, except chooses only one of the vects"""
+    """Inverse of listofvects2array, except chooses only one of the vects."""
     return [arr[arr[:, 0] == i, vect_index] for i in np.sort(np.unique(arr[:, 0]))]

@@ -1,4 +1,4 @@
-"""_summary_"""
+"""_summary_."""
 
 import cv2
 import numpy as np
@@ -9,9 +9,9 @@ from behavysis.utils.qt_utils import cv2qt
 
 
 class CvView(QLabel):
-    """_summary_"""
+    """_summary_."""
 
-    def __init__(self, parent=None, **kwargs):
+    def __init__(self, parent=None, **kwargs) -> None:
         """Displays cv2 images (i.e. numpy arrays).
 
         Parameters
@@ -30,7 +30,7 @@ class CvView(QLabel):
         img_cv = np.full((self.height(), self.width(), 3), 127, dtype=np.uint8)
         self.display_cv2(img_cv)
 
-    def display_fp(self, fp: str):
+    def display_fp(self, fp: str) -> None:
         """Displaying image in given `fp`.
 
         Parameters
@@ -61,5 +61,5 @@ class CvView(QLabel):
         # QImage to QPixmap and displkaying on widget
         self.setPixmap(QPixmap.fromImage(img_qt))
 
-    def setFixedSize(self, width, height):
+    def setFixedSize(self, width, height) -> None:
         super().setFixedSize(width, height)

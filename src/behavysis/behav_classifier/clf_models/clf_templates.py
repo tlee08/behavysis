@@ -1,4 +1,4 @@
-"""_summary_"""
+"""_summary_."""
 
 import numpy as np
 import pandas as pd
@@ -15,7 +15,7 @@ class RF1(RandomForestClassifier):
     y outcome is (samples, class).
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(
             n_estimators=2000,
             max_depth=3,
@@ -34,8 +34,8 @@ class RF1(RandomForestClassifier):
         **kwargs,
     ):
         # Filtering data
-        x_ls = [x[index] for x, index in zip(x_ls, index_ls)]
-        y_ls = [y[index] for y, index in zip(y_ls, index_ls)]
+        x_ls = [x[index] for x, index in zip(x_ls, index_ls, strict=False)]
+        y_ls = [y[index] for y, index in zip(y_ls, index_ls, strict=False)]
         # Concatenating dataframes
         x = np.concatenate(x_ls, axis=0)
         y = np.concatenate(y_ls, axis=0)
@@ -56,7 +56,7 @@ class DNN1(BaseTorchModel):
     y outcome is (samples, class).
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         # Initialising the parent class
         super().__init__(498, 0)  # 546
         # Input shape
@@ -91,7 +91,7 @@ class DNN2(BaseTorchModel):
     y outcome is (samples, class).
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         # Initialising the parent class
         super().__init__(498, 0)  # 546
         # Input shape
@@ -126,7 +126,7 @@ class DNN3(BaseTorchModel):
     y outcome is (samples, class).
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         # Initialising the parent class
         super().__init__(498, 0)  # 546
         # Input shape
@@ -167,7 +167,7 @@ class CNN1(BaseTorchModel):
     y outcome is (samples, class).
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         # Initialising the parent class
         super().__init__(498, 10)  # 546
         # Define the layers
@@ -211,7 +211,7 @@ class CNN2(BaseTorchModel):
     y outcome is (samples, class).
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         # Initialising the parent class
         super().__init__(498, 10)  # 546
         # Define the layers

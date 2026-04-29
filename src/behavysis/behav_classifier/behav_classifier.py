@@ -1,4 +1,4 @@
-"""_summary_"""
+"""_summary_."""
 
 from __future__ import annotations
 
@@ -220,10 +220,11 @@ class BehavClassifier:
         try:
             BehavClassifierConfigs.model_validate_json(configs_fp.read_text())
         except (FileNotFoundError, OSError):
-            raise ValueError(
+            msg = (
                 f'Model in project directory, "{proj_dir}", and behav name, "{behav_name}", not found.\n'
                 "Please check file path."
             )
+            raise ValueError(msg)
         return cls(proj_dir, behav_name)
 
     ###############################################################################################
@@ -257,7 +258,7 @@ class BehavClassifier:
         """The preprocessing steps are:
         - Select only the derived features (not the x-y-l columns)
             - 2 (indivs) * 8 (bpts) * 3 (coords) = 48 (columns) before derived features
-        - MinMax scaling (using previously fitted MinMaxScaler)
+        - MinMax scaling (using previously fitted MinMaxScaler).
         """
         preproc_pipe = Pipeline(
             steps=[
@@ -371,10 +372,15 @@ class BehavClassifier:
             for y in y_df_ls
         ]
         # Ensuring x and y dfs have the same index and are in the same row order
-        index_df_ls = [x.index.intersection(y.index) for x, y in zip(x_df_ls, y_df_ls)]
-        x_df_ls = [x.loc[index] for x, index in zip(x_df_ls, index_df_ls)]
-        y_df_ls = [y.loc[index] for y, index in zip(y_df_ls, index_df_ls)]
-        assert np.all([x.shape[0] == y.shape[0] for x, y in zip(x_df_ls, y_df_ls)])
+        index_df_ls = [
+            x.index.intersection(y.index)
+            for x, y in zip(x_df_ls, y_df_ls, strict=False)
+        ]
+        x_df_ls = [x.loc[index] for x, index in zip(x_df_ls, index_df_ls, strict=False)]
+        y_df_ls = [y.loc[index] for y, index in zip(y_df_ls, index_df_ls, strict=False)]
+        assert np.all(
+            [x.shape[0] == y.shape[0] for x, y in zip(x_df_ls, y_df_ls, strict=False)]
+        )
         # Converting to numpy arrays
         x_ls = [x.values for x in x_df_ls]
         y_ls = [y.values for y in y_df_ls]
@@ -431,7 +437,7 @@ class BehavClassifier:
         # Saving model
         joblib_dump(self.clf, self.clf_fp)
 
-    def pipeline_training_all(self):
+    def pipeline_training_all(self) -> None:
         """Making classifier for all available templates."""
         # Saving existing clf
         clf = self.clf
@@ -478,7 +484,7 @@ class BehavClassifier:
     # COMPREHENSIVE EVALUATION FUNCTIONS
     #################################################
 
-    def clf_eval_save_history(self, history: pd.DataFrame):
+    def clf_eval_save_history(self, history: pd.DataFrame) -> None:
         # Saving history df
         DFMixin.write(history, self.eval_dir / f"history.{DFMixin.IO}")
         # Making and saving history figure
@@ -508,10 +514,10 @@ class BehavClassifier:
             Figure showing the logistic curve for different predicted probabilities.
         """
         # Getting predictions
-        y_true_ls = [y[index] for y, index in zip(y_ls, index_ls)]
+        y_true_ls = [y[index] for y, index in zip(y_ls, index_ls, strict=False)]
         y_prob_ls = [
             self.clf.predict(x=x, index=index, batch_size=self.configs.batch_size)
-            for x, index in zip(x_ls, index_ls)
+            for x, index in zip(x_ls, index_ls, strict=False)
         ]
         # Making eval vects
         y_true = np.concatenate(y_true_ls)
@@ -557,7 +563,7 @@ class BehavClassifier:
 
     @classmethod
     def eval_report(cls, y_true: np.ndarray, y_pred: np.ndarray) -> dict:
-        """__summary__"""
+        """__summary__."""
         return classification_report(
             y_true=y_true,
             y_pred=y_pred,
@@ -567,7 +573,7 @@ class BehavClassifier:
 
     @classmethod
     def eval_conf_matr(cls, y_true: np.ndarray, y_pred: np.ndarray) -> Figure:
-        """__summary__"""
+        """__summary__."""
         # Making confusion matrix
         fig, ax = plt.subplots(figsize=(7, 7))
         sns.heatmap(
@@ -586,7 +592,7 @@ class BehavClassifier:
 
     @classmethod
     def eval_metrics_pcutoffs(cls, y_true: np.ndarray, y_prob: np.ndarray) -> Figure:
-        """__summary__"""
+        """__summary__."""
         # Getting precision, recall and accuracy for different cutoffs
         pcutoffs = np.linspace(0, 1, 101)
         # Measures
@@ -616,7 +622,7 @@ class BehavClassifier:
 
     @classmethod
     def eval_logc(cls, y_true: np.ndarray, y_prob: np.ndarray) -> Figure:
-        """__summary__"""
+        """__summary__."""
         y_eval = pd.DataFrame(
             {
                 "y_true": y_true,
@@ -644,7 +650,7 @@ class BehavClassifier:
 
     @classmethod
     def eval_bouts(cls, y_true: np.ndarray, y_pred: np.ndarray) -> pd.DataFrame:
-        """__summary__"""
+        """__summary__."""
         y_eval = pd.DataFrame({"y_true": y_true, "y_pred": y_pred})
         y_eval["ids"] = np.cumsum(y_eval["y_true"] != y_eval["y_true"].shift())
         # Getting the proportion of correct predictions for each bout

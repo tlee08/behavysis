@@ -30,7 +30,7 @@ from behavysis.viewer.widgets.graph_view import GraphView
 
 
 class Ui_MainWindow:
-    def setupUi(self, MainWindow):
+    def setupUi(self, MainWindow) -> None:
         if not MainWindow.objectName():
             MainWindow.setObjectName("MainWindow")
         MainWindow.resize(683, 496)
@@ -292,7 +292,7 @@ class Ui_MainWindow:
 
     # setupUi
 
-    def retranslateUi(self, MainWindow):
+    def retranslateUi(self, MainWindow) -> None:
         MainWindow.setWindowTitle(
             QCoreApplication.translate("MainWindow", "MainWindow", None)
         )

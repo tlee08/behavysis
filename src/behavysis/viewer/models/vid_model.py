@@ -8,17 +8,18 @@ class VidModel:
     nframes = int
     jump_size: int
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         self.vid = None
         self.fps = None
         self.nframes = None
         self.jump_size = None
 
-    def load(self, fp: str):
+    def load(self, fp: str) -> None:
         # Read video
         self.vid = cv2.VideoCapture(fp)
         if not self.vid.isOpened():
-            raise ValueError("Error opening video")
+            msg = "Error opening video"
+            raise ValueError(msg)
         # Get video properties
         self.fps = int(self.vid.get(cv2.CAP_PROP_FPS))
         self.nframes = int(self.vid.get(cv2.CAP_PROP_FRAME_COUNT))

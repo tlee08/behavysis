@@ -7,7 +7,7 @@ class ExpFileManager:
     _root_dir: Path
     _name: str
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         pass
 
     @property
@@ -42,7 +42,7 @@ class ExpFileManager:
     def name(self, value: str) -> None:
         self._name = value
 
-    def load(self, fp: Path):
+    def load(self, fp: Path) -> None:
         self.root_dir = fp.parent.parent
         self.name = fp.stem
 

@@ -27,7 +27,7 @@ class GraphView(PlotWidget):
     bars: dict[int, BarGraphItem]
     time_marker_line: InfiniteLine
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
 
         # Linking reference to main window
@@ -39,7 +39,7 @@ class GraphView(PlotWidget):
         # Brining time_marker_line to front
         self.time_marker_line.setZValue(10)
 
-    def set_plot_attr(self, **kwargs):
+    def set_plot_attr(self, **kwargs) -> None:
         if "xmin" in kwargs and "xmax" in kwargs:
             self.setXRange(
                 kwargs["xmin"],
@@ -53,7 +53,7 @@ class GraphView(PlotWidget):
                 # padding=kwargs.get("ypadding", 0),  # type: ignore
             )
 
-    def plot_bouts_init(self, bouts: Bouts, configs: ExperimentConfigs):
+    def plot_bouts_init(self, bouts: Bouts, configs: ExperimentConfigs) -> None:
         # Getting necessary configs
         fps = configs.auto.formatted_vid.fps
         # Getting data
@@ -64,7 +64,7 @@ class GraphView(PlotWidget):
         # Plotting data
         self.plot_init(start_ls, stop_ls, behavs_ls, actual_ls)
 
-    def plot_init(self, start_ls, stop_ls, behavs_ls, actual_ls, **kwargs):
+    def plot_init(self, start_ls, stop_ls, behavs_ls, actual_ls, **kwargs) -> None:
         # Clearing plot and data
         self.clear()
         self.bars = {}
@@ -74,7 +74,7 @@ class GraphView(PlotWidget):
         # Plotting bouts as bars
         behavs_ls_i, behavs_cat = pd.factorize(behavs_ls)
         for i, (start, stop, behav, actual) in enumerate(
-            zip(start_ls, stop_ls, behavs_ls_i, actual_ls)
+            zip(start_ls, stop_ls, behavs_ls_i, actual_ls, strict=False)
         ):
             # Making bar item
             bar_ = BarGraphItem(
@@ -97,20 +97,20 @@ class GraphView(PlotWidget):
         # Setting plot aesthetics
         self.set_plot_attr(**kwargs)
 
-    def _on_bar_double_click(self, event, id_):
+    def _on_bar_double_click(self, event, id_) -> None:
         if self.main is not None:
             # Getting index of bout with given `id_`
             index = self.main.bouts_model.index(id_)
             # Selecting this bout in bouts_view list
             self.main.ui.bouts_view.setCurrentIndex(index)
 
-    def plot_update(self, i, **kwargs):
+    def plot_update(self, i, **kwargs) -> None:
         # Plotting data
         self.time_marker_line.setPos(i)
         # Plot aesthetics
         self.set_plot_attr(**kwargs)
 
-    def update_bar(self, id_: int, opts: dict):
+    def update_bar(self, id_: int, opts: dict) -> None:
         # Get old bar
         old_bar = self.bars[id_]
         # Make new bar

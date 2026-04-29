@@ -41,7 +41,7 @@ DLC_HDF_KEY = "data"
 
 
 class RunDLC:
-    """_summary_"""
+    """_summary_."""
 
     @classmethod
     def ma_dlc_run_single(
@@ -67,10 +67,11 @@ class RunDLC:
 
         # Assertion: the config.yaml file must exist.
         if not model_fp.is_file():
-            raise ValueError(
+            msg = (
                 f'The given model_fp file does not exist: "{model_fp}".\n'
                 'Check this file and specify a DLC ".yaml" config file.'
             )
+            raise ValueError(msg)
 
         # Running the DLC subprocess (in a separate conda env)
         run_dlc_subproc(model_fp, [formatted_vid_fp], temp_dlc_dir, CACHE_DIR, gputouse)
@@ -178,7 +179,7 @@ def run_dlc_subproc(
 
 
 def export2df(name: str, src_dir: Path, dst_dir: Path) -> None:
-    """__summary__"""
+    """__summary__."""
     # Get the corresponding .h5 filename
     name_fp_ls = [
         i for i in src_dir.iterdir() if re.search(rf"^{name}DLC.*\.h5$", i.name)

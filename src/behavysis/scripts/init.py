@@ -6,7 +6,7 @@ from pathlib import Path
 def main() -> None:
     """Sets up the behavysis environment.
     - Installs DEEPLABCUT conda env
-    - Installs SimBA conda env
+    - Installs SimBA conda env.
     """
     templates_dir = Path(str(files("behavysis"))) / "templates"
     # Running
