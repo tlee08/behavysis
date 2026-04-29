@@ -1,3 +1,4 @@
+import logging
 import os
 
 import numpy as np
@@ -8,9 +9,7 @@ from behavysis.df_classes.behav_df import BehavScoredDf, BehavValues
 from behavysis.models.experiment_configs import ExperimentConfigs
 from behavysis.utils.io_utils import get_name
 
-###################################################################################################
-#               ANALYSIS API FUNCS
-###################################################################################################
+logger = logging.getLogger(__name__)
 
 
 class AnalyseBehavs:
@@ -21,7 +20,6 @@ class AnalyseBehavs:
         configs_fp: str,
     ) -> str:
         """Takes a behavs dataframe and generates a summary and binned version of the data."""
-        logger = logging.getLogger(__name__)
         name = get_name(behavs_fp)
         dst_subdir = os.path.join(dst_dir, "analyse_behavs")
         # Calculating the deltas (changes in body position) between each frame for the subject

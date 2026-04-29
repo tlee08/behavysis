@@ -1,5 +1,4 @@
-"""__summary__"""
-
+import logging
 import os
 from abc import ABC, abstractmethod
 
@@ -20,11 +19,7 @@ from behavysis.models.experiment_configs import ExperimentConfigs
 from behavysis.utils.diagnostics_utils import file_exists_msg
 from behavysis.utils.qt_utils import qt2cv
 
-###################################################################################################
-# EVALUATE VID FUNC, WHICH FACES OUT
-###################################################################################################
-
-# TODO: revamp logging
+logger = logging.getLogger(__name__)
 
 
 class EvaluateVid:
@@ -39,7 +34,6 @@ class EvaluateVid:
         overwrite: bool,
     ) -> str:
         """Generate an annotated video with (optionally) keypoints and tracking analysis graphs."""
-        logger = logging.getLogger(__name__)
         if not overwrite and os.path.exists(eval_vid_fp):
             logger.warning(file_exists_msg(eval_vid_fp))
             return ""
@@ -107,7 +101,7 @@ class EvaluateVid:
         # Define the codec and create VideoWriter object
         eval_vid_cap = cv2.VideoWriter(
             eval_vid_fp,
-            cv2.VideoWriter_fourcc(*"mp4v"),  # type: ignore
+            cv2.VideoWriter_fourcc(*"mp4v"),
             fps,
             (vid_funcs_runner.width_out, vid_funcs_runner.height_out),
         )
@@ -124,6 +118,7 @@ class EvaluateVid:
         # Release video objects
         formatted_vid_cap.release()
         eval_vid_cap.release()
+        logger.info(f"Evaluated video saved to {eval_vid_fp}")
         return ""
 
 

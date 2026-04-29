@@ -28,12 +28,6 @@ from behavysis.processes.preprocess import Preprocess
 from behavysis.utils.logging_utils import setup_logging
 
 #####################################################################
-#               FILTERING STDOUT WARNINGS
-#####################################################################
-
-warnings.filterwarnings("ignore")
-
-#####################################################################
 #              SETTING UP LOGGING
 #####################################################################
 
@@ -42,7 +36,6 @@ setup_logging()
 #####################################################################
 #           INITIALISE MPL PLOTTING PARAMETERS
 #####################################################################
-
 
 # Makes graphs non-interactive (saves memory)
 matplotlib.use("Agg")  # QtAgg

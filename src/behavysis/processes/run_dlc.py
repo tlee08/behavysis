@@ -34,6 +34,8 @@ from behavysis.utils.io_utils import get_name, silent_remove
 from behavysis.utils.subproc_utils import run_subproc_console
 from behavysis.utils.template_utils import save_template
 
+logger = logging.getLogger(__name__)
+
 DLC_HDF_KEY = "data"
 
 
@@ -50,7 +52,6 @@ class RunDLC:
         overwrite: bool,
     ) -> str:
         """Running custom DLC script to generate a DLC keypoints dataframe from a single video."""
-        logger = logging.getLogger(__name__)
         if not overwrite and os.path.exists(keypoints_fp):
             logger.warning(file_exists_msg(keypoints_fp))
             return ""
@@ -90,8 +91,6 @@ class RunDLC:
         overwrite: bool,
     ) -> str:
         """Running custom DLC script to generate a DLC keypoints dataframe from a single video."""
-        logger = logging.getLogger(__name__)
-
         # Specifying the GPU to use and making the output directory
         # Making output directories
         temp_dlc_dir = os.path.join(CACHE_DIR, f"dlc_{gputouse}")

@@ -26,6 +26,8 @@ from behavysis.df_classes.keypoints_df import (
 from behavysis.models.experiment_configs import ExperimentConfigs
 from behavysis.utils.io_utils import get_name
 
+logger = logging.getLogger(__name__)
+
 
 class CalculateParams:
     @staticmethod
@@ -52,7 +54,6 @@ class CalculateParams:
                     - pcutoff: float
         ```
         """
-        logger = logging.getLogger(__name__)
         start_frame, stop_frame = calc_exists_from_likelihood(
             keypoints_fp, configs_fp, logger
         )
@@ -84,7 +85,6 @@ class CalculateParams:
                     - name: None | str
         ```
         """
-        logger = logging.getLogger(__name__)
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
         configs_filt = configs.user.calculate_params.start_frame_from_csv
@@ -124,7 +124,6 @@ class CalculateParams:
         the determine this as the start time.
 
         """
-        logger = logging.getLogger(__name__)
         start_frame, stop_frame = calc_exists_from_likelihood(
             keypoints_fp, configs_fp, logger
         )
@@ -152,7 +151,6 @@ class CalculateParams:
                     - dur_sec: float
         ```
         """
-        logger = logging.getLogger(__name__)
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
         configs_filt = configs.user.calculate_params.stop_frame_from_dur
@@ -192,7 +190,6 @@ class CalculateParams:
         to the time they disappeared.
         Appear/disappear is calculated from likelihood.
         """
-        logger = logging.getLogger(__name__)
         start_frame, stop_frame = calc_exists_from_likelihood(
             keypoints_fp, configs_fp, logger
         )
@@ -227,7 +224,6 @@ class CalculateParams:
                     - dist_mm: float
         ```
         """
-        logger = logging.getLogger(__name__)
         # Getting necessary config parameters
         configs = ExperimentConfigs.read_json(configs_fp)
         configs_filt = configs.user.calculate_params.px_per_mm

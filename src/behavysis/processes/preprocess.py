@@ -32,6 +32,8 @@ from behavysis.df_classes.keypoints_df import (
 from behavysis.models.experiment_configs import ExperimentConfigs
 from behavysis.utils.diagnostics_utils import file_exists_msg
 
+logger = logging.getLogger(__name__)
+
 
 class Preprocess:
     """_summary_"""
@@ -71,7 +73,6 @@ class Preprocess:
                     - stop_frame: int
         ```
         """
-        logger = logging.getLogger(__name__)
         if not overwrite and os.path.exists(dst_fp):
             logger.warning(file_exists_msg(dst_fp))
             return ""
@@ -109,7 +110,6 @@ class Preprocess:
                     ]
         ```
         """
-        logger = logging.getLogger(__name__)
         if not overwrite and os.path.exists(dst_fp):
             logger.warning(file_exists_msg(dst_fp))
             return ""
@@ -183,7 +183,6 @@ class Preprocess:
         ```
         """
         # TODO: have error checking for any columns that have NO points above the pcutoff (so they are all NaN)
-        logger = logging.getLogger(__name__)
         if not overwrite and os.path.exists(dst_fp):
             logger.warning(file_exists_msg(dst_fp))
             return ""
@@ -242,7 +241,6 @@ class Preprocess:
                     - metric: ["current", "rolling", "binned"]
         ```
         """
-        logger = logging.getLogger(__name__)
         if not overwrite and os.path.exists(dst_fp):
             logger.warning(file_exists_msg(dst_fp))
             return ""

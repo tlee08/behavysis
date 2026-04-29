@@ -1,3 +1,4 @@
+import logging
 import os
 
 from behavysis.behav_classifier.behav_classifier import BehavClassifier
@@ -10,6 +11,8 @@ from behavysis.models.experiment_configs import ExperimentConfigs
 from behavysis.utils.df_mixin import DFMixin
 from behavysis.utils.diagnostics_utils import file_exists_msg
 
+logger = logging.getLogger(__name__)
+
 
 class Export:
     @classmethod
@@ -20,7 +23,6 @@ class Export:
         overwrite: bool,
     ) -> str:
         """__summary__"""
-        logger = logging.getLogger(__name__)
         if not overwrite and os.path.exists(dst_fp):
             logger.warning(file_exists_msg(dst_fp))
             return ""
@@ -37,7 +39,6 @@ class Export:
         overwrite: bool,
     ) -> str:
         """__summary__"""
-        logger = logging.getLogger(__name__)
         if not overwrite and os.path.exists(dst_fp):
             logger.warning(file_exists_msg(dst_fp))
             return ""
@@ -59,7 +60,6 @@ class Export:
         - Adds an "actual" column to the df. All predicted positive BEHAV frames are set to UNDETERMINED.
         - Adds user_defined columns to the df and sets all values to 0 (NON_BEHAV).
         """
-        logger = logging.getLogger(__name__)
         if not overwrite and os.path.exists(dst_fp):
             logger.warning(file_exists_msg(dst_fp))
             return ""
@@ -94,7 +94,6 @@ class Export:
         behavs_ls: list[str],
         overwrite: bool,
     ) -> str:
-        logger = logging.getLogger(__name__)
         if not overwrite and os.path.exists(dst_fp):
             logger.warning(file_exists_msg(dst_fp))
             return ""

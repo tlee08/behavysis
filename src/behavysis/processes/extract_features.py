@@ -55,7 +55,6 @@ class ExtractFeatures:
         str
             The outcome of the process.
         """
-        logger = logging.getLogger(__name__)
         if not overwrite and os.path.exists(features_fp):
             logger.warning(file_exists_msg(features_fp))
             return ""

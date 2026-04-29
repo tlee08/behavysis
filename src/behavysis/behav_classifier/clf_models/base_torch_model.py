@@ -1,3 +1,5 @@
+import logging
+
 import numpy as np
 import pandas as pd
 import torch
@@ -6,9 +8,9 @@ from torch import nn, optim
 from torch.utils.data import DataLoader, Dataset, TensorDataset
 from tqdm import tqdm
 
-import logging
-
 from behavysis.utils.misc_utils import array2listofvect, listofvects2array
+
+logger = logging.getLogger(__name__)
 
 
 class BaseTorchModel(nn.Module):
@@ -54,7 +56,6 @@ class BaseTorchModel(nn.Module):
         epochs: int,
         val_split: float,
     ):
-        logger = logging.getLogger(__name__)
         # Making a 2D array of (df_index, index, y) for train test split
         index_flat = listofvects2array(
             index_ls, [y[index] for y, index in zip(y_ls, index_ls)]

@@ -21,6 +21,8 @@ from behavysis.utils.diagnostics_utils import file_exists_msg
 # TODO: handle reading the model file whilst in multiprocessing
 # TODO: auto-remove anything with only 1 frame of behaviour (probably a spike)
 
+logger = logging.getLogger(__name__)
+
 
 class ClassifyBehavs:
     @classmethod
@@ -60,7 +62,6 @@ class ClassifyBehavs:
         ```
         Where the `models` list is a list of `model_config.json` filepaths.
         """
-        logger = logging.getLogger(__name__)
         if not overwrite and os.path.exists(behavs_fp):
             logger.warning(file_exists_msg(behavs_fp))
             return ""

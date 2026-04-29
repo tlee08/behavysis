@@ -39,9 +39,7 @@ from behavysis.df_classes.keypoints_df import (
 from behavysis.models.experiment_configs import ExperimentConfigs
 from behavysis.utils.io_utils import get_name
 
-###################################################################################################
-#               ANALYSIS API FUNCS
-###################################################################################################
+logger = logging.getLogger(__name__)
 
 
 class Analyse:
@@ -58,7 +56,6 @@ class Analyse:
 
         Points are `padding_px` padded (away) from center.
         """
-        logger = logging.getLogger(__name__)
         name = get_name(keypoints_fp)
         dst_subdir = os.path.join(dst_dir, __name__.split(".")[-1])
         # Calculating the deltas (changes in body position) between each frame for the subject
@@ -289,7 +286,6 @@ class Analyse:
         configs_fp: str,
     ) -> str:
         """Determines the speed of the subject in each frame."""
-        logger = logging.getLogger(__name__)
         name = get_name(keypoints_fp)
         dst_subdir = os.path.join(dst_dir, __name__.split(".")[-1])
         # Calculating the deltas (changes in body position) between each frame for the subject
@@ -362,7 +358,6 @@ class Analyse:
 
         Very similar to speed, except not scaled by time (fps).
         """
-        logger = logging.getLogger(__name__)
         name = get_name(keypoints_fp)
         dst_subdir = os.path.join(dst_dir, __name__.split(".")[-1])
         # Calculating the deltas (changes in body position) between each frame for the subject
@@ -432,7 +427,6 @@ class Analyse:
         configs_fp: str,
     ) -> str:
         """Determines the speed of the subject in each frame."""
-        logger = logging.getLogger(__name__)
         name = get_name(keypoints_fp)
         dst_subdir = os.path.join(dst_dir, __name__.split(".")[-1])
         # Calculating the deltas (changes in body position) between each frame for the subject
@@ -503,7 +497,6 @@ class Analyse:
 
         NOTE: method is "greedy" because it looks at a freezing bout from earliest possible frame.
         """
-        logger = logging.getLogger(__name__)
         name = get_name(keypoints_fp)
         dst_subdir = os.path.join(dst_dir, __name__.split(".")[-1])
         # Calculating the deltas (changes in body position) between each frame for the subject

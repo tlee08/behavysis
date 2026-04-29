@@ -15,11 +15,14 @@ str
     Description of the function's outcome.
 """
 
+import logging
 from typing import Literal
 
 from pydantic import ValidationError
 
 from behavysis.models.experiment_configs import ExperimentConfigs
+
+logger = logging.getLogger(__name__)
 
 
 class UpdateConfigs:
@@ -50,7 +53,6 @@ class UpdateConfigs:
         str
             Description of the function's outcome.
         """
-        logger = logging.getLogger(__name__)
         # Parsing in the experiment's existing JSON configs
         try:
             configs = ExperimentConfigs.read_json(configs_fp)

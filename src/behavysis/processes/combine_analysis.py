@@ -1,3 +1,4 @@
+import logging
 import os
 
 import pandas as pd
@@ -7,9 +8,7 @@ from behavysis.df_classes.analysis_df import FBF, AnalysisDf
 from behavysis.utils.diagnostics_utils import file_exists_msg
 from behavysis.utils.io_utils import get_name
 
-###################################################################################################
-#               ANALYSIS API FUNCS
-###################################################################################################
+logger = logging.getLogger(__name__)
 
 
 class CombineAnalysis:
@@ -24,7 +23,6 @@ class CombineAnalysis:
         """Concatenates across columns the frame-by-frame dataframes for all analysis subdirectories
         and saves this in a single dataframe.
         """
-        logger = logging.getLogger(__name__)
         if not overwrite and os.path.exists(analysis_combined_fp):
             logger.warning(file_exists_msg(analysis_combined_fp))
             return ""
