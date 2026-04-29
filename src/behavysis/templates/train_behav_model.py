@@ -1,27 +1,27 @@
-import os
+from pathlib import Path
 
 import pandas as pd
 
 from behavysis import BehavClassifier, Export, Project
 
 if __name__ == "__main__":
-    root_dir = "."
+    root_dir = Path.cwd()
     overwrite = True
 
     # Option 1: From BORIS
     # Define behaviours in BORIS
     behavs_ls = ["potential huddling", "huddling"]
     # Paths
-    boris_dir = os.path.join(root_dir, "boris")
-    behav_dir = os.path.join(root_dir, "7_scored_behavs")
-    config_dir = os.path.join(root_dir, "0_configs")
-    for i in os.listdir(boris_dir):
-        name = os.path.splitext(i)[0]
+    boris_dir = root_dir / "boris"
+    behav_dir = root_dir / "7_scored_behavs"
+    config_dir = root_dir / "0_configs"
+    for i in boris_dir.iterdir():
+        name = i.stem
         print(name)
         outcome = Export.boris2behav(
-            src_fp=os.path.join(boris_dir, f"{name}.tsv"),
-            dst_fp=os.path.join(behav_dir, f"{name}.parquet"),
-            configs_fp=os.path.join(config_dir, f"{name}.json"),
+            src_fp=boris_dir / f"{name}.tsv",
+            dst_fp=behav_dir / f"{name}.parquet",
+            configs_fp=config_dir / f"{name}.json",
             behavs_ls=behavs_ls,
             overwrite=overwrite,
         )
@@ -37,7 +37,7 @@ if __name__ == "__main__":
 
     # Loading a BehavModel
     behav = "fight"
-    model_fp = os.path.join(root_dir, "behav_models", behav)
+    model_fp = root_dir / "behav_models" / behav
     model = BehavClassifier.load(model_fp)
     # Testing all different classifiers
     model.pipeline_training_all()

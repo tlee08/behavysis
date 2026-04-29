@@ -16,7 +16,6 @@ str
 """
 
 import logging
-import os
 from pathlib import Path
 
 import cv2
@@ -51,7 +50,7 @@ class Analyse:
         formatted_vid_fp: Path,
         dst_dir: Path,
         configs_fp: Path,
-    ) -> str:
+    ) -> None:
         """Determines the frames in which the subject is inside the cage (from average
         of given bodypoints).
 
@@ -150,7 +149,7 @@ class Analyse:
         )
         corners_df = corners_df.reset_index(level="roi")
         # Saving analysis_df
-        fbf_fp = os.path.join(dst_subdir, FBF, f"{name}.{AnalysisDf.IO}")
+        fbf_fp = dst_subdir / FBF / f"{name}.{AnalysisDf.IO}"
         AnalysisDf.write(analysis_df, fbf_fp)
         # Making scatter plot
         formatted_vid_cap = cv2.VideoCapture(formatted_vid_fp)
@@ -161,7 +160,7 @@ class Analyse:
                 logger.warning("Video shorter than start_frame")
                 break
         # Getting scatter plot
-        plot_fp = os.path.join(dst_subdir, "scatter_plot", f"{name}.png")
+        plot_fp = dst_subdir / "scatter_plot" / f"{name}.png"
         cls._make_location_scatterplot(scatter_df, corners_df, frame, plot_fp)
         # Summarising and binning analysis_df
         AnalysisBinnedDf.summary_binned_behavs(
@@ -172,7 +171,6 @@ class Analyse:
             bins_ls,
             cbins_ls,
         )
-        return ""
 
     @classmethod
     def _pt_in_roi(
@@ -211,7 +209,7 @@ class Analyse:
         scatter_df: pd.DataFrame,
         corners_df: pd.DataFrame,
         frame: np.ndarray,
-        dst_fp: str,
+        dst_fp: Path,
     ) -> None:
         """Expects analysis_df index levels to be (frame,),
         and column levels to be (individual, measure).
@@ -276,7 +274,7 @@ class Analyse:
                 ax.set_aspect("equal")
                 # ax.invert_yaxis()
         # Saving fig
-        os.makedirs(os.path.dirname(dst_fp), exist_ok=True)
+        dst_fp.parent.mkdir(parents=True, exist_ok=True)
         fig.savefig(dst_fp)
         fig.clf()
 
@@ -290,7 +288,7 @@ class Analyse:
     ) -> None:
         """Determines the speed of the subject in each frame."""
         name = get_name(keypoints_fp)
-        dst_subdir = os.path.join(dst_dir, "speed")
+        dst_subdir = dst_dir / "speed"
         # Calculating the deltas (changes in body position) between each frame for the subject
         configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
         fps, _, _, px_per_mm, bins_ls, cbins_ls = configs.get_analysis_configs()
@@ -335,7 +333,7 @@ class Analyse:
         # Backfilling the analysis_df so no nan's
         analysis_df = analysis_df.bfill()
         # Saving analysis_df
-        fbf_fp = os.path.join(dst_subdir, FBF, f"{name}.{AnalysisDf.IO}")
+        fbf_fp = dst_subdir / FBF / f"{name}.{AnalysisDf.IO}"
         AnalysisDf.write(analysis_df, fbf_fp)
 
         # Summarising and binning analysis_df
@@ -347,7 +345,6 @@ class Analyse:
             bins_ls,
             cbins_ls,
         )
-        return ""
 
     @classmethod
     def distance(
@@ -362,7 +359,7 @@ class Analyse:
         Very similar to speed, except not scaled by time (fps).
         """
         name = get_name(keypoints_fp)
-        dst_subdir = os.path.join(dst_dir, "distance")
+        dst_subdir = dst_dir / "distance"
         # Calculating the deltas (changes in body position) between each frame for the subject
         configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
         fps, _, _, px_per_mm, bins_ls, cbins_ls = configs.get_analysis_configs()
@@ -407,7 +404,7 @@ class Analyse:
         # Backfilling the analysis_df so no nan's
         analysis_df = analysis_df.bfill()
         # Saving analysis_df
-        fbf_fp = os.path.join(dst_subdir, FBF, f"{name}.{AnalysisDf.IO}")
+        fbf_fp = dst_subdir / FBF / f"{name}.{AnalysisDf.IO}"
         AnalysisDf.write(analysis_df, fbf_fp)
 
         # Summarising and binning analysis_df
@@ -419,7 +416,6 @@ class Analyse:
             bins_ls,
             cbins_ls,
         )
-        return ""
 
     @classmethod
     def social_distance(
@@ -500,7 +496,7 @@ class Analyse:
         NOTE: method is "greedy" because it looks at a freezing bout from earliest possible frame.
         """
         name = get_name(keypoints_fp)
-        dst_subdir = os.path.join(dst_dir, "freezing")
+        dst_subdir = dst_dir / "freezing"
         # Calculating the deltas (changes in body position) between each frame for the subject
         configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
         fps, _, _, px_per_mm, bins_ls, cbins_ls = configs.get_analysis_configs()
@@ -559,7 +555,7 @@ class Analyse:
                 if row["dur"] < window_frames:
                     analysis_df.loc[row["start"] : row["stop"], (indiv, "freezing")] = 0
         # Saving analysis_df
-        fbf_fp = os.path.join(dst_subdir, FBF, f"{name}.{AnalysisDf.IO}")
+        fbf_fp = dst_subdir / FBF / f"{name}.{AnalysisDf.IO}"
         AnalysisDf.write(analysis_df, fbf_fp)
 
         # Summarising and binning analysis_df

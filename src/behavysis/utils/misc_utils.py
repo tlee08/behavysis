@@ -1,38 +1,16 @@
-import inspect
 from collections.abc import Iterable
 from enum import EnumType
-from importlib.util import find_spec
 from typing import Any
 
 import numpy as np
 
 
-def get_module_dir(module_name: str) -> str:
-    module_spec = find_spec(module_name)
-    if module_spec is None:
-        raise ModuleNotFoundError(f"Module '{module_name}' not found.")
-    submodules = module_spec.submodule_search_locations
-    if not submodules:
-        raise ModuleNotFoundError(f"Module '{module_name}' has no submodules.")
-    return submodules[0]
-
-
-def import_extra_error_func(extra_dep_name: str):
-    def error_func(*args, **kwargs):
-        raise ImportError(
-            f"{extra_dep_name} dependency not installed.\n"
-            f'Install with `pip install "microscopy_proc[{extra_dep_name}]"`'
-        )
-
-    return error_func
-
-
 def enum2tuple(my_enum: EnumType) -> tuple[Any]:
-    return tuple(i.value for i in my_enum)  # type: ignore
+    return tuple(i.value for i in my_enum)
 
 
 def enum2list(my_enum: EnumType) -> list[Any]:
-    return [i.value for i in my_enum]  # type: ignore
+    return [i.value for i in my_enum]
 
 
 def const2iter(x: Any, n: int) -> Iterable[Any]:
@@ -116,4 +94,3 @@ def listofvects2array(*list_of_vects):
 def array2listofvect(arr, vect_index):
     """Inverse of listofvects2array, except chooses only one of the vects"""
     return [arr[arr[:, 0] == i, vect_index] for i in np.sort(np.unique(arr[:, 0]))]
-

@@ -51,37 +51,33 @@ class RunDLC:
         configs_fp: Path,
         gputouse: int | None,
         overwrite: bool,
-    ) -> str:
+    ) -> None:
         """Running custom DLC script to generate a DLC keypoints dataframe from a single video."""
         if not overwrite and keypoints_fp.exists():
             logger.warning(file_exists_msg(keypoints_fp))
-            return ""
+            return
         # Getting model_fp
         configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
         model_fp = configs.get_ref(configs.user.run_dlc.model_fp)
         # Derive more parameters
-        temp_dlc_dir = os.path.join(CACHE_DIR, f"dlc_{gputouse}")
-        keypoints_dir = os.path.dirname(keypoints_fp)
+        temp_dlc_dir = CACHE_DIR / f"dlc_{gputouse}"
+        keypoints_dir = keypoints_fp.parent
         # Making output directories
-        os.makedirs(temp_dlc_dir, exist_ok=True)
+        temp_dlc_dir.mkdir(parents=True, exist_ok=True)
 
         # Assertion: the config.yaml file must exist.
-        if not os.path.isfile(model_fp):
+        if not model_fp.is_file():
             raise ValueError(
                 f'The given model_fp file does not exist: "{model_fp}".\n'
                 'Check this file and specify a DLC ".yaml" config file.'
             )
 
         # Running the DLC subprocess (in a separate conda env)
-        run_dlc_subproc(
-            model_fp, [formatted_vid_fp], temp_dlc_dir, CACHE_DIR, gputouse, logger
-        )
+        run_dlc_subproc(model_fp, [formatted_vid_fp], temp_dlc_dir, CACHE_DIR, gputouse)
 
         # Exporting the h5 to chosen file format
-        export2df(formatted_vid_fp, temp_dlc_dir, keypoints_dir, logger)
+        export2df(get_name(formatted_vid_fp), temp_dlc_dir, keypoints_dir)
         silent_remove(temp_dlc_dir)
-
-        return ""
 
     @staticmethod
     def ma_dlc_run_batch(
@@ -108,7 +104,7 @@ class RunDLC:
 
         # If there are no videos to process, return
         if len(vid_fp_ls) == 0:
-            return None
+            return
 
         # Getting the DLC model config path
         # Getting the names of the files that need processing
@@ -134,13 +130,12 @@ class RunDLC:
         )
 
         # Running the DLC subprocess (in a separate conda env)
-        run_dlc_subproc(model_fp, vid_fp_ls, temp_dlc_dir, CACHE_DIR, gputouse, logger)
+        run_dlc_subproc(model_fp, vid_fp_ls, temp_dlc_dir, CACHE_DIR, gputouse)
 
         # Exporting the h5 to chosen file format
         for vid_fp in vid_fp_ls:
-            export2df(vid_fp, temp_dlc_dir, keypoints_dir, logger)
+            export2df(get_name(vid_fp), temp_dlc_dir, keypoints_dir)
         silent_remove(temp_dlc_dir)
-        return ""
 
 
 def run_dlc_subproc(
@@ -176,16 +171,14 @@ def run_dlc_subproc(
         "-n",
         "DEEPLABCUT",
         "python",
-        script_fp,
+        str(script_fp),
     ]
-    # run_subproc_logger(cmd, logger)
     run_subproc_console(cmd)
     silent_remove(script_fp)
 
 
 def export2df(name: str, src_dir: Path, dst_dir: Path) -> None:
     """__summary__"""
-    name = get_name(name)
     # Get the corresponding .h5 filename
     name_fp_ls = [
         i for i in src_dir.iterdir() if re.search(rf"^{name}DLC.*\.h5$", i.name)

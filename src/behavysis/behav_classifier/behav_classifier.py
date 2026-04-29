@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
+import json
 import logging
-import os
 from enum import Enum
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -359,12 +359,8 @@ class BehavClassifier:
         - index_test_ls: list of each dataframe's indexes for the testing data.
         """
         # Getting the lists of x and y dfs
-        x_fp_ls = [
-            os.path.join(self.x_dir, i) for i in os.listdir(os.path.join(self.x_dir))
-        ]
-        y_fp_ls = [
-            os.path.join(self.y_dir, i) for i in os.listdir(os.path.join(self.y_dir))
-        ]
+        x_fp_ls = [self.x_dir / i for i in self.x_dir.iterdir()]
+        y_fp_ls = [self.y_dir / i for i in self.y_dir.iterdir()]
         x_df_ls = async_read_files_run(x_fp_ls, FeaturesDf.read)
         y_df_ls = async_read_files_run(y_fp_ls, BehavScoredDf.read)
         # Formatting y dfs (selecting column and replacing UNDETERMINED with NON_BEHAV values)
@@ -484,11 +480,11 @@ class BehavClassifier:
 
     def clf_eval_save_history(self, history: pd.DataFrame):
         # Saving history df
-        DFMixin.write(history, os.path.join(self.eval_dir, f"history.{DFMixin.IO}"))
+        DFMixin.write(history, self.eval_dir / f"history.{DFMixin.IO}")
         # Making and saving history figure
         fig, ax = plt.subplots(figsize=(10, 7))
         sns.lineplot(data=history, ax=ax)
-        fig.savefig(os.path.join(self.eval_dir, "history.png"))
+        fig.savefig(self.eval_dir / "history.png")
 
     def clf_eval_save_performance(
         self,
@@ -545,9 +541,11 @@ class BehavClassifier:
         # Saving data and figures
         BehavClassifierEvalDf.write(
             eval_df,
-            os.path.join(self.eval_dir, f"{name}_eval.{BehavClassifierEvalDf.IO}"),
+            self.eval_dir / f"{name}_eval.{BehavClassifierEvalDf.IO}",
         )
-        (self.eval_dir / f"{name}_report.json").write_text(report_dict)
+        (self.eval_dir / f"{name}_report.json").write_text(
+            json.dumps(report_dict, indent=2)
+        )
         metrics_fig.savefig(self.eval_dir / f"{name}_confm.png")
         pcutoffs_fig.savefig(self.eval_dir / f"{name}_pcutoffs.png")
         logc_fig.savefig(self.eval_dir / f"{name}_logc.png")
@@ -565,7 +563,7 @@ class BehavClassifier:
             y_pred=y_pred,
             target_names=enum2tuple(GenericBehavLabels),
             output_dict=True,
-        )  # type: ignore
+        )
 
     @classmethod
     def eval_conf_matr(cls, y_true: np.ndarray, y_pred: np.ndarray) -> Figure:
@@ -604,10 +602,10 @@ class BehavClassifier:
                 target_names=enum2tuple(GenericBehavLabels),
                 output_dict=True,
             )
-            precisions[i] = report[GenericBehavLabels.BEHAV.value]["precision"]  # type: ignore
-            recalls[i] = report[GenericBehavLabels.BEHAV.value]["recall"]  # type: ignore
-            f1[i] = report[GenericBehavLabels.BEHAV.value]["f1-score"]  # type: ignore
-            accuracies[i] = report["accuracy"]  # type: ignore
+            precisions[i] = report[GenericBehavLabels.BEHAV.value]["precision"]
+            recalls[i] = report[GenericBehavLabels.BEHAV.value]["recall"]
+            f1[i] = report[GenericBehavLabels.BEHAV.value]["f1-score"]
+            accuracies[i] = report["accuracy"]
         # Making figure
         fig, ax = plt.subplots(figsize=(10, 7))
         sns.lineplot(x=pcutoffs, y=precisions, label="precision", ax=ax)

@@ -1,54 +1,50 @@
-import os
+from pathlib import Path
 
 from behavysis.constants import DF_IO_FORMAT
 
 
 class ExpFileManager:
-    _root_dir: str
+    _root_dir: Path
     _name: str
 
     def __init__(self, *args, **kwargs):
         pass
 
     @property
-    def root_dir(self):
+    def root_dir(self) -> Path:
         return self._root_dir
 
     @property
-    def name(self):
+    def name(self) -> str:
         return self._name
 
     @property
-    def vid_fp(self):
-        return os.path.join(self.root_dir, "2_formatted_vid", f"{self.name}.mp4")
+    def vid_fp(self) -> Path:
+        return self.root_dir / "2_formatted_vid" / f"{self.name}.mp4"
 
     @property
-    def behavs_df_fp(self):
-        return os.path.join(
-            self.root_dir, "7_scored_behavs", f"{self.name}.{DF_IO_FORMAT}"
-        )
+    def behavs_df_fp(self) -> Path:
+        return self.root_dir / "7_scored_behavs" / f"{self.name}.{DF_IO_FORMAT}"
 
     @property
-    def dlc_df_fp(self):
-        return os.path.join(
-            self.root_dir, "4_preprocessed", f"{self.name}.{DF_IO_FORMAT}"
-        )
+    def dlc_df_fp(self) -> Path:
+        return self.root_dir / "4_preprocessed" / f"{self.name}.{DF_IO_FORMAT}"
 
     @property
-    def configs_fp(self):
-        return os.path.join(self.root_dir, "0_configs", f"{self.name}.json")
+    def configs_fp(self) -> Path:
+        return self.root_dir / "0_configs" / f"{self.name}.json"
 
     @root_dir.setter
-    def root_dir(self, value: str):
+    def root_dir(self, value: Path) -> None:
         self._root_dir = value
 
     @name.setter
-    def name(self, value: str):
+    def name(self, value: str) -> None:
         self._name = value
 
-    def load(self, fp: str):
-        self.root_dir = os.path.dirname(os.path.dirname(fp))
-        self.name = os.path.splitext(os.path.basename(fp))[0]
+    def load(self, fp: Path):
+        self.root_dir = fp.parent.parent
+        self.name = fp.stem
 
 
 if __name__ == "__main__":

@@ -73,7 +73,7 @@ class Experiment:
     ) -> ProcessResultCollection:
         """All processing runs through here."""
         f_names_ls_msg = "".join([f"\n    - {f.__name__}" for f in funcs])
-        logger.info(f"Processing experiment, {self.name}, with:{f_names_ls_msg}")
+        logger.info("Processing experiment, %s, with:%s", self.name, f_names_ls_msg)
         results = ProcessResultCollection(experiment=self.name)
         for f in funcs:
             f_name = f.__name__
@@ -87,7 +87,7 @@ class Experiment:
                 result.mark_complete(success=False, error_message=str(e))
             results.results[f_name] = result
         logger.info(
-            f"Finished processing experiment, {self.name}, with:{f_names_ls_msg}"
+            "Finished processing experiment, %s, with:%s", self.name, f_names_ls_msg
         )
         return results
 

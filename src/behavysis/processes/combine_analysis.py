@@ -1,5 +1,5 @@
 import logging
-import os
+from pathlib import Path
 
 import pandas as pd
 
@@ -15,34 +15,30 @@ class CombineAnalysis:
     @classmethod
     def combine_analysis(
         cls,
-        analysis_dir: str,
-        analysis_combined_fp: str,
-        configs_fp: str,
+        analysis_dir: Path,
+        analysis_combined_fp: Path,
+        configs_fp: Path,
         overwrite: bool,
-    ) -> str:
+    ) -> None:
         """Concatenates across columns the frame-by-frame dataframes for all analysis subdirectories
         and saves this in a single dataframe.
         """
-        if not overwrite and os.path.exists(analysis_combined_fp):
+        if not overwrite and analysis_combined_fp:
             logger.warning(file_exists_msg(analysis_combined_fp))
-            return ""
+            return
         name = get_name(configs_fp)
         # For each analysis subdir, combining fbf files
         analysis_subdir_ls = [
-            i
-            for i in os.listdir(analysis_dir)
-            if os.path.isdir(os.path.join(analysis_dir, i))
+            i for i in analysis_dir.iterdir() if (analysis_dir / i).is_dir()
         ]
         # If no analysis files, then return warning and don't make df
         if len(analysis_subdir_ls) == 0:
             logger.warning("no analysis fbf files made. Run `exp.analyse` first")
-            return ""
+            return
         # Reading in each fbf analysis df
         comb_df_ls = [
             AnalysisDf.read(
-                os.path.join(
-                    analysis_dir, analysis_subdir, FBF, f"{name}.{AnalysisDf.IO}"
-                )
+                analysis_dir / analysis_subdir / FBF / f"{name}.{AnalysisDf.IO}"
             )
             for analysis_subdir in analysis_subdir_ls
         ]
@@ -55,4 +51,3 @@ class CombineAnalysis:
         )
         # Writing to file
         AnalysisCombinedDf.write(comb_df, analysis_combined_fp)
-        return ""

@@ -1,16 +1,17 @@
 """Utility functions."""
 
-import os
+import logging
 import subprocess
+from pathlib import Path
 
-ENCODING = "utf-8"
+logger = logging.getLogger(__name__)
 
 
-def run_subproc_fstream(cmd: list[str], fp: str, **kwargs) -> None:
+def run_subproc_fstream(cmd: list[str], fp: Path, **kwargs) -> None:
     """Run a subprocess and stream the output to a file."""
     # Making a file to store the output
-    os.makedirs(os.path.dirname(fp), exist_ok=True)
-    with open(fp, "w", encoding=ENCODING) as f:
+    fp.parent.mkdir(parents=True, exist_ok=True)
+    with fp.open("w") as f:
         # Starting the subprocess
         with subprocess.Popen(cmd, stdout=f, stderr=f, **kwargs) as p:
             # Wait for the subprocess to finish
@@ -35,7 +36,7 @@ def run_subproc_str(cmd: list[str], **kwargs) -> str:
         return out
 
 
-def run_subproc_logger(cmd: list[str], logger, **kwargs) -> None:
+def run_subproc_logger(cmd: list[str], **kwargs) -> None:
     """Run a subprocess and stream the output to a logger."""
     # Starting the subprocess
     with subprocess.Popen(
@@ -64,7 +65,7 @@ def run_subproc_console(cmd: list[str], **kwargs) -> None:
         p.wait()
         # Error handling (returncode is not 0)
         if p.returncode:
-            raise ValueError("ERROR: Subprocess failed to run.")
+            raise ValueError("Subprocess failed to run.")
 
 
 def run_subproc_simple(cmd_str) -> None:

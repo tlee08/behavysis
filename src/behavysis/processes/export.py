@@ -1,5 +1,4 @@
 import logging
-import os
 from pathlib import Path
 
 from behavysis.behav_classifier.behav_classifier import BehavClassifier
@@ -19,34 +18,32 @@ class Export:
     @classmethod
     def df2df(
         cls,
-        src_fp: str,
-        dst_fp: str,
+        src_fp: Path,
+        dst_fp: Path,
         overwrite: bool,
-    ) -> str:
+    ) -> None:
         """__summary__"""
-        if not overwrite and os.path.exists(dst_fp):
+        if not overwrite and dst_fp.exists():
             logger.warning(file_exists_msg(dst_fp))
-            return ""
+            return
         df = DFMixin.read(src_fp)
         DFMixin.write(df, dst_fp)
         logger.info("df to df")
-        return ""
 
     @classmethod
     def df2csv(
         cls,
-        src_fp: str,
-        dst_fp: str,
+        src_fp: Path,
+        dst_fp: Path,
         overwrite: bool,
-    ) -> str:
+    ) -> None:
         """__summary__"""
-        if not overwrite and os.path.exists(dst_fp):
+        if not overwrite and dst_fp.exists():
             logger.warning(file_exists_msg(dst_fp))
-            return ""
+            return
         df = DFMixin.read(src_fp)
         DFMixin.write_csv(df, dst_fp)
         logger.info("exported df to csv")
-        return ""
 
     @classmethod
     def predictedbehavs2scoredbehavs(
@@ -61,7 +58,7 @@ class Export:
         - Adds an "actual" column to the df. All predicted positive BEHAV frames are set to UNDETERMINED.
         - Adds user_defined columns to the df and sets all values to 0 (NON_BEHAV).
         """
-        if not overwrite and os.path.exists(dst_fp):
+        if not overwrite and dst_fp.exists():
             logger.warning(file_exists_msg(dst_fp))
             return
         # Reading the configs file
@@ -84,7 +81,6 @@ class Export:
         )
         BehavScoredDf.write(behavs_scored_df, dst_fp)
         logger.info("predicted_behavs to scored_behavs.")
-        return
 
     @classmethod
     def boris2behav(
@@ -92,10 +88,10 @@ class Export:
         src_fp: Path,
         dst_fp: Path,
         configs_fp: Path,
-        behavs_ls: list[Path],
+        behavs_ls: list[str],
         overwrite: bool,
     ) -> None:
-        if not overwrite and os.path.exists(dst_fp):
+        if not overwrite and dst_fp.exists():
             logger.warning(file_exists_msg(dst_fp))
             return
         # Reading the configs file
@@ -106,4 +102,3 @@ class Export:
         df = BehavScoredDf.import_boris_tsv(src_fp, behavs_ls, start_frame, stop_frame)
         BehavScoredDf.write(df, dst_fp)
         logger.info("boris tsv to behav")
-        return

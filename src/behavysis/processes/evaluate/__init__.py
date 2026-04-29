@@ -56,9 +56,9 @@ class Evaluate:
     ) -> str:
         """Make keypoints evaluation plot of likelihood of each bodypart through time."""
         name = get_name(dlc_fp)
-        dst_dir = os.path.join(dst_dir, Evaluate.keypoints_plot.__name__)
-        dst_fp = os.path.join(dst_dir, f"{name}.png")
-        os.makedirs(dst_dir, exist_ok=True)
+        dst_dir = dst_dir / Evaluate.keypoints_plot.__name__
+        dst_fp = dst_dir / f"{name}.png"
+        dst_dir.mkdir(parents=True, exist_ok=True)
 
         # Getting necessary config parameters
         configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
@@ -114,11 +114,11 @@ class Evaluate:
     ) -> str:
         """Make behaviour evaluation plot of the predicted and actual behaviours through time."""
         name = get_name(behavs_fp)
-        dst_dir = os.path.join(dst_dir, Evaluate.behav_plot.__name__)
-        dst_fp = os.path.join(dst_dir, f"{name}.png")
-        os.makedirs(dst_dir, exist_ok=True)
+        dst_dir = dst_dir / Evaluate.behav_plot.__name__
+        dst_fp = dst_dir / f"{name}.png"
+        dst_dir.mkdir(parents=True, exist_ok=True)
         # If overwrite is False, checking if we should skip processing
-        if not overwrite and os.path.exists(dst_fp):
+        if not overwrite and dst_fp.exists():
             return file_exists_msg()
 
         # Getting necessary config parameters

@@ -18,7 +18,6 @@ str
 """
 
 import logging
-import os
 from pathlib import Path
 
 import cv2
@@ -38,8 +37,12 @@ class FormatVid:
 
     @classmethod
     def format_vid(
-        cls, raw_vid_fp: Path, formatted_vid_fp: Path, configs_fp: Path, overwrite: bool
-    ) -> str:
+        cls,
+        raw_vid_fp: Path,
+        formatted_vid_fp: Path,
+        configs_fp: Path,
+        overwrite: bool,
+    ) -> None:
         """Formats the input video with the given parameters.
 
         Parameters
@@ -58,9 +61,9 @@ class FormatVid:
         str
             Description of the function's outcome.
         """
-        if not overwrite and os.path.exists(formatted_vid_fp):
+        if not overwrite and formatted_vid_fp.exists():
             logger.warning(file_exists_msg(formatted_vid_fp))
-            return ""
+            return
         # Finding all necessary config parameters for video formatting
         configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
         configs_filt = configs.user.format_vid
@@ -76,12 +79,11 @@ class FormatVid:
             overwrite=overwrite,
         )
         cls.get_vids_metadata(raw_vid_fp, formatted_vid_fp, configs_fp)
-        return ""
 
     @classmethod
     def get_vids_metadata(
         cls, raw_vid_fp: Path, formatted_vid_fp: Path, configs_fp: Path
-    ) -> Path:
+    ) -> None:
         """Finds the video metadata/parameters for either the raw or formatted video,
         and stores this data in the experiment's config file.
 
@@ -128,7 +130,7 @@ def ffmpeg_process_vid(
         logger.debug(f"Trimming video from {start_sec} seconds.")
 
     # Opening video
-    cmd += ["-i", in_fp]
+    cmd += ["-i", str(in_fp)]
 
     # RESIZING and TRIMMING
     filters = []
@@ -167,9 +169,9 @@ def ffmpeg_process_vid(
         "-y",
         # "-loglevel",
         # "quiet",
-        dst_fp,
+        str(dst_fp),
     ]
-    os.makedirs(os.path.dirname(dst_fp), exist_ok=True)
+    dst_fp.parent.mkdir(parents=True, exist_ok=True)
     run_subproc_console(cmd)
 
 
@@ -190,7 +192,8 @@ def get_vid_metadata(vid_fp: Path) -> VidMetadata:
     cap = cv2.VideoCapture(vid_fp)
     if not cap.isOpened():
         logger.warning(
-            f"The file, {vid_fp}, does not exist or is corrupted. Please check this file."
+            "The file, %s, does not exist or is corrupted. Please check this file.",
+            vid_fp,
         )
     else:
         configs_meta.height_px = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))

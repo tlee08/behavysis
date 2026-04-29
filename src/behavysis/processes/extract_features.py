@@ -38,7 +38,7 @@ class ExtractFeatures:
         features_fp: Path,
         configs_fp: Path,
         overwrite: bool,
-    ) -> str:
+    ) -> None:
         """Extracting features from preprocessed keypoints dataframe using SimBA
         processes.
 
@@ -58,25 +58,23 @@ class ExtractFeatures:
         str
             The outcome of the process.
         """
-        if not overwrite and os.path.exists(features_fp):
+        if not overwrite and features_fp.exists():
             logger.warning(file_exists_msg(features_fp))
-            return ""
+            return
         # Getting directory and file paths
         name = get_name(keypoints_fp)
         cpid = get_cpid()
-        configs_dir = os.path.dirname(configs_fp)
-        simba_in_dir = os.path.join(CACHE_DIR, f"input_{cpid}")
-        simba_dir = os.path.join(CACHE_DIR, f"simba_proj_{cpid}")
-        simba_features_dir = os.path.join(
-            simba_dir, "project_folder", "csv", "features_extracted"
-        )
-        simba_features_fp = os.path.join(simba_features_dir, f"{name}.csv")
+        configs_dir = configs_fp.parent
+        simba_in_dir = CACHE_DIR / f"input_{cpid}"
+        simba_dir = CACHE_DIR / f"simba_proj_{cpid}"
+        simba_features_dir = simba_dir / "project_folder" / "csv" / "features_extracted"
+        simba_features_fp = simba_features_dir / f"{name}.csv"
         # Removing temp folders (preemptively)
         silent_remove(simba_in_dir)
         silent_remove(simba_dir)
         # Preparing keypoints dataframes for input to SimBA project
-        os.makedirs(simba_in_dir, exist_ok=True)
-        simba_in_fp = os.path.join(simba_in_dir, f"{name}.csv")
+        simba_in_dir.mkdir(parents=True, exist_ok=True)
+        simba_in_fp = simba_in_dir / f"{name}.csv"
         # Selecting bodyparts for SimBA (8 bpts, 2 indivs)
         keypoints_df = KeypointsDf.read(keypoints_fp)
         keypoints_df = select_cols(keypoints_df, configs_fp)
@@ -93,7 +91,6 @@ class ExtractFeatures:
         # Removing temp folders
         silent_remove(simba_in_dir)
         silent_remove(simba_dir)
-        return ""
 
 
 #####################################################################

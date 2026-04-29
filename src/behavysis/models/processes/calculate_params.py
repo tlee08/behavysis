@@ -1,4 +1,4 @@
-import os
+from pathlib import Path
 
 from pydantic import BaseModel
 
@@ -12,7 +12,7 @@ class FromLikelihoodConfigs(BaseModel):
 
 
 class StartFrameFromCsvConfigs(BaseModel):
-    csv_fp: str = os.path.join("path_to", "start_times.csv")
+    csv_fp: str = Path("path_to") / "start_times.csv"
     name: str | None = None
 
 

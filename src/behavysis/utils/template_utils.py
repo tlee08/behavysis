@@ -1,6 +1,6 @@
 """Utility functions."""
 
-import os
+from pathlib import Path
 from typing import Any
 
 from jinja2 import Environment, PackageLoader
@@ -22,13 +22,13 @@ def render_template(
 
 
 def save_template(
-    tmpl_name: str, pkg_name: str, pkg_subdir: str, dst_fp: str, **kwargs: Any
+    tmpl_name: str, pkg_name: str, pkg_subdir: str, dst_fp: Path, **kwargs: Any
 ) -> None:
     """Renders the given template with the given arguments and saves it to the dst_fp."""
     # Rendering the template
     rendered = render_template(tmpl_name, pkg_name, pkg_subdir, **kwargs)
     # Making the directory if it doesn't exist
-    os.makedirs(os.path.dirname(dst_fp), exist_ok=True)
+    dst_fp.parent.mkdir(parents=True, exist_ok=True)
     # Saving the rendered template
     with open(dst_fp, "w") as f:
         f.write(rendered)
@@ -39,7 +39,7 @@ def import_static_templates_script(
     templates_ls: list[str],
     pkg_name: str,
     pkg_subdir: str,
-    root_dir: str = ".",
+    root_dir: Path,
     to_overwrite: bool = False,
     dialogue: bool = True,
 ) -> tuple[bool, bool]:
@@ -63,10 +63,10 @@ def import_static_templates_script(
             0
         ] == "y"
     # Making the root folder
-    os.makedirs(root_dir, exist_ok=True)
+    root_dir.mkdir(parents=True, exist_ok=True)
     # Copying the Python files to the project folder
     for template_fp in templates_ls:
-        dst_fp = os.path.join(root_dir, template_fp)
+        dst_fp = root_dir / template_fp
         if not to_overwrite and check_files_exist(dst_fp):
             # Check if we should skip importing (i.e. overwrite is False and file exists)
             print(file_exists_msg(dst_fp))

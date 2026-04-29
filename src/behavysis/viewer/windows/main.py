@@ -8,7 +8,6 @@ pyside6-uic behavysis/viewer/ui/settings_ui.ui -o behavysis/viewer/ui/settings_u
 ```
 """
 
-import os
 from multiprocessing import Process
 from pathlib import Path
 
@@ -338,12 +337,12 @@ class MainWindow(QMainWindow):
             # Loading data into vid model
             self.vid_model.load(self.file_manager.vid_fp)
             # Loading data into bouts model
-            if os.path.exists(self.file_manager.dlc_df_fp):
+            if self.file_manager.dlc_df_fp.exists():
                 self.keypoints_model.load(self.file_manager.dlc_df_fp, configs)
             else:
                 self.keypoints_model.load_empty()
             # Loading data into keypoint model
-            if os.path.exists(self.file_manager.behavs_df_fp):
+            if self.file_manager.behavs_df_fp.exists():
                 self.bouts_model.load(self.file_manager.behavs_df_fp, configs)
             else:
                 self.bouts_model.load_empty()

@@ -1,17 +1,17 @@
-import os
+from pathlib import Path
 
 from behavysis import Analyse, CalculateParams, Preprocess, Project
 
 if __name__ == "__main__":
     overwrite = False
 
-    proj_dir = os.path.join(".")
+    proj_dir = Path.cwd()
     proj = Project(proj_dir)
     proj.import_experiments()
     exp = proj.experiments[0]
     proj.nprocs = 5
 
-    default_configs_fp = os.path.join(proj_dir, "default_configs.json")
+    default_configs_fp = proj_dir / "default_configs.json"
     proj.update_configs(
         default_configs_fp,
         overwrite="user",
@@ -61,9 +61,9 @@ if __name__ == "__main__":
     proj.evaluate_vid(overwrite)
 
     # for exp in proj.experiments:
-    #     if os.path.exists(os.path.join(exp.root_dir, "9_analysis_combined", f"{exp.name}.parquet")):
+    #     if (exp.root_dir / "9_analysis_combined" / f"{exp.name}.parquet").exists():
     #         Export.df2csv(
-    #             src_fp=os.path.join(exp.root_dir, "9_analysis_combined", f"{exp.name}.parquet"),
-    #             dst_fp=os.path.join(exp.root_dir, "9_analysis_combined_csv", f"{exp.name}.csv"),
+    #             src_fp=exp.root_dir / "9_analysis_combined" / f"{exp.name}.parquet",
+    #             dst_fp=exp.root_dir / "9_analysis_combined_csv" / f"{exp.name}.csv",
     #             overwrite=overwrite,
     #         )

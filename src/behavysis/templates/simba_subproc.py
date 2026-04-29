@@ -1,7 +1,7 @@
 import configparser
 import json
-import os
 import shutil
+from pathlib import Path
 
 import pandas as pd
 from simba.feature_extractors.feature_extractor_16bp import ExtractFeaturesFrom16bps
@@ -19,11 +19,9 @@ class FeatureExtractor:
     """__summary__."""
 
     @staticmethod
-    def simba_update_configs(simba_dir, update_dict):
+    def simba_update_configs(simba_dir: Path, update_dict: dict):
         """Updates project_config.ini file."""
-        simba_configs_fp = os.path.join(
-            simba_dir, "project_folder", "project_config.ini"
-        )
+        simba_configs_fp = simba_dir / "project_folder" / "project_config.ini"
         # Making ConfigParser instance
         config = configparser.ConfigParser()
         # Reading in existing simba project configs
@@ -31,7 +29,7 @@ class FeatureExtractor:
         # Updating with given configs
         config.read_dict(update_dict)
         # Writing updated configs to file
-        with open(simba_configs_fp, "w", encoding="utf-8") as f:
+        with simba_configs_fp.open("w", encoding="utf-8") as f:
             config.write(f)
 
     #################################################
@@ -39,15 +37,15 @@ class FeatureExtractor:
     #################################################
 
     @staticmethod
-    def simba_make_proj(proj_dir, behavs_ls):
+    def simba_make_proj(proj_dir: Path, behavs_ls: list[str]):
         """Pose number is from:
             - https://github.com/sgoldenlab/simba/blob/master/simba/pose_configurations/configuration_names/pose_config_names.csv
             - https://github.com/sgoldenlab/simba/blob/master/simba/pose_configurations/bp_names/bp_names.csv
         2 animals; 16 body-parts
         """
         ProjectConfigCreator(
-            project_path=os.path.dirname(proj_dir),
-            project_name=os.path.basename(proj_dir),
+            project_path=proj_dir.absolute().parent,
+            project_name=proj_dir.name,
             target_list=behavs_ls,
             pose_estimation_bp_cnt="16",
             body_part_config_idx=6,  # bp_names.csv or pose_config_names.csv row minus 1
@@ -60,17 +58,15 @@ class FeatureExtractor:
     #################################################
 
     @staticmethod
-    def simba_import_files(simba_dir, keypoints_dir):
+    def simba_import_files(simba_dir: Path, keypoints_dir: Path):
         """Keypoints csv must already be in simba csv readable format.
         Similar to simba.import_multiple_dlc_tracking_csv_file()
         """
-        for fp in os.listdir(keypoints_dir):
+        for fp in keypoints_dir.iterdir():
             name = FeatureExtractor.get_name(fp)
-            src_fp = os.path.join(keypoints_dir, f"{name}.csv")
-            dst_fp = os.path.join(
-                simba_dir, "project_folder", "csv", "input_csv", f"{name}.csv"
-            )
-            os.makedirs(os.path.dirname(dst_fp), exist_ok=True)
+            src_fp = keypoints_dir / f"{name}.csv"
+            dst_fp = simba_dir / "project_folder" / "csv" / "input_csv" / f"{name}.csv"
+            dst_fp.parent.mkdir(parents=True, exist_ok=True)
             # Copying video mp4 and keypoints csv to simba project dir
             shutil.copyfile(src_fp, dst_fp)
 
@@ -79,11 +75,9 @@ class FeatureExtractor:
     #################################################
 
     @staticmethod
-    def simba_set_dims(simba_dir, configs_dir):
+    def simba_set_dims(simba_dir: Path, configs_dir: Path):
         """Similar to `simba.set_video_parameters()` but gets specific vals from each config file."""
-        # simba_configs_fp = os.path.join(
-        #     simba_dir, "project_folder", "project_config.ini"
-        # )
+        # simba_configs_fp = simba_dir / "project_folder" / "project_config.ini"
         # set_video_parameters(config_path=simba_configs_fp, px_per_mm=PX_PER_MM, fps=FPS, resolution=RESOLUTION)
 
         # Initialising video dims df
@@ -97,13 +91,13 @@ class FeatureExtractor:
                 "pixels/mm",
             ]
         )
-        input_csv_dir = os.path.join(simba_dir, "project_folder", "csv", "input_csv")
+        input_csv_dir = simba_dir / "project_folder" / "csv" / "input_csv"
         # Getting and saving the px/mm values to the df
-        for fp in os.listdir(input_csv_dir):
+        for fp in input_csv_dir.iterdir():
             name = FeatureExtractor.get_name(fp)
             # Getting configs JSON
-            configs_fp = os.path.join(configs_dir, f"{name}.json")
-            with open(configs_fp, encoding="utf-8") as f:
+            configs_fp = configs_dir / f"{name}.json"
+            with configs_fp.open("r") as f:
                 configs = json.load(f)
             vid_configs = configs["auto"]["formatted_vid"]
             row = (
@@ -124,8 +118,8 @@ class FeatureExtractor:
             )
             df = pd.concat([df, row], axis=0, ignore_index=True)
         # Storing the df in the simba project
-        logs_fp = os.path.join(simba_dir, "project_folder", "logs", "video_info.csv")
-        os.makedirs(os.path.dirname(logs_fp), exist_ok=True)
+        logs_fp = simba_dir / "project_folder" / "logs" / "video_info.csv"
+        logs_fp.parent.mkdir(parents=True, exist_ok=True)
         df.to_csv(logs_fp, index=None)
         return df
 
@@ -141,18 +135,14 @@ class FeatureExtractor:
         The threshold is the criterion, C, multiplied by the median (or mean) of all frames.
         Any points above the threshold are set as the previously "valid" point.
         """
-        simba_configs_fp = os.path.join(
-            simba_dir, "project_folder", "project_config.ini"
-        )
+        simba_configs_fp = simba_dir / "project_folder" / "project_config.ini"
         OutlierCorrecterMovement(config_path=simba_configs_fp).run()
         OutlierCorrecterLocation(config_path=simba_configs_fp).run()
 
     @staticmethod
     def simba_skip_outlier_correction(simba_dir):
         """Skipping"""
-        simba_configs_fp = os.path.join(
-            simba_dir, "project_folder", "project_config.ini"
-        )
+        simba_configs_fp = simba_dir / "project_folder" / "project_config.ini"
         OutlierCorrectionSkipper(config_path=simba_configs_fp).run()
 
     #################################################
@@ -162,9 +152,7 @@ class FeatureExtractor:
     @staticmethod
     def simba_extract_features(simba_dir):
         """Extracting features"""
-        simba_configs_fp = os.path.join(
-            simba_dir, "project_folder", "project_config.ini"
-        )
+        simba_configs_fp = simba_dir / "project_folder" / "project_config.ini"
         ExtractFeaturesFrom16bps(config_path=simba_configs_fp).run()
 
     #################################################
@@ -189,14 +177,14 @@ class FeatureExtractor:
         df.to_csv(targets_inserted_fp)
 
     @staticmethod
-    def get_name(fp: str) -> str:
+    def get_name(fp: Path) -> str:
         """Given the filepath, returns the name of the file.
         The name is:
         ```
         <path_to_file>/<name>.<ext>
         ```
         """
-        return os.path.splitext(os.path.basename(fp))[0]
+        return fp.stem
 
 
 def main() -> None:
@@ -205,11 +193,11 @@ def main() -> None:
     Assumes input is column-selected csv, and output is csv in simba_proj >> features_extracted dir.
     """
     # Getting directories from cmd args
-    simba_dir = r"{{ simba_dir }}"
-    keypoints_dir = r"{{ keypoints_dir }}"
-    configs_dir = r"{{ configs_dir }}"
+    simba_dir = Path(r"{{ simba_dir }}")
+    keypoints_dir = Path(r"{{ keypoints_dir }}")
+    configs_dir = Path(r"{{ configs_dir }}")
     # Making SimBA project
-    if not os.path.exists(simba_dir):
+    if not simba_dir.exists():
         FeatureExtractor.simba_make_proj(simba_dir, ["placeholder"])
     # Importing keypoints dataframes to SimBA project
     FeatureExtractor.simba_import_files(simba_dir, keypoints_dir)
