@@ -17,6 +17,7 @@ from natsort import natsorted
 
 from behavysis.constants import (
     ANALYSIS_DIR,
+    CACHE_DIR,
     DIAGNOSTICS_DIR,
     Folders,
 )
@@ -78,7 +79,7 @@ class Project:
         self.nprocs = 4
         # Setup logging for this project
         project_name = os.path.basename(self.root_dir)
-        setup_logging(project_name=project_name)
+        setup_logging(log_file=CACHE_DIR / project_name)
 
     #####################################################################
     # GETTER METHODS

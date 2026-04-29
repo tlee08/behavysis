@@ -1,11 +1,11 @@
 """Clean logging system for behavysis following the cellcounter pattern."""
+
 import logging
 import logging.handlers
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Optional
 
 from behavysis.constants import CACHE_DIR
 
@@ -14,6 +14,7 @@ LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 
 class LogLevel(Enum):
     """Log level enumeration."""
+
     DEBUG = logging.DEBUG
     INFO = logging.INFO
     WARNING = logging.WARNING
@@ -24,16 +25,17 @@ class LogLevel(Enum):
 @dataclass
 class ProcessResult:
     """Structured result container for process function diagnostics.
-    
+
     Replaces the previous StringIO-based logging approach with a cleaner,
     structured result object.
     """
+
     process_name: str
     success: bool = True
     error_message: str = ""
     logs: list[str] = field(default_factory=list)
     start_time: datetime = field(default_factory=datetime.now)
-    end_time: Optional[datetime] = None
+    end_time: datetime | None = None
 
     def add_log(self, level: LogLevel, message: str) -> None:
         """Add a log entry to the result."""
@@ -61,14 +63,13 @@ class ProcessResult:
             "success": self.success,
             "error_message": self.error_message,
             "logs": "\n".join(self.logs) if self.logs else "",
-            "duration": self.duration
+            "duration": self.duration,
         }
 
 
 def setup_logging(
     level: LogLevel = LogLevel.INFO,
-    log_file: Optional[Path | str] = None,
-    project_name: Optional[str] = None,
+    log_file: Path | str | None = None,
 ) -> None:
     """Configure logging once at application startup.
 
@@ -81,10 +82,8 @@ def setup_logging(
     log_file : Path | str | None
         Optional custom log file path. If None and project_name is provided,
         uses ~/.behavysis/{project_name}/debug.log
-    project_name : str | None
-        Optional project name for project-specific logging
 
-    Returns
+    Returns:
     -------
     None
     """
@@ -103,15 +102,7 @@ def setup_logging(
     root.addHandler(ch)
 
     # File handler (with rotation)
-    if log_file is None:
-        if project_name:
-            log_dir = Path(CACHE_DIR) / project_name
-        else:
-            log_dir = Path(CACHE_DIR)
-        log_file = log_dir / "debug.log"
-    else:
-        log_file = Path(log_file)
-
+    log_file = Path(log_file) if log_file else CACHE_DIR / "debug.log"
     log_file.parent.mkdir(parents=True, exist_ok=True)
     fh = logging.handlers.RotatingFileHandler(
         log_file, maxBytes=10_000_000, backupCount=3
@@ -119,19 +110,3 @@ def setup_logging(
     fh.setLevel(logging.DEBUG)
     fh.setFormatter(formatter)
     root.addHandler(fh)
-
-
-def get_logger(name: str) -> logging.Logger:
-    """Get a logger with the given name.
-
-    Parameters
-    ----------
-    name : str
-        Logger name (typically __name__)
-
-    Returns
-    -------
-    logging.Logger
-        Configured logger instance
-    """
-    return logging.getLogger(f"behavysis.{name}")

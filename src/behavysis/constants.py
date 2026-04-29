@@ -1,8 +1,7 @@
 """_summary_"""
 
-import os
-import pathlib
 from enum import Enum
+from pathlib import Path
 
 from PySide6 import QtCore, QtGui
 
@@ -46,16 +45,13 @@ class FileExts(Enum):
 DIAGNOSTICS_DIR = "0_diagnostics"
 ANALYSIS_DIR = "8_analysis"
 
-CACHE_DIR = os.path.join(pathlib.Path.home(), ".behavysis")
-
+CACHE_DIR = Path.home() / ".behavysis"
 
 ####################################################################################################
 # DIAGNOSTICS CONSTANTS
 ####################################################################################################
 
-
 STR_DIV = "".ljust(50, "-")
-
 
 ####################################################################################################
 # PLOT CONSTANTS

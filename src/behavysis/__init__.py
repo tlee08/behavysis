@@ -25,12 +25,19 @@ from behavysis.processes.analyse import Analyse
 from behavysis.processes.calculate_params import CalculateParams
 from behavysis.processes.export import Export
 from behavysis.processes.preprocess import Preprocess
+from behavysis.utils.logging_utils import setup_logging
 
 #####################################################################
 #               FILTERING STDOUT WARNINGS
 #####################################################################
 
 warnings.filterwarnings("ignore")
+
+#####################################################################
+#              SETTING UP LOGGING
+#####################################################################
+
+setup_logging()
 
 #####################################################################
 #           INITIALISE MPL PLOTTING PARAMETERS
