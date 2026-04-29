@@ -1,7 +1,7 @@
 """Classify Behaviours"""
 
 import logging
-import os
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -28,21 +28,21 @@ class ClassifyBehavs:
     @classmethod
     def classify_behavs(
         cls,
-        features_fp: str,
-        behavs_fp: str,
-        configs_fp: str,
+        features_fp: Path,
+        behavs_fp: Path,
+        configs_fp: Path,
         overwrite: bool,
-    ) -> str:
+    ) -> None:
         """Given model config files in the BehavClassifier format, generates beahviour predidctions
         on the given extracted features dataframe.
 
         Parameters
         ----------
-        features_fp : str
+        features_fp : Path
             _description_
-        dst_fp : str
+        dst_fp : Path
             _description_
-        configs_fp : str
+        configs_fp : Path
             _description_
         overwrite : bool
             Whether to overwrite the output file (if it exists).
@@ -62,11 +62,11 @@ class ClassifyBehavs:
         ```
         Where the `models` list is a list of `model_config.json` filepaths.
         """
-        if not overwrite and os.path.exists(behavs_fp):
+        if not overwrite and behavs_fp.exists():
             logger.warning(file_exists_msg(behavs_fp))
-            return ""
+            return
         # Getting necessary config parameters
-        configs = ExperimentConfigs.read_json(configs_fp)
+        configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
         fps = configs.auto.formatted_vid.fps
         model_configs_ls = configs.user.classify_behavs
         # Getting features data
@@ -82,7 +82,6 @@ class ClassifyBehavs:
             pcutoff = get_pcutoff(
                 configs.get_ref(model_config.pcutoff),
                 behav_model.configs.pcutoff,
-                logger,
             )
             min_window_secs = configs.get_ref(model_config.min_empty_window_secs)
             min_window_frames = int(np.round(min_window_secs * fps))
@@ -94,24 +93,21 @@ class ClassifyBehavs:
             # Using pcutoff to get binary predictions
             behav_df_i[pred_col] = (behav_df_i[prob_col] > pcutoff).astype(int)
             # Filling in small non-behav bouts
-            behav_df_i[pred_col] = merge_bouts(
-                behav_df_i[pred_col], min_window_frames, logger
-            )
+            behav_df_i[pred_col] = merge_bouts(behav_df_i[pred_col], min_window_frames)
             # Adding model predictions df to list
             behavs_df_ls.append(behav_df_i)
             # Logging outcome
             logger.info(f"Completed {behav_name} classification.")
         # If no models were run, then return outcome
         if len(behavs_df_ls) == 0:
-            return ""
+            return
         # Concatenating predictions to a single dataframe
         behavs_df = pd.concat(behavs_df_ls, axis=1)
         # Saving behav_preds df
         BehavPredictedDf.write(behavs_df, behavs_fp)
-        return ""
 
 
-def get_pcutoff(pcutoff: float, model_pcutoff: float, logger: logging.Logger) -> float:
+def get_pcutoff(pcutoff: float, model_pcutoff: float) -> float:
     """Check if the pcutoff is valid.
 
     Also check if the pcutoff is the special value `-1`, in which case
@@ -132,9 +128,7 @@ def get_pcutoff(pcutoff: float, model_pcutoff: float, logger: logging.Logger) ->
     return pcutoff
 
 
-def merge_bouts(
-    vect: pd.Series, min_window_frames: int, logger: logging.Logger
-) -> pd.Series:
+def merge_bouts(vect: pd.Series, min_window_frames: int) -> pd.Series:
     """For a given pd.Series, `vect`,
     if the time between two bouts is less than `min_window_frames`, then merging
     the two bouts together by filling in the short `non-behav` period with `is-behav`.

@@ -1,5 +1,6 @@
 import logging
 from io import BytesIO
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -64,8 +65,8 @@ def test_start_frame():
     )
     configs.auto.formatted_vid.fps = fps
     # Writing to BytesIO to mimmick file API
-    configs_io = "configs.json"
-    configs.write_json(configs_io)
+    configs_io = Path.cwd() / "configs.json"
+    configs_io.write_text(configs.model_dump_json(indent=2))
 
     # Making random normal values in a given range (above and below pcutoff)
     dlc_df = make_dlc_df_for_dur(
@@ -83,7 +84,7 @@ def test_start_frame():
     output = CalculateParams.start_frame_from_likelihood(dlc_df_io_in, configs_io)
 
     # Getting updated configs
-    configs = ExperimentConfigs.read_json(configs_io)
+    configs = ExperimentConfigs.model_validate_json(configs_io.read_text())
     logging.info(configs.auto.model_dump_json(indent=2))
 
     # Asserting
@@ -106,8 +107,8 @@ def test_stop_frame():
     configs.auto.start_frame = start_frame
     configs.auto.formatted_vid.total_frames = total_frames
     # Writing to BytesIO to mimmick file API
-    configs_io = "configs.json"
-    configs.write_json(configs_io)
+    configs_io = Path.cwd() / "configs.json"
+    configs_io.write_text(configs.model_dump_json(indent=2))
 
     # Making random normal values in a given range (above and below pcutoff)
     dlc_df = make_dlc_df_for_dur(
@@ -125,7 +126,7 @@ def test_stop_frame():
     output = CalculateParams.stop_frame_from_dur(dlc_df_io_in, configs_io)
 
     # Getting updated configs
-    configs = ExperimentConfigs.read_json(configs_io)
+    configs = ExperimentConfigs.model_validate_json(configs_io.read_text())
     logging.info(configs.auto.model_dump_json(indent=2))
 
     # Asserting
@@ -148,8 +149,8 @@ def test_exp_dur():
     )
     configs.auto.formatted_vid.fps = fps
     # Writing to BytesIO to mimmick file API
-    configs_io = "configs.json"
-    configs.write_json(configs_io)
+    configs_io = Path.cwd() / "configs.json"
+    configs_io.write_text(configs.model_dump_json(indent=2))
 
     # Making random normal values in a given range (above and below pcutoff)
     dlc_df = make_dlc_df_for_dur(
@@ -167,7 +168,7 @@ def test_exp_dur():
     output = CalculateParams.dur_frames_from_likelihood(dlc_df_io_in, configs_io)
 
     # Getting updated configs
-    configs = ExperimentConfigs.read_json(configs_io)
+    configs = ExperimentConfigs.model_validate_json(configs_io.read_text())
     logging.info(configs.auto.model_dump_json(indent=2))
 
     # Asserting

@@ -1,9 +1,9 @@
 """Experiment class for processing a single experiment in the behavysis pipeline."""
 
 import logging
-import os
 import traceback
 from collections.abc import Callable
+from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -29,27 +29,21 @@ logger = logging.getLogger(__name__)
 
 
 class Experiment:
-    """Behavysis Pipeline class for a single experiment.
+    """Behavysis Pipeline class for a single experiment."""
 
-    Encompasses the entire process including:
-    - Raw mp4 file import.
-    - mp4 file formatting (px and fps).
-    - DLC keypoints inference.
-    - Feature wrangling (start time detection, more features like average body position).
-    - Interpretable behaviour results.
-    - Other quantitative analysis.
-    """
+    name: str
+    root_dir: Path
 
-    def __init__(self, name: str, root_dir: str) -> None:
-        """Make a Experiment instance."""
-        if not os.path.isdir(root_dir):
+    def __init__(self, name: str, root_dir: str | Path) -> None:
+        root_dir = Path(root_dir)
+        if not root_dir.is_dir():
             raise ValueError(
-                f'Cannot find the project folder named "{root_dir}".\n'
+                f'Cannot find the project folder "{root_dir}". '
                 "Please specify a folder that exists."
             )
         self.name = name
-        self.root_dir = os.path.abspath(root_dir)
-        file_exists_ls = [os.path.isfile(self.get_fp(f)) for f in Folders]
+        self.root_dir = root_dir.resolve()
+        file_exists_ls = [self.get_fp(f).is_file() for f in Folders]
         if not np.any(file_exists_ls):
             folders_ls_msg = "".join([f"\n    - {f.value}" for f in Folders])
             raise ValueError(
@@ -57,7 +51,7 @@ class Experiment:
                 f"Please specify a file in one of these folders:{folders_ls_msg}"
             )
 
-    def get_fp(self, folder: Folders | str) -> str:
+    def get_fp(self, folder: Folders | str) -> Path:
         """Returns the experiment's file path from the given folder."""
         if isinstance(folder, str):
             try:
@@ -68,13 +62,11 @@ class Experiment:
                     f"{folder} is not a valid folder. Valid folders:{valid}"
                 )
         file_ext: FileExts = getattr(FileExts, folder.name)
-        return os.path.join(
-            self.root_dir, folder.value, f"{self.name}.{file_ext.value}"
-        )
+        return self.root_dir / folder.value / f"{self.name}.{file_ext.value}"
 
-    def _analysis_dir(self) -> str:
+    def _analysis_dir(self) -> Path:
         """Returns the analysis directory path for this experiment."""
-        return os.path.join(self.root_dir, ANALYSIS_DIR)
+        return self.root_dir / ANALYSIS_DIR
 
     def _proc_scaff(
         self, funcs: tuple[Callable, ...], *args: Any, **kwargs: Any
@@ -156,7 +148,9 @@ class Experiment:
         """Collates the auto-configs of the experiment into the main configs file."""
         result = ProcessResult(process_name="reading_configs")
         try:
-            configs = ExperimentConfigs.read_json(self.get_fp(Folders.CONFIGS))
+            configs = ExperimentConfigs.model_validate_json(
+                self.get_fp(Folders.CONFIGS).read_text()
+            )
             result.add_log(logging.DEBUG, "Reading configs file.")
             result.mark_complete(success=True)
         except FileNotFoundError:
@@ -270,12 +264,12 @@ class Experiment:
         )
 
     def export2csv(
-        self, src_dir: str, dst_dir: str, *, overwrite: bool
+        self, src_dir: str, dst_dir: str | Path, *, overwrite: bool
     ) -> ProcessResultCollection:
         """Export dataframe to CSV."""
         return self._proc_scaff(
             (Export.df2csv,),
             src_fp=self.get_fp(src_dir),
-            dst_fp=os.path.join(dst_dir, f"{self.name}.csv"),
+            dst_fp=Path(dst_dir) / f"{self.name}.csv",
             overwrite=overwrite,
         )

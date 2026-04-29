@@ -1,10 +1,10 @@
-import os
+from pathlib import Path
 
-from behavysis.utils.pydantic_base_model import PydanticBaseModel
+from pydantic import BaseModel
 
 
-class ClassifyBehavConfigs(PydanticBaseModel):
-    proj_dir: str = os.path.join("path", "to", "project_dir")
+class ClassifyBehavConfigs(BaseModel):
+    proj_dir: Path = Path("path") / "to" / "project_dir"
     behav_name: str = "behav_name"
     pcutoff: float | str = -1
     min_empty_window_secs: float | str = 0.2

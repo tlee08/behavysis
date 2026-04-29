@@ -69,9 +69,9 @@ def upload_configs(configs_f):
 @status_wrapper
 def update_configs(proj: Project, configs: dict, overwrite: str):
     # Writing configs to temp file
-    configs_fp = os.path.join(proj.root_dir, ".temp", "temp_configs.json")
+    configs_fp = proj.root_dir / ".temp" / "temp_configs.json"
     configs_model = ExperimentConfigs.model_validate(configs)
-    configs_model.write_json(configs_fp)
+    configs_fp.write_text(configs_model.model_dump_json(indent=2))
     # Updatng configs
     proj.update_configs(configs_fp, overwrite)
     # Removing temp file

@@ -1,7 +1,7 @@
-import os
+from pathlib import Path
 
-from behavysis.utils.pydantic_base_model import PydanticBaseModel
+from pydantic import BaseModel
 
 
-class RunDlcConfigs(PydanticBaseModel):
-    model_fp: str = os.path.join("path", "to", "DEEPLABCUT_model", "config.yaml")
+class RunDlcConfigs(BaseModel):
+    model_fp: Path = Path("path") / "to" / "DEEPLABCUT_model" / "config.yaml"

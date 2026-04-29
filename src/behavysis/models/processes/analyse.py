@@ -1,25 +1,26 @@
+from pydantic import BaseModel
+
 from behavysis.constants import BPTS_CORNERS, BPTS_SIMBA
-from behavysis.utils.pydantic_base_model import PydanticBaseModel
 
 
-class SpeedConfigs(PydanticBaseModel):
+class SpeedConfigs(BaseModel):
     smoothing_sec: float | str = 1
     bodyparts: list[str] | str = BPTS_SIMBA
 
 
-class SocialDistanceConfigs(PydanticBaseModel):
+class SocialDistanceConfigs(BaseModel):
     smoothing_sec: float | str = 1
     bodyparts: list[str] | str = BPTS_SIMBA
 
 
-class FreezingConfigs(PydanticBaseModel):
+class FreezingConfigs(BaseModel):
     window_sec: float | str = 2
     thresh_mm: float | str = 5
     smoothing_sec: float | str = 0.2
     bodyparts: list[str] | str = BPTS_SIMBA
 
 
-class InRoiConfigs(PydanticBaseModel):
+class InRoiConfigs(BaseModel):
     roi_name: str = "in_my_roi"
     is_in: bool | str = True
     padding_mm: float | str = 0
@@ -27,7 +28,7 @@ class InRoiConfigs(PydanticBaseModel):
     bodyparts: list[str] | str = BPTS_SIMBA
 
 
-class AnalyseConfigs(PydanticBaseModel):
+class AnalyseConfigs(BaseModel):
     bins_sec: list[int] | str = [30, 60, 120]
     custom_bins_sec: list[int] | str = [60, 120, 300, 600]
 

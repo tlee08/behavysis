@@ -1,5 +1,6 @@
 import logging
 from datetime import UTC, datetime
+from pathlib import Path
 
 import numpy as np
 from pydantic import BaseModel, Field
@@ -31,10 +32,13 @@ def success_msg() -> str:
     return f"SUCCESS: {np.random.choice(DIAGNOSTICS_SUCCESS_MESSAGES)}\n"
 
 
-def file_exists_msg(fp: str | None = None) -> str:
+def file_exists_msg(fp: Path | str | None = None) -> str:
     """Return a warning message."""
     fp_str = f", {fp}, " if fp else " "
-    return f"Output file{fp_str}already exists - not overwriting file.To overwrite, specify `overwrite=True`."
+    return (
+        f"Output file{fp_str}already exists - not overwriting file.\n"
+        "To overwrite, specify `overwrite=True`."
+    )
 
 
 class ProcessResult(BaseModel):

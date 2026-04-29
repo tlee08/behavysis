@@ -42,8 +42,8 @@ class FileExts(Enum):
 
 
 # TODO: is there a better way to do the subsubdirs?
-DIAGNOSTICS_DIR = "0_diagnostics"
-ANALYSIS_DIR = "8_analysis"
+DIAGNOSTICS_DIR = Path("0_diagnostics")
+ANALYSIS_DIR = Path("8_analysis")
 
 CACHE_DIR = Path.home() / ".behavysis"
 

@@ -10,6 +10,7 @@ pyside6-uic behavysis/viewer/ui/settings_ui.ui -o behavysis/viewer/ui/settings_u
 
 import os
 from multiprocessing import Process
+from pathlib import Path
 
 import cv2
 import numpy as np
@@ -331,7 +332,9 @@ class MainWindow(QMainWindow):
             # Loading filenames in vid file manager
             self.file_manager.load(fp)
             # Reading in configs
-            configs = ExperimentConfigs.read_json(self.file_manager.configs_fp)
+            configs = ExperimentConfigs.model_validate_json(
+                self.file_manager.configs_fp.read_text()
+            )
             # Loading data into vid model
             self.vid_model.load(self.file_manager.vid_fp)
             # Loading data into bouts model
@@ -462,7 +465,7 @@ class MainWindow(QMainWindow):
                 f"Saved scored behaviour frames to {fp}", timeout=STATUS_MSG_TIMEOUT
             )
 
-    def save_bouts(self, fp=None):
+    def save_bouts(self, fp: Path | None = None):
         """__summary__"""
         if not fp:
             fp = QFileDialog.getSaveFileName(
@@ -473,7 +476,7 @@ class MainWindow(QMainWindow):
             )[0]
         if fp:
             # Writing to json file
-            self.bouts_model.bouts.write_json(fp)
+            fp.write_text(self.bouts_model.bouts.model_dump_json(indent=2))
             self.ui.statusbar.showMessage(
                 f"Saved scored behaviour bouts to {fp}", timeout=STATUS_MSG_TIMEOUT
             )
@@ -521,7 +524,9 @@ class MainWindow(QMainWindow):
         app = QApplication()
 
         # Get configs
-        configs = ExperimentConfigs.read_json(file_manager.configs_fp)
+        configs = ExperimentConfigs.model_validate_json(
+            file_manager.configs_fp.read_text()
+        )
         # Make video model
         vid_model = VidModel()
         vid_model.load(file_manager.vid_fp)

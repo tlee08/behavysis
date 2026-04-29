@@ -1,5 +1,6 @@
 import logging
 import os
+from pathlib import Path
 
 from behavysis.behav_classifier.behav_classifier import BehavClassifier
 from behavysis.df_classes.behav_df import (
@@ -50,11 +51,11 @@ class Export:
     @classmethod
     def predictedbehavs2scoredbehavs(
         cls,
-        src_fp: str,
-        dst_fp: str,
-        configs_fp: str,
+        src_fp: Path,
+        dst_fp: Path,
+        configs_fp: Path,
         overwrite: bool,
-    ) -> str:
+    ) -> None:
         """Converts a predicted_behavs df to a scored_behavs df.
         Namely:
         - Adds an "actual" column to the df. All predicted positive BEHAV frames are set to UNDETERMINED.
@@ -62,9 +63,9 @@ class Export:
         """
         if not overwrite and os.path.exists(dst_fp):
             logger.warning(file_exists_msg(dst_fp))
-            return ""
+            return
         # Reading the configs file
-        configs = ExperimentConfigs.read_json(configs_fp)
+        configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
         models_ls = configs.user.classify_behavs
         # Getting the behav_outcomes dict from the configs file
         bouts_struct = []
@@ -83,26 +84,26 @@ class Export:
         )
         BehavScoredDf.write(behavs_scored_df, dst_fp)
         logger.info("predicted_behavs to scored_behavs.")
-        return ""
+        return
 
     @classmethod
     def boris2behav(
         cls,
-        src_fp: str,
-        dst_fp: str,
-        configs_fp: str,
-        behavs_ls: list[str],
+        src_fp: Path,
+        dst_fp: Path,
+        configs_fp: Path,
+        behavs_ls: list[Path],
         overwrite: bool,
-    ) -> str:
+    ) -> None:
         if not overwrite and os.path.exists(dst_fp):
             logger.warning(file_exists_msg(dst_fp))
-            return ""
+            return
         # Reading the configs file
-        configs = ExperimentConfigs.read_json(configs_fp)
+        configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
         start_frame = configs.get_ref(configs.auto.start_frame)
         stop_frame = configs.get_ref(configs.auto.stop_frame) + 1
         # Importing the boris file to the Behav df format
         df = BehavScoredDf.import_boris_tsv(src_fp, behavs_ls, start_frame, stop_frame)
         BehavScoredDf.write(df, dst_fp)
         logger.info("boris tsv to behav")
-        return ""
+        return

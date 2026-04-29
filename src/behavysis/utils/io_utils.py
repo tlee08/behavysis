@@ -2,10 +2,10 @@
 
 import asyncio
 import json
-import os
 import shutil
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 
 import joblib
 
@@ -21,77 +21,74 @@ import joblib
 #             silent_remove(path)
 
 
-def silent_remove(fp: str) -> None:
+def silent_remove(fp: Path) -> None:
     """Removes the given file or dir if it exists.
+
     Does nothing if not.
     Does not throw any errors,
     """
     try:
-        if os.path.isfile(fp):
-            os.remove(fp)
-        elif os.path.isdir(fp):
+        if fp.is_file():
+            fp.unlink()
+        elif fp.is_dir():
             shutil.rmtree(fp)
     except (OSError, FileNotFoundError):
         pass
 
 
-def get_name(fp: str) -> str:
+def get_name(fp: Path | str) -> str:
     """Given the filepath, returns the name of the file.
+
     The name is:
     ```
     <path_to_file>/<name>.<ext>
     ```
     """
-    return os.path.splitext(os.path.basename(fp))[0]
+    return Path(fp).stem
 
 
-def check_files_exist(*args: str):
-    """Args is dst_fp_ls"""
-    for dst_fp in args:
-        if os.path.exists(dst_fp):
-            return True
-    return False
+def check_files_exist(*args: Path) -> bool:
+    """Args is dst_fp_ls."""
+    return any(dst_fp.exists() for dst_fp in args)
 
 
-def read_json(fp: str) -> dict:
+def read_json(fp: Path) -> dict:
     """Reads the json file at the given filepath."""
-    with open(fp, encoding="utf-8") as f:
-        return json.load(f)
+    return json.loads(fp.read_text())
 
 
-def write_json(fp: str, data: dict) -> None:
+def write_json(fp: Path, data: dict) -> None:
     """Writes the given data to the json file at the given filepath."""
-    os.makedirs(os.path.dirname(fp), exist_ok=True)
-    with open(fp, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=4)
+    fp.parent.mkdir(parents=True, exist_ok=True)
+    fp.write_text(json.dumps(data, indent=4))
 
 
-def joblib_load(fp: str):
+def joblib_load(fp: Path) -> object:
     """Load a joblib file."""
     return joblib.load(fp)
 
 
-def joblib_dump(data, fp: str):
+def joblib_dump(data: object, fp: Path) -> None:
     """Dump a joblib file."""
-    os.makedirs(os.path.dirname(fp), exist_ok=True)
+    fp.parent.mkdir(parents=True, exist_ok=True)
     joblib.dump(data, fp)
 
 
 async def async_read(
-    fp: str, executor: ThreadPoolExecutor, read_func: Callable
+    fp: Path, executor: ThreadPoolExecutor, read_func: Callable
 ) -> list:
     """Asynchronously read a single file."""
     loop = asyncio.get_running_loop()
     return await loop.run_in_executor(executor, read_func, fp)
 
 
-async def async_read_files(fp_ls, read_func: Callable) -> list:
+async def async_read_files(fp_ls: list[Path], read_func: Callable) -> list:
     """Asynchronously read a list of files and return a list of numpy arrays."""
     with ThreadPoolExecutor() as executor:
         tasks = [async_read(fp, executor, read_func) for fp in fp_ls]
         return await asyncio.gather(*tasks)
 
 
-def async_read_files_run(fp_ls, read_func: Callable) -> list:
+def async_read_files_run(fp_ls: list[Path], read_func: Callable) -> list:
     """Asynchronously read a list of files and return a list of numpy arrays."""
     return asyncio.run(async_read_files(fp_ls, read_func))

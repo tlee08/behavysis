@@ -19,7 +19,7 @@ str
 """
 
 import logging
-import os
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -40,8 +40,8 @@ class Preprocess:
 
     @classmethod
     def start_stop_trim(
-        cls, src_fp: str, dst_fp: str, configs_fp: str, overwrite: bool
-    ) -> str:
+        cls, src_fp: Path, dst_fp: Path, configs_fp: Path, overwrite: bool
+    ) -> None:
         """Filters the rows of a DLC formatted dataframe to include only rows within the start
         and end time of the experiment, given a corresponding configs dict.
 
@@ -49,9 +49,9 @@ class Preprocess:
         ----------
         dlc_fp : str
             The file path of the input DLC formatted dataframe.
-        dst_fp : str
+        dst_fp : Path
             The file path of the output trimmed dataframe.
-        configs_fp : str
+        configs_fp : Path
             The file path of the configs dict.
         overwrite : bool
             If True, overwrite the output file if it already exists. If False, skip processing
@@ -73,11 +73,11 @@ class Preprocess:
                     - stop_frame: int
         ```
         """
-        if not overwrite and os.path.exists(dst_fp):
+        if not overwrite and dst_fp.exists():
             logger.warning(file_exists_msg(dst_fp))
-            return ""
+            return
         # Getting necessary config parameters
-        configs = ExperimentConfigs.read_json(configs_fp)
+        configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
         start_frame = configs.auto.start_frame
         stop_frame = configs.auto.stop_frame
         # Reading file
@@ -85,12 +85,11 @@ class Preprocess:
         # Trimming dataframe between start and stop frames
         keypoints_df = keypoints_df.loc[start_frame:stop_frame, :]
         KeypointsDf.write(keypoints_df, dst_fp)
-        return ""
 
     @classmethod
     def interpolate_stationary(
-        cls, src_fp: str, dst_fp: str, configs_fp: str, overwrite: bool
-    ) -> str:
+        cls, src_fp: Path, dst_fp: Path, configs_fp: Path, overwrite: bool
+    ) -> None:
         """If the point detection (above a certain threshold) is below a certain proportion, then the x and y coordinates are set to the given values (usually corners).
         Otherwise, does nothing (encouraged to run Preprocess.interpolate afterwards).
 
@@ -110,13 +109,12 @@ class Preprocess:
                     ]
         ```
         """
-        if not overwrite and os.path.exists(dst_fp):
+        if not overwrite and dst_fp.exists():
             logger.warning(file_exists_msg(dst_fp))
-            return ""
+            return
         # Getting necessary config parameters list
-        configs = ExperimentConfigs.read_json(configs_fp)
+        configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
         configs_filt_ls = configs.user.preprocess.interpolate_stationary
-        # scorer = configs.auto.scorer_name
         width_px = configs.auto.formatted_vid.width_px
         height_px = configs.auto.formatted_vid.height_px
         if width_px is None or height_px is None:
@@ -161,12 +159,11 @@ class Preprocess:
                 )
         # Saving
         KeypointsDf.write(keypoints_df, dst_fp)
-        return ""
 
     @classmethod
     def interpolate(
-        cls, src_fp: str, dst_fp: str, configs_fp: str, overwrite: bool
-    ) -> str:
+        cls, src_fp: Path, dst_fp: Path, configs_fp: Path, overwrite: bool
+    ) -> None:
         """ "Smooths" out noticeable jitter of points, where the likelihood (and accuracy) of
         a point's coordinates are low (e.g., when the subject's head goes out of view). It
         does this by linearly interpolating the frames of a body part that are below a given
@@ -183,11 +180,11 @@ class Preprocess:
         ```
         """
         # TODO: have error checking for any columns that have NO points above the pcutoff (so they are all NaN)
-        if not overwrite and os.path.exists(dst_fp):
+        if not overwrite and dst_fp.exists():
             logger.warning(file_exists_msg(dst_fp))
-            return ""
+            return
         # Getting necessary config parameters
-        configs = ExperimentConfigs.read_json(configs_fp)
+        configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
         configs_filt = configs.user.preprocess.interpolate
         # Reading file
         keypoints_df = KeypointsDf.read(src_fp)
@@ -218,12 +215,11 @@ class Preprocess:
         # if df.isnull().values.any() then the entire column is nan (log warning)
         # keypoints_df = keypoints_df.fillna(0)
         KeypointsDf.write(keypoints_df, dst_fp)
-        return ""
 
     @classmethod
     def refine_ids(
-        cls, src_fp: str, dst_fp: str, configs_fp: str, overwrite: bool
-    ) -> str:
+        cls, src_fp: Path, dst_fp: Path, configs_fp: Path, overwrite: bool
+    ) -> None:
         """Ensures that the identity is correctly tracked for maDLC.
         Assumes interpolate_points has already been run.
 
@@ -241,13 +237,13 @@ class Preprocess:
                     - metric: ["current", "rolling", "binned"]
         ```
         """
-        if not overwrite and os.path.exists(dst_fp):
+        if not overwrite and dst_fp.exists():
             logger.warning(file_exists_msg(dst_fp))
-            return ""
+            return
         # Reading file
         keypoints_df = KeypointsDf.read(src_fp)
         # Getting necessary config parameters
-        configs = ExperimentConfigs.read_json(configs_fp)
+        configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
         configs_filt = configs.user.preprocess.refine_ids
         marked = configs.get_ref(configs_filt.marked)
         unmarked = configs.get_ref(configs_filt.unmarked)
@@ -272,18 +268,15 @@ class Preprocess:
         KeypointsDf.check_bpts_exist(keypoints_df, bpts)
         # Calculating the distances between the averaged bodycentres and the marking
         mark_dists_df = get_mark_dists_df(
-            keypoints_df, marked, unmarked, [marking], bpts, logger
+            keypoints_df, marked, unmarked, [marking], bpts
         )
         # Getting "to_switch" decision series for each frame
-        switch_df = get_id_switch_df(
-            mark_dists_df, window_frames, marked, unmarked, logger
-        )
+        switch_df = get_id_switch_df(mark_dists_df, window_frames, marked, unmarked)
         # Updating df with the switched values
         switched_keypoints_df = switch_identities(
-            keypoints_df, switch_df[metric], marked, unmarked, logger
+            keypoints_df, switch_df[metric], marked, unmarked
         )
         KeypointsDf.write(switched_keypoints_df, dst_fp)
-        return ""
 
 
 def get_mark_dists_df(
@@ -292,7 +285,6 @@ def get_mark_dists_df(
     unmarked_indiv: str,
     mark_pts: list[str],
     bpts: list[str],
-    logger: logging.Logger,
 ) -> pd.DataFrame:
     """_summary_
 
@@ -348,7 +340,6 @@ def get_id_switch_df(
     window_frames: int,
     marked: str,
     unmarked: str,
-    logger: logging.Logger,
 ) -> pd.DataFrame:
     """Calculating different metrics for whether to swap the mice identities, depending
     on the current distance, rolling decision, and average binned decision.
@@ -401,7 +392,6 @@ def switch_identities(
     is_switch: pd.Series,
     marked_indiv: str,
     unmarked_indiv: str,
-    logger: logging.Logger,
 ) -> pd.DataFrame:
     """_summary_
 

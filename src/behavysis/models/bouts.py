@@ -1,9 +1,9 @@
 """_summary_"""
 
-from behavysis.utils.pydantic_base_model import PydanticBaseModel
+from pydantic import BaseModel
 
 
-class Bout(PydanticBaseModel):
+class Bout(BaseModel):
     start: int
     stop: int
     dur: int
@@ -12,12 +12,12 @@ class Bout(PydanticBaseModel):
     user_defined: dict[str, int]
 
 
-class BoutStruct(PydanticBaseModel):
+class BoutStruct(BaseModel):
     behav: str
     user_defined: list[str]
 
 
-class Bouts(PydanticBaseModel):
+class Bouts(BaseModel):
     start: int
     stop: int
     bouts: list[Bout]

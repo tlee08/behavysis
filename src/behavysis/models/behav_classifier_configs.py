@@ -1,8 +1,10 @@
-from behavysis.utils.pydantic_base_model import PydanticBaseModel
+from pathlib import Path
+
+from pydantic import BaseModel
 
 
-class BehavClassifierConfigs(PydanticBaseModel):
-    proj_dir: str = "project_dir"
+class BehavClassifierConfigs(BaseModel):
+    proj_dir: Path = Path("project_dir")
     behav_name: str = "behav_name"
     seed: int = 42
     oversample_ratio: float = 0.2

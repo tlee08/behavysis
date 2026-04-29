@@ -1,7 +1,7 @@
-from behavysis.utils.pydantic_base_model import PydanticBaseModel
+from pydantic import BaseModel
 
 
-class FormatVidConfigs(PydanticBaseModel):
+class FormatVidConfigs(BaseModel):
     width_px: None | int | str = None
     height_px: None | int | str = None
     fps: None | float | str = None
@@ -9,7 +9,7 @@ class FormatVidConfigs(PydanticBaseModel):
     stop_sec: None | float | str = None
 
 
-class VidMetadata(PydanticBaseModel):
+class VidMetadata(BaseModel):
     width_px: int = -1
     height_px: int = -1
     fps: float = -1

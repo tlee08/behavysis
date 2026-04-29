@@ -23,6 +23,7 @@ str
 import logging
 import os
 import re
+from pathlib import Path
 
 import pandas as pd
 
@@ -45,18 +46,18 @@ class RunDLC:
     @classmethod
     def ma_dlc_run_single(
         cls,
-        formatted_vid_fp: str,
-        keypoints_fp: str,
-        configs_fp: str,
+        formatted_vid_fp: Path,
+        keypoints_fp: Path,
+        configs_fp: Path,
         gputouse: int | None,
         overwrite: bool,
     ) -> str:
         """Running custom DLC script to generate a DLC keypoints dataframe from a single video."""
-        if not overwrite and os.path.exists(keypoints_fp):
+        if not overwrite and keypoints_fp.exists():
             logger.warning(file_exists_msg(keypoints_fp))
             return ""
         # Getting model_fp
-        configs = ExperimentConfigs.read_json(configs_fp)
+        configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
         model_fp = configs.get_ref(configs.user.run_dlc.model_fp)
         # Derive more parameters
         temp_dlc_dir = os.path.join(CACHE_DIR, f"dlc_{gputouse}")
@@ -84,17 +85,17 @@ class RunDLC:
 
     @staticmethod
     def ma_dlc_run_batch(
-        vid_fp_ls: list[str],
-        keypoints_dir: str,
-        configs_dir: str,
+        vid_fp_ls: list[Path],
+        keypoints_dir: Path,
+        configs_dir: Path,
         gputouse: int | None,
         overwrite: bool,
-    ) -> str:
+    ) -> None:
         """Running custom DLC script to generate a DLC keypoints dataframe from a single video."""
         # Specifying the GPU to use and making the output directory
         # Making output directories
-        temp_dlc_dir = os.path.join(CACHE_DIR, f"dlc_{gputouse}")
-        os.makedirs(temp_dlc_dir, exist_ok=True)
+        temp_dlc_dir = CACHE_DIR / f"dlc_{gputouse}"
+        temp_dlc_dir.mkdir(parents=True, exist_ok=True)
 
         # If overwrite is False, filtering for only experiments that need processing
         if not overwrite:
@@ -102,22 +103,22 @@ class RunDLC:
             vid_fp_ls = [
                 vid_fp
                 for vid_fp in vid_fp_ls
-                if not os.path.exists(
-                    os.path.join(keypoints_dir, f"{get_name(vid_fp)}.{KeypointsDf.IO}")
-                )
+                if not (keypoints_dir / f"{get_name(vid_fp)}.{KeypointsDf.IO}").exists()
             ]
 
         # If there are no videos to process, return
         if len(vid_fp_ls) == 0:
-            return ""
+            return None
 
         # Getting the DLC model config path
         # Getting the names of the files that need processing
         dlc_fp_ls = [get_name(i) for i in vid_fp_ls]
         # Getting their corresponding configs_fp
-        dlc_fp_ls = [os.path.join(configs_dir, f"{i}.json") for i in dlc_fp_ls]
+        dlc_fp_ls = [configs_dir / f"{i}.json" for i in dlc_fp_ls]
         # Reading their configs
-        dlc_fp_ls = [ExperimentConfigs.read_json(i) for i in dlc_fp_ls]
+        dlc_fp_ls = [
+            ExperimentConfigs.model_validate_json(i.read_text()) for i in dlc_fp_ls
+        ]
         # Getting their model_fp
         dlc_fp_ls = [i.user.run_dlc.model_fp for i in dlc_fp_ls]
         # Converting to a set
@@ -127,7 +128,7 @@ class RunDLC:
         # Getting the model_fp
         model_fp = dlc_fp_set.pop()
         # Assertion: the config.yaml file must exist.
-        assert os.path.isfile(model_fp), (
+        assert model_fp.is_file(), (
             f'The given model_fp file does not exist: "{model_fp}".\n'
             'Check this file and specify a DLC ".yaml" config file.'
         )
@@ -143,12 +144,11 @@ class RunDLC:
 
 
 def run_dlc_subproc(
-    model_fp: str,
-    vid_fp_ls: list[str],
-    temp_dlc_dir: str,
-    temp_dir: str,
+    model_fp: Path,
+    vid_fp_ls: list[Path],
+    temp_dlc_dir: Path,
+    temp_dir: Path,
     gputouse: int | None,
-    logger: logging.Logger,
 ) -> None:
     """Running the DLC subprocess in a separate process (i.e. separate conda env).
 
@@ -157,7 +157,7 @@ def run_dlc_subproc(
     """
     # TODO: implement for and try for each video and get errors?? Maybe save a log to a file
     # Saving the script to a file.
-    script_fp = os.path.join(temp_dir, f"dlc_subproc_{gputouse}.py")
+    script_fp = temp_dir / f"dlc_subproc_{gputouse}.py"
     save_template(
         "dlc_subproc.py",
         "behavysis",
@@ -183,16 +183,18 @@ def run_dlc_subproc(
     silent_remove(script_fp)
 
 
-def export2df(name: str, src_dir: str, dst_dir: str, logger: logging.Logger) -> None:
+def export2df(name: str, src_dir: Path, dst_dir: Path) -> None:
     """__summary__"""
     name = get_name(name)
     # Get the corresponding .h5 filename
-    name_fp_ls = [i for i in os.listdir(src_dir) if re.search(rf"^{name}DLC.*\.h5$", i)]
+    name_fp_ls = [
+        i for i in src_dir.iterdir() if re.search(rf"^{name}DLC.*\.h5$", i.name)
+    ]
     if len(name_fp_ls) == 0:
         logger.warning(f"No .h5 file found for {name}.")
         return
     if len(name_fp_ls) == 1:
-        name_fp = os.path.join(src_dir, name_fp_ls[0])
+        name_fp = src_dir / name_fp_ls[0]
         # Reading the .h5 file
         # NOTE: may need DLC_HDF_KEY
         df = pd.DataFrame(pd.read_hdf(name_fp))
@@ -202,7 +204,7 @@ def export2df(name: str, src_dir: str, dst_dir: str, logger: logging.Logger) -> 
         lhoods_idx = pd.IndexSlice[:, :, :, CoordsCols.LIKELIHOOD.value]
         df.loc[:, lhoods_idx] = df.loc[:, lhoods_idx].clip(0, 1)  # type: ignore
         # Writing the file
-        KeypointsDf.write(df, os.path.join(dst_dir, f"{name}.{KeypointsDf.IO}"))
+        KeypointsDf.write(df, dst_dir / f"{name}.{KeypointsDf.IO}")
         logger.info("Outputted DLC file.")
 
     else:

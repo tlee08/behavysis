@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 
 from behavysis.constants import Folders
 from behavysis.models.experiment_configs import get_default_configs
@@ -26,10 +27,12 @@ def main() -> None:
         print(file_exists_msg("default_configs.json"))
     else:
         default_configs = get_default_configs()
-        default_configs.write_json("default_configs.json")
+        (Path.cwd() / "default_configs.json").write_text(
+            default_configs.model_dump_json(indent=2)
+        )
     # Adding the folders
     for folder in Folders:
-        os.makedirs(os.path.join(root_dir, folder.value), exist_ok=True)
+        (Path.cwd() / folder.value).mkdir(parents=True, exist_ok=True)
 
 
 if __name__ == "__main__":

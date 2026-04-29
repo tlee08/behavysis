@@ -1,6 +1,6 @@
 import logging
-import os
 from abc import ABC, abstractmethod
+from pathlib import Path
 
 import cv2
 import numpy as np
@@ -26,19 +26,19 @@ class EvaluateVid:
     @classmethod
     def evaluate_vid(
         cls,
-        formatted_vid_fp: str,
-        keypoints_fp: str,
-        analysis_combined_fp: str,
-        eval_vid_fp: str,
-        configs_fp: str,
+        formatted_vid_fp: Path,
+        keypoints_fp: Path,
+        analysis_combined_fp: Path,
+        eval_vid_fp: Path,
+        configs_fp: Path,
         overwrite: bool,
     ) -> str:
         """Generate an annotated video with (optionally) keypoints and tracking analysis graphs."""
-        if not overwrite and os.path.exists(eval_vid_fp):
+        if not overwrite and eval_vid_fp.exists():
             logger.warning(file_exists_msg(eval_vid_fp))
             return ""
         # Getting necessary config parameters
-        configs = ExperimentConfigs.read_json(configs_fp)
+        configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
         configs_filt = configs.user.evaluate_vid
         funcs_names = configs.get_ref(configs_filt.funcs)
         pcutoff = configs.get_ref(configs_filt.pcutoff)
@@ -97,7 +97,7 @@ class EvaluateVid:
         # Opening the input video
         formatted_vid_cap = cv2.VideoCapture(formatted_vid_fp)
         # Making output folder
-        os.makedirs(os.path.dirname(eval_vid_fp), exist_ok=True)
+        eval_vid_fp.parent.mkdir(parents=True, exist_ok=True)
         # Define the codec and create VideoWriter object
         eval_vid_cap = cv2.VideoWriter(
             eval_vid_fp,

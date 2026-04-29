@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from pydantic import ConfigDict
+from pydantic import BaseModel, ConfigDict
 
 from behavysis.constants import (
     BPTS_CENTRE,
@@ -28,10 +28,9 @@ from behavysis.models.processes.extract_features import ExtractFeaturesConfigs
 from behavysis.models.processes.format_vid import FormatVidConfigs, VidMetadata
 from behavysis.models.processes.preprocess import PreprocessConfigs, RefineIdsConfigs
 from behavysis.models.processes.run_dlc import RunDlcConfigs
-from behavysis.utils.pydantic_base_model import PydanticBaseModel
 
 
-class UserConfigs(PydanticBaseModel):
+class UserConfigs(BaseModel):
     format_vid: FormatVidConfigs = FormatVidConfigs()
     run_dlc: RunDlcConfigs = RunDlcConfigs()
     calculate_params: CalculateParamsConfigs = CalculateParamsConfigs()
@@ -42,7 +41,7 @@ class UserConfigs(PydanticBaseModel):
     evaluate_vid: EvaluateVidConfigs = EvaluateVidConfigs()
 
 
-class AutoConfigs(PydanticBaseModel):
+class AutoConfigs(BaseModel):
     raw_vid: VidMetadata = VidMetadata()
     formatted_vid: VidMetadata = VidMetadata()
 
@@ -51,12 +50,24 @@ class AutoConfigs(PydanticBaseModel):
     stop_frame: int = -1
     dur_frames: int = -1
 
+    @classmethod
+    def get_field_names(cls) -> list[tuple[str, ...]]:
+        """Returns the nested field names of the class as a list of tuples."""
+        fields = []
+        for name, type_ in cls.__annotations__.items():
+            if hasattr(type_, "__annotations__"):
+                for subfield in type_.get_field_names():
+                    fields.append((name,) + subfield)
+            else:
+                fields.append((name,))
+        return fields
 
-class RefConfigs(PydanticBaseModel):
+
+class RefConfigs(BaseModel):
     model_config = ConfigDict(extra="allow")
 
 
-class ExperimentConfigs(PydanticBaseModel):
+class ExperimentConfigs(BaseModel):
     user: UserConfigs = UserConfigs()
     auto: AutoConfigs = AutoConfigs()
     ref: RefConfigs = RefConfigs()

@@ -14,6 +14,7 @@ str
 """
 
 import logging
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -32,9 +33,9 @@ logger = logging.getLogger(__name__)
 class CalculateParams:
     @staticmethod
     def start_frame_from_likelihood(
-        keypoints_fp: str,
-        configs_fp: str,
-    ) -> str:
+        keypoints_fp: Path,
+        configs_fp: Path,
+    ) -> None:
         """Determines the starting frame of the experiment based on
         when the subject "likely" entered the frame of view.
 
@@ -54,17 +55,14 @@ class CalculateParams:
                     - pcutoff: float
         ```
         """
-        start_frame, stop_frame = calc_exists_from_likelihood(
-            keypoints_fp, configs_fp, logger
-        )
+        start_frame, stop_frame = calc_exists_from_likelihood(keypoints_fp, configs_fp)
         # Writing to configs
-        configs = ExperimentConfigs.read_json(configs_fp)
+        configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
         configs.auto.start_frame = start_frame
-        configs.write_json(configs_fp)
-        return ""
+        configs_fp.write_text(configs.model_dump_json(indent=2))
 
     @staticmethod
-    def start_frame_from_csv(keypoints_fp: str, configs_fp: str) -> str:
+    def start_frame_from_csv(keypoints_fp: Path, configs_fp: Path) -> None:
         """Reads the start time of the experiment from a given CSV file
         (filepath specified in config file).
 
@@ -86,7 +84,7 @@ class CalculateParams:
         ```
         """
         # Getting necessary config parameters
-        configs = ExperimentConfigs.read_json(configs_fp)
+        configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
         configs_filt = configs.user.calculate_params.start_frame_from_csv
         fps = configs.auto.formatted_vid.fps
         csv_fp = configs.get_ref(configs_filt.csv_fp)
@@ -109,13 +107,12 @@ class CalculateParams:
         # Converting to start frame
         start_frame = int(np.round(start_sec * fps, 0))
         # Writing to configs
-        configs = ExperimentConfigs.read_json(configs_fp)
+        configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
         configs.auto.start_frame = start_frame
-        configs.write_json(configs_fp)
-        return ""
+        configs_fp.write_text(configs.model_dump_json(indent=2))
 
     @staticmethod
-    def stop_frame_from_likelihood(keypoints_fp: str, configs_fp: str) -> str:
+    def stop_frame_from_likelihood(keypoints_fp: Path, configs_fp: Path) -> None:
         """Determines the starting frame of the experiment based on
         when the subject "likely" entered the frame of view.
 
@@ -124,17 +121,14 @@ class CalculateParams:
         the determine this as the start time.
 
         """
-        start_frame, stop_frame = calc_exists_from_likelihood(
-            keypoints_fp, configs_fp, logger
-        )
+        start_frame, stop_frame = calc_exists_from_likelihood(keypoints_fp, configs_fp)
         # Writing to configs
-        configs = ExperimentConfigs.read_json(configs_fp)
+        configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
         configs.auto.stop_frame = stop_frame
-        configs.write_json(configs_fp)
-        return ""
+        configs_fp.write_text(configs.model_dump_json(indent=2))
 
     @staticmethod
-    def stop_frame_from_dur(keypoints_fp: str, configs_fp: str) -> str:
+    def stop_frame_from_dur(keypoints_fp: Path, configs_fp: Path) -> None:
         """Calculates the end time according to the following equation:
 
         ```
@@ -152,7 +146,7 @@ class CalculateParams:
         ```
         """
         # Getting necessary config parameters
-        configs = ExperimentConfigs.read_json(configs_fp)
+        configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
         configs_filt = configs.user.calculate_params.stop_frame_from_dur
         dur_sec = configs.get_ref(configs_filt.dur_sec)
         start_frame = configs.auto.start_frame
@@ -179,28 +173,24 @@ class CalculateParams:
                 "too short or if the dur_sec value is incorrect."
             )
         # Writing to config
-        configs = ExperimentConfigs.read_json(configs_fp)
+        configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
         configs.auto.stop_frame = stop_frame
-        configs.write_json(configs_fp)
-        return ""
+        configs_fp.write_text(configs.model_dump_json(indent=2))
 
     @staticmethod
-    def dur_frames_from_likelihood(keypoints_fp: str, configs_fp: str) -> str:
+    def dur_frames_from_likelihood(keypoints_fp: Path, configs_fp: Path) -> None:
         """Calculates the duration in seconds, from the time the specified bodyparts appeared
         to the time they disappeared.
         Appear/disappear is calculated from likelihood.
         """
-        start_frame, stop_frame = calc_exists_from_likelihood(
-            keypoints_fp, configs_fp, logger
-        )
+        start_frame, stop_frame = calc_exists_from_likelihood(keypoints_fp, configs_fp)
         # Writing to configs
-        configs = ExperimentConfigs.read_json(configs_fp)
+        configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
         configs.auto.dur_frames = stop_frame - start_frame
-        configs.write_json(configs_fp)
-        return ""
+        configs_fp.write_text(configs.model_dump_json(indent=2))
 
     @staticmethod
-    def px_per_mm(keypoints_fp: str, configs_fp: str) -> str:
+    def px_per_mm(keypoints_fp: Path, configs_fp: Path) -> None:
         """Calculates the pixels per mm conversion for the video.
 
         This is done by averaging the (x, y) coordinates of each corner,
@@ -225,7 +215,7 @@ class CalculateParams:
         ```
         """
         # Getting necessary config parameters
-        configs = ExperimentConfigs.read_json(configs_fp)
+        configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
         configs_filt = configs.user.calculate_params.px_per_mm
         pt_a = configs.get_ref(configs_filt.pt_a)
         pt_b = configs.get_ref(configs_filt.pt_b)
@@ -262,14 +252,13 @@ class CalculateParams:
         # Finding pixels per mm conversion, using the given arena width and height as calibration
         px_per_mm = dist_px / dist_mm
         # Saving to configs file
-        configs = ExperimentConfigs.read_json(configs_fp)
+        configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
         configs.auto.px_per_mm = px_per_mm
-        configs.write_json(configs_fp)
-        return ""
+        configs_fp.write_text(configs.model_dump_json(indent=2))
 
 
 def calc_exists_from_likelihood(
-    keypoints_fp: str, configs_fp: str, logger: logging.Logger
+    keypoints_fp: Path, configs_fp: Path
 ) -> tuple[int, int]:
     """Determines the start and stop frames of the experiment based on
     when the subject "likely" entered and exited the frame of view.
@@ -291,7 +280,7 @@ def calc_exists_from_likelihood(
     ```
     """
     # Getting necessary config parameters
-    configs = ExperimentConfigs.read_json(configs_fp)
+    configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
     configs_filt = configs.user.calculate_params.from_likelihood
     bpts = configs.get_ref(configs_filt.bodyparts)
     window_sec = configs.get_ref(configs_filt.window_sec)

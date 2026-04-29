@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import logging
 import os
 from enum import Enum
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import matplotlib.pyplot as plt
@@ -42,10 +44,7 @@ from behavysis.utils.io_utils import (
     get_name,
     joblib_dump,
     joblib_load,
-    write_json,
 )
-import logging
-
 from behavysis.utils.misc_utils import array2listofvect, enum2tuple, listofvects2array
 
 logger = logging.getLogger(__name__)
@@ -64,13 +63,13 @@ class BehavClassifier:
     evaluation, and inference.
     """
 
-    _proj_dir: str
+    _proj_dir: Path
     _behav_name: str
     _clf: BaseTorchModel
 
-    def __init__(self, proj_dir: str, behav_name: str) -> None:
+    def __init__(self, proj_dir: Path, behav_name: str) -> None:
         # Setting attributes
-        self._proj_dir = os.path.abspath(proj_dir)
+        self._proj_dir = proj_dir.resolve()
         self._behav_name = behav_name
         # Assert that the behaviour is scored in the project (in the scored_behavs directory)
         # Getting the list of behaviours in project to check against
@@ -78,7 +77,9 @@ class BehavClassifier:
         assert np.isin(behav_name, y_df.columns)
         # Trying to load configs (or making new)
         try:
-            configs = BehavClassifierConfigs.read_json(self.configs_fp)
+            configs = BehavClassifierConfigs.model_validate_json(
+                self.configs_fp.read_text()
+            )
             logger.debug("Loaded existing configs")
         except FileNotFoundError:
             configs = BehavClassifierConfigs()
@@ -100,7 +101,7 @@ class BehavClassifier:
     #################################################
 
     @property
-    def proj_dir(self) -> str:
+    def proj_dir(self) -> Path:
         return self._proj_dir
 
     @property
@@ -116,7 +117,7 @@ class BehavClassifier:
         # If a str, then loading
         if isinstance(clf, str):
             clf_name = clf
-            self._clf = joblib_load(os.path.join(self.clfs_dir, clf, "classifier.sav"))
+            self._clf = joblib_load(self.clfs_dir / clf / "classifier.sav")
             logger.debug(f"Loaded classifier: {clf_name}")
         # If a BaseTorchModel, then setting
         else:
@@ -129,16 +130,16 @@ class BehavClassifier:
         self.configs = configs
 
     @property
-    def model_dir(self) -> str:
-        return os.path.join(self.proj_dir, "behav_models", self.behav_name)
+    def model_dir(self) -> Path:
+        return self.proj_dir / "behav_models" / self.behav_name
 
     @property
-    def configs_fp(self) -> str:
-        return os.path.join(self.model_dir, "configs.json")
+    def configs_fp(self) -> Path:
+        return self.model_dir / "configs.json"
 
     @property
     def configs(self) -> BehavClassifierConfigs:
-        return BehavClassifierConfigs.read_json(self.configs_fp)
+        return BehavClassifierConfigs.model_validate_json(self.configs_fp.read_text())
 
     @configs.setter
     def configs(self, configs: BehavClassifierConfigs) -> None:
@@ -148,52 +149,55 @@ class BehavClassifier:
         except FileNotFoundError:
             pass
         logger.debug("Configs have changed. Updating model configs on disk")
-        configs.write_json(self.configs_fp)
+        self.configs_fp.write_text(configs.model_dump_json(indent=2))
 
     @property
-    def clfs_dir(self) -> str:
-        return os.path.join(self.model_dir, "classifiers")
+    def clfs_dir(self) -> Path:
+        return self.model_dir / "classifiers"
 
     @property
-    def clf_dir(self) -> str:
-        return os.path.join(self.clfs_dir, self.configs.clf_struct)
+    def clf_dir(self) -> Path:
+        return self.clfs_dir / self.configs.clf_struct
 
     @property
-    def clf_fp(self) -> str:
-        return os.path.join(self.clf_dir, "classifier.sav")
+    def clf_fp(self) -> Path:
+        return self.clf_dir / "classifier.sav"
 
     @property
-    def preproc_fp(self) -> str:
-        return os.path.join(self.clf_dir, "preproc.sav")
+    def preproc_fp(self) -> Path:
+        return self.clf_dir / "preproc.sav"
 
     @property
-    def eval_dir(self) -> str:
-        return os.path.join(self.clf_dir, "evaluation")
+    def eval_dir(self) -> Path:
+        return self.clf_dir / "evaluation"
 
     @property
-    def x_dir(self) -> str:
+    def x_dir(self) -> Path:
         """Returns the model's x directory.
-        It gets the features_extracted directory from the parent Behavysis model directory.
+
+        Gets features_extracted dir from the parent Behavysis model directory.
         """
-        return os.path.join(self.proj_dir, Folders.FEATURES_EXTRACTED.value)
+        return self.proj_dir / Folders.FEATURES_EXTRACTED.value
 
     @property
-    def y_dir(self) -> str:
+    def y_dir(self) -> Path:
         """Returns the model's y directory.
-        It gets the scored_behavs directory from the parent Behavysis model directory.
+
+        Gets scored_behavs directory from the parent Behavysis model directory.
         """
-        return os.path.join(self.proj_dir, Folders.SCORED_BEHAVS.value)
+        return self.proj_dir / Folders.SCORED_BEHAVS.value
 
     #################################################
     # CREATE/LOAD MODEL METHODS
     #################################################
 
     @classmethod
-    def create_from_project_dir(cls, proj_dir: str) -> list:
+    def create_from_project_dir(cls, proj_dir: Path) -> list:
         """Loading classifier from given Behavysis project directory."""
         # Getting the list of behaviours (after wrangling column names)
+        proj_dir = proj_dir.resolve()
         y_df = cls.wrangle_columns_y(
-            cls.combine_dfs(os.path.join(proj_dir, Folders.SCORED_BEHAVS.value))
+            cls.combine_dfs(proj_dir / Folders.SCORED_BEHAVS.value)
         )
         behavs_ls = y_df.columns.to_list()
         # For each behaviour, making a new BehavClassifier instance
@@ -208,12 +212,13 @@ class BehavClassifier:
         return cls.create_from_project_dir(proj.root_dir)
 
     @classmethod
-    def load(cls, proj_dir: str, behav_name: str) -> BehavClassifier:
+    def load(cls, proj_dir: Path, behav_name: str) -> BehavClassifier:
         """Reads the model from the expected model file."""
         # Checking that the configs file exists and is valid
-        configs_fp = os.path.join(proj_dir, "behav_models", behav_name, "configs.json")
+        proj_dir = proj_dir.resolve()
+        configs_fp = proj_dir / "behav_models" / behav_name / "configs.json"
         try:
-            BehavClassifierConfigs.read_json(configs_fp)
+            BehavClassifierConfigs.model_validate_json(configs_fp.read_text())
         except (FileNotFoundError, OSError):
             raise ValueError(
                 f'Model in project directory, "{proj_dir}", and behav name, "{behav_name}", not found.\n'
@@ -226,14 +231,11 @@ class BehavClassifier:
     ###############################################################################################
 
     @classmethod
-    def combine_dfs(cls, src_dir):
+    def combine_dfs(cls, src_dir: Path):
         """Combines the data in the given directory into a single dataframe.
         Adds a MultiIndex level to the rows, with the values as the filenames in the directory.
         """
-        data_dict = {
-            get_name(i): DFMixin.read(os.path.join(src_dir, i))
-            for i in os.listdir(os.path.join(src_dir))
-        }
+        data_dict = {get_name(i): DFMixin.read(src_dir / i) for i in src_dir.iterdir()}
         df = pd.concat(data_dict.values(), axis=0, keys=data_dict.keys())
         df = BehavClassifierCombinedDf.basic_clean(df)
         return df
@@ -251,7 +253,7 @@ class BehavClassifier:
         return x[:, 48:]
 
     @classmethod
-    def preproc_x_fit(cls, x: np.ndarray, preproc_fp: str) -> None:
+    def preproc_x_fit(cls, x: np.ndarray, preproc_fp: Path) -> None:
         """The preprocessing steps are:
         - Select only the derived features (not the x-y-l columns)
             - 2 (indivs) * 8 (bpts) * 3 (coords) = 48 (columns) before derived features
@@ -267,7 +269,7 @@ class BehavClassifier:
         joblib_dump(preproc_pipe, preproc_fp)
 
     @classmethod
-    def preproc_x_transform(cls, x: np.ndarray, preproc_fp: str) -> np.ndarray:
+    def preproc_x_transform(cls, x: np.ndarray, preproc_fp: Path) -> np.ndarray:
         """Runs the preprocessing steps fitted from `preproc_x_fit` on the given `x` data."""
         preproc_pipe: Pipeline = joblib_load(preproc_fp)
         x_preproc = preproc_pipe.transform(x)
@@ -545,10 +547,10 @@ class BehavClassifier:
             eval_df,
             os.path.join(self.eval_dir, f"{name}_eval.{BehavClassifierEvalDf.IO}"),
         )
-        write_json(os.path.join(self.eval_dir, f"{name}_report.json"), report_dict)
-        metrics_fig.savefig(os.path.join(self.eval_dir, f"{name}_confm.png"))
-        pcutoffs_fig.savefig(os.path.join(self.eval_dir, f"{name}_pcutoffs.png"))
-        logc_fig.savefig(os.path.join(self.eval_dir, f"{name}_logc.png"))
+        (self.eval_dir / f"{name}_report.json").write_text(report_dict)
+        metrics_fig.savefig(self.eval_dir / f"{name}_confm.png")
+        pcutoffs_fig.savefig(self.eval_dir / f"{name}_pcutoffs.png")
+        logc_fig.savefig(self.eval_dir / f"{name}_logc.png")
         return eval_df, report_dict, metrics_fig, pcutoffs_fig, logc_fig
 
     #################################################

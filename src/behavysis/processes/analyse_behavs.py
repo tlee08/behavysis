@@ -1,5 +1,5 @@
 import logging
-import os
+from pathlib import Path
 
 import numpy as np
 
@@ -15,15 +15,15 @@ logger = logging.getLogger(__name__)
 class AnalyseBehavs:
     @staticmethod
     def analyse_behavs(
-        behavs_fp: str,
-        dst_dir: str,
-        configs_fp: str,
-    ) -> str:
+        behavs_fp: Path,
+        dst_dir: Path,
+        configs_fp: Path,
+    ) -> None:
         """Takes a behavs dataframe and generates a summary and binned version of the data."""
         name = get_name(behavs_fp)
-        dst_subdir = os.path.join(dst_dir, "analyse_behavs")
+        dst_subdir = dst_dir / "analyse_behavs"
         # Calculating the deltas (changes in body position) between each frame for the subject
-        configs = ExperimentConfigs.read_json(configs_fp)
+        configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
         fps, _, _, _, bins_ls, cbins_ls = configs.get_analysis_configs()
         # Loading in dataframe
         behavs_df = BehavScoredDf.read(behavs_fp)
@@ -41,7 +41,7 @@ class AnalyseBehavs:
         behavs_df = behavs_df.loc[:, columns]
         behavs_df = AnalysisDf.basic_clean(behavs_df)
         # Writing the behavs_df to the fbf file
-        fbf_fp = os.path.join(dst_subdir, FBF, f"{name}.{AnalysisDf.IO}")
+        fbf_fp = dst_subdir / FBF / f"{name}.{AnalysisDf.IO}"
         AnalysisDf.write(behavs_df, fbf_fp)
         # Making the summary and binned dataframes
         AnalysisBinnedDf.summary_binned_behavs(
@@ -52,4 +52,3 @@ class AnalyseBehavs:
             bins_ls,
             cbins_ls,
         )
-        return ""

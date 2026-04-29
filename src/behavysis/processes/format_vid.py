@@ -19,6 +19,7 @@ str
 
 import logging
 import os
+from pathlib import Path
 
 import cv2
 
@@ -37,7 +38,7 @@ class FormatVid:
 
     @classmethod
     def format_vid(
-        cls, raw_vid_fp: str, formatted_vid_fp: str, configs_fp: str, overwrite: bool
+        cls, raw_vid_fp: Path, formatted_vid_fp: Path, configs_fp: Path, overwrite: bool
     ) -> str:
         """Formats the input video with the given parameters.
 
@@ -61,7 +62,7 @@ class FormatVid:
             logger.warning(file_exists_msg(formatted_vid_fp))
             return ""
         # Finding all necessary config parameters for video formatting
-        configs = ExperimentConfigs.read_json(configs_fp)
+        configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
         configs_filt = configs.user.format_vid
         # Processing the video
         ffmpeg_process_vid(
@@ -79,8 +80,8 @@ class FormatVid:
 
     @classmethod
     def get_vids_metadata(
-        cls, raw_vid_fp: str, formatted_vid_fp: str, configs_fp: str
-    ) -> str:
+        cls, raw_vid_fp: Path, formatted_vid_fp: Path, configs_fp: Path
+    ) -> Path:
         """Finds the video metadata/parameters for either the raw or formatted video,
         and stores this data in the experiment's config file.
 
@@ -99,17 +100,16 @@ class FormatVid:
             Description of the function's outcome.
         """
         # Saving video metadata to configs dict
-        configs = ExperimentConfigs.read_json(configs_fp)
-        configs.auto.raw_vid = get_vid_metadata(raw_vid_fp, logger)
-        configs.auto.formatted_vid = get_vid_metadata(formatted_vid_fp, logger)
+        configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
+        configs.auto.raw_vid = get_vid_metadata(raw_vid_fp)
+        configs.auto.formatted_vid = get_vid_metadata(formatted_vid_fp)
         logger.info("Video metadata stored in config file.")
-        configs.write_json(configs_fp)
-        return ""
+        configs_fp.write_text(configs.model_dump_json(indent=2))
 
 
 def ffmpeg_process_vid(
-    in_fp: str,
-    dst_fp: str,
+    in_fp: Path,
+    dst_fp: Path,
     width_px: None | int = None,
     height_px: None | int = None,
     fps: None | int = None,
@@ -173,12 +173,12 @@ def ffmpeg_process_vid(
     run_subproc_console(cmd)
 
 
-def get_vid_metadata(vid_fp: str, logger: logging.Logger) -> VidMetadata:
+def get_vid_metadata(vid_fp: Path) -> VidMetadata:
     """Finds the video metadata/parameters for either the raw or formatted video.
 
     Parameters
     ----------
-    fp : str
+    fp : Path
         The video filepath.
 
     Returns:

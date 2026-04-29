@@ -2,9 +2,9 @@
 
 import json
 import logging
-import os
 import re
 from collections.abc import Callable
+from pathlib import Path
 from typing import Any
 
 import dask
@@ -25,7 +25,6 @@ from behavysis.df_classes.analysis_collated_df import (
     AnalysisBinnedCollatedDf,
     AnalysisSummaryCollatedDf,
 )
-from behavysis.df_classes.diagnostics_df import DiagnosticsDf
 from behavysis.models.experiment_configs import ExperimentConfigs
 from behavysis.pipeline.experiment import Experiment
 from behavysis.processes.run_dlc import RunDLC
@@ -40,20 +39,18 @@ logger = logging.getLogger(__name__)
 class Project:
     """A project is used to process and analyse many experiments at the same time."""
 
-    root_dir: str
+    root_dir: Path
     _experiments: dict[str, Experiment]
     nprocs: int
 
-    def __init__(self, root_dir: str) -> None:
-        if not os.path.isdir(root_dir):
-            raise ValueError(
-                f'The folder "{root_dir}" does not exist.\n'
-                "Please specify a folder that exists."
-            )
-        self.root_dir = os.path.abspath(root_dir)
+    def __init__(self, root_dir: str | Path) -> None:
+        root_dir = Path(root_dir)
+        if not root_dir.is_dir():
+            raise ValueError(f'The folder "{root_dir}" does not exist.')
+        self.root_dir = root_dir.resolve()
         self._experiments = {}
         self.nprocs = 4
-        project_name = os.path.basename(self.root_dir)
+        project_name = self.root_dir.name
         setup_logging(log_file=CACHE_DIR / project_name)
 
     @property
@@ -88,11 +85,10 @@ class Project:
         if not results:
             return
 
-        diagnostics_dir = os.path.join(self.root_dir, DIAGNOSTICS_DIR)
-        os.makedirs(diagnostics_dir, exist_ok=True)
+        diagnostics_dir = self.root_dir / DIAGNOSTICS_DIR
+        diagnostics_dir.mkdir(parents=True, exist_ok=True)
 
-        # Save as JSON
-        json_path = os.path.join(diagnostics_dir, f"{method.__name__}.json")
+        json_path = diagnostics_dir / f"{method.__name__}.json"
         with open(json_path, "w") as f:
             json.dump([r.model_dump() for r in results], f, indent=2, default=str)
 
@@ -111,36 +107,37 @@ class Project:
         dd_dict: dict[str, list[str]] = {}
 
         for f in Folders:
-            folder = os.path.join(self.root_dir, f.value)
+            folder = self.root_dir / f.value
             dd_dict[f.value] = []
-            if not os.path.isdir(folder):
+            if not folder.is_dir():
                 continue
-            for fp_name in natsorted(os.listdir(folder)):
-                if re.search(r"^\.", fp_name):
+            for fp_name in natsorted(folder.iterdir()):
+                if re.search(r"^\.", fp_name.name):
                     continue
-                name = get_name(fp_name)
+                name = get_name(fp_name.name)
                 try:
                     self.import_experiment(name)
                     dd_dict[f.value].append(name)
                 except ValueError as e:
-                    logger.info(f"Failed: {f.value} - {fp_name}: {e}")
+                    logger.info(f"Failed: {f.value} - {fp_name.name}: {e}")
 
         exp_ls_msg = "".join([f"\n    - {exp.name}" for exp in self.experiments])
         logger.info(f"Experiments imported:{exp_ls_msg}")
 
-        # Build diagnostics DataFrame
         all_names = np.unique(np.concatenate(list(dd_dict.values())))
         df = pd.DataFrame(index=all_names)
         for folder, names in dd_dict.items():
             df[folder] = df.index.isin(names)
+        from behavysis.df_classes.diagnostics_df import DiagnosticsDf
+
         DiagnosticsDf.write(
             df,
-            os.path.join(self.root_dir, DIAGNOSTICS_DIR, "import_experiments.csv"),
+            self.root_dir / DIAGNOSTICS_DIR / "import_experiments.csv",
         )
 
     # Batch processing methods
 
-    def update_configs(self, default_configs_fp: str, overwrite: str) -> None:
+    def update_configs(self, default_configs_fp: Path, overwrite: str) -> None:
         self._run_and_save_diagnostics(
             Experiment.update_configs, default_configs_fp, overwrite
         )
@@ -159,9 +156,7 @@ class Project:
         exp_ls = self.experiments
         if not overwrite:
             exp_ls = [
-                exp
-                for exp in exp_ls
-                if not os.path.isfile(exp.get_fp(Folders.KEYPOINTS))
+                exp for exp in exp_ls if not exp.get_fp(Folders.KEYPOINTS).is_file()
             ]
 
         if not exp_ls:
@@ -172,8 +167,8 @@ class Project:
             delayed_tasks = [
                 dask.delayed(RunDLC.ma_dlc_run_batch)(
                     vid_fp_ls=[exp.get_fp(Folders.FORMATTED_VID) for exp in batch],
-                    keypoints_dir=os.path.join(self.root_dir, Folders.KEYPOINTS.value),
-                    configs_dir=os.path.join(self.root_dir, Folders.CONFIGS.value),
+                    keypoints_dir=self.root_dir / Folders.KEYPOINTS.value,
+                    configs_dir=self.root_dir / Folders.CONFIGS.value,
                     gputouse=gpu,
                     overwrite=overwrite,
                 )
@@ -186,13 +181,9 @@ class Project:
 
     def collate_auto_configs(self) -> None:
         self._run_and_save_diagnostics(Experiment.collate_auto_configs)
-        # Generate histogram plots of numerical auto fields
-        json_path = os.path.join(
-            self.root_dir, DIAGNOSTICS_DIR, "collate_auto_configs.json"
-        )
+        json_path = self.root_dir / DIAGNOSTICS_DIR / "collate_auto_configs.json"
         with open(json_path) as f:
             results = json.load(f)
-        # Extract 'data' fields from each result
         records = [
             r["results"].get("data", {}) for r in results if r["results"].get("data")
         ]
@@ -206,9 +197,7 @@ class Project:
         g = sns.FacetGrid(data=df, col="measure", sharex=False, col_wrap=4)
         g.map(sns.histplot, "value", bins=10)
         g.set_titles("{col_name}")
-        g.savefig(
-            os.path.join(self.root_dir, DIAGNOSTICS_DIR, "collate_auto_configs.png")
-        )
+        g.savefig(self.root_dir / DIAGNOSTICS_DIR / "collate_auto_configs.png")
         g.figure.clf()
 
     def preprocess(self, funcs: tuple[Callable, ...], *, overwrite: bool) -> None:
@@ -241,7 +230,7 @@ class Project:
     def evaluate_vid(self, *, overwrite: bool) -> None:
         self._run_and_save_diagnostics(Experiment.evaluate_vid, overwrite=overwrite)
 
-    def export2csv(self, src_dir: str, dst_dir: str, *, overwrite: bool) -> None:
+    def export2csv(self, src_dir: str, dst_dir: str | Path, *, overwrite: bool) -> None:
         self._run_and_save_diagnostics(
             Experiment.export2csv, src_dir, dst_dir, overwrite=overwrite
         )
@@ -254,26 +243,27 @@ class Project:
     def _collate_binned(self) -> None:
         """Combine binned analysis data across experiments."""
         logger.info("Collating binned analysis...")
-        proj_analyse_dir = os.path.join(self.root_dir, ANALYSIS_DIR)
-        if not os.path.isdir(proj_analyse_dir):
+        proj_analyse_dir = self.root_dir / ANALYSIS_DIR
+        if not proj_analyse_dir.is_dir():
             return
 
-        configs = ExperimentConfigs.read_json(
-            self.experiments[0].get_fp(Folders.CONFIGS)
+        configs = ExperimentConfigs.model_validate_json(
+            self.experiments[0].get_fp(Folders.CONFIGS).read_text()
         )
         bin_sizes = list(configs.get_ref(configs.user.analyse.bins_sec)) + ["custom"]
 
-        for subdir in os.listdir(proj_analyse_dir):
+        for subdir in proj_analyse_dir.iterdir():
+            if not subdir.is_dir():
+                continue
             for bin_size in bin_sizes:
                 df_ls, names_ls = [], []
                 for exp in self.experiments:
-                    in_fp = os.path.join(
-                        proj_analyse_dir,
-                        subdir,
-                        f"binned_{bin_size}",
-                        f"{exp.name}.{AnalysisBinnedDf.IO}",
+                    in_fp = (
+                        subdir
+                        / f"binned_{bin_size}"
+                        / f"{exp.name}.{AnalysisBinnedDf.IO}"
                     )
-                    if os.path.isfile(in_fp):
+                    if in_fp.is_file():
                         df_ls.append(AnalysisBinnedDf.read(in_fp))
                         names_ls.append(exp.name)
                 if not df_ls:
@@ -281,45 +271,34 @@ class Project:
                 df = pd.concat(
                     df_ls, keys=names_ls, names=["experiment"], axis=1
                 ).fillna(0)
-                out_dir = os.path.join(proj_analyse_dir, subdir)
                 AnalysisBinnedCollatedDf.write(
                     df,
-                    os.path.join(
-                        out_dir,
-                        f"__ALL_binned_{bin_size}.{AnalysisBinnedCollatedDf.IO}",
-                    ),
+                    subdir / f"__ALL_binned_{bin_size}.{AnalysisBinnedCollatedDf.IO}",
                 )
                 AnalysisBinnedCollatedDf.write_csv(
-                    df, os.path.join(out_dir, f"__ALL_binned_{bin_size}.csv")
+                    df, subdir / f"__ALL_binned_{bin_size}.csv"
                 )
 
     def _collate_summary(self) -> None:
         """Combine summary analysis data across experiments."""
         logger.info("Collating summary analysis...")
-        proj_analyse_dir = os.path.join(self.root_dir, ANALYSIS_DIR)
-        if not os.path.isdir(proj_analyse_dir):
+        proj_analyse_dir = self.root_dir / ANALYSIS_DIR
+        if not proj_analyse_dir.is_dir():
             return
 
-        for subdir in os.listdir(proj_analyse_dir):
+        for subdir in proj_analyse_dir.iterdir():
+            if not subdir.is_dir():
+                continue
             df_ls, names_ls = [], []
             for exp in self.experiments:
-                in_fp = os.path.join(
-                    proj_analyse_dir,
-                    subdir,
-                    "summary",
-                    f"{exp.name}.{AnalysisSummaryDf.IO}",
-                )
-                if os.path.isfile(in_fp):
+                in_fp = subdir / "summary" / f"{exp.name}.{AnalysisSummaryDf.IO}"
+                if in_fp.is_file():
                     df_ls.append(AnalysisSummaryDf.read(in_fp))
                     names_ls.append(exp.name)
             if not df_ls:
                 continue
             df = pd.concat(df_ls, keys=names_ls, names=["experiment"], axis=0).fillna(0)
-            out_dir = os.path.join(proj_analyse_dir, subdir)
             AnalysisSummaryCollatedDf.write(
-                df,
-                os.path.join(out_dir, f"__ALL_summary.{AnalysisSummaryCollatedDf.IO}"),
+                df, subdir / f"__ALL_summary.{AnalysisSummaryCollatedDf.IO}"
             )
-            AnalysisSummaryCollatedDf.write_csv(
-                df, os.path.join(out_dir, "__ALL_summary.csv")
-            )
+            AnalysisSummaryCollatedDf.write_csv(df, subdir / "__ALL_summary.csv")

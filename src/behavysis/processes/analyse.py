@@ -17,6 +17,7 @@ str
 
 import logging
 import os
+from pathlib import Path
 
 import cv2
 import numpy as np
@@ -46,10 +47,10 @@ class Analyse:
     @classmethod
     def in_roi(
         cls,
-        keypoints_fp: str,
-        formatted_vid_fp: str,
-        dst_dir: str,
-        configs_fp: str,
+        keypoints_fp: Path,
+        formatted_vid_fp: Path,
+        dst_dir: Path,
+        configs_fp: Path,
     ) -> str:
         """Determines the frames in which the subject is inside the cage (from average
         of given bodypoints).
@@ -57,9 +58,9 @@ class Analyse:
         Points are `padding_px` padded (away) from center.
         """
         name = get_name(keypoints_fp)
-        dst_subdir = os.path.join(dst_dir, "in_roi")
+        dst_subdir = dst_dir / "in_roi"
         # Calculating the deltas (changes in body position) between each frame for the subject
-        configs = ExperimentConfigs.read_json(configs_fp)
+        configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
         fps, _, _, px_per_mm, bins_ls, cbins_ls = configs.get_analysis_configs()
         start_frame = configs.auto.start_frame
         configs_filt_ls = configs.user.analyse.in_roi
@@ -126,7 +127,7 @@ class Analyse:
                 )  # type: ignore
                 # Determining if the indiv body center is in the ROI
                 analysis_i_df[(indiv, roi_name)] = analysis_i_df[indiv].apply(
-                    lambda pt: cls._pt_in_roi(pt, corners_i_df, logger), axis=1
+                    lambda pt: cls._pt_in_roi(pt, corners_i_df), axis=1
                 )
             # Inverting in_roi status if is_in is False
             if not is_in:
@@ -175,7 +176,9 @@ class Analyse:
 
     @classmethod
     def _pt_in_roi(
-        cls, pt: pd.Series, corners_df: pd.DataFrame, logger: logging.Logger
+        cls,
+        pt: pd.Series,
+        corners_df: pd.DataFrame,
     ) -> bool:
         """__summary__"""
         # Counting crossings over edge in region when point is translated to the right
@@ -209,7 +212,7 @@ class Analyse:
         corners_df: pd.DataFrame,
         frame: np.ndarray,
         dst_fp: str,
-    ):
+    ) -> None:
         """Expects analysis_df index levels to be (frame,),
         and column levels to be (individual, measure).
         """
@@ -280,16 +283,16 @@ class Analyse:
     @classmethod
     def speed(
         cls,
-        keypoints_fp: str,
-        formatted_vid_fp: str,
-        dst_dir: str,
-        configs_fp: str,
-    ) -> str:
+        keypoints_fp: Path,
+        formatted_vid_fp: Path,
+        dst_dir: Path,
+        configs_fp: Path,
+    ) -> None:
         """Determines the speed of the subject in each frame."""
         name = get_name(keypoints_fp)
         dst_subdir = os.path.join(dst_dir, "speed")
         # Calculating the deltas (changes in body position) between each frame for the subject
-        configs = ExperimentConfigs.read_json(configs_fp)
+        configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
         fps, _, _, px_per_mm, bins_ls, cbins_ls = configs.get_analysis_configs()
         configs_filt = configs.user.analyse.speed
         bpts = configs.get_ref(configs_filt.bodyparts)
@@ -349,11 +352,11 @@ class Analyse:
     @classmethod
     def distance(
         cls,
-        keypoints_fp: str,
-        formatted_vid_fp: str,
-        dst_dir: str,
-        configs_fp: str,
-    ) -> str:
+        keypoints_fp: Path,
+        formatted_vid_fp: Path,
+        dst_dir: Path,
+        configs_fp: Path,
+    ) -> None:
         """Determines the distance travelled by the subject in each frame.
 
         Very similar to speed, except not scaled by time (fps).
@@ -361,7 +364,7 @@ class Analyse:
         name = get_name(keypoints_fp)
         dst_subdir = os.path.join(dst_dir, "distance")
         # Calculating the deltas (changes in body position) between each frame for the subject
-        configs = ExperimentConfigs.read_json(configs_fp)
+        configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
         fps, _, _, px_per_mm, bins_ls, cbins_ls = configs.get_analysis_configs()
         configs_filt = configs.user.analyse.speed
         bpts = configs.get_ref(configs_filt.bodyparts)
@@ -421,16 +424,16 @@ class Analyse:
     @classmethod
     def social_distance(
         cls,
-        keypoints_fp: str,
-        formatted_vid_fp: str,
-        dst_dir: str,
-        configs_fp: str,
-    ) -> str:
+        keypoints_fp: Path,
+        formatted_vid_fp: Path,
+        dst_dir: Path,
+        configs_fp: Path,
+    ) -> None:
         """Determines the speed of the subject in each frame."""
         name = get_name(keypoints_fp)
-        dst_subdir = os.path.join(dst_dir, "social_distance")
+        dst_subdir = dst_dir / "social_distance"
         # Calculating the deltas (changes in body position) between each frame for the subject
-        configs = ExperimentConfigs.read_json(configs_fp)
+        configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
         fps, _, _, px_per_mm, bins_ls, cbins_ls = configs.get_analysis_configs()
         configs_filt = configs.user.analyse.social_distance
         bpts = configs.get_ref(configs_filt.bodyparts)
@@ -468,7 +471,7 @@ class Analyse:
             .agg(np.nanmean)
         )
         # Saving analysis_df
-        fbf_fp = os.path.join(dst_subdir, FBF, f"{name}.{AnalysisDf.IO}")
+        fbf_fp = dst_subdir / FBF / f"{name}.{AnalysisDf.IO}"
         AnalysisDf.write(analysis_df, fbf_fp)
 
         # Summarising and binning analysis_df
@@ -480,16 +483,15 @@ class Analyse:
             bins_ls,
             cbins_ls,
         )
-        return ""
 
     @classmethod
     def freezing(
         cls,
-        keypoints_fp: str,
-        formatted_vid_fp: str,
-        dst_dir: str,
-        configs_fp: str,
-    ) -> str:
+        keypoints_fp: Path,
+        formatted_vid_fp: Path,
+        dst_dir: Path,
+        configs_fp: Path,
+    ) -> None:
         """Determines the frames in which the subject is frozen.
 
         "Frozen" is defined as not moving outside of a radius of `threshold_mm`, and only
@@ -500,7 +502,7 @@ class Analyse:
         name = get_name(keypoints_fp)
         dst_subdir = os.path.join(dst_dir, "freezing")
         # Calculating the deltas (changes in body position) between each frame for the subject
-        configs = ExperimentConfigs.read_json(configs_fp)
+        configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
         fps, _, _, px_per_mm, bins_ls, cbins_ls = configs.get_analysis_configs()
         configs_filt = configs.user.analyse.freezing
         bpts = configs.get_ref(configs_filt.bodyparts)
@@ -569,4 +571,3 @@ class Analyse:
             bins_ls,
             cbins_ls,
         )
-        return ""

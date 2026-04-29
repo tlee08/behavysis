@@ -26,6 +26,7 @@ Given the `dst_dir`, we save the files to `dst_dir/<func_name>/<exp_name>.<ext>`
 """
 
 import os
+from pathlib import Path
 
 import pandas as pd
 import seaborn as sns
@@ -46,11 +47,11 @@ class Evaluate:
 
     @staticmethod
     def keypoints_plot(
-        vid_fp: str,
-        dlc_fp: str,
-        behavs_fp: str,
-        dst_dir: str,
-        configs_fp: str,
+        vid_fp: Path,
+        dlc_fp: Path,
+        behavs_fp: Path,
+        dst_dir: Path,
+        configs_fp: Path,
         overwrite: bool,
     ) -> str:
         """Make keypoints evaluation plot of likelihood of each bodypart through time."""
@@ -60,7 +61,7 @@ class Evaluate:
         os.makedirs(dst_dir, exist_ok=True)
 
         # Getting necessary config parameters
-        configs = ExperimentConfigs.read_json(configs_fp)
+        configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
         configs_filt = configs.user.evaluate.keypoints_plot
         bpts = configs.get_ref(configs_filt.bodyparts)
         fps = configs.auto.formatted_vid.fps
@@ -104,11 +105,11 @@ class Evaluate:
 
     @staticmethod
     def behav_plot(
-        vid_fp: str,
-        dlc_fp: str,
-        behavs_fp: str,
-        dst_dir: str,
-        configs_fp: str,
+        vid_fp: Path,
+        dlc_fp: Path,
+        behavs_fp: Path,
+        dst_dir: Path,
+        configs_fp: Path,
         overwrite: bool,
     ) -> str:
         """Make behaviour evaluation plot of the predicted and actual behaviours through time."""
@@ -121,7 +122,7 @@ class Evaluate:
             return file_exists_msg()
 
         # Getting necessary config parameters
-        configs = ExperimentConfigs.read_json(configs_fp)
+        configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
         # configs_filt = configs.user.evaluate.behav_plot
         fps = float(configs.auto.formatted_vid.fps)
 

@@ -1,12 +1,11 @@
 from matplotlib import pyplot as plt
-from pydantic import field_validator
+from pydantic import BaseModel, field_validator
 
 from behavysis.df_classes.keypoints_df import KeypointsDf
 from behavysis.utils.misc_utils import enum2tuple
-from behavysis.utils.pydantic_base_model import PydanticBaseModel
 
 
-class EvaluateVidConfigs(PydanticBaseModel):
+class EvaluateVidConfigs(BaseModel):
     funcs: list[str] | str = ["keypoints", "analysis"]
     pcutoff: float | str = 0.8
     colour_level: str = KeypointsDf.CN.INDIVIDUALS.value
@@ -26,7 +25,7 @@ class EvaluateVidConfigs(PydanticBaseModel):
         return cls.validate_attr_closed_set(v, vals)
 
 
-class KeypointsConfigs(PydanticBaseModel):
+class KeypointsConfigs(BaseModel):
     pcutoff: float | str = 0.8
     colour_level: str = KeypointsDf.CN.INDIVIDUALS.value
     radius: int | str = 3
@@ -44,9 +43,9 @@ class KeypointsConfigs(PydanticBaseModel):
         return cls.validate_attr_closed_set(v, vals)
 
 
-class AnalysisConfigs(PydanticBaseModel):
+class AnalysisConfigs(BaseModel):
     padding: int = 30  # Graph viewable window either side
 
 
-class JohanssonConfigs(PydanticBaseModel):
+class JohanssonConfigs(BaseModel):
     colour: str = "black"

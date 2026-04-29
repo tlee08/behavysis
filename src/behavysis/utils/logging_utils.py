@@ -11,7 +11,7 @@ LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 
 def setup_logging(
     level: int = logging.INFO,
-    log_file: Path | str | None = None,
+    log_file: Path | None = None,
 ) -> None:
     """Configure logging once at application startup.
 
@@ -21,7 +21,7 @@ def setup_logging(
     ----------
     level : int
         Minimum log level for console output
-    log_file : Path | str | None
+    log_file : Path | None
         Optional custom log file path. If None and project_name is provided,
         uses ~/.behavysis/{project_name}/debug.log
 
@@ -44,7 +44,7 @@ def setup_logging(
     root.addHandler(ch)
 
     # File handler (with rotation)
-    log_file = Path(log_file) if log_file else CACHE_DIR / "debug.log"
+    log_file = log_file or CACHE_DIR / "debug.log"
     log_file.parent.mkdir(parents=True, exist_ok=True)
     fh = logging.handlers.RotatingFileHandler(
         log_file, maxBytes=10_000_000, backupCount=3

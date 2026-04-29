@@ -30,10 +30,10 @@ class UpdateConfigs:
 
     @staticmethod
     def update_configs(
-        configs_fp: str,
-        default_configs_fp: str,
+        configs_fp: Path,
+        default_configs_fp: Path,
         overwrite: Literal["user", "all"],
-    ) -> str:
+    ) -> None:
         """Initialises the config files with the given `default_configs`.
         The different types of overwriting are:
         - "user": Only the user parameters are updated.
@@ -55,11 +55,13 @@ class UpdateConfigs:
         """
         # Parsing in the experiment's existing JSON configs
         try:
-            configs = ExperimentConfigs.read_json(configs_fp)
+            configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
         except (FileNotFoundError, ValidationError):
             configs = ExperimentConfigs()
         # Reading in the new configs from the given configs_fp
-        default_configs = ExperimentConfigs.read_json(default_configs_fp)
+        default_configs = ExperimentConfigs.model_validate_json(
+            default_configs_fp.read_text()
+        )
         # Overwriting the configs file (with given method)
         if overwrite == "user":
             configs.user = default_configs.user
@@ -73,5 +75,4 @@ class UpdateConfigs:
                 f'Invalid value "{overwrite}" passed to function. The value must be either "user", or "all".'
             )
         # Writing new configs to JSON file
-        configs.write_json(configs_fp)
-        return ""
+        configs_fp.write_text(configs.model_dump_json(indent=2))

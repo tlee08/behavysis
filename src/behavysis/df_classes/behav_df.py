@@ -1,6 +1,7 @@
 """Utility functions."""
 
 from enum import Enum
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -108,7 +109,11 @@ class BehavScoredDf(BehavDf):
 
     @classmethod
     def import_boris_tsv(
-        cls, fp: str, behavs_ls: list[str], start_frame: int, stop_frame: int
+        cls,
+        fp: Path,
+        behavs_ls: list[Path],
+        start_frame: int,
+        stop_frame: int,
     ) -> pd.DataFrame:
         """Importing Boris TSV file."""
         # Making df structure

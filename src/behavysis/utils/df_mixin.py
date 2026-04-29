@@ -1,7 +1,7 @@
 """Utility functions."""
 
-import os
 from enum import EnumType
+from pathlib import Path
 
 import pandas as pd
 
@@ -22,7 +22,7 @@ class DFMixin:
     ###############################################################################################
 
     @classmethod
-    def read_csv(cls, fp: str) -> pd.DataFrame:
+    def read_csv(cls, fp: Path) -> pd.DataFrame:
         """Reading dataframe csv file."""
         df = pd.read_csv(
             fp,
@@ -33,29 +33,30 @@ class DFMixin:
         return df
 
     @classmethod
-    def read_h5(cls, fp: str) -> pd.DataFrame:
+    def read_h5(cls, fp: Path) -> pd.DataFrame:
         """Reading dataframe h5 file."""
         df = pd.DataFrame(pd.read_hdf(fp, mode="r"))
         df = cls.basic_clean(df)
         return df
 
     @classmethod
-    def read_feather(cls, fp: str) -> pd.DataFrame:
+    def read_feather(cls, fp: Path) -> pd.DataFrame:
         """Reading dataframe feather file."""
         df = pd.read_feather(fp)
         df = cls.basic_clean(df)
         return df
 
     @classmethod
-    def read_parquet(cls, fp: str) -> pd.DataFrame:
+    def read_parquet(cls, fp: Path) -> pd.DataFrame:
         """Reading dataframe parquet file."""
         df = pd.read_parquet(fp)
         df = cls.basic_clean(df)
         return df
 
     @classmethod
-    def read(cls, fp: str) -> pd.DataFrame:
+    def read(cls, fp: Path) -> pd.DataFrame:
         """Default dataframe read method.
+
         Based on `IO` class attribute.
         """
         methods = {
@@ -65,7 +66,8 @@ class DFMixin:
             "parquet": cls.read_parquet,
         }
         assert cls.IO in methods, (
-            f"File type, {cls.IO}, not supported.\nSupported IO types are: {list(methods.keys())}."
+            f"File type, {cls.IO}, not supported.\n"
+            f"Supported IO types are: {list(methods.keys())}."
         )
         return methods[cls.IO](fp)
 
@@ -74,35 +76,35 @@ class DFMixin:
     ###############################################################################################
 
     @classmethod
-    def write_csv(cls, df: pd.DataFrame, fp: str) -> None:
+    def write_csv(cls, df: pd.DataFrame, fp: Path) -> None:
         """Writing dataframe to csv file."""
         df = cls.basic_clean(df)
-        os.makedirs(os.path.dirname(fp), exist_ok=True)
+        fp.parent.mkdir(parents=True, exist_ok=True)
         df.to_csv(fp)
 
     @classmethod
-    def write_h5(cls, df: pd.DataFrame, fp: str) -> None:
+    def write_h5(cls, df: pd.DataFrame, fp: Path) -> None:
         """Writing dataframe h5 file."""
         df = cls.basic_clean(df)
-        os.makedirs(os.path.dirname(fp), exist_ok=True)
+        fp.parent.mkdir(parents=True, exist_ok=True)
         df.to_hdf(fp, key="data", mode="w")
 
     @classmethod
-    def write_feather(cls, df: pd.DataFrame, fp: str) -> None:
+    def write_feather(cls, df: pd.DataFrame, fp: Path) -> None:
         """Writing dataframe feather file."""
         df = cls.basic_clean(df)
-        os.makedirs(os.path.dirname(fp), exist_ok=True)
+        fp.parent.mkdir(parents=True, exist_ok=True)
         df.to_feather(fp)
 
     @classmethod
-    def write_parquet(cls, df: pd.DataFrame, fp: str) -> None:
+    def write_parquet(cls, df: pd.DataFrame, fp: Path) -> None:
         """Writing dataframe parquet file."""
         df = cls.basic_clean(df)
-        os.makedirs(os.path.dirname(fp), exist_ok=True)
+        fp.parent.mkdir(parents=True, exist_ok=True)
         df.to_parquet(fp)
 
     @classmethod
-    def write(cls, df: pd.DataFrame, fp: str) -> None:
+    def write(cls, df: pd.DataFrame, fp: Path) -> None:
         """Default dataframe read method based on IO attribute.
         Based on `IO` class attribute.
         """
