@@ -2,7 +2,6 @@
 
 from enum import EnumType
 from pathlib import Path
-from typing import Callable
 
 import pandas as pd
 
@@ -22,115 +21,76 @@ class DFMixin:
     CN = None
     IO = DF_IO_FORMAT
 
-    # Dispatch tables for I/O operations
-    _READERS: dict[str, Callable] = {
-        "csv": pd.read_csv,
-        "h5": pd.read_hdf,
-        "feather": pd.read_feather,
-        "parquet": pd.read_parquet,
-    }
-
-    _WRITERS: dict[str, Callable] = {
-        "csv": pd.DataFrame.to_csv,
-        "h5": lambda df, fp: df.to_hdf(fp, key="data", mode="w"),
-        "feather": pd.DataFrame.to_feather,
-        "parquet": pd.DataFrame.to_parquet,
-    }
-
     ###############################################################################################
     # DF Read Functions
     ###############################################################################################
 
     @classmethod
-    def read_csv(cls, fp: Path) -> pd.DataFrame:
-        """Read dataframe from CSV file."""
-        df = pd.read_csv(
-            fp,
-            index_col=list(range(len(enum2tuple(cls.IN) if cls.IN else (None,)))),
-            header=list(range(len(enum2tuple(cls.CN) if cls.CN else (None,)))),
-        )
-        return cls.basic_clean(df)
-
-    @classmethod
-    def read_h5(cls, fp: Path) -> pd.DataFrame:
-        """Read dataframe from HDF5 file."""
-        df = pd.DataFrame(pd.read_hdf(fp, mode="r"))
-        return cls.basic_clean(df)
-
-    @classmethod
-    def read_feather(cls, fp: Path) -> pd.DataFrame:
-        """Read dataframe from Feather file."""
-        df = pd.read_feather(fp)
-        return cls.basic_clean(df)
-
-    @classmethod
-    def read_parquet(cls, fp: Path) -> pd.DataFrame:
-        """Read dataframe from Parquet file."""
-        df = pd.read_parquet(fp)
-        return cls.basic_clean(df)
-
-    @classmethod
-    def read(cls, fp: Path) -> pd.DataFrame:
-        """Read dataframe using the format specified by IO attribute.
+    def read(cls, fp: Path, fmt: str | None = None) -> pd.DataFrame:
+        """Read dataframe from file.
 
         Parameters
         ----------
         fp : Path
             File path to read from.
+        fmt : str | None
+            File format. If None, uses cls.IO. Supports: csv, h5, feather, parquet.
 
-        Returns
+        Returns:
         -------
         pd.DataFrame
             Loaded dataframe with validated schema.
 
-        Raises
+        Raises:
         ------
         AssertionError
-            If IO format is not supported.
+            If format is not supported.
         """
-        if cls.IO not in cls._READERS:
-            msg = (
-                f"File type, {cls.IO}, not supported.\n"
-                f"Supported IO types are: {list(cls._READERS.keys())}."
+        fmt = fmt or cls.IO
+        if fmt == "csv":
+            df = pd.read_csv(
+                fp,
+                index_col=list(range(len(enum2tuple(cls.IN) if cls.IN else (None,)))),
+                header=list(range(len(enum2tuple(cls.CN) if cls.CN else (None,)))),
             )
+        elif fmt == "h5":
+            df = pd.DataFrame(pd.read_hdf(fp, mode="r"))
+        elif fmt == "feather":
+            df = pd.read_feather(fp)
+        elif fmt == "parquet":
+            df = pd.read_parquet(fp)
+        else:
+            msg = f"File type, {fmt}, not supported. Supported formats: csv, h5, feather, parquet."
             raise AssertionError(msg)
-        return cls._READERS[cls.IO](fp)
+        return cls.basic_clean(df)
+
+    @classmethod
+    def read_csv(cls, fp: Path) -> pd.DataFrame:
+        """Read dataframe from CSV file."""
+        return cls.read(fp, fmt="csv")
+
+    @classmethod
+    def read_h5(cls, fp: Path) -> pd.DataFrame:
+        """Read dataframe from HDF5 file."""
+        return cls.read(fp, fmt="h5")
+
+    @classmethod
+    def read_feather(cls, fp: Path) -> pd.DataFrame:
+        """Read dataframe from Feather file."""
+        return cls.read(fp, fmt="feather")
+
+    @classmethod
+    def read_parquet(cls, fp: Path) -> pd.DataFrame:
+        """Read dataframe from Parquet file."""
+        return cls.read(fp, fmt="parquet")
 
     ###############################################################################################
     # DF Write Functions
     ###############################################################################################
 
     @classmethod
-    def write_csv(cls, df: pd.DataFrame, fp: Path) -> None:
-        """Write dataframe to CSV file."""
-        df = cls.basic_clean(df)
-        fp.parent.mkdir(parents=True, exist_ok=True)
-        df.to_csv(fp)
-
-    @classmethod
-    def write_h5(cls, df: pd.DataFrame, fp: Path) -> None:
-        """Write dataframe to HDF5 file."""
-        df = cls.basic_clean(df)
-        fp.parent.mkdir(parents=True, exist_ok=True)
-        df.to_hdf(fp, key="data", mode="w")
-
-    @classmethod
-    def write_feather(cls, df: pd.DataFrame, fp: Path) -> None:
-        """Write dataframe to Feather file."""
-        df = cls.basic_clean(df)
-        fp.parent.mkdir(parents=True, exist_ok=True)
-        df.to_feather(fp)
-
-    @classmethod
-    def write_parquet(cls, df: pd.DataFrame, fp: Path) -> None:
-        """Write dataframe to Parquet file."""
-        df = cls.basic_clean(df)
-        fp.parent.mkdir(parents=True, exist_ok=True)
-        df.to_parquet(fp)
-
-    @classmethod
-    def write(cls, df: pd.DataFrame, fp: Path) -> None:
-        """Write dataframe using the format specified by IO attribute.
+    def write(cls, df: pd.DataFrame, fp: Path, fmt: str | None = None) -> None:
+        """Write dataframe to file.
 
         Parameters
         ----------
@@ -138,19 +98,48 @@ class DFMixin:
             Dataframe to write.
         fp : Path
             File path to write to.
+        fmt : str | None
+            File format. If None, uses cls.IO. Supports: csv, h5, feather, parquet.
 
-        Raises
+        Raises:
         ------
         AssertionError
-            If IO format is not supported.
+            If format is not supported.
         """
-        if cls.IO not in cls._WRITERS:
-            msg = (
-                f"File type, {cls.IO}, not supported.\n"
-                f"Supported IO types are: {list(cls._WRITERS.keys())}."
-            )
+        df = cls.basic_clean(df)
+        fp.parent.mkdir(parents=True, exist_ok=True)
+        fmt = fmt or cls.IO
+        if fmt == "csv":
+            df.to_csv(fp)
+        elif fmt == "h5":
+            df.to_hdf(fp, key="data", mode="w")
+        elif fmt == "feather":
+            df.to_feather(fp)
+        elif fmt == "parquet":
+            df.to_parquet(fp)
+        else:
+            msg = f"File type, {fmt}, not supported. Supported formats: csv, h5, feather, parquet."
             raise AssertionError(msg)
-        cls._WRITERS[cls.IO](df, fp)
+
+    @classmethod
+    def write_csv(cls, df: pd.DataFrame, fp: Path) -> None:
+        """Write dataframe to CSV file."""
+        cls.write(df, fp, fmt="csv")
+
+    @classmethod
+    def write_h5(cls, df: pd.DataFrame, fp: Path) -> None:
+        """Write dataframe to HDF5 file."""
+        cls.write(df, fp, fmt="h5")
+
+    @classmethod
+    def write_feather(cls, df: pd.DataFrame, fp: Path) -> None:
+        """Write dataframe to Feather file."""
+        cls.write(df, fp, fmt="feather")
+
+    @classmethod
+    def write_parquet(cls, df: pd.DataFrame, fp: Path) -> None:
+        """Write dataframe to Parquet file."""
+        cls.write(df, fp, fmt="parquet")
 
     ###############################################################################################
     # DF init functions
@@ -165,7 +154,7 @@ class DFMixin:
         index : pd.Series | pd.Index
             Index values for the new dataframe.
 
-        Returns
+        Returns:
         -------
         pd.DataFrame
             Empty dataframe with proper MultiIndex structure.
@@ -193,7 +182,7 @@ class DFMixin:
         df : pd.DataFrame
             Dataframe to clean.
 
-        Returns
+        Returns:
         -------
         pd.DataFrame
             Cleaned dataframe with validated structure.
@@ -226,7 +215,7 @@ class DFMixin:
         df : pd.DataFrame
             Dataframe to validate.
 
-        Raises
+        Raises:
         ------
         AssertionError
             If dataframe doesn't match expected schema.
@@ -235,7 +224,7 @@ class DFMixin:
         assert isinstance(df, pd.DataFrame), "The dataframe must be a pandas DataFrame."
         # Checking there are no null values
         if not cls.NULLABLE:
-            assert not df.isnull().values.any(), (
+            assert not df.isna().to_numpy().any(), (
                 "The dataframe contains null values but it should not."
             )
         # Checking that the index levels are correct
@@ -247,7 +236,10 @@ class DFMixin:
 
     @classmethod
     def _check_levels(
-        cls, obj: pd.Index | pd.MultiIndex, levels: EnumType | tuple[str] | str, name: str
+        cls,
+        obj: pd.Index | pd.MultiIndex,
+        levels: EnumType | tuple[str] | str,
+        name: str,
     ) -> None:
         """Validate that index/column levels match expected names.
 

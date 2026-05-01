@@ -19,10 +19,7 @@ from behavysis.constants import PLOT_DPI, PLOT_STYLE
 #           IMPORTING SUBMODULES
 #####################################################################
 from behavysis.pipeline.project import Project
-from behavysis.processes.analyse import Analyse
-from behavysis.processes.calculate_params import CalculateParams
-from behavysis.processes.export import Export
-from behavysis.processes.preprocess import Preprocess
+from behavysis.processes import Analyse, CalculateParams, Export, Preprocess
 from behavysis.utils.logging_utils import setup_logging
 
 #####################################################################

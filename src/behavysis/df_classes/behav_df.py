@@ -111,7 +111,7 @@ class BehavScoredDf(BehavDf):
     def import_boris_tsv(
         cls,
         fp: Path,
-        behavs_ls: list[Path],
+        behavs_ls: list[str],
         start_frame: int,
         stop_frame: int,
     ) -> pd.DataFrame:
@@ -203,7 +203,7 @@ class BehavScoredDf(BehavDf):
             # Adding pred column
             scored_df[(behav, cls.OutcomesCols.PRED.value)] = df[
                 (behav, cls.OutcomesCols.PRED.value)
-            ].values
+            ].to_numpy()
             # Adding actual column and behav is set to undetermined
             scored_df[(behav, cls.OutcomesCols.ACTUAL.value)] = scored_df[
                 (behav, cls.OutcomesCols.PRED.value)

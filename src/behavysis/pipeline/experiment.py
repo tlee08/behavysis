@@ -4,7 +4,6 @@ import logging
 import traceback
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any
 
 import numpy as np
 
@@ -13,7 +12,7 @@ from behavysis.constants import (
     FileExts,
     Folders,
 )
-from behavysis.models.experiment_configs import AutoConfigs, ExperimentConfigs
+from behavysis.models.process_result import ProcessResult, ProcessResultCollection
 from behavysis.processes.analyse_behavs import AnalyseBehavs
 from behavysis.processes.classify_behavs import ClassifyBehavs
 from behavysis.processes.combine_analysis import CombineAnalysis
@@ -23,7 +22,6 @@ from behavysis.processes.extract_features import ExtractFeatures
 from behavysis.processes.format_vid import FormatVid
 from behavysis.processes.run_dlc import RunDLC
 from behavysis.processes.update_configs import UpdateConfigs
-from behavysis.utils.diagnostics_utils import ProcessResult, ProcessResultCollection
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +33,7 @@ class Experiment:
     root_dir: Path
 
     def __init__(self, name: str, root_dir: str | Path) -> None:
+        """Initialises the experiment with the given name and root directory."""
         root_dir = Path(root_dir)
         if not root_dir.is_dir():
             msg = (
@@ -58,19 +57,15 @@ class Experiment:
         if isinstance(folder, str):
             try:
                 folder = Folders(folder)
-            except ValueError:
+            except ValueError as e:
                 valid = "".join([f"\n    - {f.value}" for f in Folders])
                 msg = f"{folder} is not a valid folder. Valid folders:{valid}"
-                raise ValueError(msg)
+                raise ValueError(msg) from e
         file_ext: FileExts = getattr(FileExts, folder.name)
         return self.root_dir / folder.value / f"{self.name}.{file_ext.value}"
 
-    def _analysis_dir(self) -> Path:
-        """Returns the analysis directory path for this experiment."""
-        return self.root_dir / ANALYSIS_DIR
-
     def _proc_scaff(
-        self, funcs: tuple[Callable, ...], *args: Any, **kwargs: Any
+        self, funcs: tuple[Callable, ...], *args, **kwargs
     ) -> ProcessResultCollection:
         """All processing runs through here."""
         f_names_ls_msg = "".join([f"\n    - {f.__name__}" for f in funcs])
@@ -145,31 +140,6 @@ class Experiment:
             configs_fp=self.get_fp(Folders.CONFIGS),
         )
 
-    def collate_auto_configs(self) -> ProcessResultCollection:
-        """Collates the auto-configs of the experiment into the main configs file."""
-        result = ProcessResult(process_name="reading_configs")
-        try:
-            configs = ExperimentConfigs.model_validate_json(
-                self.get_fp(Folders.CONFIGS).read_text()
-            )
-            result.add_log(logging.DEBUG, "Reading configs file.")
-            result.mark_complete(success=True)
-        except FileNotFoundError:
-            result.add_log(logging.ERROR, "no configs file found.")
-            result.mark_complete(success=False, error_message="no configs file found.")
-            return ProcessResultCollection(
-                experiment=self.name, results={"reading_configs": result}
-            )
-        data = {}
-        for field_key_ls in AutoConfigs.get_field_names():
-            value = configs.auto
-            for key in field_key_ls:
-                value = getattr(value, key)
-            data["_".join(field_key_ls)] = value
-        return ProcessResultCollection(
-            experiment=self.name, results={"reading_configs": result, "data": data}
-        )
-
     def preprocess(
         self, funcs: tuple[Callable, ...], *, overwrite: bool
     ) -> ProcessResultCollection:
@@ -229,7 +199,7 @@ class Experiment:
             funcs,
             keypoints_fp=self.get_fp(Folders.PREPROCESSED),
             formatted_vid_fp=self.get_fp(Folders.FORMATTED_VID),
-            dst_dir=self._analysis_dir(),
+            dst_dir=self.root_dir / ANALYSIS_DIR,
             configs_fp=self.get_fp(Folders.CONFIGS),
         )
 
@@ -239,7 +209,7 @@ class Experiment:
             (AnalyseBehavs.analyse_behavs,),
             behavs_fp=self.get_fp(Folders.SCORED_BEHAVS),
             configs_fp=self.get_fp(Folders.CONFIGS),
-            dst_dir=self._analysis_dir(),
+            dst_dir=self.root_dir / ANALYSIS_DIR,
         )
 
     def combine_analysis(self) -> ProcessResultCollection:
@@ -248,7 +218,7 @@ class Experiment:
             (CombineAnalysis.combine_analysis,),
             analysis_combined_fp=self.get_fp(Folders.ANALYSIS_COMBINED),
             configs_fp=self.get_fp(Folders.CONFIGS),
-            analysis_dir=self._analysis_dir(),
+            analysis_dir=self.root_dir / ANALYSIS_DIR,
             overwrite=True,
         )
 

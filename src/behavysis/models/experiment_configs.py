@@ -61,18 +61,6 @@ class AutoConfigs(BaseModel):
     stop_frame: int = -1
     dur_frames: int = -1
 
-    @classmethod
-    def get_field_names(cls) -> list[tuple[str, ...]]:
-        """Returns the nested field names of the class as a list of tuples."""
-        fields = []
-        for name, type_ in cls.__annotations__.items():
-            if hasattr(type_, "__annotations__"):
-                for subfield in type_.get_field_names():
-                    fields.append((name, *subfield))
-            else:
-                fields.append((name,))
-        return fields
-
 
 class RefConfigs(BaseModel):
     model_config = ConfigDict(extra="allow")
@@ -94,7 +82,7 @@ class ExperimentConfigs(BaseModel):
         val : Any
             Value to resolve, potentially a reference string.
 
-        Returns
+        Returns:
         -------
         Any
             Resolved value or original val if not a reference.
@@ -113,12 +101,12 @@ class ExperimentConfigs(BaseModel):
     def get_analysis_configs(self) -> "AnalysisConfigs":
         """Get validated analysis configuration parameters.
 
-        Returns
+        Returns:
         -------
         AnalysisConfigs
             Pydantic model containing fps, dimensions, scale, and bin sizes.
 
-        Raises
+        Raises:
         ------
         AssertionError
             If required video metadata or px_per_mm not set.

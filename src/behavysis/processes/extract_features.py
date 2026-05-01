@@ -31,66 +31,64 @@ from behavysis.utils.template_utils import save_template
 logger = logging.getLogger(__name__)
 
 
-class ExtractFeatures:
-    @staticmethod
-    def extract_features(
-        keypoints_fp: Path,
-        features_fp: Path,
-        configs_fp: Path,
-        overwrite: bool,
-    ) -> None:
-        """Extracting features from preprocessed keypoints dataframe using SimBA
-        processes.
+def extract_features(
+    keypoints_fp: Path,
+    features_fp: Path,
+    configs_fp: Path,
+    *,
+    overwrite: bool,
+) -> None:
+    """Extracting features from keypoints dataframe using SimBA processes.
 
-        Parameters
-        ----------
-        keypoints_fp : Path
-            Preprocessed keypoints filepath.
-        features_fp : Path
-            Filepath to save extracted_features dataframe.
-        configs_fp : Path
-            Configs JSON filepath.
-        overwrite : bool
-            Whether to overwrite the features_fp file (if it exists).
+    Parameters
+    ----------
+    keypoints_fp : Path
+        Preprocessed keypoints filepath.
+    features_fp : Path
+        Filepath to save extracted_features dataframe.
+    configs_fp : Path
+        Configs JSON filepath.
+    overwrite : bool
+        Whether to overwrite the features_fp file (if it exists).
 
-        Returns:
-        -------
-        str
-            The outcome of the process.
-        """
-        if not overwrite and features_fp.exists():
-            logger.warning(file_exists_msg(features_fp))
-            return
-        # Getting directory and file paths
-        name = get_name(keypoints_fp)
-        cpid = get_cpid()
-        configs_dir = configs_fp.parent
-        simba_in_dir = CACHE_DIR / f"input_{cpid}"
-        simba_dir = CACHE_DIR / f"simba_proj_{cpid}"
-        simba_features_dir = simba_dir / "project_folder" / "csv" / "features_extracted"
-        simba_features_fp = simba_features_dir / f"{name}.csv"
-        # Removing temp folders (preemptively)
-        silent_remove(simba_in_dir)
-        silent_remove(simba_dir)
-        # Preparing keypoints dataframes for input to SimBA project
-        simba_in_dir.mkdir(parents=True, exist_ok=True)
-        simba_in_fp = simba_in_dir / f"{name}.csv"
-        # Selecting bodyparts for SimBA (8 bpts, 2 indivs)
-        keypoints_df = KeypointsDf.read(keypoints_fp)
-        keypoints_df = select_cols(keypoints_df, configs_fp)
-        # Saving keypoints index to use in the SimBA features extraction df
-        index = keypoints_df.index
-        # Need to remove index name for SimBA to import correctly
-        keypoints_df.index.name = None
-        # Saving as csv
-        keypoints_df.to_csv(simba_in_fp)
-        # Running SimBA env and script to run SimBA feature extraction
-        run_simba_subproc(simba_dir, simba_in_dir, configs_dir, CACHE_DIR, cpid)
-        # Exporting SimBA feature extraction csv to disk
-        export2df(simba_features_fp, features_fp, index)
-        # Removing temp folders
-        silent_remove(simba_in_dir)
-        silent_remove(simba_dir)
+    Returns:
+    -------
+    str
+        The outcome of the process.
+    """
+    if not overwrite and features_fp.exists():
+        logger.warning(file_exists_msg(features_fp))
+        return
+    # Getting directory and file paths
+    name = get_name(keypoints_fp)
+    cpid = get_cpid()
+    configs_dir = configs_fp.parent
+    simba_in_dir = CACHE_DIR / f"input_{cpid}"
+    simba_dir = CACHE_DIR / f"simba_proj_{cpid}"
+    simba_features_dir = simba_dir / "project_folder" / "csv" / "features_extracted"
+    simba_features_fp = simba_features_dir / f"{name}.csv"
+    # Removing temp folders (preemptively)
+    silent_remove(simba_in_dir)
+    silent_remove(simba_dir)
+    # Preparing keypoints dataframes for input to SimBA project
+    simba_in_dir.mkdir(parents=True, exist_ok=True)
+    simba_in_fp = simba_in_dir / f"{name}.csv"
+    # Selecting bodyparts for SimBA (8 bpts, 2 indivs)
+    keypoints_df = KeypointsDf.read(keypoints_fp)
+    keypoints_df = select_cols(keypoints_df, configs_fp)
+    # Saving keypoints index to use in the SimBA features extraction df
+    index = keypoints_df.index
+    # Need to remove index name for SimBA to import correctly
+    keypoints_df.index.name = None
+    # Saving as csv
+    keypoints_df.to_csv(simba_in_fp)
+    # Running SimBA env and script to run SimBA feature extraction
+    run_simba_subproc(simba_dir, simba_in_dir, configs_dir, CACHE_DIR, cpid)
+    # Exporting SimBA feature extraction csv to disk
+    export2df(simba_features_fp, features_fp, index)
+    # Removing temp folders
+    silent_remove(simba_in_dir)
+    silent_remove(simba_dir)
 
 
 #####################################################################
@@ -134,12 +132,12 @@ def run_simba_subproc(
     temp_dir: Path,
     cpid: int,
 ) -> None:
-    """Running the custom SimBA script to take the prepared keypoints dataframe as input and
-    create the features extracted dataframe.
+    """Running SimBA script to feature engineer from x-y-likelihood pts.
 
-    A custom SimBA script must be run in a separate custom conda environment because SimBA
-    cannot be installed in the same environment as DEEPLABCUT (and also uses Python 3.6 -
-    which is old).
+    A custom SimBA script must be run in a
+    separate custom conda environment because SimBA
+    cannot be installed in the same environment
+    as DEEPLABCUT (and also uses Python 3.6 - which is old).
 
     Parameters
     ----------
@@ -149,8 +147,10 @@ def run_simba_subproc(
         Prepared keypoints dataframes directory. SimBA imports the entire directory.
         If only one file is being processed, put that file in a separate folder.
     configs_dir : Path
-        Directory path of config files corresponding to keypoints dataframes in keypoints_dir.
-        For each keypoints dataframe file, there should be a config file with the same name.
+        Directory path of config files corresponding to
+        keypoints dataframes in keypoints_dir.
+        For each keypoints dataframe file, there should be
+        a config file with the same name.
     """
     # Saving the script to a file
     script_fp = temp_dir / f"simba_subproc_{cpid}.py"

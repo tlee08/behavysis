@@ -10,7 +10,6 @@ from typing import Any
 import dask
 import numpy as np
 import pandas as pd
-import seaborn as sns
 from dask.distributed import LocalCluster
 from natsort import natsorted
 
@@ -174,27 +173,6 @@ class Project:
 
     def calculate_parameters(self, funcs: tuple[Callable, ...]) -> None:
         self._run_and_save_diagnostics(Experiment.calculate_parameters, funcs)
-
-    def collate_auto_configs(self) -> None:
-        self._run_and_save_diagnostics(Experiment.collate_auto_configs)
-        json_path = self.root_dir / DIAGNOSTICS_DIR / "collate_auto_configs.json"
-        with open(json_path) as f:
-            results = json.load(f)
-        records = [
-            r["results"].get("data", {}) for r in results if r["results"].get("data")
-        ]
-        if not records:
-            return
-        df = pd.DataFrame(records)
-        numeric_cols = df.select_dtypes(include="number").columns
-        if len(numeric_cols) == 0:
-            return
-        df = df[numeric_cols].fillna(-1).melt(var_name="measure", value_name="value")
-        g = sns.FacetGrid(data=df, col="measure", sharex=False, col_wrap=4)
-        g.map(sns.histplot, "value", bins=10)
-        g.set_titles("{col_name}")
-        g.savefig(self.root_dir / DIAGNOSTICS_DIR / "collate_auto_configs.png")
-        g.figure.clf()
 
     def preprocess(self, funcs: tuple[Callable, ...], *, overwrite: bool) -> None:
         self._run_and_save_diagnostics(

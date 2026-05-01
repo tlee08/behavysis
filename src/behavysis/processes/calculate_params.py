@@ -1,4 +1,4 @@
-"""Functions have the following format:
+"""Functions have the following format.
 
 Parameters
 ----------
@@ -30,241 +30,236 @@ from behavysis.utils.io_utils import get_name
 logger = logging.getLogger(__name__)
 
 
-class CalculateParams:
-    @staticmethod
-    def start_frame_from_likelihood(
-        keypoints_fp: Path,
-        configs_fp: Path,
-    ) -> None:
-        """Determines the starting frame of the experiment based on
-        when the subject "likely" entered the frame of view.
+def start_frame_from_likelihood(
+    keypoints_fp: Path,
+    configs_fp: Path,
+) -> None:
+    """Determines start frame based on when subject "likely" entered the frame.
 
-        This is done by looking at a sliding window of time. If the median likelihood of the subject
-        existing in each frame across the sliding window is greater than the defined pcutoff, then
-        the determine this as the start time.
+    This is done by looking at a sliding window of time.
+    If the median likelihood of the subject
+    existing in each frame across the sliding window is
+    greater than the defined pcutoff, then
+    the determine this as the start time.
 
-        Notes:
-        -----
-        The config file must contain the following parameters:
-        ```
-        - user
-            - calculate_params
-                - start_frame
-                    - bodyparts: list[str]
-                    - window_sec: float
-                    - pcutoff: float
-        ```
-        """
-        start_frame, _stop_frame = calc_exists_from_likelihood(keypoints_fp, configs_fp)
-        # Writing to configs
-        configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
-        configs.auto.start_frame = start_frame
-        configs_fp.write_text(configs.model_dump_json(indent=2))
+    Notes:
+    -----
+    The config file must contain the following parameters:
+    ```
+    - user
+        - calculate_params
+            - start_frame
+                - bodyparts: list[str]
+                - window_sec: float
+                - pcutoff: float
+    ```
+    """
+    start_frame, _stop_frame = _calc_exists_from_likelihood(keypoints_fp, configs_fp)
+    # Writing to configs
+    configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
+    configs.auto.start_frame = start_frame
+    configs_fp.write_text(configs.model_dump_json(indent=2))
 
-    @staticmethod
-    def start_frame_from_csv(keypoints_fp: Path, configs_fp: Path) -> None:
-        """Reads the start time of the experiment from a given CSV file
-        (filepath specified in config file).
 
-        Expects value to be in seconds (so will convert to frames).
-        Also expects the csv_fp to be a csv file,
-        where the first column is the name of the video and the second column
-        is the start time.
-        Also expect a header row, but it doesn't matter what the header names are.
+def start_frame_from_csv(keypoints_fp: Path, configs_fp: Path) -> None:
+    """Determines start frame from timestamps in csv.
 
-        Notes:
-        -----
-        The config file must contain the following parameters:
-        ```
-        - user
-            - calculate_params
-                - start_frame_from_csv
-                    - csv_fp: str
-                    - name: None | str
-        ```
-        """
-        # Getting necessary config parameters
-        configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
-        configs_filt = configs.user.calculate_params.start_frame_from_csv
-        fps = configs.auto.formatted_vid.fps
-        csv_fp = configs.get_ref(configs_filt.csv_fp)
-        name = configs.get_ref(configs_filt.name)
-        assert fps != -1, (
-            "fps not yet set. Please calculate fps first with `proj.get_vid_metadata`."
+    Expects value to be in seconds (so will convert to frames).
+    Also expects the csv_fp to be a csv file,
+    where the first column is the name of the video and the second column
+    is the start time.
+    Also expect a header row, but it doesn't matter what the header names are.
+
+    Notes:
+    -----
+    The config file must contain the following parameters:
+    ```
+    - user
+        - calculate_params
+            - start_frame_from_csv
+                - csv_fp: str
+                - name: None | str
+    ```
+    """
+    # Getting necessary config parameters
+    configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
+    configs_filt = configs.user.calculate_params.start_frame_from_csv
+    fps = configs.auto.formatted_vid.fps
+    csv_fp = configs.get_ref(configs_filt.csv_fp)
+    name = configs.get_ref(configs_filt.name)
+    assert fps != -1, (
+        "fps not yet set. Please calculate fps first with `proj.get_vid_metadata`."
+    )
+    # Using the name of the video as the name of the experiment if not specified
+    if name is None:
+        name = get_name(keypoints_fp)
+    # Reading csv_fp
+    start_times_df = pd.read_csv(csv_fp, index_col=0)
+    start_times_df.index = start_times_df.index.astype(str)
+    assert name in start_times_df.index.to_numpy(), (
+        f"{name} not in {csv_fp}.\n"
+        "Update `name` parameter in configs file or check the start_frames csv file."
+    )
+    # Getting start time in seconds
+    start_sec = start_times_df.loc[name][0]
+    # Converting to start frame
+    start_frame = int(np.round(start_sec * fps, 0))
+    # Writing to configs
+    configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
+    configs.auto.start_frame = start_frame
+    configs_fp.write_text(configs.model_dump_json(indent=2))
+
+
+def stop_frame_from_likelihood(keypoints_fp: Path, configs_fp: Path) -> None:
+    """Determines stop frame based on when subject "likely" entered the frame.
+
+    This is done by looking at a sliding window of time.
+    If the median likelihood of the subject
+    existing in each frame across the sliding window
+    is greater than the defined pcutoff, then
+    the determine this as the start time.
+    """
+    _start_frame, stop_frame = _calc_exists_from_likelihood(keypoints_fp, configs_fp)
+    # Writing to configs
+    configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
+    configs.auto.stop_frame = stop_frame
+    configs_fp.write_text(configs.model_dump_json(indent=2))
+
+
+def stop_frame_from_dur(keypoints_fp: Path, configs_fp: Path) -> None:
+    """Calculates the end time according to the following equation.
+
+    ```
+    stop_frame = start_frame + experiment_duration
+    ```
+
+    Notes:
+    -----
+    The config file must contain the following parameters:
+    ```
+    - user
+        - calculate_params
+            - stop_frame_from_dur
+                - dur_sec: float
+    ```
+    """
+    # Getting necessary config parameters
+    configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
+    configs_filt = configs.user.calculate_params.stop_frame_from_dur
+    dur_sec = configs.get_ref(configs_filt.dur_sec)
+    start_frame = configs.auto.start_frame
+    fps = configs.auto.formatted_vid.fps
+    total_frames = configs.auto.formatted_vid.total_frames
+    assert start_frame != -1, "start_frame is None. Please calculate start_frame first."
+    assert fps != -1, (
+        "fps not yet set. Please calculate fps first with `proj.get_vid_metadata`."
+    )
+    # Calculating stop_frame
+    dur_frames = int(dur_sec * fps)
+    stop_frame = start_frame + dur_frames
+    # Make warning if use-specified dur_sec is larger than the video dur.
+    if total_frames is None:
+        logger.warning("The length of the video itself has not been calculated yet.")
+    elif stop_frame > total_frames:
+        logger.warning(
+            "The user specified dur_sec in the configs file is greater "
+            "than the actual length of the video. Please check to see if this video is "
+            "too short or if the dur_sec value is incorrect."
         )
-        # Using the name of the video as the name of the experiment if not specified
-        if name is None:
-            name = get_name(keypoints_fp)
-        # Reading csv_fp
-        start_times_df = pd.read_csv(csv_fp, index_col=0)
-        start_times_df.index = start_times_df.index.astype(str)
-        assert name in start_times_df.index.values, (
-            f"{name} not in {csv_fp}.\n"
-            "Update the `name` parameter in the configs file or check the start_frames csv file."
+    # Writing to config
+    configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
+    configs.auto.stop_frame = stop_frame
+    configs_fp.write_text(configs.model_dump_json(indent=2))
+
+
+def dur_frames_from_likelihood(keypoints_fp: Path, configs_fp: Path) -> None:
+    """Determines duration in seconds, from subject first to last seen in vid.
+
+    Appear/disappear is calculated from likelihood.
+    """
+    start_frame, stop_frame = _calc_exists_from_likelihood(keypoints_fp, configs_fp)
+    # Writing to configs
+    configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
+    configs.auto.dur_frames = stop_frame - start_frame
+    configs_fp.write_text(configs.model_dump_json(indent=2))
+
+
+def px_per_mm(keypoints_fp: Path, configs_fp: Path) -> None:
+    """Calculates the pixels per mm conversion for the video.
+
+    This is done by averaging the (x, y) coordinates of each corner,
+    finding the average x difference for the widths in pixels and y distance
+    for the heights in pixels,
+    dividing these pixel distances by their respective mm distances
+    (from the *config.json file),
+    and taking the average of these width and height conversions to estimate
+    the px to mm
+    conversion.
+
+    Notes:
+    -----
+    The config file must contain the following parameters:
+    ```
+    - user
+        - calculate_params
+            - px_per_mm
+                - point_a: str
+                - point_b: str
+                - dist_mm: float
+    ```
+    """
+    # Getting necessary config parameters
+    configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
+    configs_filt = configs.user.calculate_params.px_per_mm
+    pt_a = configs.get_ref(configs_filt.pt_a)
+    pt_b = configs.get_ref(configs_filt.pt_b)
+    pcutoff = configs.get_ref(configs_filt.pcutoff)
+    dist_mm = configs.get_ref(configs_filt.dist_mm)
+    # Loading dataframe
+    keypoints_df = KeypointsDf.clean_headings(KeypointsDf.read(keypoints_fp))
+    # Imputing missing values with 0 (only really relevant for `likelihood` columns)
+    keypoints_df = keypoints_df.fillna(0)
+    # Checking that the two reference points are valid
+    KeypointsDf.check_bpts_exist(keypoints_df, [pt_a, pt_b])
+    # Getting calibration points (x, y, likelihood) values
+    pt_a_df = keypoints_df[IndivCols.SINGLE.value, pt_a]
+    pt_b_df = keypoints_df[IndivCols.SINGLE.value, pt_b]
+    for pt_df, pt in ([pt_a_df, pt_a], [pt_b_df, pt_b]):
+        assert np.any(pt_df[CoordsCols.LIKELIHOOD.value] > pcutoff), (
+            f'No points for "{pt}" are above the pcutoff of {pcutoff}.\n'
+            "Consider lowering the pcutoff in the configs file.\n"
+            f'The highest likelihood value in "{pt}" is '
+            f"{np.nanmax(pt_df[CoordsCols.LIKELIHOOD.value])}."
         )
-        # Getting start time in seconds
-        start_sec = start_times_df.loc[name][0]
-        # Converting to start frame
-        start_frame = int(np.round(start_sec * fps, 0))
-        # Writing to configs
-        configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
-        configs.auto.start_frame = start_frame
-        configs_fp.write_text(configs.model_dump_json(indent=2))
-
-    @staticmethod
-    def stop_frame_from_likelihood(keypoints_fp: Path, configs_fp: Path) -> None:
-        """Determines the starting frame of the experiment based on
-        when the subject "likely" entered the frame of view.
-
-        This is done by looking at a sliding window of time. If the median likelihood of the subject
-        existing in each frame across the sliding window is greater than the defined pcutoff, then
-        the determine this as the start time.
-
-        """
-        _start_frame, stop_frame = calc_exists_from_likelihood(keypoints_fp, configs_fp)
-        # Writing to configs
-        configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
-        configs.auto.stop_frame = stop_frame
-        configs_fp.write_text(configs.model_dump_json(indent=2))
-
-    @staticmethod
-    def stop_frame_from_dur(keypoints_fp: Path, configs_fp: Path) -> None:
-        """Calculates the end time according to the following equation:
-
-        ```
-        stop_frame = start_frame + experiment_duration
-        ```
-
-        Notes:
-        -----
-        The config file must contain the following parameters:
-        ```
-        - user
-            - calculate_params
-                - stop_frame_from_dur
-                    - dur_sec: float
-        ```
-        """
-        # Getting necessary config parameters
-        configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
-        configs_filt = configs.user.calculate_params.stop_frame_from_dur
-        dur_sec = configs.get_ref(configs_filt.dur_sec)
-        start_frame = configs.auto.start_frame
-        fps = configs.auto.formatted_vid.fps
-        total_frames = configs.auto.formatted_vid.total_frames
-        assert start_frame != -1, (
-            "start_frame is None. Please calculate start_frame first."
+    # Interpolating points which are below a likelihood threshold (linear)
+    pt_a_df.loc[pt_a_df[CoordsCols.LIKELIHOOD.value] < pcutoff] = np.nan
+    pt_a_df = pt_a_df.interpolate(method="linear", axis=0).bfill().ffill()
+    pt_b_df.loc[pt_b_df[CoordsCols.LIKELIHOOD.value] < pcutoff] = np.nan
+    pt_b_df = pt_b_df.interpolate(method="linear", axis=0).bfill().ffill()
+    # Getting distance between calibration points
+    dist_px = np.nanmean(
+        np.sqrt(
+            np.square(pt_a_df["x"] - pt_b_df["x"])
+            + np.square(pt_a_df["y"] - pt_b_df["y"])
         )
-        assert fps != -1, (
-            "fps not yet set. Please calculate fps first with `proj.get_vid_metadata`."
-        )
-        # Calculating stop_frame
-        dur_frames = int(dur_sec * fps)
-        stop_frame = start_frame + dur_frames
-        # Make a warning if the use-specified dur_sec is larger than the duration of the video.
-        if total_frames is None:
-            logger.warning(
-                "The length of the video itself has not been calculated yet."
-            )
-        elif stop_frame > total_frames:
-            logger.warning(
-                "The user specified dur_sec in the configs file is greater "
-                "than the actual length of the video. Please check to see if this video is "
-                "too short or if the dur_sec value is incorrect."
-            )
-        # Writing to config
-        configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
-        configs.auto.stop_frame = stop_frame
-        configs_fp.write_text(configs.model_dump_json(indent=2))
-
-    @staticmethod
-    def dur_frames_from_likelihood(keypoints_fp: Path, configs_fp: Path) -> None:
-        """Calculates the duration in seconds, from the time the specified bodyparts appeared
-        to the time they disappeared.
-        Appear/disappear is calculated from likelihood.
-        """
-        start_frame, stop_frame = calc_exists_from_likelihood(keypoints_fp, configs_fp)
-        # Writing to configs
-        configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
-        configs.auto.dur_frames = stop_frame - start_frame
-        configs_fp.write_text(configs.model_dump_json(indent=2))
-
-    @staticmethod
-    def px_per_mm(keypoints_fp: Path, configs_fp: Path) -> None:
-        """Calculates the pixels per mm conversion for the video.
-
-        This is done by averaging the (x, y) coordinates of each corner,
-        finding the average x difference for the widths in pixels and y distance
-        for the heights in pixels,
-        dividing these pixel distances by their respective mm distances
-        (from the *config.json file),
-        and taking the average of these width and height conversions to estimate
-        the px to mm
-        conversion.
-
-        Notes:
-        -----
-        The config file must contain the following parameters:
-        ```
-        - user
-            - calculate_params
-                - px_per_mm
-                    - point_a: str
-                    - point_b: str
-                    - dist_mm: float
-        ```
-        """
-        # Getting necessary config parameters
-        configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
-        configs_filt = configs.user.calculate_params.px_per_mm
-        pt_a = configs.get_ref(configs_filt.pt_a)
-        pt_b = configs.get_ref(configs_filt.pt_b)
-        pcutoff = configs.get_ref(configs_filt.pcutoff)
-        dist_mm = configs.get_ref(configs_filt.dist_mm)
-        # Loading dataframe
-        keypoints_df = KeypointsDf.clean_headings(KeypointsDf.read(keypoints_fp))
-        # Imputing missing values with 0 (only really relevant for `likelihood` columns)
-        keypoints_df = keypoints_df.fillna(0)
-        # Checking that the two reference points are valid
-        KeypointsDf.check_bpts_exist(keypoints_df, [pt_a, pt_b])
-        # Getting calibration points (x, y, likelihood) values
-        pt_a_df = keypoints_df[IndivCols.SINGLE.value, pt_a]
-        pt_b_df = keypoints_df[IndivCols.SINGLE.value, pt_b]
-        for pt_df, pt in ([pt_a_df, pt_a], [pt_b_df, pt_b]):
-            assert np.any(pt_df[CoordsCols.LIKELIHOOD.value] > pcutoff), (
-                f'No points for "{pt}" are above the pcutoff of {pcutoff}.\n'
-                "Consider lowering the pcutoff in the configs file.\n"
-                f'The highest likelihood value in "{pt}" is {np.nanmax(pt_df[CoordsCols.LIKELIHOOD.value])}.'
-            )
-        # Interpolating points which are below a likelihood threshold (linear)
-        pt_a_df.loc[pt_a_df[CoordsCols.LIKELIHOOD.value] < pcutoff] = np.nan
-        pt_a_df = pt_a_df.interpolate(method="linear", axis=0).bfill().ffill()
-        pt_b_df.loc[pt_b_df[CoordsCols.LIKELIHOOD.value] < pcutoff] = np.nan
-        pt_b_df = pt_b_df.interpolate(method="linear", axis=0).bfill().ffill()
-        # Getting distance between calibration points
-        # TODO: use variable names for x and y
-        dist_px = np.nanmean(
-            np.sqrt(
-                np.square(pt_a_df["x"] - pt_b_df["x"])
-                + np.square(pt_a_df["y"] - pt_b_df["y"])
-            )
-        )
-        # Finding pixels per mm conversion, using the given arena width and height as calibration
-        px_per_mm = dist_px / dist_mm
-        # Saving to configs file
-        configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
-        configs.auto.px_per_mm = px_per_mm
-        configs_fp.write_text(configs.model_dump_json(indent=2))
+    )
+    # Finding pixels per mm conversion using given width and height as calibration
+    px_per_mm = dist_px / dist_mm
+    # Saving to configs file
+    configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
+    configs.auto.px_per_mm = px_per_mm
+    configs_fp.write_text(configs.model_dump_json(indent=2))
 
 
-def calc_exists_from_likelihood(
+def _calc_exists_from_likelihood(
     keypoints_fp: Path, configs_fp: Path
 ) -> tuple[int, int]:
-    """Determines the start and stop frames of the experiment based on
-    when the subject "likely" entered and exited the frame of view.
+    """Determines whether subject exists.
 
-    This is done by looking at a sliding window of time. If the median likelihood of the subject
-    existing in each frame across the sliding window is greater than the defined pcutoff, then
+    This is done by looking at a sliding window of time.
+    If the median likelihood of the subject
+    existing in each frame across the sliding window is
+    greater than the defined pcutoff, then
     the determine this as the start time.
 
     Notes:
@@ -303,7 +298,7 @@ def calc_exists_from_likelihood(
         # Calculating likelihood of subject existing at each frame from median
         lhood_df[(indiv, "current")] = keypoints_df.loc[
             :, idx[indiv, bpts, lhood_name]
-        ].apply(np.nanmedian, axis=1)  # type: ignore
+        ].apply(np.nanmedian, axis=1)
         # Calculating likelihood of subject existing over time window
         lhood_df[(indiv, "rolling")] = (
             lhood_df[(indiv, "current")]
@@ -313,7 +308,7 @@ def calc_exists_from_likelihood(
     lhood_df.columns = pd.MultiIndex.from_tuples(lhood_df.columns)
     # Getting bool of frames where ALL indivs exist
     idx = pd.IndexSlice
-    exists_vect = (lhood_df.loc[:, idx[:, "rolling"]] > pcutoff).all(axis=1)  # type: ignore
+    exists_vect = (lhood_df.loc[:, idx[:, "rolling"]] > pcutoff).all(axis=1)
     assert np.any(exists_vect), (
         "The subject was not detected in any frames. Please also check the video."
     )

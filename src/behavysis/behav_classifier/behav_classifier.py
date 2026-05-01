@@ -22,7 +22,7 @@ from behavysis.behav_classifier.evaluation import (
     save_training_history,
 )
 from behavysis.constants import Folders
-from behavysis.df_classes.behav_df import BehavPredictedDf, BehavScoredDf, BehavValues
+from behavysis.df_classes.behav_df import BehavPredictedDf
 from behavysis.models.behav_classifier_configs import BehavClassifierConfigs
 from behavysis.utils.io_utils import joblib_dump, joblib_load
 
@@ -38,7 +38,7 @@ class BehavClassifier:
     Manages model training, evaluation, and prediction for animal behavior
     classification from pose estimation features.
 
-    Attributes
+    Attributes:
     ----------
     proj_dir : Path
         Project directory containing features and scored behaviors.
@@ -62,7 +62,7 @@ class BehavClassifier:
         behav_name : str
             Name of behavior to classify.
 
-        Raises
+        Raises:
         ------
         AssertionError
             If behavior is not found in scored behaviors.
@@ -78,7 +78,9 @@ class BehavClassifier:
 
         # Load or create configs
         try:
-            configs = BehavClassifierConfigs.model_validate_json(self.configs_fp.read_text())
+            configs = BehavClassifierConfigs.model_validate_json(
+                self.configs_fp.read_text()
+            )
             logger.debug("Loaded existing configs")
         except FileNotFoundError:
             configs = BehavClassifierConfigs()
@@ -197,7 +199,7 @@ class BehavClassifier:
     #################################################
 
     @classmethod
-    def create_from_project_dir(cls, proj_dir: Path) -> list["BehavClassifier"]:
+    def create_from_project_dir(cls, proj_dir: Path) -> list[BehavClassifier]:
         """Create classifiers for all behaviors in project.
 
         Parameters
@@ -205,7 +207,7 @@ class BehavClassifier:
         proj_dir : Path
             Project directory path.
 
-        Returns
+        Returns:
         -------
         list[BehavClassifier]
             List of BehavClassifier instances, one per behavior.
@@ -216,7 +218,7 @@ class BehavClassifier:
         return [cls(proj_dir, behav) for behav in behavs_ls]
 
     @classmethod
-    def create_from_project(cls, proj: "Project") -> list["BehavClassifier"]:
+    def create_from_project(cls, proj: Project) -> list[BehavClassifier]:
         """Create classifiers from Project instance.
 
         Parameters
@@ -224,7 +226,7 @@ class BehavClassifier:
         proj : Project
             Behavysis Project instance.
 
-        Returns
+        Returns:
         -------
         list[BehavClassifier]
             List of BehavClassifier instances.
@@ -232,7 +234,7 @@ class BehavClassifier:
         return cls.create_from_project_dir(proj.root_dir)
 
     @classmethod
-    def load(cls, proj_dir: Path, behav_name: str) -> "BehavClassifier":
+    def load(cls, proj_dir: Path, behav_name: str) -> BehavClassifier:
         """Load existing classifier.
 
         Parameters
@@ -242,12 +244,12 @@ class BehavClassifier:
         behav_name : str
             Behavior name.
 
-        Returns
+        Returns:
         -------
         BehavClassifier
             Loaded classifier instance.
 
-        Raises
+        Raises:
         ------
         ValueError
             If model config file not found.
@@ -330,8 +332,14 @@ class BehavClassifier:
         y_pred = (y_prob > self.configs.pcutoff).astype(int)
 
         save_evaluation_results(
-            y_true, y_prob, y_pred, self.configs.behav_name, self.configs.pcutoff,
-            self.eval_dir, name, index_ls
+            y_true,
+            y_prob,
+            y_pred,
+            self.configs.behav_name,
+            self.configs.pcutoff,
+            self.eval_dir,
+            name,
+            index_ls,
         )
 
     #################################################
@@ -346,13 +354,13 @@ class BehavClassifier:
         x_df : pd.DataFrame
             Unprocessed features dataframe.
 
-        Returns
+        Returns:
         -------
         pd.DataFrame
             Predictions with probability and label columns.
         """
         index = x_df.index
-        x = preproc_x_transform(x_df.values, self.preproc_fp)
+        x = preproc_x_transform(x_df.to_numpy(), self.preproc_fp)
 
         self.clf = joblib_load(self.clf_fp)
 
@@ -364,7 +372,11 @@ class BehavClassifier:
         y_pred = (y_prob > self.configs.pcutoff).astype(int)
 
         pred_df = BehavPredictedDf.init_df(pd.Series(index))
-        pred_df[(self.configs.behav_name, BehavPredictedDf.OutcomesCols.PROB.value)] = y_prob
-        pred_df[(self.configs.behav_name, BehavPredictedDf.OutcomesCols.PRED.value)] = y_pred
+        pred_df[(self.configs.behav_name, BehavPredictedDf.OutcomesCols.PROB.value)] = (
+            y_prob
+        )
+        pred_df[(self.configs.behav_name, BehavPredictedDf.OutcomesCols.PRED.value)] = (
+            y_pred
+        )
 
         return pred_df

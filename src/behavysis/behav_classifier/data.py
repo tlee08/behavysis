@@ -9,12 +9,16 @@ from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import FunctionTransformer, MinMaxScaler
 
-from behavysis.constants import Folders
 from behavysis.df_classes.behav_classifier_df import BehavClassifierCombinedDf
 from behavysis.df_classes.behav_df import BehavScoredDf, BehavValues
 from behavysis.df_classes.features_df import FeaturesDf
 from behavysis.utils.df_mixin import DFMixin
-from behavysis.utils.io_utils import async_read_files_run, get_name, joblib_dump, joblib_load
+from behavysis.utils.io_utils import (
+    async_read_files_run,
+    get_name,
+    joblib_dump,
+    joblib_load,
+)
 from behavysis.utils.misc_utils import array2listofvect, listofvects2array
 
 logger = logging.getLogger(__name__)
@@ -28,7 +32,7 @@ def combine_dfs(src_dir: Path) -> pd.DataFrame:
     src_dir : Path
         Directory containing dataframe files.
 
-    Returns
+    Returns:
     -------
     pd.DataFrame
         Combined dataframe with experiment names as index level.
@@ -47,7 +51,7 @@ def wrangle_columns_y(y: pd.DataFrame) -> pd.DataFrame:
     y : pd.DataFrame
         Scored behaviors dataframe.
 
-    Returns
+    Returns:
     -------
     pd.DataFrame
         Wrangled dataframe with simplified column names.
@@ -103,7 +107,7 @@ def preproc_x_transform(x: np.ndarray, preproc_fp: Path) -> np.ndarray:
     preproc_fp : Path
         Path to fitted pipeline.
 
-    Returns
+    Returns:
     -------
     np.ndarray
         Transformed features.
@@ -132,7 +136,7 @@ def oversample(x: np.ndarray, y: np.ndarray, ratio: float) -> np.ndarray:
     ratio : float
         Target ratio of positive to negative samples.
 
-    Returns
+    Returns:
     -------
     np.ndarray
         Resampled feature array.
@@ -159,7 +163,7 @@ def undersample(x: np.ndarray, y: np.ndarray, ratio: float) -> np.ndarray:
     ratio : float
         Target ratio of positive to negative samples.
 
-    Returns
+    Returns:
     -------
     np.ndarray
         Resampled feature array.
@@ -202,7 +206,7 @@ def prepare_training_data(
     undersample_ratio : float
         Ratio for undersampling negative class.
 
-    Returns
+    Returns:
     -------
     tuple
         (x_ls, y_ls, index_train_ls, index_test_ls)
@@ -233,8 +237,8 @@ def prepare_training_data(
     )
 
     # Convert to numpy
-    x_ls = [x.values for x in x_df_ls]
-    y_ls = [y.values for y in y_df_ls]
+    x_ls = [x.to_numpy() for x in x_df_ls]
+    y_ls = [y.to_numpy() for y in y_df_ls]
     index_ls = [np.arange(x.shape[0]) for x in x_ls]
 
     # Fit and apply preprocessing
@@ -250,8 +254,12 @@ def prepare_training_data(
     )
 
     # Resample training data
-    index_train_flat = oversample(index_train_flat, index_train_flat[:, 2], oversample_ratio)
-    index_train_flat = undersample(index_train_flat, index_train_flat[:, 2], undersample_ratio)
+    index_train_flat = oversample(
+        index_train_flat, index_train_flat[:, 2], oversample_ratio
+    )
+    index_train_flat = undersample(
+        index_train_flat, index_train_flat[:, 2], undersample_ratio
+    )
 
     # Reshape back to per-dataframe lists
     index_train_ls = array2listofvect(index_train_flat, 1)

@@ -31,6 +31,7 @@ class EvaluateVid:
         analysis_combined_fp: Path,
         eval_vid_fp: Path,
         configs_fp: Path,
+        *,
         overwrite: bool,
     ) -> None:
         """Generate an annotated video with (optionally) keypoints and tracking analysis graphs."""
@@ -303,8 +304,10 @@ class Analysis(EvalVidFuncBase):
                     # Making measure's line
                     # Using seconds (frames / fps). "update_plot" method also converts to seconds
                     line_item = pg.PlotDataItem(
-                        x=self.analysis_df.index.values / self.fps,
-                        y=self.analysis_df[(analysis_i, indivs_j, measures_k)].values,
+                        x=self.analysis_df.index.to_numpy() / self.fps,
+                        y=self.analysis_df[
+                            (analysis_i, indivs_j, measures_k)
+                        ].to_numpy(),
                         pen=pg.mkPen(color=colours_ls[k], width=5),
                         # brush=pg.mkBrush(color=colours_ls[k]),
                     )
