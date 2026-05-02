@@ -70,10 +70,10 @@ def ma_dlc_run_single(
         raise ValueError(msg)
 
     # Running the DLC subprocess (in a separate conda env)
-    run_dlc_subproc(model_fp, [formatted_vid_fp], temp_dlc_dir, CACHE_DIR, gputouse)
+    _run_dlc_subproc(model_fp, [formatted_vid_fp], temp_dlc_dir, CACHE_DIR, gputouse)
 
     # Exporting the h5 to chosen file format
-    export2df(get_name(formatted_vid_fp), temp_dlc_dir, keypoints_dir)
+    _export2df(get_name(formatted_vid_fp), temp_dlc_dir, keypoints_dir)
     silent_remove(temp_dlc_dir)
 
 
@@ -128,15 +128,15 @@ def ma_dlc_run_batch(
     )
 
     # Running the DLC subprocess (in a separate conda env)
-    run_dlc_subproc(model_fp, vid_fp_ls, temp_dlc_dir, CACHE_DIR, gputouse)
+    _run_dlc_subproc(model_fp, vid_fp_ls, temp_dlc_dir, CACHE_DIR, gputouse)
 
     # Exporting the h5 to chosen file format
     for vid_fp in vid_fp_ls:
-        export2df(get_name(vid_fp), temp_dlc_dir, keypoints_dir)
+        _export2df(get_name(vid_fp), temp_dlc_dir, keypoints_dir)
     silent_remove(temp_dlc_dir)
 
 
-def run_dlc_subproc(
+def _run_dlc_subproc(
     model_fp: Path,
     vid_fp_ls: list[Path],
     temp_dlc_dir: Path,
@@ -175,7 +175,7 @@ def run_dlc_subproc(
     silent_remove(script_fp)
 
 
-def export2df(name: str, src_dir: Path, dst_dir: Path) -> None:
+def _export2df(name: str, src_dir: Path, dst_dir: Path) -> None:
     """Export DLC h5 output to project dataframe format."""
     # Get the corresponding .h5 filename
     name_fp_ls = [

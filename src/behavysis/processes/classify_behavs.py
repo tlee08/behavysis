@@ -28,6 +28,7 @@ def classify_behavs(
     features_fp: Path,
     behavs_fp: Path,
     configs_fp: Path,
+    *,
     overwrite: bool,
 ) -> None:
     """Given model config files and features df, classifies behaviour with ML model.
@@ -75,7 +76,7 @@ def classify_behavs(
         proj_dir = configs.get_ref(model_config.proj_dir)
         behav_name = configs.get_ref(model_config.behav_name)
         behav_model = BehavClassifier.load(proj_dir, behav_name)
-        pcutoff = get_pcutoff(
+        pcutoff = _get_pcutoff(
             configs.get_ref(model_config.pcutoff),
             behav_model.configs.pcutoff,
         )
@@ -89,7 +90,7 @@ def classify_behavs(
         # Using pcutoff to get binary predictions
         behav_df_i[pred_col] = (behav_df_i[prob_col] > pcutoff).astype(int)
         # Filling in small non-behav bouts
-        behav_df_i[pred_col] = merge_bouts(behav_df_i[pred_col], min_window_frames)
+        behav_df_i[pred_col] = _merge_bouts(behav_df_i[pred_col], min_window_frames)
         # Adding model predictions df to list
         behavs_df_ls.append(behav_df_i)
         # Logging outcome
@@ -103,7 +104,7 @@ def classify_behavs(
     BehavPredictedDf.write(behavs_df, behavs_fp)
 
 
-def get_pcutoff(pcutoff: float, model_pcutoff: float) -> float:
+def _get_pcutoff(pcutoff: float, model_pcutoff: float) -> float:
     """Check if the pcutoff is valid.
 
     Also check if the pcutoff is the special value `-1`, in which case
@@ -125,7 +126,7 @@ def get_pcutoff(pcutoff: float, model_pcutoff: float) -> float:
     return pcutoff
 
 
-def merge_bouts(vect: pd.Series, min_window_frames: int) -> pd.Series:
+def _merge_bouts(vect: pd.Series, min_window_frames: int) -> pd.Series:
     """Mergs behaviour bouts that are close together.
 
     For a given pd.Series, `vect`,

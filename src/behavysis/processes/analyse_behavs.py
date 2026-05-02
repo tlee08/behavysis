@@ -17,10 +17,10 @@ def analyse_behavs(
     dst_dir: Path,
     configs_fp: Path,
 ) -> None:
-    """Takes a behavs dataframe and generates a summary and binned version of the data."""
+    """Takes a behavs df and generates a summary and binned version of the data."""
     name = get_name(behavs_fp)
     dst_subdir = dst_dir / "analyse_behavs"
-    # Calculating the deltas (changes in body position) between each frame for the subject
+    # Calculating deltas (changes in bpts) between each frame for the subject
     configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
     analysis_configs = configs.get_analysis_configs()
     # Loading in dataframe

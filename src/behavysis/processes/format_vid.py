@@ -72,10 +72,10 @@ def format_vid(
         stop_sec=configs.get_ref(configs_filt.stop_sec),
         overwrite=overwrite,
     )
-    _get_vids_metadata(raw_vid_fp, formatted_vid_fp, configs_fp)
+    _extract_vid_metadata(raw_vid_fp, formatted_vid_fp, configs_fp)
 
 
-def _get_vids_metadata(
+def _extract_vid_metadata(
     raw_vid_fp: Path,
     formatted_vid_fp: Path,
     configs_fp: Path,
@@ -108,7 +108,7 @@ def _ffmpeg_process_vid(
     start_sec: None | float = None,
     stop_sec: None | float = None,
     *,
-    overwrite: bool = False,
+    overwrite: bool = True,
 ) -> None:
     """Process video with ffmpeg to resize, trim, and change frame rate.
 
@@ -131,6 +131,11 @@ def _ffmpeg_process_vid(
     overwrite : bool
         Whether to overwrite existing output file.
     """
+    # Not overwriting if specified
+    if not overwrite and dst_fp.exists():
+        logger.warning(file_exists_msg(dst_fp))
+        return
+
     # Constructing ffmpeg command
     cmd = ["ffmpeg"]
 

@@ -264,146 +264,121 @@ def _make_location_scatterplot(
     fig.clf()
 
 
+def _compute_movement(
+    keypoints_df: pd.DataFrame,
+    bpts: list[str],
+    indivs: list[str],
+    px_per_mm: float,
+    smoothing_frames: int,
+) -> pd.DataFrame:
+    """Compute frame-by-frame movement distance for each individual.
+
+    Returns DataFrame with columns (indiv, 'DistMM') and (indiv, 'DistMMSmoothed').
+    """
+    analysis_df = AnalysisDf.init_df(keypoints_df.index)
+    idx = pd.IndexSlice
+
+    # Smooth to reduce jitter contribution to movement
+    jitter_frames = 3
+    smoothed_xy_df = keypoints_df.rolling(
+        window=jitter_frames, min_periods=1, center=True
+    ).agg(np.nanmean)
+
+    for indiv in indivs:
+        # Getting changes in x-y values between frames
+        delta_x = smoothed_xy_df.loc[:, idx[indiv, bpts, "x"]].mean(axis=1).diff()
+        delta_y = smoothed_xy_df.loc[:, idx[indiv, bpts, "y"]].mean(axis=1).diff()
+        delta_px = np.sqrt(np.power(delta_x, 2) + np.power(delta_y, 2))
+
+        # Store distance in mm (raw and smoothed)
+        analysis_df[(indiv, "DistMM")] = delta_px / px_per_mm
+        analysis_df[(indiv, "DistMMSmoothed")] = (
+            analysis_df[(indiv, "DistMM")]
+            .rolling(window=smoothing_frames, min_periods=1, center=True)
+            .agg(np.nanmean)
+        )
+
+    return analysis_df.bfill()
+
+
 def speed(
     keypoints_fp: Path,
-    formatted_vid_fp: Path,
     dst_dir: Path,
     configs_fp: Path,
 ) -> None:
     """Determines the speed of the subject in each frame."""
     name = get_name(keypoints_fp)
     dst_subdir = dst_dir / "speed"
-    # Calculating deltas (changes in body position) between each frame for the subject
+
     configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
     analysis_configs = configs.get_analysis_configs()
     configs_filt = configs.user.analyse.speed
     bpts = configs.get_ref(configs_filt.bodyparts)
     smoothing_sec = configs.get_ref(configs_filt.smoothing_sec)
-    # Calculating more parameters
     smoothing_frames = int(smoothing_sec * analysis_configs.fps)
 
-    # Loading in dataframe
     keypoints_df = KeypointsDf.clean_headings(KeypointsDf.read(keypoints_fp))
-    assert keypoints_df.shape[0] > 0, (
-        "No frames in keypoints_df. Please check keypoints file."
-    )
-    # Checking body-centre bodypart exists
+    assert keypoints_df.shape[0] > 0, "No frames in keypoints_df. Please check keypoints file."
     KeypointsDf.check_bpts_exist(keypoints_df, bpts)
-    # Getting indivs and bpts list
     indivs, _ = KeypointsDf.get_indivs_bpts(keypoints_df)
 
-    # Calculating speed of subject for each frame
-    analysis_df = AnalysisDf.init_df(keypoints_df.index)
-    idx = pd.IndexSlice
+    # Compute movement and convert to speed (distance per second)
+    analysis_df = _compute_movement(
+        keypoints_df, bpts, indivs, analysis_configs.px_per_mm, smoothing_frames
+    )
     for indiv in indivs:
-        # Making a rolling window of 3 frames for average body-centre
-        # Otherwise jitter contributes to movement
-        jitter_frames = 3
-        smoothed_xy_df = keypoints_df.rolling(
-            window=jitter_frames, min_periods=1, center=True
-        ).agg(np.nanmean)
-        # Getting changes in x-y values between frames (deltas)
-        delta_x = smoothed_xy_df.loc[:, idx[indiv, bpts, "x"]].mean(axis=1).diff()
-        delta_y = smoothed_xy_df.loc[:, idx[indiv, bpts, "y"]].mean(axis=1).diff()
-        delta = np.array(np.sqrt(np.power(delta_x, 2) + np.power(delta_y, 2)))
-        # Storing speed (raw and smoothed)
-        analysis_df[(indiv, "SpeedMMperSec")] = (
-            delta / analysis_configs.px_per_mm
-        ) * analysis_configs.fps
+        analysis_df[(indiv, "SpeedMMperSec")] = analysis_df[(indiv, "DistMM")] * analysis_configs.fps
         analysis_df[(indiv, "SpeedMMperSecSmoothed")] = (
-            analysis_df[(indiv, "SpeedMMperSec")]
-            .rolling(window=smoothing_frames, min_periods=1, center=True)
-            .agg(np.nanmean)
+            analysis_df[(indiv, "DistMMSmoothed")] * analysis_configs.fps
         )
-    # Backfilling the analysis_df so no nan's
-    analysis_df = analysis_df.bfill()
-    # Saving analysis_df
+        # Remove distance columns - we only want speed
+        analysis_df = analysis_df.drop(columns=[(indiv, "DistMM"), (indiv, "DistMMSmoothed")])
+
     fbf_fp = dst_subdir / FBF / f"{name}.{AnalysisDf.IO}"
     AnalysisDf.write(analysis_df, fbf_fp)
 
-    # Summarising and binning analysis_df
     AnalysisBinnedDf.summary_binned_quantitative(
-        analysis_df,
-        dst_subdir,
-        name,
-        analysis_configs.fps,
-        analysis_configs.bins_sec,
-        analysis_configs.custom_bins_sec,
+        analysis_df, dst_subdir, name, analysis_configs.fps,
+        analysis_configs.bins_sec, analysis_configs.custom_bins_sec
     )
 
 
 def distance(
     keypoints_fp: Path,
-    formatted_vid_fp: Path,
     dst_dir: Path,
     configs_fp: Path,
 ) -> None:
-    """Determines the distance travelled by the subject in each frame.
-
-    Very similar to speed, except not scaled by time (fps).
-    """
+    """Determines the distance travelled by the subject in each frame."""
     name = get_name(keypoints_fp)
     dst_subdir = dst_dir / "distance"
-    # Calculating  deltas (changes in body position) between each frame for the subject
+
     configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
     analysis_configs = configs.get_analysis_configs()
-    configs_filt = configs.user.analyse.speed
+    configs_filt = configs.user.analyse.speed  # uses same config as speed
     bpts = configs.get_ref(configs_filt.bodyparts)
     smoothing_sec = configs.get_ref(configs_filt.smoothing_sec)
-    # Calculating more parameters
     smoothing_frames = int(smoothing_sec * analysis_configs.fps)
 
-    # Loading in dataframe
     keypoints_df = KeypointsDf.clean_headings(KeypointsDf.read(keypoints_fp))
-    assert keypoints_df.shape[0] > 0, (
-        "No frames in keypoints_df. Please check keypoints file."
-    )
-    # Checking body-centre bodypart exists
+    assert keypoints_df.shape[0] > 0, "No frames in keypoints_df. Please check keypoints file."
     KeypointsDf.check_bpts_exist(keypoints_df, bpts)
-    # Getting indivs and bpts list
     indivs, _ = KeypointsDf.get_indivs_bpts(keypoints_df)
 
-    # Calculating speed of subject for each frame
-    analysis_df = AnalysisDf.init_df(keypoints_df.index)
-    idx = pd.IndexSlice
-    for indiv in indivs:
-        # Making a rolling window of 3 frames for average body-centre
-        # Otherwise jitter contributes to movement
-        jitter_frames = 3
-        smoothed_xy_df = keypoints_df.rolling(
-            window=jitter_frames, min_periods=1, center=True
-        ).agg(np.nanmean)
-        # Getting changes in x-y values between frames (deltas)
-        delta_x = smoothed_xy_df.loc[:, idx[indiv, bpts, "x"]].mean(axis=1).diff()
-        delta_y = smoothed_xy_df.loc[:, idx[indiv, bpts, "y"]].mean(axis=1).diff()
-        delta = np.array(np.sqrt(np.power(delta_x, 2) + np.power(delta_y, 2)))
-        # Storing speed (raw and smoothed)
-        analysis_df[(indiv, "DistMM")] = delta / analysis_configs.px_per_mm
-        analysis_df[(indiv, "DistMMSmoothed")] = (
-            analysis_df[(indiv, "DistMM")]
-            .rolling(window=smoothing_frames, min_periods=1, center=True)
-            .agg(np.nanmean)
-        )
-    # Backfilling the analysis_df so no nan's
-    analysis_df = analysis_df.bfill()
-    # Saving analysis_df
+    analysis_df = _compute_movement(
+        keypoints_df, bpts, indivs, analysis_configs.px_per_mm, smoothing_frames
+    )
+
     fbf_fp = dst_subdir / FBF / f"{name}.{AnalysisDf.IO}"
     AnalysisDf.write(analysis_df, fbf_fp)
 
-    # Summarising and binning analysis_df
     AnalysisBinnedDf.summary_binned_quantitative(
-        analysis_df,
-        dst_subdir,
-        name,
-        analysis_configs.fps,
-        analysis_configs.bins_sec,
-        analysis_configs.custom_bins_sec,
+        analysis_df, dst_subdir, name, analysis_configs.fps,
+        analysis_configs.bins_sec, analysis_configs.custom_bins_sec
     )
 
 
 def social_distance(
     keypoints_fp: Path,
-    formatted_vid_fp: Path,
     dst_dir: Path,
     configs_fp: Path,
 ) -> None:
@@ -465,7 +440,6 @@ def social_distance(
 
 def freezing(
     keypoints_fp: Path,
-    formatted_vid_fp: Path,
     dst_dir: Path,
     configs_fp: Path,
 ) -> None:

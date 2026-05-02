@@ -126,7 +126,7 @@ def stop_frame_from_likelihood(keypoints_fp: Path, configs_fp: Path) -> None:
     configs_fp.write_text(configs.model_dump_json(indent=2))
 
 
-def stop_frame_from_dur(keypoints_fp: Path, configs_fp: Path) -> None:
+def stop_frame_from_dur(configs_fp: Path) -> None:
     """Calculates the end time according to the following equation.
 
     ```

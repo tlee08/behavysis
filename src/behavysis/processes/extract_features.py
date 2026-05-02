@@ -75,7 +75,7 @@ def extract_features(
     simba_in_fp = simba_in_dir / f"{name}.csv"
     # Selecting bodyparts for SimBA (8 bpts, 2 indivs)
     keypoints_df = KeypointsDf.read(keypoints_fp)
-    keypoints_df = select_cols(keypoints_df, configs_fp)
+    keypoints_df = _select_cols(keypoints_df, configs_fp)
     # Saving keypoints index to use in the SimBA features extraction df
     index = keypoints_df.index
     # Need to remove index name for SimBA to import correctly
@@ -83,9 +83,9 @@ def extract_features(
     # Saving as csv
     keypoints_df.to_csv(simba_in_fp)
     # Running SimBA env and script to run SimBA feature extraction
-    run_simba_subproc(simba_dir, simba_in_dir, configs_dir, CACHE_DIR, cpid)
+    _run_simba_subproc(simba_dir, simba_in_dir, configs_dir, CACHE_DIR, cpid)
     # Exporting SimBA feature extraction csv to disk
-    export2df(simba_features_fp, features_fp, index)
+    _export2df(simba_features_fp, features_fp, index)
     # Removing temp folders
     silent_remove(simba_in_dir)
     silent_remove(simba_dir)
@@ -96,7 +96,7 @@ def extract_features(
 #####################################################################
 
 
-def select_cols(keypoints_df: pd.DataFrame, configs_fp: Path) -> pd.DataFrame:
+def _select_cols(keypoints_df: pd.DataFrame, configs_fp: Path) -> pd.DataFrame:
     """Selecting given keypoints columns to input to SimBA.
 
     Parameters
@@ -125,7 +125,7 @@ def select_cols(keypoints_df: pd.DataFrame, configs_fp: Path) -> pd.DataFrame:
     return keypoints_df
 
 
-def run_simba_subproc(
+def _run_simba_subproc(
     simba_dir: Path,
     keypoints_dir: Path,
     configs_dir: Path,
@@ -201,7 +201,7 @@ def run_simba_subproc(
 #     return keypoints_df.iloc[:, n:]
 
 
-def export2df(in_fp: Path, dst_fp: Path, index: pd.Index) -> None:
+def _export2df(in_fp: Path, dst_fp: Path, index: pd.Index) -> None:
     """Export SimBA features CSV to project dataframe format."""
     features_df = FeaturesDf.read_csv(in_fp)
     # Setting index to the same as the preprocessed preprocessed df
