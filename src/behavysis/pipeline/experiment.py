@@ -23,7 +23,6 @@ from behavysis.processes import (
     df2df,
     extract_features,
     format_vid,
-    get_vid_metadata,
     ma_dlc_run_single,
     predictedbehavs2scoredbehavs,
     update_configs,
@@ -118,15 +117,6 @@ class Experiment:
             formatted_vid_fp=self.get_fp(Folders.FORMATTED_VID),
             configs_fp=self.get_fp(Folders.CONFIGS),
             overwrite=overwrite,
-        )
-
-    def get_vid_metadata(self) -> ProcessResultCollection:
-        """Gets the video metadata for the raw and formatted video files."""
-        return self._run_funcs_with_filtered_kwargs(
-            (get_vid_metadata,),
-            raw_vid_fp=self.get_fp(Folders.RAW_VID),
-            formatted_vid_fp=self.get_fp(Folders.FORMATTED_VID),
-            configs_fp=self.get_fp(Folders.CONFIGS),
         )
 
     def run_dlc(

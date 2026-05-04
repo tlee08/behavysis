@@ -18,7 +18,6 @@ if __name__ == "__main__":
     )
 
     proj.format_vid(overwrite=overwrite)
-    proj.get_vid_metadata()
 
     proj.run_dlc(
         gputouse=None,

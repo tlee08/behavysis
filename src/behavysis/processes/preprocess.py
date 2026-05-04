@@ -124,7 +124,7 @@ def interpolate_stationary(
     if width_px <= 0 or height_px <= 0:
         msg = (
             "Width and height must be provided in the formatted video. "
-            "Try running FormatVid.format_vid."
+            "Try running format_vid."
         )
         raise ValueError(msg)
     # Reading file

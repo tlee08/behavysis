@@ -27,7 +27,7 @@ class DFMixin:
 
     @classmethod
     def read(cls, fp: Path, fmt: str | None = None) -> pd.DataFrame:
-        """Read dataframe from file.
+        """Read dataframe from file, asserts format, and cleans.
 
         Parameters
         ----------
@@ -90,7 +90,7 @@ class DFMixin:
 
     @classmethod
     def write(cls, df: pd.DataFrame, fp: Path, fmt: str | None = None) -> None:
-        """Write dataframe to file.
+        """Asserts format, makes parent dir, and write dataframe to file.
 
         Parameters
         ----------

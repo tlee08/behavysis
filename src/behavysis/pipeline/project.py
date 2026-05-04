@@ -140,9 +140,6 @@ class Project:
     def format_vid(self, *, overwrite: bool) -> None:
         self._run_and_save_diagnostics(Experiment.format_vid, overwrite=overwrite)
 
-    def get_vid_metadata(self) -> None:
-        self._run_and_save_diagnostics(Experiment.get_vid_metadata)
-
     def run_dlc(self, gputouse: int | None = None, overwrite: bool = False) -> None:
         """Run DLC on all experiments with GPU batching."""
         gputouse_ls = get_gpu_ids() if gputouse is None else [gputouse]

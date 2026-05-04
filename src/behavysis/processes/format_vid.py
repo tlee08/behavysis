@@ -1,21 +1,4 @@
-"""Functions have the following format.
-
-Parameters
-----------
-raw_fp : str
-    The input video filepath.
-formatted_fp : str
-    The output video filepath.
-configs_fp : str
-    The JSON configs filepath.
-overwrite : bool
-    Whether to overwrite the output file (if it exists).
-
-Returnss
--------
-str
-    Description of the function's outcome.
-"""
+"""Video formatting with ffmpeg."""
 
 import logging
 from pathlib import Path
@@ -37,181 +20,61 @@ def format_vid(
     *,
     overwrite: bool,
 ) -> None:
-    """Formats the input video with the given parameters.
-
-    Parameters
-    ----------
-    raw_fp : str
-        The input video filepath.
-    formatted_fp : str
-        The output video filepath.
-    configs_fp : str
-        The JSON configs filepath.
-    overwrite : bool
-        Whether to overwrite the output file (if it exists).
-
-    Returns:
-    -------
-    str
-        Description of the function's outcome.
-    """
+    """Format video with ffmpeg and save metadata to configs."""
     if not overwrite and formatted_vid_fp.exists():
         logger.warning(file_exists_msg(formatted_vid_fp))
         return
-    # Finding all necessary config parameters for video formatting
+
     configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
-    configs_filt = configs.user.format_vid
-    # Processing the video
-    _ffmpeg_process_vid(
-        in_fp=raw_vid_fp,
-        dst_fp=formatted_vid_fp,
-        width_px=configs.get_ref(configs_filt.width_px),
-        height_px=configs.get_ref(configs_filt.height_px),
-        fps=configs.get_ref(configs_filt.fps),
-        start_sec=configs.get_ref(configs_filt.start_sec),
-        stop_sec=configs.get_ref(configs_filt.stop_sec),
-        overwrite=overwrite,
-    )
-    _extract_vid_metadata(raw_vid_fp, formatted_vid_fp, configs_fp)
+    cfg = configs.user.format_vid
 
-
-def _extract_vid_metadata(
-    raw_vid_fp: Path,
-    formatted_vid_fp: Path,
-    configs_fp: Path,
-) -> None:
-    """Extract metadata from raw and formatted videos, store in configs.
-
-    Parameters
-    ----------
-    raw_vid_fp : Path
-        Raw video filepath.
-    formatted_vid_fp : Path
-        Formatted video filepath.
-    configs_fp : Path
-        JSON configs filepath to update with metadata.
-    """
-    # Saving video metadata to configs dict
-    configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
-    configs.auto.raw_vid = get_vid_metadata(raw_vid_fp)
-    configs.auto.formatted_vid = get_vid_metadata(formatted_vid_fp)
-    logger.info("Video metadata stored in config file.")
-    configs_fp.write_text(configs.model_dump_json(indent=2))
-
-
-def _ffmpeg_process_vid(
-    in_fp: Path,
-    dst_fp: Path,
-    width_px: None | int = None,
-    height_px: None | int = None,
-    fps: None | int = None,
-    start_sec: None | float = None,
-    stop_sec: None | float = None,
-    *,
-    overwrite: bool = True,
-) -> None:
-    """Process video with ffmpeg to resize, trim, and change frame rate.
-
-    Parameters
-    ----------
-    in_fp : Path
-        Input video filepath.
-    dst_fp : Path
-        Output video filepath.
-    width_px : int, optional
-        Target width in pixels. -1 auto-calculates from height.
-    height_px : int, optional
-        Target height in pixels. -1 auto-calculates from width.
-    fps : int, optional
-        Target frame rate.
-    start_sec : float, optional
-        Start time in seconds for trimming.
-    stop_sec : float, optional
-        Stop time in seconds for trimming.
-    overwrite : bool
-        Whether to overwrite existing output file.
-    """
-    # Not overwriting if specified
-    if not overwrite and dst_fp.exists():
-        logger.warning(file_exists_msg(dst_fp))
-        return
-
-    # Constructing ffmpeg command
+    # Build ffmpeg command
     cmd = ["ffmpeg"]
 
-    # TRIMMING (SEEKING TO START BEFORE OPENING VIDEO - MUCH FASTER)
-    if start_sec:
-        # Setting start trim filter in cmd
-        cmd += ["-ss", str(start_sec)]
-        logger.debug("Trimming video from %s seconds.", start_sec)
+    if cfg.start_sec:
+        cmd += ["-ss", str(configs.get_ref(cfg.start_sec))]
 
-    # Opening video
-    cmd += ["-i", str(in_fp)]
+    cmd += ["-i", str(raw_vid_fp)]
 
-    # RESIZING and TRIMMING
     filters = []
-    if width_px or height_px:
-        # Setting width and height (if one is None)
-        width_px = width_px or -1
-        height_px = height_px or -1
-        # Constructing downsample filter in cmd
-        filters.append(f"scale={width_px}:{height_px}")
-        logger.debug("Downsampling to %s x %s.", width_px, height_px)
+    width = configs.get_ref(cfg.width_px)
+    height = configs.get_ref(cfg.height_px)
+    if width or height:
+        filters.append(f"scale={width or -1}:{height or -1}")
     if filters:
         cmd += ["-vf", ",".join(filters)]
 
-    # CHANGING FPS
-    if fps:
-        cmd += ["-r", str(fps)]
-        logger.debug("Changing fps to %s.", fps)
-    # TRIMMING
-    if stop_sec:
-        # Setting stop trim filter in cmd
-        duration = stop_sec - (start_sec or 0)
-        cmd += ["-t", str(duration)]
-        logger.debug("Trimming video to %s seconds.", stop_sec)
+    if cfg.fps:
+        cmd += ["-r", str(configs.get_ref(cfg.fps))]
 
-    # Adding output parameters to ffmpeg command
+    if cfg.stop_sec:
+        duration = configs.get_ref(cfg.stop_sec) - (configs.get_ref(cfg.start_sec) or 0)
+        cmd += ["-t", str(duration)]
+
     cmd += [
-        "-c:v",
-        "h264",
-        "-preset",
-        "fast",
-        "-crf",
-        "20",
-        "-y",
-        # "-loglevel",
-        # "quiet",
-        str(dst_fp),
+        "-c:v", "h264", "-preset", "fast", "-crf", "20", "-y",
+        str(formatted_vid_fp),
     ]
-    dst_fp.parent.mkdir(parents=True, exist_ok=True)
+
+    formatted_vid_fp.parent.mkdir(parents=True, exist_ok=True)
     run_subproc_console(cmd)
 
+    # Save metadata to configs
+    configs.auto.raw_vid = _get_vid_metadata(raw_vid_fp)
+    configs.auto.formatted_vid = _get_vid_metadata(formatted_vid_fp)
+    configs_fp.write_text(configs.model_dump_json(indent=2))
 
-def get_vid_metadata(vid_fp: Path) -> VidMetadata:
-    """Finds the video metadata/parameters for either the raw or formatted video.
 
-    Parameters
-    ----------
-    fp : Path
-        The video filepath.
-
-    Returns:
-    -------
-    VidMetadata
-        Object containing video metadata.
-    """
-    configs_meta = VidMetadata()
+def _get_vid_metadata(vid_fp: Path) -> VidMetadata:
+    """Extract metadata from video file."""
+    meta = VidMetadata()
     cap = cv2.VideoCapture(vid_fp)
-    if not cap.isOpened():
-        logger.warning(
-            "The file, %s, does not exist or is corrupted. Please check this file.",
-            vid_fp,
-        )
+    if cap.isOpened():
+        meta.height_px = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        meta.width_px = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        meta.total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        meta.fps = cap.get(cv2.CAP_PROP_FPS)
     else:
-        configs_meta.height_px = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        configs_meta.width_px = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        configs_meta.total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-        configs_meta.fps = cap.get(cv2.CAP_PROP_FPS)
+        logger.warning("Cannot open video: %s", vid_fp)
     cap.release()
-    return configs_meta
+    return meta

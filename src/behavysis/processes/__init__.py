@@ -8,7 +8,7 @@ from .combine_analysis import combine_analysis
 from .evaluate_vid import EvaluateVid
 from .export import boris2behav, df2csv, df2df, predictedbehavs2scoredbehavs
 from .extract_features import extract_features
-from .format_vid import format_vid, get_vid_metadata
+from .format_vid import format_vid
 from .preprocess import interpolate, interpolate_stationary, refine_ids, start_stop_trim
 from .run_dlc import ma_dlc_run_batch, ma_dlc_run_single
 from .update_configs import update_configs
@@ -25,7 +25,6 @@ __all__ = [
     "extract_features",
     "format_vid",
     "freezing",
-    "get_vid_metadata",
     "in_roi",
     "interpolate",
     "interpolate_stationary",
