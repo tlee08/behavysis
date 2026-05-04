@@ -1,17 +1,16 @@
-from behavysis.utils.template_utils import import_static_templates_script
+from pathlib import Path
+
+from behavysis.utils.template_utils import confirm, save_template
 
 
 def main() -> None:
-    """Makes a script to build a BehavClassifier."""
-    import_static_templates_script(
-        description="Make Behavysis Model Script",
-        templates_ls=["train_behav_model.py"],
-        pkg_name="behavysis",
-        pkg_subdir="templates",
-        root_dir=".",
-        to_overwrite=False,
-        dialogue=True,
-    )
+    if not confirm("Create training script in current directory?"):
+        return
+    if Path("train_behav_model.py").exists() and not confirm(
+        "Overwrite existing file?"
+    ):
+        return
+    save_template("train_behav_model.py", Path("train_behav_model.py"))
 
 
 if __name__ == "__main__":
