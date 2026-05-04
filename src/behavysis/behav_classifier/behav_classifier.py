@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
+from joblib import dump, load
 
 from behavysis.behav_classifier.clf_models.base_torch_model import BaseTorchModel
 from behavysis.behav_classifier.clf_models.clf_templates import CLF_TEMPLATES, CNN1
@@ -24,7 +25,6 @@ from behavysis.behav_classifier.evaluation import (
 from behavysis.constants import Folders
 from behavysis.df_classes.behav_df import BehavPredictedDf
 from behavysis.models.behav_classifier_configs import BehavClassifierConfigs
-from behavysis.utils.io_utils import joblib_dump, joblib_load
 
 if TYPE_CHECKING:
     from behavysis.pipeline.project import Project
@@ -92,7 +92,7 @@ class BehavClassifier:
 
         # Load or create classifier
         try:
-            self.clf = joblib_load(self.clf_fp)
+            self.clf = load(self.clf_fp)
             logger.debug("Loaded existing classifier")
         except FileNotFoundError:
             self.clf = CNN1()
@@ -122,7 +122,7 @@ class BehavClassifier:
         """Set classifier from model instance or saved model name."""
         if isinstance(clf, str):
             clf_name = clf
-            self._clf = joblib_load(self.clfs_dir / clf / "classifier.sav")
+            self._clf = load(self.clfs_dir / clf / "classifier.sav")
             logger.debug(f"Loaded classifier: {clf_name}")
         else:
             clf_name = type(clf).__name__
@@ -303,7 +303,7 @@ class BehavClassifier:
         self._evaluate_and_save(x_ls, y_ls, index_test_ls, "test")
 
         # Save model
-        joblib_dump(self.clf, self.clf_fp)
+        dump(self.clf, self.clf_fp)
 
     def pipeline_training_all(self) -> None:
         """Train classifiers for all available templates."""
@@ -362,7 +362,7 @@ class BehavClassifier:
         index = x_df.index
         x = preproc_x_transform(x_df.to_numpy(), self.preproc_fp)
 
-        self.clf = joblib_load(self.clf_fp)
+        self.clf = load(self.clf_fp)
 
         y_prob = self.clf.predict(
             x=x,

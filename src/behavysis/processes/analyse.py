@@ -37,7 +37,6 @@ from behavysis.df_classes.keypoints_df import (
     KeypointsDf,
 )
 from behavysis.models.experiment_configs import ExperimentConfigs
-from behavysis.utils.io_utils import get_name
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +51,7 @@ def in_roi(
 
     Points are `padding_px` padded (away) from center.
     """
-    name = get_name(keypoints_fp)
+    name = keypoints_fp.stem
     dst_subdir = dst_dir / "in_roi"
     # Calculating the deltas (changes in body position) between each frame for the subject
     configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
@@ -307,7 +306,7 @@ def speed(
     configs_fp: Path,
 ) -> None:
     """Determines the speed of the subject in each frame."""
-    name = get_name(keypoints_fp)
+    name = keypoints_fp.stem
     dst_subdir = dst_dir / "speed"
 
     configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
@@ -318,7 +317,9 @@ def speed(
     smoothing_frames = int(smoothing_sec * analysis_configs.fps)
 
     keypoints_df = KeypointsDf.clean_headings(KeypointsDf.read(keypoints_fp))
-    assert keypoints_df.shape[0] > 0, "No frames in keypoints_df. Please check keypoints file."
+    assert keypoints_df.shape[0] > 0, (
+        "No frames in keypoints_df. Please check keypoints file."
+    )
     KeypointsDf.check_bpts_exist(keypoints_df, bpts)
     indivs, _ = KeypointsDf.get_indivs_bpts(keypoints_df)
 
@@ -327,19 +328,27 @@ def speed(
         keypoints_df, bpts, indivs, analysis_configs.px_per_mm, smoothing_frames
     )
     for indiv in indivs:
-        analysis_df[(indiv, "SpeedMMperSec")] = analysis_df[(indiv, "DistMM")] * analysis_configs.fps
+        analysis_df[(indiv, "SpeedMMperSec")] = (
+            analysis_df[(indiv, "DistMM")] * analysis_configs.fps
+        )
         analysis_df[(indiv, "SpeedMMperSecSmoothed")] = (
             analysis_df[(indiv, "DistMMSmoothed")] * analysis_configs.fps
         )
         # Remove distance columns - we only want speed
-        analysis_df = analysis_df.drop(columns=[(indiv, "DistMM"), (indiv, "DistMMSmoothed")])
+        analysis_df = analysis_df.drop(
+            columns=[(indiv, "DistMM"), (indiv, "DistMMSmoothed")]
+        )
 
     fbf_fp = dst_subdir / FBF / f"{name}.{AnalysisDf.IO}"
     AnalysisDf.write(analysis_df, fbf_fp)
 
     AnalysisBinnedDf.summary_binned_quantitative(
-        analysis_df, dst_subdir, name, analysis_configs.fps,
-        analysis_configs.bins_sec, analysis_configs.custom_bins_sec
+        analysis_df,
+        dst_subdir,
+        name,
+        analysis_configs.fps,
+        analysis_configs.bins_sec,
+        analysis_configs.custom_bins_sec,
     )
 
 
@@ -349,7 +358,7 @@ def distance(
     configs_fp: Path,
 ) -> None:
     """Determines the distance travelled by the subject in each frame."""
-    name = get_name(keypoints_fp)
+    name = keypoints_fp.stem
     dst_subdir = dst_dir / "distance"
 
     configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
@@ -360,7 +369,9 @@ def distance(
     smoothing_frames = int(smoothing_sec * analysis_configs.fps)
 
     keypoints_df = KeypointsDf.clean_headings(KeypointsDf.read(keypoints_fp))
-    assert keypoints_df.shape[0] > 0, "No frames in keypoints_df. Please check keypoints file."
+    assert keypoints_df.shape[0] > 0, (
+        "No frames in keypoints_df. Please check keypoints file."
+    )
     KeypointsDf.check_bpts_exist(keypoints_df, bpts)
     indivs, _ = KeypointsDf.get_indivs_bpts(keypoints_df)
 
@@ -372,8 +383,12 @@ def distance(
     AnalysisDf.write(analysis_df, fbf_fp)
 
     AnalysisBinnedDf.summary_binned_quantitative(
-        analysis_df, dst_subdir, name, analysis_configs.fps,
-        analysis_configs.bins_sec, analysis_configs.custom_bins_sec
+        analysis_df,
+        dst_subdir,
+        name,
+        analysis_configs.fps,
+        analysis_configs.bins_sec,
+        analysis_configs.custom_bins_sec,
     )
 
 
@@ -383,7 +398,7 @@ def social_distance(
     configs_fp: Path,
 ) -> None:
     """Determines the speed of the subject in each frame."""
-    name = get_name(keypoints_fp)
+    name = keypoints_fp.stem
     dst_subdir = dst_dir / "social_distance"
     # Calculating deltas (changes in body position) between each frame for the subject
     configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
@@ -450,7 +465,7 @@ def freezing(
 
     NOTE: method is "greedy". Looks at a freezing bout from earliest possible frame.
     """
-    name = get_name(keypoints_fp)
+    name = keypoints_fp.stem
     dst_subdir = dst_dir / "freezing"
     # Calculating deltas (changes in body position) between each frame for the subject
     configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())

@@ -11,7 +11,7 @@ from behavysis.df_classes.features_df import FeaturesDf
 from behavysis.df_classes.keypoints_df import CoordsCols, KeypointsDf
 from behavysis.models.experiment_configs import ExperimentConfigs
 from behavysis.utils.diagnostics_utils import file_exists_msg
-from behavysis.utils.io_utils import get_name, silent_remove
+from behavysis.utils.io_utils import silent_remove
 from behavysis.utils.misc_utils import enum2list
 from behavysis.utils.multiproc_utils import get_cpid
 from behavysis.utils.subproc_utils import run_subproc_console
@@ -60,7 +60,7 @@ def extract_features(
         logger.warning(file_exists_msg(features_fp))
         return
     # Getting directory and file paths
-    name = get_name(keypoints_fp)
+    name = keypoints_fp.stem
     cpid = get_cpid()
     configs_dir = configs_fp.parent
     simba_in_dir = CACHE_DIR / f"input_{cpid}"

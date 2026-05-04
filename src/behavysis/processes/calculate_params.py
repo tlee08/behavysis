@@ -25,7 +25,6 @@ from behavysis.df_classes.keypoints_df import (
     KeypointsDf,
 )
 from behavysis.models.experiment_configs import ExperimentConfigs
-from behavysis.utils.io_utils import get_name
 
 logger = logging.getLogger(__name__)
 
@@ -92,7 +91,7 @@ def start_frame_from_csv(keypoints_fp: Path, configs_fp: Path) -> None:
     )
     # Using the name of the video as the name of the experiment if not specified
     if name is None:
-        name = get_name(keypoints_fp)
+        name = keypoints_fp.stem
     # Reading csv_fp
     start_times_df = pd.read_csv(csv_fp, index_col=0)
     start_times_df.index = start_times_df.index.astype(str)

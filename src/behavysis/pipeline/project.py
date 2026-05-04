@@ -28,7 +28,6 @@ from behavysis.models.experiment_configs import ExperimentConfigs
 from behavysis.pipeline.experiment import Experiment
 from behavysis.processes.run_dlc import ma_dlc_run_batch
 from behavysis.utils.dask_utils import cluster_process
-from behavysis.utils.io_utils import get_name
 from behavysis.utils.multiproc_utils import get_gpu_ids
 
 logger = logging.getLogger(__name__)
@@ -109,7 +108,7 @@ class Project:
             for fp_name in natsorted(folder.iterdir()):
                 if re.search(r"^\.", fp_name.name):
                     continue
-                name = get_name(fp_name.name)
+                name = fp_name.stem
                 try:
                     self.import_experiment(name)
                     dd_dict[f.value].append(name)

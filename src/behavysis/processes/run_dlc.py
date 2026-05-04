@@ -31,7 +31,7 @@ from behavysis.constants import CACHE_DIR
 from behavysis.df_classes.keypoints_df import CoordsCols, KeypointsDf
 from behavysis.models.experiment_configs import ExperimentConfigs
 from behavysis.utils.diagnostics_utils import file_exists_msg
-from behavysis.utils.io_utils import get_name, silent_remove
+from behavysis.utils.io_utils import silent_remove
 from behavysis.utils.subproc_utils import run_subproc_console
 from behavysis.utils.template_utils import save_template
 
@@ -73,7 +73,7 @@ def ma_dlc_run_single(
     _run_dlc_subproc(model_fp, [formatted_vid_fp], temp_dlc_dir, CACHE_DIR, gputouse)
 
     # Exporting the h5 to chosen file format
-    _export2df(get_name(formatted_vid_fp), temp_dlc_dir, keypoints_dir)
+    _export2df(formatted_vid_fp.stem, temp_dlc_dir, keypoints_dir)
     silent_remove(temp_dlc_dir)
 
 
@@ -97,7 +97,7 @@ def ma_dlc_run_batch(
         vid_fp_ls = [
             vid_fp
             for vid_fp in vid_fp_ls
-            if not (keypoints_dir / f"{get_name(vid_fp)}.{KeypointsDf.IO}").exists()
+            if not (keypoints_dir / f"{vid_fp.stem}.{KeypointsDf.IO}").exists()
         ]
 
     # If there are no videos to process, return
@@ -106,7 +106,7 @@ def ma_dlc_run_batch(
 
     # Getting the DLC model config path
     # Getting the names of the files that need processing
-    dlc_fp_ls = [get_name(i) for i in vid_fp_ls]
+    dlc_fp_ls = [i.stem for i in vid_fp_ls]
     # Getting their corresponding configs_fp
     dlc_fp_ls = [configs_dir / f"{i}.json" for i in dlc_fp_ls]
     # Reading their configs
@@ -132,7 +132,7 @@ def ma_dlc_run_batch(
 
     # Exporting the h5 to chosen file format
     for vid_fp in vid_fp_ls:
-        _export2df(get_name(vid_fp), temp_dlc_dir, keypoints_dir)
+        _export2df(vid_fp.stem, temp_dlc_dir, keypoints_dir)
     silent_remove(temp_dlc_dir)
 
 

@@ -5,6 +5,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+from joblib import dump, load
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import FunctionTransformer, MinMaxScaler
@@ -15,9 +16,6 @@ from behavysis.df_classes.features_df import FeaturesDf
 from behavysis.utils.df_mixin import DFMixin
 from behavysis.utils.io_utils import (
     async_read_files_run,
-    get_name,
-    joblib_dump,
-    joblib_load,
 )
 from behavysis.utils.misc_utils import array2listofvect, listofvects2array
 
@@ -37,7 +35,7 @@ def combine_dfs(src_dir: Path) -> pd.DataFrame:
     pd.DataFrame
         Combined dataframe with experiment names as index level.
     """
-    data_dict = {get_name(i): DFMixin.read(src_dir / i) for i in src_dir.iterdir()}
+    data_dict = {i.stem: DFMixin.read(src_dir / i) for i in src_dir.iterdir()}
     df = pd.concat(data_dict.values(), axis=0, keys=data_dict.keys())
     df = BehavClassifierCombinedDf.basic_clean(df)
     return df
@@ -94,7 +92,7 @@ def preproc_x_fit(x: np.ndarray, preproc_fp: Path) -> None:
         ]
     )
     preproc_pipe.fit(x)
-    joblib_dump(preproc_pipe, preproc_fp)
+    dump(preproc_pipe, preproc_fp)
 
 
 def preproc_x_transform(x: np.ndarray, preproc_fp: Path) -> np.ndarray:
@@ -112,7 +110,7 @@ def preproc_x_transform(x: np.ndarray, preproc_fp: Path) -> np.ndarray:
     np.ndarray
         Transformed features.
     """
-    preproc_pipe: Pipeline = joblib_load(preproc_fp)
+    preproc_pipe: Pipeline = load(preproc_fp)
     return preproc_pipe.transform(x)
 
 

@@ -7,7 +7,6 @@ from behavysis.df_classes.analysis_agg_df import AnalysisBinnedDf
 from behavysis.df_classes.analysis_df import FBF, AnalysisDf
 from behavysis.df_classes.behav_df import BehavScoredDf, BehavValues
 from behavysis.models.experiment_configs import ExperimentConfigs
-from behavysis.utils.io_utils import get_name
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +17,7 @@ def analyse_behavs(
     configs_fp: Path,
 ) -> None:
     """Takes a behavs df and generates a summary and binned version of the data."""
-    name = get_name(behavs_fp)
+    name = behavs_fp.stem
     dst_subdir = dst_dir / "analyse_behavs"
     # Calculating deltas (changes in bpts) between each frame for the subject
     configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())

@@ -63,7 +63,7 @@ class FeatureExtractor:
         Similar to simba.import_multiple_dlc_tracking_csv_file().
         """
         for fp in keypoints_dir.iterdir():
-            name = FeatureExtractor.get_name(fp)
+            name = fp.stem
             src_fp = keypoints_dir / f"{name}.csv"
             dst_fp = simba_dir / "project_folder" / "csv" / "input_csv" / f"{name}.csv"
             dst_fp.parent.mkdir(parents=True, exist_ok=True)
@@ -94,7 +94,7 @@ class FeatureExtractor:
         input_csv_dir = simba_dir / "project_folder" / "csv" / "input_csv"
         # Getting and saving the px/mm values to the df
         for fp in input_csv_dir.iterdir():
-            name = FeatureExtractor.get_name(fp)
+            name = fp.stem
             # Getting configs JSON
             configs_fp = configs_dir / f"{name}.json"
             with configs_fp.open("r") as f:
@@ -177,16 +177,6 @@ class FeatureExtractor:
                 df[behav] = 0
         # Writing to csv
         df.to_csv(targets_inserted_fp)
-
-    @staticmethod
-    def get_name(fp: Path) -> str:
-        """Given the filepath, returns the name of the file.
-        The name is:
-        ```
-        <path_to_file>/<name>.<ext>
-        ```.
-        """
-        return fp.stem
 
 
 def main() -> None:
