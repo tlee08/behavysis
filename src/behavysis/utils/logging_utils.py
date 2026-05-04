@@ -22,8 +22,7 @@ def setup_logging(
     level : int
         Minimum log level for console output
     log_file : Path | None
-        Optional custom log file path. If None and project_name is provided,
-        uses ~/.behavysis/{project_name}/debug.log
+        Optional custom log file path.
 
     Returns:
     -------

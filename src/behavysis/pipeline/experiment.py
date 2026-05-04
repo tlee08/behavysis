@@ -99,7 +99,7 @@ class Experiment:
         return results
 
     def update_configs(
-        self, default_configs_fp: str, overwrite: str
+        self, default_configs_fp: str, *, overwrite: str
     ) -> ProcessResultCollection:
         """Initialises the JSON config files with the given configurations."""
         return self._run_funcs_with_filtered_kwargs(
@@ -120,7 +120,7 @@ class Experiment:
         )
 
     def run_dlc(
-        self, *, gputouse: int | None, overwrite: bool
+        self, gputouse: int | None, *, overwrite: bool
     ) -> ProcessResultCollection:
         """Run the DLC model on the formatted video."""
         return self._run_funcs_with_filtered_kwargs(

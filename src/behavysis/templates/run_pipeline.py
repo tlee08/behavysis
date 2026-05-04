@@ -13,7 +13,7 @@ if __name__ == "__main__":
 
     default_configs_fp = proj_dir / "default_configs.json"
     proj.update_configs(
-        default_configs_fp,
+        default_configs_fp=default_configs_fp,
         overwrite="user",
     )
 
@@ -25,7 +25,7 @@ if __name__ == "__main__":
     )
 
     proj.calculate_parameters(
-        (
+        funcs=(
             CalculateParams.start_frame_from_likelihood,
             CalculateParams.stop_frame_from_dur,
             CalculateParams.dur_frames_from_likelihood,
@@ -35,20 +35,20 @@ if __name__ == "__main__":
     proj.collate_auto_configs()
 
     proj.preprocess(
-        (
+        funcs=(
             Preprocess.start_stop_trim,
             Preprocess.interpolate,
         ),
         overwrite=overwrite,
     )
 
-    proj.extract_features(overwrite)
-    proj.classify_behavs(overwrite)
-    proj.export_behavs(overwrite)
+    proj.extract_features(overwrite=overwrite)
+    proj.classify_behavs(overwrite=overwrite)
+    proj.export_behavs(overwrite=overwrite)
 
     proj.analyse_behavs()
     proj.analyse(
-        (
+        funcs=(
             Analyse.in_roi,
             Analyse.speed,
             Analyse.distance,
@@ -57,7 +57,7 @@ if __name__ == "__main__":
     proj.combine_analysis()
     proj.collate_analysis()
 
-    proj.evaluate_vid(overwrite)
+    proj.evaluate_vid(overwrite=overwrite)
 
     # for exp in proj.experiments:
     #     if (exp.root_dir / "9_analysis_combined" / f"{exp.name}.parquet").exists():
