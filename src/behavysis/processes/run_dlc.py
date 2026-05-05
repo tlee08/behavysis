@@ -64,8 +64,9 @@ def ma_dlc_run_single(
     # Assertion: the config.yaml file must exist.
     if not model_fp.is_file():
         msg = (
-            f'The given model_fp file does not exist: "{model_fp}".\n'
-            'Check this file and specify a DLC ".yaml" config file.'
+            f'DLC model config not found: "{model_fp}"\n'
+            f"  Check user.run_dlc.model_fp in your config file.\n"
+            f"  It should point to a DeepLabCut config.yaml file."
         )
         raise ValueError(msg)
 
@@ -123,8 +124,9 @@ def ma_dlc_run_batch(
     model_fp = dlc_fp_set.pop()
     # Assertion: the config.yaml file must exist.
     assert model_fp.is_file(), (
-        f'The given model_fp file does not exist: "{model_fp}".\n'
-        'Check this file and specify a DLC ".yaml" config file.'
+        f'DLC model config not found: "{model_fp}"\n'
+        f"  Check user.run_dlc.model_fp in your config files.\n"
+        f"  All experiments in this batch must use the same model."
     )
 
     # Running the DLC subprocess (in a separate conda env)

@@ -101,7 +101,8 @@ class DFMixin:
             if df.index.nlevels != len(in_names):
                 msg = (
                     f"Index has {df.index.nlevels} levels, expected {len(in_names)}.\n"
-                    f"Expected: {in_names}"
+                    f"  Expected index: {in_names}\n"
+                    f"  Tip: Check that your data file has the correct column structure."
                 )
                 raise AssertionError(msg)
             df.index = df.index.set_names(in_names)
@@ -110,7 +111,8 @@ class DFMixin:
             if df.columns.nlevels != len(cn_names):
                 msg = (
                     f"Columns have {df.columns.nlevels} levels, expected {len(cn_names)}.\n"
-                    f"Expected: {cn_names}"
+                    f"  Expected columns: {cn_names}\n"
+                    f"  Tip: Check that your data file has the correct header structure."
                 )
                 raise AssertionError(msg)
             df.columns = df.columns.set_names(cn_names)

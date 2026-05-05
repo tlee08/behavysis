@@ -70,8 +70,8 @@ def update_configs(
         logger.info("Updating all configs.")
     else:
         msg = (
-            f'Invalid value "{overwrite}" passed to function. '
-            'The value must be either "user", or "all".'
+            f'Invalid overwrite value: "{overwrite}"\n'
+            f'  Expected: "user" or "all"'
         )
         raise ValueError(msg)
     # Writing new configs to JSON file

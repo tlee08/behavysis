@@ -44,7 +44,13 @@ class KeypointsDf(DFMixin):
     def check_bpts_exist(cls, df: pd.DataFrame, bodyparts: list) -> None:
         missing = [b for b in bodyparts if b not in df.columns.unique("bodyparts")]
         if missing:
-            msg = f"Missing bodyparts: {missing}"
+            available = df.columns.unique("bodyparts").to_list()[:5]
+            suffix = "..." if len(df.columns.unique("bodyparts")) > 5 else ""
+            msg = (
+                f"Bodyparts not found in keypoints data: {missing}\n"
+                f"  Available: {', '.join(available)}{suffix}\n"
+                f"  Check your config file's bodyparts list."
+            )
             raise ValueError(msg)
 
     @classmethod

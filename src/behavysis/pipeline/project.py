@@ -25,6 +25,7 @@ from behavysis.df_classes.analysis_collated_df import (
 )
 from behavysis.df_classes.diagnostics_df import DiagnosticsDf
 from behavysis.models.experiment_configs import ExperimentConfigs
+from behavysis.models.process_result import ProcessResultCollection
 from behavysis.pipeline.experiment import Experiment
 from behavysis.processes.run_dlc import ma_dlc_run_batch
 from behavysis.utils.dask_utils import cluster_process
@@ -43,7 +44,10 @@ class Project:
     def __init__(self, root_dir: str | Path) -> None:
         root_dir = Path(root_dir)
         if not root_dir.is_dir():
-            msg = f'The folder "{root_dir}" does not exist.'
+            msg = (
+                f'Project folder not found: "{root_dir}"\n'
+                f"  Create a new project with: behavysis-make-project"
+            )
             raise ValueError(msg)
         self.root_dir = root_dir.resolve()
         self._experiments = {}
@@ -57,10 +61,20 @@ class Project:
     def get_experiment(self, name: str) -> Experiment:
         if name in self._experiments:
             return self._experiments[name]
-        msg = f'Experiment "{name}" does not exist in the project.'
+        available = list(self._experiments.keys())[:5]
+        suffix = "..." if len(self._experiments) > 5 else ""
+        msg = (
+            f'Experiment "{name}" not found in project.\n'
+            f"  Available: {', '.join(available)}{suffix}\n"
+            f"  Did you forget to call proj.import_experiments()?"
+        )
         raise ValueError(msg)
 
-    def _run_parallel(self, method: Callable, **kwargs: Any) -> list[Any]:
+    def _run_parallel(
+        self,
+        method: Callable[..., ProcessResultCollection],
+        **kwargs: Any,
+    ) -> list[ProcessResultCollection]:
         """Run a method on all experiments in parallel."""
         with cluster_process(LocalCluster(n_workers=self.nprocs, threads_per_worker=1)):
             delayed_tasks = [
@@ -68,11 +82,19 @@ class Project:
             ]
             return list(dask.compute(*delayed_tasks))
 
-    def _run_sequential(self, method: Callable, **kwargs: Any) -> list[Any]:
+    def _run_sequential(
+        self,
+        method: Callable[..., ProcessResultCollection],
+        **kwargs: Any,
+    ) -> list[ProcessResultCollection]:
         """Run a method on all experiments sequentially."""
         return [method(exp, **kwargs) for exp in self.experiments]
 
-    def _run_and_save_diagnostics(self, _func: Callable, **kwargs: Any) -> None:
+    def _run_and_save_diagnostics(
+        self,
+        _func: Callable[..., ProcessResultCollection],
+        **kwargs: Any,
+    ) -> None:
         """Run a method on all experiments and save diagnostics."""
         logger.info("Running %s for all experiments.", _func.__name__)
         runner = self._run_sequential if self.nprocs == 1 else self._run_parallel
@@ -80,14 +102,27 @@ class Project:
         if not results:
             return
 
+        # Print summary table
+        failed = [r for r in results if not r.success]
+        if failed:
+            logger.warning(
+                "Completed %d/%d. Failed: %s",
+                len(results) - len(failed),
+                len(results),
+                ", ".join(r.experiment for r in failed),
+            )
+        else:
+            logger.info(
+                "Completed %d/%d experiments successfully",
+                len(results),
+                len(results),
+            )
+        # Writing diagnostics
         diagnostics_dir = self.root_dir / DIAGNOSTICS_DIR
         diagnostics_dir.mkdir(parents=True, exist_ok=True)
-
         json_path = diagnostics_dir / f"{_func.__name__}.json"
-        with open(json_path, "w") as f:
+        with json_path.open("w") as f:
             json.dump([r.model_dump() for r in results], f, indent=2, default=str)
-
-        logger.info("Finished running %s for all experiments", _func.__name__)
 
     def import_experiment(self, name: str) -> bool:
         """Add an experiment to the project. Returns True if newly added."""

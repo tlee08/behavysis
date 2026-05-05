@@ -42,8 +42,8 @@ class Experiment:
         root_dir = Path(root_dir)
         if not root_dir.is_dir():
             msg = (
-                f'Cannot find the project folder "{root_dir}". '
-                "Please specify a folder that exists."
+                f'Project folder not found: "{root_dir}"\n'
+                f"  Create a new project with: behavysis-make-project"
             )
             raise ValueError(msg)
         self.name = name
@@ -52,8 +52,9 @@ class Experiment:
         if not np.any(file_exists_ls):
             folders_ls_msg = "".join([f"\n    - {f.value}" for f in Folders])
             msg = (
-                f'No files named "{name}" exist in "{root_dir}".\n'
-                f"Please specify a file in one of these folders:{folders_ls_msg}"
+                f'No files named "{name}" found in "{root_dir}".\n'
+                f"  Expected files in one of these folders:{folders_ls_msg}\n"
+                f"  Tip: Check the experiment name matches your file names (without extension)."
             )
             raise ValueError(msg)
 
@@ -64,7 +65,10 @@ class Experiment:
                 folder = Folders(folder)
             except ValueError as e:
                 valid = "".join([f"\n    - {f.value}" for f in Folders])
-                msg = f"{folder} is not a valid folder. Valid folders:{valid}"
+                msg = (
+                    f'Invalid folder: "{folder}"\n'
+                    f"  Valid folders:{valid}"
+                )
                 raise ValueError(msg) from e
         file_ext: FileExts = getattr(FileExts, folder.name)
         return self.root_dir / folder.value / f"{self.name}.{file_ext.value}"
@@ -93,6 +97,7 @@ class Experiment:
                 logger.debug(traceback.format_exc())
                 result.mark_complete(success=False, error_message=str(e))
             results.results[f_name] = result
+        results.mark_complete()
         logger.info(
             "Finished processing experiment, %s, with:%s", self.name, f_names_ls_msg
         )

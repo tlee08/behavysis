@@ -40,4 +40,9 @@ class ProcessResultCollection(BaseModel):
     """Structured collection of process results for an experiment."""
 
     experiment: str
+    success: bool = True
     results: dict[str, ProcessResult] = {}
+
+    def mark_complete(self) -> None:
+        """Based on existing results, set success."""
+        self.success = all(result.success for result in self.results.values())

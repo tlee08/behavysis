@@ -123,8 +123,9 @@ def interpolate_stationary(
     height_px = configs.auto.formatted_vid.height_px
     if width_px <= 0 or height_px <= 0:
         msg = (
-            "Width and height must be provided in the formatted video. "
-            "Try running format_vid."
+            f"Video dimensions not set for experiment.\n"
+            f"  width_px={width_px}, height_px={height_px}\n"
+            f"  Run proj.format_vid() first to set these values."
         )
         raise ValueError(msg)
     # Reading file
