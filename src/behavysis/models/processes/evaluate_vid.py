@@ -4,6 +4,32 @@ from pydantic import BaseModel, field_validator
 from behavysis.df_classes.keypoints_df import KeypointsDf
 
 
+def _validate_in_set(v: str, valid_values: list[str]) -> str:
+    """Validate that value is in the set of valid values.
+
+    Parameters
+    ----------
+    v : str
+        Value to validate.
+    valid_values : list[str]
+        List of valid values.
+
+    Returns:
+    -------
+    str
+        The validated value.
+
+    Raises:
+    ------
+    ValueError
+        If value is not in valid_values.
+    """
+    if v not in valid_values:
+        msg = f"Value '{v}' not in valid values: {valid_values[:5]}..."
+        raise ValueError(msg)
+    return v
+
+
 class EvaluateVidConfigs(BaseModel):
     funcs: list[str] | str = ["keypoints", "analysis"]
     pcutoff: float | str = 0.8
@@ -15,13 +41,13 @@ class EvaluateVidConfigs(BaseModel):
     @field_validator("cmap")
     @classmethod
     def validate_cmap(cls, v):
-        return cls.validate_attr_closed_set(v, plt.colormaps())
+        return _validate_in_set(v, plt.colormaps())
 
     @field_validator("colour_level")
     @classmethod
     def validate_colour_level(cls, v):
         vals = [e.value for e in KeypointsDf.CN]
-        return cls.validate_attr_closed_set(v, vals)
+        return _validate_in_set(v, vals)
 
 
 class KeypointsConfigs(BaseModel):
@@ -33,13 +59,13 @@ class KeypointsConfigs(BaseModel):
     @field_validator("cmap")
     @classmethod
     def validate_cmap(cls, v):
-        return cls.validate_attr_closed_set(v, plt.colormaps())
+        return _validate_in_set(v, plt.colormaps())
 
     @field_validator("colour_level")
     @classmethod
     def validate_colour_level(cls, v):
         vals = [e.value for e in KeypointsDf.CN]
-        return cls.validate_attr_closed_set(v, vals)
+        return _validate_in_set(v, vals)
 
 
 class AnalysisConfigs(BaseModel):
