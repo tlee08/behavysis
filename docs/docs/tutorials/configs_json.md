@@ -1,40 +1,368 @@
 # Configs JSON File
 
-A configs JSON file is attached to each experiment.
-This file defines a) how the experiment should be processed (e.g. hyperparameters like the `dlc_config_fp` to use), and b) the inherent parameters of the experiment (e.g. like the `px/mm` and `start_frame` calculations).
+A configs JSON file is attached to each experiment. This file defines:
 
-An example configs file is shown below:
+1. **How** the experiment should be processed (e.g., which DLC model to use)
+2. **Inherent parameters** of the experiment (e.g., px/mm, start_frame)
+
+[:material-book-open-variant: Full config reference](#full-config-reference){ .md-button }
+
+---
+
+## Quick Start
+
+1. Generate a default config file:
+    ```bash
+    behavysis-make-project
+    ```
+
+2. Edit `default_configs.json` - most experiments only need to change a few fields.
+
+3. Apply configs to all experiments:
+    ```python
+    proj.update_configs(default_configs_fp="default_configs.json", overwrite="user")
+    ```
+
+---
+
+## Required Settings
+
+These fields **must** be configured for the pipeline to work:
+
+| Field | Description | Example |
+|-------|-------------|---------|
+| `user.run_dlc.model_fp` | Path to DeepLabCut model config.yaml | `"/models/my_model/config.yaml"` |
+| `user.calculate_params.px_per_mm.dist_mm` | Real-world distance between two arena corners | `400` (for 40cm arena) |
+
+---
+
+## Config Structure
+
+The config has three sections:
+
+### `user` - Your Settings
+Parameters you define to control processing:
+
+```json
+{
+  "user": {
+    "format_vid": { "fps": 15, "width_px": 960, "height_px": 540 },
+    "run_dlc": { "model_fp": "/path/to/model/config.yaml" },
+    "preprocess": { "interpolate": { "pcutoff": 0.5 } }
+  }
+}
+```
+
+### `auto` - Auto-Calculated Values
+Populated automatically during processing:
+
+```json
+{
+  "auto": {
+    "px_per_mm": 2.5,
+    "start_frame": 150,
+    "stop_frame": 9000,
+    "formatted_vid": { "fps": 15.0, "width_px": 960, "height_px": 540 }
+  }
+}
+```
+
+### `ref` - Reusable References
+Define values once, reference them with `--name`:
+
+```json
+{
+  "ref": {
+    "bpts_centre": ["BodyCentre", "TailBase1"],
+    "bpts_simba": ["Nose", "LeftEar", "RightEar", "BodyCentre", "TailBase1"]
+  },
+  "user": {
+    "analyse": {
+      "speed": { "bodyparts": "--bpts_centre" },
+      "freezing": { "bodyparts": "--bpts_centre" }
+    }
+  }
+}
+```
+
+---
+
+## Common Settings by Stage
+
+### Video Formatting
+
+```json
+{
+  "format_vid": {
+    "width_px": 960,
+    "height_px": 540,
+    "fps": 15.0,
+    "start_sec": null,
+    "stop_sec": null
+  }
+}
+```
+
+### DeepLabCut
+
+```json
+{
+  "run_dlc": {
+    "model_fp": "/path/to/DEEPLABCUT_model/config.yaml"
+  }
+}
+```
+
+### Preprocessing
+
+```json
+{
+  "preprocess": {
+    "interpolate": { "pcutoff": 0.5 },
+    "interpolate_stationary": [],
+    "refine_ids": {
+      "marked": "mouse1marked",
+      "unmarked": "mouse2unmarked",
+      "marking": "AnimalColourMark",
+      "window_sec": 0.5,
+      "bodyparts": "--bpts_centre"
+    }
+  }
+}
+```
+
+### Feature Extraction
+
+```json
+{
+  "extract_features": {
+    "individuals": "--indivs_simba",
+    "bodyparts": "--bpts_simba"
+  }
+}
+```
+
+### Behavioral Classification
+
+```json
+{
+  "classify_behavs": [
+    {
+      "proj_dir": "path/to/project",
+      "behav_name": "fighting",
+      "pcutoff": 0.5,
+      "min_empty_window_secs": 0.2
+    }
+  ]
+}
+```
+
+### Analysis
+
+```json
+{
+  "analyse": {
+    "bins_sec": [30, 60, 120],
+    "speed": { "smoothing_sec": 1, "bodyparts": "--bpts_centre" },
+    "social_distance": { "smoothing_sec": 1, "bodyparts": "--bpts_centre" },
+    "freezing": { "window_sec": 2, "thresh_mm": 5, "bodyparts": "--bpts_centre" },
+    "in_roi": [
+      {
+        "roi_corners": "--bpts_corners",
+        "bodyparts": "--bpts_front",
+        "padding_mm": 0
+      }
+    ]
+  }
+}
+```
+
+---
+
+## Example Configs
+
+### Open Field (Single Mouse)
+
+Standard open field test with one mouse. Measures speed, freezing, and thigmotaxis.
 
 ```json
 {
   "user": {
     "format_vid": {
-      "height_px": 540,
       "width_px": 960,
-      "fps": 15,
+      "height_px": 540,
+      "fps": 15.0
+    },
+    "run_dlc": {
+      "model_fp": "/path/to/open_field_dlc/config.yaml"
+    },
+    "calculate_params": {
+      "from_likelihood": {
+        "bodyparts": "--bpts_simba",
+        "window_sec": 1.0,
+        "pcutoff": 0.8
+      },
+      "stop_frame_from_dur": {
+        "dur_sec": 600
+      },
+      "px_per_mm": {
+        "pt_a": "TopLeft",
+        "pt_b": "TopRight",
+        "pcutoff": 0.5,
+        "dist_mm": 400
+      }
+    },
+    "preprocess": {
+      "interpolate": { "pcutoff": 0.5 }
+    },
+    "extract_features": {
+      "individuals": ["single"],
+      "bodyparts": "--bpts_simba"
+    },
+    "analyse": {
+      "bins_sec": [30, 60, 120],
+      "speed": {
+        "smoothing_sec": 1,
+        "bodyparts": ["BodyCentre"]
+      },
+      "freezing": {
+        "window_sec": 2,
+        "thresh_mm": 5,
+        "smoothing_sec": 0.2,
+        "bodyparts": ["BodyCentre"]
+      }
+    }
+  },
+  "ref": {
+    "bpts_simba": ["Nose", "LeftEar", "RightEar", "BodyCentre", "TailBase1", "TailTip"]
+  }
+}
+```
+
+### Two-Mouse Social Interaction
+
+Social interaction test with two mice (one marked, one unmarked). Includes social distance and individual tracking.
+
+```json
+{
+  "user": {
+    "format_vid": {
+      "width_px": 960,
+      "height_px": 540,
+      "fps": 15.0
+    },
+    "run_dlc": {
+      "model_fp": "/path/to/social_interaction_dlc/config.yaml"
+    },
+    "calculate_params": {
+      "from_likelihood": {
+        "bodyparts": "--bpts_simba",
+        "window_sec": 1.0,
+        "pcutoff": 0.8
+      },
+      "stop_frame_from_dur": {
+        "dur_sec": 600
+      },
+      "px_per_mm": {
+        "pt_a": "TopLeft",
+        "pt_b": "TopRight",
+        "pcutoff": 0.5,
+        "dist_mm": 400
+      }
+    },
+    "preprocess": {
+      "interpolate": { "pcutoff": 0.5 },
+      "refine_ids": {
+        "marked": "mouse1marked",
+        "unmarked": "mouse2unmarked",
+        "marking": "AnimalColourMark",
+        "window_sec": 0.5,
+        "bodyparts": "--bpts_centre"
+      }
+    },
+    "extract_features": {
+      "individuals": "--indivs_simba",
+      "bodyparts": "--bpts_simba"
+    },
+    "analyse": {
+      "bins_sec": [30, 60, 120],
+      "speed": {
+        "smoothing_sec": 1,
+        "bodyparts": "--bpts_centre"
+      },
+      "social_distance": {
+        "smoothing_sec": 1,
+        "bodyparts": "--bpts_centre"
+      },
+      "freezing": {
+        "window_sec": 2,
+        "thresh_mm": 5,
+        "smoothing_sec": 0.2,
+        "bodyparts": "--bpts_centre"
+      }
+    }
+  },
+  "ref": {
+    "indivs_simba": ["mouse1marked", "mouse2unmarked"],
+    "bpts_simba": [
+      "Nose", "LeftEar", "RightEar", "BodyCentre",
+      "LeftFlankMid", "RightFlankMid", "TailBase1", "TailTip"
+    ],
+    "bpts_centre": ["BodyCentre", "TailBase1"]
+  }
+}
+```
+
+---
+
+## Troubleshooting
+
+### "DLC model config not found"
+Check that `user.run_dlc.model_fp` points to an existing `.yaml` file:
+```json
+{ "run_dlc": { "model_fp": "/absolute/path/to/config.yaml" } }
+```
+
+### "Width and height must be provided"
+Run `proj.format_vid()` first - it populates `auto.formatted_vid` dimensions.
+
+### "Bodyparts not found in keypoints data"
+Your DLC model's bodypart names don't match the config. Check `ref.bpts_simba` matches your model's output.
+
+---
+
+## Full Config Reference
+
+```json
+{
+  "user": {
+    "format_vid": {
+      "width_px": 960,
+      "height_px": 540,
+      "fps": 15.0,
       "start_sec": null,
       "stop_sec": null
     },
     "run_dlc": {
-      "model_fp": "/path/to/dlc_config.yaml"
+      "model_fp": "path/to/DEEPLABCUT_model/config.yaml"
     },
     "calculate_params": {
-      "start_frame": {
-        "window_sec": 1,
-        "pcutoff": 0.9,
-        "bodyparts": "--bodyparts-simba"
+      "from_likelihood": {
+        "bodyparts": "--bpts_simba",
+        "window_sec": 1.0,
+        "pcutoff": 0.8
       },
-      "exp_dur": {
-        "window_sec": 1,
-        "pcutoff": 0.9,
-        "bodyparts": "--bodyparts-simba"
+      "start_frame_from_csv": {
+        "csv_fp": "path_to/start_times.csv",
+        "name": null
       },
-      "stop_frame": {
+      "stop_frame_from_dur": {
         "dur_sec": 6000
       },
       "px_per_mm": {
-        "pt_a": "--tl",
-        "pt_b": "--tr",
+        "pt_a": "pt_a",
+        "pt_b": "pt_b",
+        "pcutoff": 0.5,
         "dist_mm": 400
       }
     },
@@ -42,191 +370,85 @@ An example configs file is shown below:
       "interpolate": {
         "pcutoff": 0.5
       },
-      "bodycentre": {
-        "bodyparts": "--bodyparts-centre"
-      },
+      "interpolate_stationary": [],
       "refine_ids": {
-        "marked": "mouse1marked",
-        "unmarked": "mouse2unmarked",
-        "marking": "AnimalColourMark",
+        "marked": "marked",
+        "unmarked": "unmarked",
+        "marking": "marking",
+        "bodyparts": "--bpts_centre",
         "window_sec": 0.5,
-        "metric": "rolling",
-        "bodyparts": "--bodyparts-centre"
-      }
-    },
-    "evaluate": {
-      "keypoints_plot": {
-        "bodyparts": ["Nose", "BodyCentre", "TailBase1"]
-      },
-      "eval_vid": {
-        "funcs": ["keypoints", "behavs"],
-        "pcutoff": 0.5,
-        "colour_level": "individuals",
-        "radius": 4,
-        "cmap": "rainbow"
+        "metric": "current"
       }
     },
     "extract_features": {
-      "individuals": ["mouse1marked", "mouse2unmarked"],
-      "bodyparts": "--bodyparts-simba"
+      "individuals": "--indivs_simba",
+      "bodyparts": "--bpts_simba"
     },
-    "classify_behaviours": [
+    "classify_behavs": [
       {
-        "model_fp": "/path/to/behav_model_1.json",
-        "pcutoff": null,
-        "min_window_frames": "--min_window_frames",
-        "user_behavs": "--user_behavs"
-      },
-      {
-        "model_fp": "/path/to/behav_model_2.json",
-        "pcutoff": null,
-        "min_window_frames": "--min_window_frames",
-        "user_behavs": "--user_behavs"
+        "proj_dir": "path/to/project_dir",
+        "behav_name": "behav_name",
+        "pcutoff": -1,
+        "min_empty_window_secs": 0.2,
+        "user_defined": []
       }
     ],
     "analyse": {
-      "thigmotaxis": {
-        "thresh_mm": 50,
-        "roi_top_left": "--tl",
-        "roi_top_right": "--tr",
-        "roi_bottom_left": "--bl",
-        "roi_bottom_right": "--br",
-        "bodyparts": "--bodyparts-centre"
-      },
-      "center_crossing": {
-        "thresh_mm": 125,
-        "roi_top_left": "--tl",
-        "roi_top_right": "--tr",
-        "roi_bottom_left": "--bl",
-        "roi_bottom_right": "--br",
-        "bodyparts": "--bodyparts-centre"
-      },
-      "in_roi": {
-        "thresh_mm": 5,
-        "roi_top_left": "--tl",
-        "roi_top_right": "--tr",
-        "roi_bottom_left": "--bl",
-        "roi_bottom_right": "--br",
-        "bodyparts": ["Nose"]
-      },
+      "bins_sec": [30, 60, 120],
+      "custom_bins_sec": [60, 120, 300, 600],
       "speed": {
         "smoothing_sec": 1,
-        "bodyparts": "--bodyparts-centre"
+        "bodyparts": "--bpts_centre"
       },
       "social_distance": {
         "smoothing_sec": 1,
-        "bodyparts": "--bodyparts-centre"
+        "bodyparts": "--bpts_centre"
       },
       "freezing": {
         "window_sec": 2,
         "thresh_mm": 5,
         "smoothing_sec": 0.2,
-        "bodyparts": "--bodyparts-simba"
+        "bodyparts": "--bpts_centre"
       },
-      "bins_sec": [30, 60, 120, 300],
-      "custom_bins_sec": [60, 120, 300, 600]
+      "in_roi": [
+        {
+          "roi_name": "in_my_roi",
+          "is_in": true,
+          "padding_mm": 0,
+          "roi_corners": "--bpts_corners",
+          "bodyparts": "--bpts_front"
+        }
+      ]
+    },
+    "evaluate_vid": {
+      "funcs": ["keypoints", "analysis"],
+      "pcutoff": 0.8,
+      "colour_level": "individuals",
+      "radius": 3,
+      "cmap": "rainbow",
+      "padding": 30
     }
   },
-  "ref": {
-    "bodyparts-centre": [
-      "LeftFlankMid",
-      "BodyCentre",
-      "RightFlankMid",
-      "LeftFlankRear",
-      "RightFlankRear",
-      "TailBase1"
-    ],
-    "bodyparts-simba": [
-      "LeftEar",
-      "RightEar",
-      "Nose",
-      "BodyCentre",
-      "LeftFlankMid",
-      "RightFlankMid",
-      "TailBase1",
-      "TailTip4"
-    ],
-    "tl": "TopLeft",
-    "tr": "TopRight",
-    "bl": "BottomLeft",
-    "br": "BottomRight",
-    "min_window_frames": 2,
-    "user_behavs": ["fight", "aggression"]
-  }
-}
-```
-
-## The Structure
-
-The configs file has three main sections
-- `user`: User defined parameters to process the experiment.
-- `auto`: Automatically calculated parameters which are used
-    in later processes for the experiment.
-    Also gives useful insights into how the experiment "went" (e.g. over/under time, arena is smaller than other videos).
-- `ref`: User defined parameters can be referenced from keys defined here.
-    Useful when the same parameter values are used for many processes
-    (e.g. bodyparts).
-
-## Understanding Specific Parameters
-
-!!! Notes
-
-    To understand specific parameters in the `configs.yaml`,
-    see each processing function's API documentation.
-
-    For example, `user.calculate_params.px_per_mm` requires
-    `pt_a`, `pt_b`, and `dist_mm`, which are described in the
-    [API docs][behavysis.processes.CalculateParams].
-
-## The Ref section
-
-The `ref` section defines values that can be referenced in the `user` section.
-
-To reference a value from the ref section, first define it:
-
-```json
-{
-    ...
-    "ref": {
-        "example": ["values", "of", "any", "type"]
-    }
-}
-```
-
-You can now reference `example` by prepending a double hyphen (`--`) when referencing it:
-
-```json
-{
-    "user": {
-        ...
-        "parameter": "--example",
-        ...
+  "auto": {
+    "raw_vid": {
+      "width_px": -1,
+      "height_px": -1,
+      "fps": -1.0,
+      "total_frames": -1
     },
-    ...
+    "formatted_vid": {
+      "width_px": -1,
+      "height_px": -1,
+      "fps": -1.0,
+      "total_frames": -1
+    },
+    "px_per_mm": -1.0,
+    "start_frame": -1,
+    "stop_frame": -1,
+    "dur_frames": -1
+  },
+  "ref": {}
 }
 ```
 
-## Setting the Configs for an Experiment or all Experiments in a Project
-
-Each experiment requires a corresponding configs file.
-
-To generate or modify an experiment's configs file, first make a `default.json` file with the configs configured as you'd like.
-
-!!! Tip
-
-    You can copy the example configs file from [here][configs-json-file].
-
-    Just make sure to change the multiple `model_fp` filepaths.
-
-```py
-from behavysis import Experiment
-
-# Getting the experiment
-experiment = Experiment("exp_name", "root_dir")
-# Making/overwriting the configs file
-experiment.update_configs("/path/to/default.json", overwrite="all")
-```
-
-!!! Note
-
-    The `overwrite` keyword can be `"all"`, or `"user"`.
+For detailed parameter documentation, see each processing function's API docs.

@@ -2,7 +2,14 @@
 
 from .analyse import distance, freezing, in_roi, speed
 from .analyse_behavs import analyse_behavs
-from .calculate_params import stop_frame_from_likelihood
+from .calculate_params import (
+    dur_frames_from_likelihood,
+    px_per_mm,
+    start_frame_from_csv,
+    start_frame_from_likelihood,
+    stop_frame_from_dur,
+    stop_frame_from_likelihood,
+)
 from .classify_behavs import classify_behavs
 from .combine_analysis import combine_analysis
 from .evaluate_vid import EvaluateVid
@@ -22,6 +29,7 @@ __all__ = [
     "df2csv",
     "df2df",
     "distance",
+    "dur_frames_from_likelihood",
     "extract_features",
     "format_vid",
     "freezing",
@@ -31,9 +39,13 @@ __all__ = [
     "ma_dlc_run_batch",
     "ma_dlc_run_single",
     "predictedbehavs2scoredbehavs",
+    "px_per_mm",
     "refine_ids",
     "speed",
+    "start_frame_from_csv",
+    "start_frame_from_likelihood",
     "start_stop_trim",
+    "stop_frame_from_dur",
     "stop_frame_from_likelihood",
     "update_configs",
 ]

@@ -45,7 +45,6 @@ dev = [
 [project.scripts]
 behavysis-init = "behavysis.scripts.init:main"
 behavysis-make-project = "behavysis.scripts.make_project:main"
-behavysis-project-gui = "behavysis.scripts.project_gui:run_script"
 behavysis-viewer = "behavysis.viewer.__main__:main"
 behavysis-make-dlc-builder = "behavysis.scripts.make_dlc_builder:main"
 
