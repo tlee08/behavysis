@@ -1,4 +1,4 @@
-"""Utility functions."""
+"""Features DataFrame for extracted behavioral features."""
 
 from enum import Enum
 

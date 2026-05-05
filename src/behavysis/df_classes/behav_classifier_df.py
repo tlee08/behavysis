@@ -1,4 +1,4 @@
-"""Utility functions."""
+"""Behavior classifier evaluation DataFrames."""
 
 from enum import Enum
 

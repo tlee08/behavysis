@@ -1,15 +1,6 @@
-from enum import EnumType
-from typing import Any
+"""Miscellaneous utility functions."""
 
 import numpy as np
-
-
-def enum2tuple(my_enum: EnumType) -> tuple[Any]:
-    return tuple(i.value for i in my_enum)
-
-
-def enum2list(my_enum: EnumType) -> list[Any]:
-    return [i.value for i in my_enum]
 
 
 def listofvects2array(*list_of_vects):
@@ -39,7 +30,6 @@ def listofvects2array(*list_of_vects):
     Helpful when each element in the list refers to a dataset.
     Returns a numpy array of (dataset_index, list_1_el, list_2_el).
     """
-    # Assert that all vects across the set have the same length
     if len(list_of_vects) == 0:
         return np.zeros(shape=(0, 0))
     for list_of_vects_i in zip(*list_of_vects, strict=False):
@@ -47,9 +37,7 @@ def listofvects2array(*list_of_vects):
             continue
         for v in list_of_vects_i[1:]:
             assert v.shape[0] == list_of_vects_i[0].shape[0]
-    # Getting the lengths of each list of vects
     lengths_ls = [i.shape[0] for i in list_of_vects[0]]
-    # Making the array
     return np.concatenate(
         [
             np.stack((np.repeat(i, vects[0]), *vects[1:]), axis=1)

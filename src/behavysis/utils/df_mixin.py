@@ -1,4 +1,14 @@
-"""DataFrame mixin class providing unified read/write operations with schema validation."""
+"""DataFrame mixin providing unified read/write with schema validation.
+
+Usage:
+    class KeypointsDf(DFMixin):
+        IN = FramesIN  # Enum for index names
+        CN = KeypointsCN  # Enum for column names
+        NULLABLE = False  # Set to True to allow NaN values
+
+    df = KeypointsDf.read(path)
+    KeypointsDf.write(df, path)
+"""
 
 from enum import EnumType
 from pathlib import Path
@@ -6,52 +16,39 @@ from pathlib import Path
 import pandas as pd
 
 from behavysis.constants import DF_IO_FORMAT
-from behavysis.utils.misc_utils import enum2tuple
+
+
+def _enum_values(e: type | None) -> tuple | None:
+    """Extract tuple of values from an enum, or None if not an enum."""
+    if e is None:
+        return None
+    return tuple(i.value for i in e)
 
 
 class DFMixin:
-    """Mixin providing read/write operations for DataFrames with schema validation.
+    """Mixin for DataFrames with schema validation via IN (index) and CN (columns) enums.
 
-    Subclasses define schema via IN (index names) and CN (column names) enums.
-    All I/O operations validate schema and ensure consistent formatting.
+    Validates schema on read and write. Sorts index and columns on both.
+    Default IO format is Parquet.
     """
 
     NULLABLE = True
-    IN = None
-    CN = None
-    IO = DF_IO_FORMAT
-
-    ###############################################################################################
-    # DF Read Functions
-    ###############################################################################################
+    IN: EnumType | None = None
+    CN: EnumType | None = None
+    IO: str = DF_IO_FORMAT
 
     @classmethod
     def read(cls, fp: Path, fmt: str | None = None) -> pd.DataFrame:
-        """Read dataframe from file, asserts format, and cleans.
-
-        Parameters
-        ----------
-        fp : Path
-            File path to read from.
-        fmt : str | None
-            File format. If None, uses cls.IO. Supports: csv, h5, feather, parquet.
-
-        Returns:
-        -------
-        pd.DataFrame
-            Loaded dataframe with validated schema.
-
-        Raises:
-        ------
-        AssertionError
-            If format is not supported.
-        """
+        """Read dataframe from file, validate schema, and sort."""
         fmt = fmt or cls.IO
+        index_levels = len(_enum_values(cls.IN) or (None,))
+        column_levels = len(_enum_values(cls.CN) or (None,))
+
         if fmt == "csv":
             df = pd.read_csv(
                 fp,
-                index_col=list(range(len(enum2tuple(cls.IN) if cls.IN else (None,)))),
-                header=list(range(len(enum2tuple(cls.CN) if cls.CN else (None,)))),
+                index_col=list(range(index_levels)) if index_levels > 0 else None,
+                header=list(range(column_levels)) if column_levels > 0 else None,
             )
         elif fmt == "h5":
             df = pd.DataFrame(pd.read_hdf(fp, mode="r"))
@@ -60,54 +57,17 @@ class DFMixin:
         elif fmt == "parquet":
             df = pd.read_parquet(fp)
         else:
-            msg = f"File type, {fmt}, not supported. Supported formats: csv, h5, feather, parquet."
-            raise AssertionError(msg)
-        return cls.basic_clean(df)
+            msg = f"Unsupported format: {fmt}. Use: csv, h5, feather, parquet."
+            raise ValueError(msg)
 
-    @classmethod
-    def read_csv(cls, fp: Path) -> pd.DataFrame:
-        """Read dataframe from CSV file."""
-        return cls.read(fp, fmt="csv")
-
-    @classmethod
-    def read_h5(cls, fp: Path) -> pd.DataFrame:
-        """Read dataframe from HDF5 file."""
-        return cls.read(fp, fmt="h5")
-
-    @classmethod
-    def read_feather(cls, fp: Path) -> pd.DataFrame:
-        """Read dataframe from Feather file."""
-        return cls.read(fp, fmt="feather")
-
-    @classmethod
-    def read_parquet(cls, fp: Path) -> pd.DataFrame:
-        """Read dataframe from Parquet file."""
-        return cls.read(fp, fmt="parquet")
-
-    ###############################################################################################
-    # DF Write Functions
-    ###############################################################################################
+        return cls._clean_and_validate(df)
 
     @classmethod
     def write(cls, df: pd.DataFrame, fp: Path, fmt: str | None = None) -> None:
-        """Asserts format, makes parent dir, and write dataframe to file.
-
-        Parameters
-        ----------
-        df : pd.DataFrame
-            Dataframe to write.
-        fp : Path
-            File path to write to.
-        fmt : str | None
-            File format. If None, uses cls.IO. Supports: csv, h5, feather, parquet.
-
-        Raises:
-        ------
-        AssertionError
-            If format is not supported.
-        """
-        df = cls.basic_clean(df)
+        """Validate schema, sort, and write dataframe to file."""
+        df = cls._clean_and_validate(df)
         fp.parent.mkdir(parents=True, exist_ok=True)
+
         fmt = fmt or cls.IO
         if fmt == "csv":
             df.to_csv(fp)
@@ -118,145 +78,64 @@ class DFMixin:
         elif fmt == "parquet":
             df.to_parquet(fp)
         else:
-            msg = f"File type, {fmt}, not supported. Supported formats: csv, h5, feather, parquet."
-            raise AssertionError(msg)
-
-    @classmethod
-    def write_csv(cls, df: pd.DataFrame, fp: Path) -> None:
-        """Write dataframe to CSV file."""
-        cls.write(df, fp, fmt="csv")
-
-    @classmethod
-    def write_h5(cls, df: pd.DataFrame, fp: Path) -> None:
-        """Write dataframe to HDF5 file."""
-        cls.write(df, fp, fmt="h5")
-
-    @classmethod
-    def write_feather(cls, df: pd.DataFrame, fp: Path) -> None:
-        """Write dataframe to Feather file."""
-        cls.write(df, fp, fmt="feather")
-
-    @classmethod
-    def write_parquet(cls, df: pd.DataFrame, fp: Path) -> None:
-        """Write dataframe to Parquet file."""
-        cls.write(df, fp, fmt="parquet")
-
-    ###############################################################################################
-    # DF init functions
-    ###############################################################################################
+            msg = f"Unsupported format: {fmt}. Use: csv, h5, feather, parquet."
+            raise ValueError(msg)
 
     @classmethod
     def init_df(cls, index: pd.Series | pd.Index) -> pd.DataFrame:
-        """Initialize empty dataframe with schema-defined index and column structure.
-
-        Parameters
-        ----------
-        index : pd.Series | pd.Index
-            Index values for the new dataframe.
-
-        Returns:
-        -------
-        pd.DataFrame
-            Empty dataframe with proper MultiIndex structure.
-        """
-        IN = enum2tuple(cls.IN) if cls.IN else None
-        CN = enum2tuple(cls.CN) if cls.CN else None
+        """Create empty dataframe with schema-defined index structure."""
+        in_names = _enum_values(cls.IN)
+        cn_names = _enum_values(cls.CN)
         return pd.DataFrame(
-            index=pd.MultiIndex.from_frame(index.to_frame(), names=IN),
-            columns=pd.MultiIndex.from_tuples((), names=CN),
+            index=pd.MultiIndex.from_frame(index.to_frame(), names=in_names),
+            columns=pd.MultiIndex.from_tuples((), names=cn_names),
         )
 
-    ###############################################################################################
-    # DF Validation Functions
-    ###############################################################################################
-
     @classmethod
-    def basic_clean(cls, df: pd.DataFrame) -> pd.DataFrame:
-        """Clean and validate dataframe structure.
+    def _clean_and_validate(cls, df: pd.DataFrame) -> pd.DataFrame:
+        """Set index/column names, sort, and validate schema."""
+        in_names = _enum_values(cls.IN)
+        cn_names = _enum_values(cls.CN)
 
-        Sets index/column names from schema and sorts both axes.
-        Validates structure with check_df.
+        if in_names:
+            if df.index.nlevels != len(in_names):
+                msg = (
+                    f"Index has {df.index.nlevels} levels, expected {len(in_names)}.\n"
+                    f"Expected: {in_names}"
+                )
+                raise AssertionError(msg)
+            df.index = df.index.set_names(in_names)
 
-        Parameters
-        ----------
-        df : pd.DataFrame
-            Dataframe to clean.
+        if cn_names:
+            if df.columns.nlevels != len(cn_names):
+                msg = (
+                    f"Columns have {df.columns.nlevels} levels, expected {len(cn_names)}.\n"
+                    f"Expected: {cn_names}"
+                )
+                raise AssertionError(msg)
+            df.columns = df.columns.set_names(cn_names)
 
-        Returns:
-        -------
-        pd.DataFrame
-            Cleaned dataframe with validated structure.
-        """
-        if cls.IN:
-            assert df.index.nlevels == len(enum2tuple(cls.IN)), (
-                "Different number of column levels than expected.\n"
-                f"Expected columns are {enum2tuple(cls.IN)} but got {df.index.nlevels} levels.\n"
-                f"{df}"
-            )
-            df.index = df.index.set_names(enum2tuple(cls.IN))
-        if cls.CN:
-            assert df.columns.nlevels == len(enum2tuple(cls.CN)), (
-                "Different number of column levels than expected.\n"
-                f"Expected columns are {enum2tuple(cls.CN)} but got {df.columns.nlevels} levels.\n"
-                f"{df}"
-            )
-            df.columns = df.columns.set_names(enum2tuple(cls.CN))
         df = df.sort_index()
         df = df.sort_index(axis=1)
-        cls.check_df(df)
+
+        cls._validate(df)
         return df
 
     @classmethod
-    def check_df(cls, df: pd.DataFrame) -> None:
-        """Validate dataframe structure matches schema.
+    def _validate(cls, df: pd.DataFrame) -> None:
+        """Override to add custom validation. Called on read and write."""
+        assert isinstance(df, pd.DataFrame), "Must be a pandas DataFrame"
 
-        Parameters
-        ----------
-        df : pd.DataFrame
-            Dataframe to validate.
-
-        Raises:
-        ------
-        AssertionError
-            If dataframe doesn't match expected schema.
-        """
-        # Checking that df is a DataFrame
-        assert isinstance(df, pd.DataFrame), "The dataframe must be a pandas DataFrame."
-        # Checking there are no null values
         if not cls.NULLABLE:
-            assert not df.isna().to_numpy().any(), (
-                "The dataframe contains null values but it should not."
-            )
-        # Checking that the index levels are correct
-        if cls.IN:
-            cls._check_levels(df.index, cls.IN, "index")
-        # Checking that the column levels are correct
-        if cls.CN:
-            cls._check_levels(df.columns, cls.CN, "columns")
+            if df.isna().to_numpy().any():
+                msg = "DataFrame contains NaN values but NULLABLE=False."
+                raise AssertionError(msg)
+
+    # Convenience methods for specific formats
+    @classmethod
+    def read_csv(cls, fp: Path) -> pd.DataFrame:
+        return cls.read(fp, fmt="csv")
 
     @classmethod
-    def _check_levels(
-        cls,
-        obj: pd.Index | pd.MultiIndex,
-        levels: EnumType | tuple[str] | str,
-        name: str,
-    ) -> None:
-        """Validate that index/column levels match expected names.
-
-        Parameters
-        ----------
-        obj : pd.Index | pd.MultiIndex
-            Index or columns to validate.
-        levels : EnumType | tuple[str] | str
-            Expected level names.
-        name : str
-            Name for error messages ("index" or "columns").
-        """
-        # Converting `levels` to a tuple
-        if isinstance(levels, EnumType):  # If Enum
-            levels = enum2tuple(levels)
-        elif isinstance(levels, str):  # If str
-            levels = (levels,)
-        assert obj.names == levels, (
-            f"The {name} levels are incorrect. Expected {levels} but got {obj.names}."
-        )
+    def write_csv(cls, df: pd.DataFrame, fp: Path) -> None:
+        cls.write(df, fp, fmt="csv")

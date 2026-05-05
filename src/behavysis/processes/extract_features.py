@@ -12,7 +12,6 @@ from behavysis.df_classes.keypoints_df import CoordsCols, KeypointsDf
 from behavysis.models.experiment_configs import ExperimentConfigs
 from behavysis.utils.diagnostics_utils import file_exists_msg
 from behavysis.utils.io_utils import silent_remove
-from behavysis.utils.misc_utils import enum2list
 from behavysis.utils.multiproc_utils import get_cpid
 from behavysis.utils.subproc_utils import run_subproc_console
 from behavysis.utils.template_utils import save_template
@@ -120,7 +119,7 @@ def _select_cols(keypoints_df: pd.DataFrame, configs_fp: Path) -> pd.DataFrame:
     KeypointsDf.check_bpts_exist(keypoints_df, bpts)
     # Selecting given columns
     idx = pd.IndexSlice
-    coords = enum2list(CoordsCols)
+    coords = [e.value for e in CoordsCols]
     keypoints_df = keypoints_df.loc[:, idx[:, indivs, bpts, coords]]
     return keypoints_df
 

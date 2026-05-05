@@ -1,3 +1,5 @@
+"""Combined analysis DataFrame from multiple analysis types."""
+
 from enum import Enum
 
 from behavysis.df_classes.keypoints_df import FramesIN
@@ -11,8 +13,6 @@ class AnalysisCombinedCN(Enum):
 
 
 class AnalysisCombinedDf(DFMixin):
-    """Combined analysis results from multiple analysis types."""
-
     NULLABLE = False
     IN = FramesIN
     CN = AnalysisCombinedCN

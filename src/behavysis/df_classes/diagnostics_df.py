@@ -1,8 +1,7 @@
-"""Utility functions."""
+"""Diagnostics DataFrame for tracking pipeline processing results."""
 
 from enum import Enum
 
-import numpy as np
 import pandas as pd
 from natsort import natsorted
 
@@ -14,7 +13,7 @@ class DiagnosticsIN(Enum):
 
 
 class DiagnosticsCN(Enum):
-    FEATURES = "functions"
+    FUNCTIONS = "functions"
 
 
 class DiagnosticsDf(DFMixin):
@@ -24,22 +23,16 @@ class DiagnosticsDf(DFMixin):
     IO = "csv"
 
     @classmethod
-    def init_from_dd_ls(cls, dd_ls: list[dict]) -> pd.DataFrame:
-        """Initialises the features dataframe from a list of dictionaries."""
-        assert all("experiment" in dd for dd in dd_ls), (
-            "All dictionaries must have the 'experiment' key."
-        )
-        df = pd.DataFrame(dd_ls).set_index("experiment")
-        df = cls.basic_clean(df)
-        return df
+    def init_from_results(cls, results: list[dict]) -> pd.DataFrame:
+        """Create DataFrame from list of result dictionaries."""
+        assert all("experiment" in r for r in results), "Missing 'experiment' key"
+        df = pd.DataFrame(results).set_index("experiment")
+        return cls._clean_and_validate(df)
 
     @classmethod
-    def basic_clean(cls, df: pd.DataFrame) -> pd.DataFrame:
-        df = super().basic_clean(df)
-        # Natural sort the index
+    def _clean_and_validate(cls, df: pd.DataFrame) -> pd.DataFrame:
+        df = super()._clean_and_validate(df)
+        # Natural sort index
         index = natsorted(df.index.get_level_values(cls.IN.EXPERIMENT.value))
-        assert set(index) == set(np.unique(index)), (
-            f"All experiments must be unique.\nSome duplicates found in the following list of experiments: {index}"
-        )
-        df = df.loc[index, :]
-        return df
+        assert len(index) == len(set(index)), f"Duplicate experiments found: {index}"
+        return df.loc[index, :]

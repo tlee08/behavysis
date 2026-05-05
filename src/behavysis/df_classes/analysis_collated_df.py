@@ -1,3 +1,5 @@
+"""Collated analysis DataFrames for cross-experiment aggregation."""
+
 from enum import Enum
 
 from behavysis.utils.df_mixin import DFMixin

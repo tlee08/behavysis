@@ -1,3 +1,5 @@
+"""Frame-by-frame analysis DataFrame."""
+
 from enum import Enum
 
 from behavysis.df_classes.keypoints_df import FramesIN
@@ -12,8 +14,6 @@ class AnalysisCN(Enum):
 
 
 class AnalysisDf(DFMixin):
-    """Frame-by-frame analysis results with individual and measure columns."""
-
     NULLABLE = False
     IN = FramesIN
     CN = AnalysisCN

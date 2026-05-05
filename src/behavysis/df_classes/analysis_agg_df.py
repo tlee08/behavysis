@@ -1,3 +1,5 @@
+"""Aggregated analysis DataFrames for summary and binned statistics."""
+
 from collections.abc import Callable
 from enum import Enum
 from pathlib import Path
@@ -9,7 +11,6 @@ import seaborn as sns
 from behavysis.df_classes.analysis_df import AnalysisDf
 from behavysis.df_classes.behav_df import BehavScoredDf
 from behavysis.utils.df_mixin import DFMixin
-from behavysis.utils.misc_utils import enum2list, enum2tuple
 
 SUMMARY = "summary"
 BINNED = "binned"
@@ -43,28 +44,12 @@ class AnalysisSummaryDf(DFMixin):
 
     @classmethod
     def agg_quantitative(cls, analysis_df: pd.DataFrame, fps: float) -> pd.DataFrame:
-        """Generates the summarised data across the entire period, including mean,
-        std, min, Q1, median, Q3, and max.
-        Used for quantitative numeric data.
-
-        Params:
-            analysis_df: pd.DataFrame
-                _description_
-
-        Returns:
-        str
-            The outcome string.
-        """
-        # Getting summary stats for each individual
+        """Summarize quantitative data: mean, std, min, Q1, median, Q3, max, sum."""
         summary_df_ls = np.zeros(analysis_df.shape[1], dtype="object")
         for i, col in enumerate(analysis_df.columns):
-            # Getting column vector of individual-measure
             vect = analysis_df[col]
-            # Handling edge case where columns are empty
-            vect = pd.Series([0]) if vect.shape[0] == 0 else vect
-            # Setting columns to type float
+            vect = pd.Series([0]) if len(vect) == 0 else vect
             vect = vect.astype(np.float64)
-            # Aggregating stats
             summary_df_ls[i] = (
                 pd.Series(
                     {
@@ -82,44 +67,19 @@ class AnalysisSummaryDf(DFMixin):
                 .to_frame()
                 .T
             )
-        # Concatenating summary_df_ls, setting index, and cleaning
         summary_df = pd.concat(summary_df_ls, axis=0)
         summary_df.index = analysis_df.columns
-        summary_df = cls.basic_clean(summary_df)
-        return summary_df
+        return cls._clean_and_validate(summary_df)
 
     @classmethod
     def agg_behavs(cls, analysis_df: pd.DataFrame, fps: float) -> pd.DataFrame:
-        """Generates the summarised data across the entire period, including number of bouts,
-        and mean, std, min, Q1, median, Q3, and max duration of bouts.
-        Used for boolean behavs classification data.
-
-        Parameters
-        ----------
-        analysis_df : pd.DataFrame
-            _description_
-
-        Returns:
-        -------
-        str
-            The outcome string.
-        """
-        # Getting summary stats for each individual
+        """Summarize behavioral data: bout frequency and duration stats."""
         summary_df_ls = np.zeros(analysis_df.shape[1], dtype="object")
         for i, col in enumerate(analysis_df.columns):
-            # Getting column vector of individual-measure
             vect = analysis_df[col]
-            # Getting duration of each behav bout
-            bouts = BehavScoredDf.vect2bouts_df(vect == 1)["dur"]
-            # Converting bouts duration from frames to seconds
-            bouts = bouts / fps
-            # Getting bout frequency (before it is overwritten if empty)
-            bout_freq = bouts.shape[0]
-            # Handling edge case where bouts is empty
-            bouts = pd.Series([0]) if bouts.shape[0] == 0 else bouts
-            # Setting bouts to type float
-            bouts = bouts.astype(np.float64)
-            # Aggregating stats
+            bouts = BehavScoredDf.vect2bouts_df(vect == 1)["dur"] / fps
+            bout_freq = len(bouts)
+            bouts = pd.Series([0]) if len(bouts) == 0 else bouts.astype(np.float64)
             summary_df_ls[i] = (
                 pd.Series(
                     {
@@ -138,16 +98,12 @@ class AnalysisSummaryDf(DFMixin):
                 .to_frame()
                 .T
             )
-        # Concatenating summary_df_ls, setting index, and cleaning
         summary_df = pd.concat(summary_df_ls, axis=0)
         summary_df.index = analysis_df.columns
-        summary_df = cls.basic_clean(summary_df)
-        return summary_df
+        return cls._clean_and_validate(summary_df)
 
 
 class AnalysisBinnedDf(DFMixin):
-    """__summary__."""
-
     NULLABLE = False
     IN = AnalysisBinnedIN
     CN = AnalysisBinnedCN
@@ -160,46 +116,38 @@ class AnalysisBinnedDf(DFMixin):
         bins_: list,
         summary_func: Callable[[pd.DataFrame, float], pd.DataFrame],
     ) -> pd.DataFrame:
-        """Generates the binned data and line graph for the given analysis_df, and given bin_sec.
-        The aggregated statistics are very similar to the summary data.
-        """
-        # For each column, displays the mean of each binned group.
+        """Bin analysis data and apply summary function."""
         timestamps = analysis_df.index.get_level_values("frame") / fps
-        # Ensuring all bins are included (start frame and end frame)
         bins = np.asarray(bins_)
         bins = np.append(0, bins) if np.min(bins) > 0 else bins
         t_max = np.max(timestamps)
         bins = np.append(bins, t_max) if np.max(bins) < t_max else bins
-        # Making binned data
-        bin_sec = pd.cut(x=timestamps, bins=bins, labels=bins[1:], include_lowest=True)  # type: ignore
+
+        bin_sec = pd.cut(x=timestamps, bins=bins, labels=bins[1:], include_lowest=True)
         grouped_df = analysis_df.groupby(bin_sec)
+
+        in_names = [e.value for e in AnalysisSummaryDf.IN]
+        cn_names = [e.value for e in cls.CN]
+
         binned_df = grouped_df.apply(
             lambda x: (
                 summary_func(x, fps)
-                .unstack(enum2tuple(AnalysisSummaryDf.IN))
-                .reorder_levels(enum2list(cls.CN))
-                .sort_index(level=enum2tuple(AnalysisSummaryDf.IN))
+                .unstack(in_names)
+                .reorder_levels(cn_names)
+                .sort_index(level=in_names)
             )
         )
-        # Cleaning (sets index and column names) and checking
-        binned_df = cls.basic_clean(binned_df)
-        return binned_df
+        return cls._clean_and_validate(binned_df)
 
     @classmethod
     def make_binned_plot(
-        cls,
-        binned_df: pd.DataFrame,
-        dst_fp: Path,
-        agg_column: str,
+        cls, binned_df: pd.DataFrame, dst_fp: Path, agg_column: str
     ) -> None:
-        """_summary_."""
-        # Making binned_df long
+        """Plot binned data over time."""
+        in_names = [e.value for e in AnalysisSummaryDf.IN]
         binned_stacked_df = (
-            binned_df.stack(enum2tuple(AnalysisSummaryDf.IN))[agg_column]
-            .rename("value")
-            .reset_index()
+            binned_df.stack(in_names)[agg_column].rename("value").reset_index()
         )
-        # Plotting line graph
         g = sns.relplot(
             data=binned_stacked_df,
             x=cls.IN.BIN_SEC.value,
@@ -214,11 +162,9 @@ class AnalysisBinnedDf(DFMixin):
             markersize=10,
             legend=True,
         )
-        # Setting fig titles and labels
         g.set_titles(col_template="{col_name}")
         g.figure.subplots_adjust(top=0.85)
         g.figure.suptitle("Binned data", fontsize=12)
-        # Saving fig
         dst_fp.parent.mkdir(parents=True, exist_ok=True)
         g.savefig(dst_fp)
         g.figure.clf()
@@ -233,7 +179,7 @@ class AnalysisBinnedDf(DFMixin):
         bins_ls: list,
         cbins_ls: list,
     ) -> None:
-        """_summary_."""
+        """Generate binned summary for quantitative data."""
         return cls.summary_binned(
             analysis_df=analysis_df,
             dst_dir=dst_dir,
@@ -255,7 +201,7 @@ class AnalysisBinnedDf(DFMixin):
         bins_ls: list,
         cbins_ls: list,
     ) -> None:
-        """_summary_."""
+        """Generate binned summary for behavioral data including latency."""
         cls.summary_binned(
             analysis_df=analysis_df,
             dst_dir=dst_dir,
@@ -266,18 +212,12 @@ class AnalysisBinnedDf(DFMixin):
             bins_ls=bins_ls,
             cbins_ls=cbins_ls,
         )
-        # Adding bout latency (time from start to first bout)
+        # Add latency (time from start to first bout)
         latency_df_ls = np.zeros(analysis_df.shape[1], dtype="object")
         for i, col in enumerate(analysis_df.columns):
-            # Getting column vector of individual-measure
             vect = analysis_df[col]
-            # Handling edge case where columns are empty
-            vect = pd.Series([0]) if vect.shape[0] == 0 else vect
-            # Setting columns to type float
-            vect = vect.astype(np.float64)
-            # Getting equivalent index vector
+            vect = pd.Series([0]) if len(vect) == 0 else vect.astype(np.float64)
             index = vect.index.get_level_values(AnalysisDf.IN.FRAME.value) / fps
-            # Aggregating stats (latency)
             latency_df_ls[i] = (
                 pd.Series(
                     {"latency": index[vect == 1][0] if np.any(vect == 1) else -1},
@@ -286,15 +226,14 @@ class AnalysisBinnedDf(DFMixin):
                 .to_frame()
                 .T
             )
-        # Concatenating summary_df_ls, setting index, and cleaning
         latency_df = pd.concat(latency_df_ls, axis=0)
         latency_df.index = analysis_df.columns
-        latency_df = AnalysisSummaryDf.basic_clean(latency_df)
-        # Concatenating latency_df to summary_df
+        latency_df = AnalysisSummaryDf._clean_and_validate(latency_df)
+
         summary_df = AnalysisSummaryDf.agg_behavs(analysis_df, fps)
         summary_df = pd.concat([summary_df, latency_df], axis=1)
-        summary_df = AnalysisSummaryDf.basic_clean(summary_df)
-        # Saving new summary_df
+        summary_df = AnalysisSummaryDf._clean_and_validate(summary_df)
+
         summary_fp = dst_dir / SUMMARY / f"{name}.{cls.IO}"
         AnalysisSummaryDf.write(summary_df, summary_fp)
 
@@ -310,37 +249,33 @@ class AnalysisBinnedDf(DFMixin):
         bins_ls: list,
         cbins_ls: list,
     ) -> None:
-        """_summary_."""
-        # Offsetting the frames index to start from 0
-        # (i.e. when the experiment commenced, rather than when the recording started)
+        """Generate binned summaries for standard and custom bins."""
+        # Offset frames index to start from 0
         index_df = analysis_df.index.to_frame(index=False)
         frame_name = AnalysisDf.IN.FRAME.value
         index_df[frame_name] = index_df[frame_name] - index_df[frame_name].iloc[0]
         analysis_df.index = pd.MultiIndex.from_frame(index_df)
-        # Summarising analysis_df
+
+        # Generate summary
         summary_fp = dst_dir / SUMMARY / f"{name}.{cls.IO}"
         summary_df = summary_func(analysis_df, fps)
         AnalysisSummaryDf.write(summary_df, summary_fp)
-        # Getting timestamps index
+
         timestamps = analysis_df.index.get_level_values(AnalysisDf.IN.FRAME.value) / fps
-        # Binning analysis_df
+
+        # Standard bins
         for bin_sec in bins_ls:
-            # Making filepaths
             binned_fp = dst_dir / f"{BINNED}_{bin_sec}" / f"{name}.{cls.IO}"
             binned_plot_fp = dst_dir / f"{BINNED}_{bin_sec}_{PLOT}" / f"{name}.png"
-            # Making binned df
             bins = np.arange(0, np.max(timestamps) + bin_sec, bin_sec)
             binned_df = cls.make_binned(analysis_df, fps, bins, summary_func)
             cls.write(binned_df, binned_fp)
-            # Making binned plots
             cls.make_binned_plot(binned_df, binned_plot_fp, agg_column)
-        # Custom binning analysis_df
+
+        # Custom bins
         if cbins_ls:
-            # Making filepaths
             binned_fp = dst_dir / f"{BINNED}_{CUSTOM}" / f"{name}.{cls.IO}"
             binned_plot_fp = dst_dir / f"{BINNED}_{CUSTOM}_{PLOT}" / f"{name}.png"
-            # Making binned df
             binned_df = cls.make_binned(analysis_df, fps, cbins_ls, summary_func)
             cls.write(binned_df, binned_fp)
-            # Making binned plots
             cls.make_binned_plot(binned_df, binned_plot_fp, agg_column)

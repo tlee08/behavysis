@@ -2,7 +2,6 @@ from matplotlib import pyplot as plt
 from pydantic import BaseModel, field_validator
 
 from behavysis.df_classes.keypoints_df import KeypointsDf
-from behavysis.utils.misc_utils import enum2tuple
 
 
 class EvaluateVidConfigs(BaseModel):
@@ -21,7 +20,7 @@ class EvaluateVidConfigs(BaseModel):
     @field_validator("colour_level")
     @classmethod
     def validate_colour_level(cls, v):
-        vals = enum2tuple(KeypointsDf.CN)
+        vals = [e.value for e in KeypointsDf.CN]
         return cls.validate_attr_closed_set(v, vals)
 
 
@@ -39,7 +38,7 @@ class KeypointsConfigs(BaseModel):
     @field_validator("colour_level")
     @classmethod
     def validate_colour_level(cls, v):
-        vals = enum2tuple(KeypointsDf.CN)
+        vals = [e.value for e in KeypointsDf.CN]
         return cls.validate_attr_closed_set(v, vals)
 
 
