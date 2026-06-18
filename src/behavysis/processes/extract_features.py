@@ -1,6 +1,7 @@
 """Feature extraction from preprocessed keypoints using SimBA."""
 
 import os
+import subprocess
 from pathlib import Path
 
 import pandas as pd
@@ -10,10 +11,8 @@ from behavysis.constants import CACHE_DIR
 from behavysis.df_classes.features_df import FeaturesDf
 from behavysis.df_classes.keypoints_df import CoordsCols, KeypointsDf
 from behavysis.models.experiment_configs import ExperimentConfigs
-from behavysis.utils.diagnostics_utils import file_exists_msg
-from behavysis.utils.io_utils import silent_remove
+from behavysis.utils.io_utils import file_exists_msg, silent_remove
 from behavysis.utils.multiproc_utils import get_cpid
-from behavysis.utils.subproc_utils import run_subproc_console
 from behavysis.utils.template_utils import save_template
 
 # Order of bodyparts is from
@@ -171,7 +170,7 @@ def _run_simba_subproc(
         "python",
         str(script_fp),
     ]
-    run_subproc_console(cmd)
+    subprocess.run(cmd, check=True)
     silent_remove(script_fp)
 
 
@@ -200,7 +199,7 @@ def _run_simba_subproc(
 
 def _export2df(in_fp: Path, dst_fp: Path, index: pd.Index) -> None:
     """Export SimBA features CSV to project dataframe format."""
-    features_df = FeaturesDf.read_csv(in_fp)
+    features_df = FeaturesDf.read(in_fp, fmt="csv")
     # Setting index to the same as the preprocessed preprocessed df
     features_df = features_df.set_index(index)
     # Saving SimBA extracted features df on disk

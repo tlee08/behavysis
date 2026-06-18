@@ -115,7 +115,7 @@ class BehavScoredDf(BehavDf):
             )
             df.loc[frame:, (behav, cls.OutcomesCols.ACTUAL.value)] = val
             df.loc[frame:, (behav, cls.OutcomesCols.PRED.value)] = val
-        return cls._clean_and_validate(df)
+        return cls.clean_and_validate(df)
 
     @classmethod
     def update_behav(cls, df: pd.DataFrame, old: str, new: str) -> pd.DataFrame:
@@ -123,7 +123,7 @@ class BehavScoredDf(BehavDf):
         columns = df.columns.to_frame(index=False)
         columns[cls.CN.BEHAVS.value] = columns[cls.CN.BEHAVS.value].replace(old, new)
         df.columns = pd.MultiIndex.from_frame(columns)
-        return cls._clean_and_validate(df)
+        return cls.clean_and_validate(df)
 
     @classmethod
     def get_bouts_struct(cls, df: pd.DataFrame) -> list[BoutStruct]:
@@ -155,7 +155,7 @@ class BehavScoredDf(BehavDf):
             ].replace(BehavValues.BEHAV.value, BehavValues.UNDETERMINED.value)
             for user_col in bout.user_defined:
                 scored_df[(behav, user_col)] = BehavValues.NON_BEHAV.value
-        return cls._clean_and_validate(scored_df)
+        return cls.clean_and_validate(scored_df)
 
     @classmethod
     def vect2bouts_df(cls, vect: pd.Series) -> pd.DataFrame:
@@ -226,7 +226,7 @@ class BehavScoredDf(BehavDf):
             ] = bout.actual
             for k, v in bout.user_defined.items():
                 df.loc[bout.start : bout.stop, (bout.behav, k)] = v
-        return cls._clean_and_validate(df)
+        return cls.clean_and_validate(df)
 
     @classmethod
     def fps_scale(
@@ -234,13 +234,13 @@ class BehavScoredDf(BehavDf):
     ) -> pd.DataFrame:
         """Resample DataFrame to a different frame rate."""
         fps_scale = dst_fps / src_fps
-        df = cls._clean_and_validate(df)
+        df = cls.clean_and_validate(df)
         columns = df.columns
         index = df.index
         scaled_vals = np.ceil(ndimage.zoom(df, (fps_scale, 1))).astype(int)
         index_scaled = np.round(ndimage.zoom(index, fps_scale) * fps_scale).astype(int)
         scaled_df = pd.DataFrame(scaled_vals, index=index_scaled, columns=columns)
-        return cls._clean_and_validate(scaled_df)
+        return cls.clean_and_validate(scaled_df)
 
 
 if __name__ == "__main__":
@@ -248,7 +248,7 @@ if __name__ == "__main__":
     df0 = BehavScoredDf.init_df(pd.Series(np.arange(len(v))))
     df0[("behav", OutcomesScoredCols.PRED.value)] = v
     df0[("behav", OutcomesScoredCols.ACTUAL.value)] = v
-    df0 = BehavScoredDf._clean_and_validate(df0)
+    df0 = BehavScoredDf.clean_and_validate(df0)
     b1 = BehavScoredDf.frames2bouts(df0)
     df1 = BehavScoredDf.bouts2frames(b1)
     b2 = BehavScoredDf.frames2bouts(df1)

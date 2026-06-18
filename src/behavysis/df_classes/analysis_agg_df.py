@@ -69,7 +69,7 @@ class AnalysisSummaryDf(DFMixin):
             )
         summary_df = pd.concat(summary_df_ls, axis=0)
         summary_df.index = analysis_df.columns
-        return cls._clean_and_validate(summary_df)
+        return cls.clean_and_validate(summary_df)
 
     @classmethod
     def agg_behavs(cls, analysis_df: pd.DataFrame, fps: float) -> pd.DataFrame:
@@ -100,7 +100,7 @@ class AnalysisSummaryDf(DFMixin):
             )
         summary_df = pd.concat(summary_df_ls, axis=0)
         summary_df.index = analysis_df.columns
-        return cls._clean_and_validate(summary_df)
+        return cls.clean_and_validate(summary_df)
 
 
 class AnalysisBinnedDf(DFMixin):
@@ -137,7 +137,7 @@ class AnalysisBinnedDf(DFMixin):
                 .sort_index(level=in_names)
             )
         )
-        return cls._clean_and_validate(binned_df)
+        return cls.clean_and_validate(binned_df)
 
     @classmethod
     def make_binned_plot(
@@ -228,11 +228,11 @@ class AnalysisBinnedDf(DFMixin):
             )
         latency_df = pd.concat(latency_df_ls, axis=0)
         latency_df.index = analysis_df.columns
-        latency_df = AnalysisSummaryDf._clean_and_validate(latency_df)
+        latency_df = AnalysisSummaryDf.clean_and_validate(latency_df)
 
         summary_df = AnalysisSummaryDf.agg_behavs(analysis_df, fps)
         summary_df = pd.concat([summary_df, latency_df], axis=1)
-        summary_df = AnalysisSummaryDf._clean_and_validate(summary_df)
+        summary_df = AnalysisSummaryDf.clean_and_validate(summary_df)
 
         summary_fp = dst_dir / SUMMARY / f"{name}.{cls.IO}"
         AnalysisSummaryDf.write(summary_df, summary_fp)

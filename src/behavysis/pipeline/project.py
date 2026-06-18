@@ -1,10 +1,8 @@
 """Project class for batch processing multiple experiments."""
 
-import json
 import re
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any
 
 import dask
 import numpy as np
@@ -15,7 +13,6 @@ from natsort import natsorted
 
 from behavysis.constants import (
     ANALYSIS_DIR,
-    DIAGNOSTICS_DIR,
     Folders,
 )
 from behavysis.df_classes.analysis_agg_df import AnalysisBinnedDf, AnalysisSummaryDf
@@ -23,9 +20,7 @@ from behavysis.df_classes.analysis_collated_df import (
     AnalysisBinnedCollatedDf,
     AnalysisSummaryCollatedDf,
 )
-from behavysis.df_classes.diagnostics_df import DiagnosticsDf
 from behavysis.models.experiment_configs import ExperimentConfigs
-from behavysis.models.process_result import ProcessResultCollection
 from behavysis.pipeline.experiment import Experiment
 from behavysis.processes.run_dlc import ma_dlc_run_batch
 from behavysis.utils.dask_utils import cluster_process
@@ -40,6 +35,7 @@ class Project:
     nprocs: int
 
     def __init__(self, root_dir: str | Path) -> None:
+        """Initialize a Project instance."""
         root_dir = Path(root_dir)
         if not root_dir.is_dir():
             msg = (
@@ -57,69 +53,44 @@ class Project:
         return [self._experiments[i] for i in natsorted(self._experiments)]
 
     def get_experiment(self, name: str) -> Experiment:
+        """Get an experiment by name."""
         if name in self._experiments:
             return self._experiments[name]
-        available = list(self._experiments.keys())[:5]
-        suffix = "..." if len(self._experiments) > 5 else ""
         msg = (
             f'Experiment "{name}" not found in project.\n'
-            f"  Available: {', '.join(available)}{suffix}\n"
             f"  Did you forget to call proj.import_experiments()?"
         )
         raise ValueError(msg)
 
     def _run_parallel(
         self,
-        method: Callable[..., ProcessResultCollection],
-        **kwargs: Any,
-    ) -> list[ProcessResultCollection]:
+        method: Callable[..., None],
+        **kwargs,
+    ) -> None:
         """Run a method on all experiments in parallel."""
         with cluster_process(LocalCluster(n_workers=self.nprocs, threads_per_worker=1)):
             delayed_tasks = [
                 dask.delayed(method)(exp, **kwargs) for exp in self.experiments
             ]
-            return list(dask.compute(*delayed_tasks))
+            dask.compute(*delayed_tasks)
 
     def _run_sequential(
         self,
-        method: Callable[..., ProcessResultCollection],
-        **kwargs: Any,
-    ) -> list[ProcessResultCollection]:
-        """Run a method on all experiments sequentially."""
-        return [method(exp, **kwargs) for exp in self.experiments]
-
-    def _run_and_save_diagnostics(
-        self,
-        _func: Callable[..., ProcessResultCollection],
+        method: Callable[..., None],
         **kwargs,
     ) -> None:
-        """Run a method on all experiments and save diagnostics."""
-        runner = self._run_sequential if self.nprocs == 1 else self._run_parallel
-        results = runner(_func, **kwargs)
-        if not results:
-            return
+        """Run a method on all experiments sequentially."""
+        for exp in self.experiments:
+            method(exp, **kwargs)
 
-        # Print summary table
-        failed = [r for r in results if not r.success]
-        if failed:
-            logger.warning(
-                "Completed %d/%d. Failed: %s",
-                len(results) - len(failed),
-                len(results),
-                ", ".join(r.experiment for r in failed),
-            )
-        else:
-            logger.info(
-                "Completed %d/%d experiments successfully",
-                len(results),
-                len(results),
-            )
-        # Writing diagnostics
-        diagnostics_dir = self.root_dir / DIAGNOSTICS_DIR
-        diagnostics_dir.mkdir(parents=True, exist_ok=True)
-        json_path = diagnostics_dir / f"{_func.__name__}.json"
-        with json_path.open("w") as f:
-            json.dump([r.model_dump() for r in results], f, indent=2, default=str)
+    def _run(
+        self,
+        _func: Callable[..., None],
+        **kwargs,
+    ) -> None:
+        """Run a method on all experiments."""
+        runner = self._run_sequential if self.nprocs == 1 else self._run_parallel
+        runner(_func, **kwargs)
 
     def import_experiment(self, name: str) -> bool:
         """Add an experiment to the project. Returns True if newly added."""
@@ -148,24 +119,18 @@ class Project:
                     logger.info(f"Failed: {f.value} - {fp_name.name}: {e}")
         exp_ls_msg = "".join([f"\n    - {exp.name}" for exp in self.experiments])
         logger.info(f"Experiments imported:{exp_ls_msg}")
-        all_names = np.unique(np.concatenate(list(dd_dict.values())))
-        df = pd.DataFrame(index=all_names)
-        for folder, names in dd_dict.items():
-            df[folder] = df.index.isin(names)
-        DiagnosticsDf.write(
-            df,
-            self.root_dir / DIAGNOSTICS_DIR / "import_experiments.csv",
-        )
 
     def update_configs(self, default_configs_fp: Path, *, overwrite: str) -> None:
-        self._run_and_save_diagnostics(
+        """Update the configs for all experiments."""
+        self._run(
             Experiment.update_configs,
             default_configs_fp=default_configs_fp,
             overwrite=overwrite,
         )
 
     def format_vid(self, *, overwrite: bool) -> None:
-        self._run_and_save_diagnostics(
+        """Format videos for all experiments."""
+        self._run(
             Experiment.format_vid,
             overwrite=overwrite,
         )
@@ -174,16 +139,13 @@ class Project:
         """Run DLC on all experiments with GPU batching."""
         gputouse_ls = get_gpu_ids() if gputouse is None else [gputouse]
         nprocs = len(gputouse_ls)
-
         exp_ls = self.experiments
         if not overwrite:
             exp_ls = [
                 exp for exp in exp_ls if not exp.get_fp(Folders.KEYPOINTS).is_file()
             ]
-
         if not exp_ls:
             return
-
         exp_batches = np.array_split(np.array(exp_ls), nprocs)
         with cluster_process(LocalCluster(n_workers=nprocs, threads_per_worker=1)):
             delayed_tasks = [
@@ -199,64 +161,74 @@ class Project:
             list(dask.compute(*delayed_tasks))
 
     def calculate_parameters(self, funcs: tuple[Callable, ...]) -> None:
-        self._run_and_save_diagnostics(
+        """Calculate parameters for all experiments."""
+        self._run(
             Experiment.calculate_parameters,
             funcs=funcs,
         )
 
     def preprocess(self, funcs: tuple[Callable, ...], *, overwrite: bool) -> None:
-        self._run_and_save_diagnostics(
+        """Preprocess all experiments."""
+        self._run(
             Experiment.preprocess,
             funcs=funcs,
             overwrite=overwrite,
         )
 
     def extract_features(self, *, overwrite: bool) -> None:
-        self._run_and_save_diagnostics(
+        """Extract features for all experiments."""
+        self._run(
             Experiment.extract_features,
             overwrite=overwrite,
         )
 
     def classify_behavs(self, *, overwrite: bool) -> None:
+        """Classify behaviours for all experiments."""
         # Temporarily use single processing due to IO issues
         nprocs = self.nprocs
         self.nprocs = 1
-        self._run_and_save_diagnostics(
+        self._run(
             Experiment.classify_behavs,
             overwrite=overwrite,
         )
         self.nprocs = nprocs
 
     def export_behavs(self, *, overwrite: bool) -> None:
-        self._run_and_save_diagnostics(
+        """Export predicted behaviours for all experiments."""
+        self._run(
             Experiment.export_behavs,
             overwrite=overwrite,
         )
 
     def analyse(self, funcs: tuple[Callable, ...]) -> None:
-        self._run_and_save_diagnostics(
+        """Analyse all experiments."""
+        self._run(
             Experiment.analyse,
             funcs=funcs,
         )
 
     def analyse_behavs(self) -> None:
-        self._run_and_save_diagnostics(
+        """Analyse behaviours for all experiments."""
+        self._run(
             Experiment.analyse_behavs,
         )
 
     def combine_analysis(self) -> None:
-        self._run_and_save_diagnostics(
+        """Combine analysis for all experiments."""
+        self._run(
             Experiment.combine_analysis,
         )
 
     def evaluate_vid(self, *, overwrite: bool) -> None:
-        self._run_and_save_diagnostics(
+        """Evaluate videos for all experiments."""
+        self._run(
             Experiment.evaluate_vid,
             overwrite=overwrite,
         )
 
     def export2csv(self, src_dir: str, dst_dir: str | Path, *, overwrite: bool) -> None:
-        self._run_and_save_diagnostics(
+        """Export dataframe to CSV for all experiments."""
+        self._run(
             Experiment.export2csv,
             src_dir=src_dir,
             dst_dir=dst_dir,
@@ -303,8 +275,8 @@ class Project:
                     df,
                     subdir / f"__ALL_binned_{bin_size}.{AnalysisBinnedCollatedDf.IO}",
                 )
-                AnalysisBinnedCollatedDf.write_csv(
-                    df, subdir / f"__ALL_binned_{bin_size}.csv"
+                AnalysisBinnedCollatedDf.write(
+                    df, subdir / f"__ALL_binned_{bin_size}.csv", fmt="csv"
                 )
 
     def _collate_summary(self) -> None:
@@ -329,4 +301,4 @@ class Project:
             AnalysisSummaryCollatedDf.write(
                 df, subdir / f"__ALL_summary.{AnalysisSummaryCollatedDf.IO}"
             )
-            AnalysisSummaryCollatedDf.write_csv(df, subdir / "__ALL_summary.csv")
+            AnalysisSummaryCollatedDf.write(df, subdir / "__ALL_summary.csv", fmt="csv")

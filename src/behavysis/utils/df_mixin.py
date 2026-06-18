@@ -26,7 +26,7 @@ def _enum_values(e: type | None) -> tuple | None:
 
 
 class DFMixin:
-    """Mixin for DataFrames with schema validation via IN (index) and CN (columns) enums.
+    """Mixin for DFs with schema validation via IN (index) and CN (columns) enums.
 
     Validates schema on read and write. Sorts index and columns on both.
     Default IO format is Parquet.
@@ -60,12 +60,12 @@ class DFMixin:
             msg = f"Unsupported format: {fmt}. Use: csv, h5, feather, parquet."
             raise ValueError(msg)
 
-        return cls._clean_and_validate(df)
+        return cls.clean_and_validate(df)
 
     @classmethod
     def write(cls, df: pd.DataFrame, fp: Path, fmt: str | None = None) -> None:
         """Validate schema, sort, and write dataframe to file."""
-        df = cls._clean_and_validate(df)
+        df = cls.clean_and_validate(df)
         fp.parent.mkdir(parents=True, exist_ok=True)
 
         fmt = fmt or cls.IO
@@ -92,7 +92,7 @@ class DFMixin:
         )
 
     @classmethod
-    def _clean_and_validate(cls, df: pd.DataFrame) -> pd.DataFrame:
+    def clean_and_validate(cls, df: pd.DataFrame) -> pd.DataFrame:
         """Set index/column names, sort, and validate schema."""
         in_names = _enum_values(cls.IN)
         cn_names = _enum_values(cls.CN)
@@ -102,7 +102,8 @@ class DFMixin:
                 msg = (
                     f"Index has {df.index.nlevels} levels, expected {len(in_names)}.\n"
                     f"  Expected index: {in_names}\n"
-                    f"  Tip: Check that your data file has the correct column structure."
+                    "  Tip: "
+                    "Check that your data file has the correct column structure."
                 )
                 raise AssertionError(msg)
             df.index = df.index.set_names(in_names)
@@ -110,9 +111,11 @@ class DFMixin:
         if cn_names:
             if df.columns.nlevels != len(cn_names):
                 msg = (
-                    f"Columns have {df.columns.nlevels} levels, expected {len(cn_names)}.\n"
+                    f"Columns have {df.columns.nlevels} levels, "
+                    f"expected {len(cn_names)}.\n"
                     f"  Expected columns: {cn_names}\n"
-                    f"  Tip: Check that your data file has the correct header structure."
+                    "  Tip: "
+                    "Check that your data file has the correct header structure."
                 )
                 raise AssertionError(msg)
             df.columns = df.columns.set_names(cn_names)
@@ -128,16 +131,6 @@ class DFMixin:
         """Override to add custom validation. Called on read and write."""
         assert isinstance(df, pd.DataFrame), "Must be a pandas DataFrame"
 
-        if not cls.NULLABLE:
-            if df.isna().to_numpy().any():
-                msg = "DataFrame contains NaN values but NULLABLE=False."
-                raise AssertionError(msg)
-
-    # Convenience methods for specific formats
-    @classmethod
-    def read_csv(cls, fp: Path) -> pd.DataFrame:
-        return cls.read(fp, fmt="csv")
-
-    @classmethod
-    def write_csv(cls, df: pd.DataFrame, fp: Path) -> None:
-        cls.write(df, fp, fmt="csv")
+        if not cls.NULLABLE and df.isna().to_numpy().any():
+            msg = "DataFrame contains NaN values but NULLABLE=False."
+            raise AssertionError(msg)

@@ -1,5 +1,6 @@
 """Video formatting with ffmpeg."""
 
+import subprocess
 from pathlib import Path
 
 import cv2
@@ -7,8 +8,7 @@ from loguru import logger
 
 from behavysis.models.experiment_configs import ExperimentConfigs
 from behavysis.models.processes.format_vid import VidMetadata
-from behavysis.utils.diagnostics_utils import file_exists_msg
-from behavysis.utils.subproc_utils import run_subproc_console
+from behavysis.utils.io_utils import file_exists_msg
 
 
 def format_vid(
@@ -61,7 +61,7 @@ def format_vid(
     ]
 
     formatted_vid_fp.parent.mkdir(parents=True, exist_ok=True)
-    run_subproc_console(cmd)
+    subprocess.run(cmd, check=True)
 
     # Save metadata to configs
     configs.auto.raw_vid = _get_vid_metadata(raw_vid_fp)

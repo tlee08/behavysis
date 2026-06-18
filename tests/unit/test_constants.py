@@ -4,7 +4,6 @@ from behavysis.constants import (
     ANALYSIS_DIR,
     CACHE_DIR,
     DF_IO_FORMAT,
-    DIAGNOSTICS_DIR,
     FileExts,
     Folders,
 )
@@ -61,10 +60,6 @@ class TestConstants:
     def test_df_io_format(self) -> None:
         """DF_IO_FORMAT should be parquet."""
         assert DF_IO_FORMAT == "parquet"
-
-    def test_diagnostics_dir(self) -> None:
-        """DIAGNOSTICS_DIR should be a Path with expected name."""
-        assert DIAGNOSTICS_DIR.name == "0_diagnostics"
 
     def test_analysis_dir(self) -> None:
         """ANALYSIS_DIR should be a Path with expected name."""

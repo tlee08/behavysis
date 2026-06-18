@@ -3,7 +3,7 @@
 import numpy as np
 
 
-def listofvects2array(*list_of_vects):
+def listofvects2array(*list_of_vects) -> np.ndarray:
     """Converts a set of a list of vectors to a numpy array.
 
     ```
@@ -47,6 +47,6 @@ def listofvects2array(*list_of_vects):
     )
 
 
-def array2listofvect(arr, vect_index):
+def array2listofvect(arr: np.ndarray, vect_index: int) -> list:
     """Inverse of listofvects2array, except chooses only one of the vects."""
     return [arr[arr[:, 0] == i, vect_index] for i in np.sort(np.unique(arr[:, 0]))]

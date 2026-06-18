@@ -22,6 +22,7 @@ str
 
 import os
 import re
+import subprocess
 from pathlib import Path
 
 import pandas as pd
@@ -30,9 +31,7 @@ from loguru import logger
 from behavysis.constants import CACHE_DIR
 from behavysis.df_classes.keypoints_df import CoordsCols, KeypointsDf
 from behavysis.models.experiment_configs import ExperimentConfigs
-from behavysis.utils.diagnostics_utils import file_exists_msg
-from behavysis.utils.io_utils import silent_remove
-from behavysis.utils.subproc_utils import run_subproc_console
+from behavysis.utils.io_utils import file_exists_msg, silent_remove
 from behavysis.utils.template_utils import save_template
 
 DLC_HDF_KEY = "data"
@@ -149,13 +148,12 @@ def _run_dlc_subproc(
     will be logged to the console and the process will continue to the next video.
     """
     # TODO: try for each video and get errors?? Maybe save a log to a file
+    # TODO: check cache_dir for save_template
     # Saving the script to a file.
     script_fp = temp_dir / f"dlc_subproc_{gputouse}.py"
     save_template(
         "dlc_subproc.py",
-        "behavysis",
-        "templates",
-        script_fp,
+        CACHE_DIR / "dlc_subproc.py",
         vid_fp_ls=vid_fp_ls,
         model_fp=model_fp,
         temp_dlc_dir=temp_dlc_dir,
@@ -171,7 +169,7 @@ def _run_dlc_subproc(
         "python",
         str(script_fp),
     ]
-    run_subproc_console(cmd)
+    subprocess.run(cmd, check=True)
     silent_remove(script_fp)
 
 

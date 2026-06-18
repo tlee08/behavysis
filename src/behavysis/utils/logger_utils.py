@@ -26,7 +26,7 @@ def configure_logger(
     *,
     json_output: bool = False,
 ) -> None:
-    """Configures logging for the cellcounter package."""
+    """Configures logging."""
     # Clear defaults
     logger.remove()
     # Set configs
@@ -43,7 +43,7 @@ def configure_logger(
         ),
     )
     # File: structured (JSON if json_output, else detailed)
-    log_file = log_file or CACHE_DIR / "cellcounter.log"
+    log_file = log_file or CACHE_DIR / "behavysis.log"
     logger.add(
         log_file,
         level="DEBUG",

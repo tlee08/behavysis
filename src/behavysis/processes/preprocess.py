@@ -30,7 +30,7 @@ from behavysis.df_classes.keypoints_df import (
     KeypointsDf,
 )
 from behavysis.models.experiment_configs import ExperimentConfigs
-from behavysis.utils.diagnostics_utils import file_exists_msg
+from behavysis.utils.io_utils import file_exists_msg
 
 
 def start_stop_trim(

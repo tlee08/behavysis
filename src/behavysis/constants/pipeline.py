@@ -36,6 +36,5 @@ class FileExts(Enum):
     EVALUATE_VID = "mp4"
 
 
-DIAGNOSTICS_DIR = Path("0_diagnostics")
 ANALYSIS_DIR = Path("8_analysis")
 CACHE_DIR = Path.home() / ".behavysis"

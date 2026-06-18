@@ -10,7 +10,7 @@ from behavysis.df_classes.behav_df import (
 from behavysis.models.bouts import BoutStruct
 from behavysis.models.experiment_configs import ExperimentConfigs
 from behavysis.utils.df_mixin import DFMixin
-from behavysis.utils.diagnostics_utils import file_exists_msg
+from behavysis.utils.io_utils import file_exists_msg
 
 
 def df2df(
@@ -39,7 +39,7 @@ def df2csv(
         logger.warning(file_exists_msg(dst_fp))
         return
     df = DFMixin.read(src_fp)
-    DFMixin.write_csv(df, dst_fp)
+    DFMixin.write(df, dst_fp, fmt="csv")
     logger.info("exported df to csv")
 
 

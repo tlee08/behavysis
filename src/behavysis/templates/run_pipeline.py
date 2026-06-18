@@ -110,4 +110,3 @@ if __name__ == "__main__":
     proj.evaluate_vid(overwrite=overwrite)
 
     print("Pipeline complete!")
-    print(f"Diagnostics saved to: {proj_dir / '0_diagnostics'}")

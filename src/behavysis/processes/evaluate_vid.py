@@ -16,7 +16,7 @@ from behavysis.df_classes.keypoints_df import (
     KeypointsDf,
 )
 from behavysis.models.experiment_configs import ExperimentConfigs
-from behavysis.utils.diagnostics_utils import file_exists_msg
+from behavysis.utils.io_utils import file_exists_msg
 from behavysis.utils.qt_utils import qt2cv
 
 
@@ -32,7 +32,7 @@ class EvaluateVid:
         *,
         overwrite: bool,
     ) -> None:
-        """Generate an annotated video with (optionally) keypoints and tracking analysis graphs."""
+        """Generate an annotated video with keypoints and analysis graphs."""
         if not overwrite and eval_vid_fp.exists():
             logger.warning(file_exists_msg(eval_vid_fp))
             return
@@ -126,9 +126,7 @@ class EvaluateVid:
 
 
 class EvalVidFuncBase(ABC):
-    """Calling the function returns the frame image (i.e. np.ndarray)
-    with the function applied.
-    """
+    """Returns the frame image (i.e. np.ndarray) with the function applied."""
 
     name: str
     width_output: int
@@ -145,6 +143,7 @@ class EvalVidFuncBase(ABC):
 
 class Johansson(EvalVidFuncBase):
     """Making black frame, in the style of Johansson.
+
     This means we see only the keypoints (i.e., what SimBA will see).
     """
 
@@ -172,11 +171,11 @@ class Keypoints(EvalVidFuncBase):
         self,
         width_input: int,
         height_input: int,
-        keypoints_df,
-        colour_level,
-        cmap,
-        pcutoff,
-        radius,
+        keypoints_df: pd.DataFrame,
+        colour_level: str,
+        cmap: str,
+        pcutoff: float,
+        radius: int,
         **kwargs,
     ) -> None:
         self.width_output = width_input
@@ -218,7 +217,8 @@ class Keypoints(EvalVidFuncBase):
 
 
 class Analysis(EvalVidFuncBase):
-    """Annotates a text table in the top-left corner, with the format:
+    """Annotates a text table in the top-left corner, with the format.
+
     ```
             actual pred
     Behav_1   X     X
@@ -353,11 +353,7 @@ class Analysis(EvalVidFuncBase):
         return plot_frame
 
     def update_plot(self, idx: int, i: int, j: int) -> None:
-        """For a single plot
-        (as the plots_layout has rows (analysis) and columns (indivs)).
-
-        NOTE: idx is
-        """
+        """For a single plot (layout has rows (analysis) and columns (indivs))."""
         # Converting index from frames to seconds
         secs = idx / self.fps
         self.x_line_arr[i][j].setPos(secs)

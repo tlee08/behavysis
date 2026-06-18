@@ -80,11 +80,11 @@ class KeypointsDf(DFMixin):
         cls, df: pd.DataFrame, width_x_scale: float, height_y_scale: float
     ) -> pd.DataFrame:
         """Scale x and y coordinates."""
-        df = cls._clean_and_validate(df)
+        df = cls.clean_and_validate(df)
         idx = pd.IndexSlice
         df.loc[:, idx[:, :, :, CoordsCols.X.value]] *= width_x_scale
         df.loc[:, idx[:, :, :, CoordsCols.Y.value]] *= height_y_scale
-        return cls._clean_and_validate(df)
+        return cls.clean_and_validate(df)
 
 
 class KeyptsAnnotationsCN(Enum):
@@ -98,7 +98,7 @@ class KeypointsAnnotationsDf(DFMixin):
     @classmethod
     def keypoint2annotationsdf(cls, keypoints_df: pd.DataFrame) -> pd.DataFrame:
         """Convert keypoints to flat column format: 'indiv_bpt_coord'."""
-        df = KeypointsDf._clean_and_validate(keypoints_df)
+        df = KeypointsDf.clean_and_validate(keypoints_df)
         filter_mask = ~df.columns.get_level_values(
             KeypointsDf.CN.INDIVIDUALS.value
         ).isin([IndivCols.PROCESSED.value])
@@ -110,18 +110,20 @@ class KeypointsAnnotationsDf(DFMixin):
         ]
         df[xy_cols] = df[xy_cols].round(0).astype(int)
         df.columns = [f"{indiv}_{bpt}_{coord}" for _, indiv, bpt, coord in df.columns]
-        return cls._clean_and_validate(df)
+        return cls.clean_and_validate(df)
 
     @classmethod
     def get_indivs_bpts(cls, df: pd.DataFrame) -> pd.DataFrame:
         """Get unique (indiv, bpt) pairs from flat columns."""
-        df = cls._clean_and_validate(df)
+        df = cls.clean_and_validate(df)
         if df.columns.shape[0] == 0:
             return pd.DataFrame(
-                columns=[
-                    KeypointsDf.CN.INDIVIDUALS.value,
-                    KeypointsDf.CN.BODYPARTS.value,
-                ]
+                columns=pd.Index(
+                    [
+                        KeypointsDf.CN.INDIVIDUALS.value,
+                        KeypointsDf.CN.BODYPARTS.value,
+                    ]
+                )
             )
         parts = df.columns.to_frame(index=False)[cls.CN.ATTRIBUTES.value].str.split(
             "_", expand=True

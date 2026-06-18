@@ -51,7 +51,7 @@ def in_roi(
     """
     name = keypoints_fp.stem
     dst_subdir = dst_dir / "in_roi"
-    # Calculating the deltas (changes in body position) between each frame for the subject
+    # Calculating deltas (changes in body position) between each frame for the subject
     configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
     analysis_configs = configs.get_analysis_configs()
     start_frame = configs.auto.start_frame
@@ -116,7 +116,8 @@ def in_roi(
             )
             # Determining if the indiv body center is in the ROI
             analysis_i_df[(indiv, roi_name)] = analysis_i_df[indiv].apply(
-                lambda pt: _pt_in_roi(pt, corners_i_df), axis=1
+                lambda pt, corners_i_df=corners_i_df: _pt_in_roi(pt, corners_i_df),
+                axis=1,
             )
         # Inverting in_roi status if is_in is False
         if not is_in:

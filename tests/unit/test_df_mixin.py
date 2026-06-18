@@ -129,7 +129,7 @@ class TestDFMixinValidation:
             index=pd.MultiIndex.from_tuples([(0, 0), (1, 0), (2, 0)]),
         )
         with pytest.raises(AssertionError, match="Index has"):
-            TestDF._clean_and_validate(df)
+            TestDF.clean_and_validate(df)
 
     def test_validate_wrong_column_levels(self) -> None:
         """DataFrame with wrong column levels should raise AssertionError."""
@@ -139,7 +139,7 @@ class TestDFMixinValidation:
             index=pd.Index([0], name="frame"),
         )
         with pytest.raises(AssertionError, match="Columns have"):
-            TestDF._clean_and_validate(df)
+            TestDF.clean_and_validate(df)
 
     def test_validate_non_nullable_with_nan(self) -> None:
         """Non-nullable DataFrame with NaN should raise AssertionError."""
@@ -175,7 +175,7 @@ class TestDFMixinValidation:
 
 
 class TestDFMixinCleanAndValidate:
-    """Tests for DFMixin._clean_and_validate method."""
+    """Tests for DFMixin.clean_and_validate method."""
 
     def test_sets_index_names(self) -> None:
         """Should set index names from IN enum."""
@@ -183,7 +183,7 @@ class TestDFMixinCleanAndValidate:
             {"value": [1, 2, 3]},
             index=pd.Index([0, 1, 2]),
         )
-        result = TestDF._clean_and_validate(df)
+        result = TestDF.clean_and_validate(df)
         assert result.index.name == "frame"
 
     def test_sets_column_names(self) -> None:
@@ -193,7 +193,7 @@ class TestDFMixinCleanAndValidate:
             columns=pd.Index(["value"]),
             index=pd.Index([0, 1, 2]),
         )
-        result = TestDF._clean_and_validate(df)
+        result = TestDF.clean_and_validate(df)
         assert result.columns.names == ["value"]
 
     def test_sorts_index(self) -> None:
@@ -202,7 +202,7 @@ class TestDFMixinCleanAndValidate:
             {"value": [1, 2, 3]},
             index=pd.Index([2, 0, 1]),
         )
-        result = TestDF._clean_and_validate(df)
+        result = TestDF.clean_and_validate(df)
         assert list(result.index) == [0, 1, 2]
 
     def test_sorts_columns(self) -> None:
@@ -211,7 +211,7 @@ class TestDFMixinCleanAndValidate:
             {"value": [1, 2, 3]},
             index=pd.Index([0, 1, 2]),
         )
-        result = TestDF._clean_and_validate(df)
+        result = TestDF.clean_and_validate(df)
         assert list(result.columns) == ["value"]
 
 
@@ -274,19 +274,6 @@ class TestDFMixinReadWrite:
 
         with pytest.raises(ValueError, match="Unsupported format"):
             TestDF.write(df, fp, fmt="xyz")
-
-    def test_convenience_read_csv(self, temp_dir: Path) -> None:
-        """read_csv convenience method should work."""
-        df = pd.DataFrame(
-            {"value": [1.0, 2.0]},
-            index=pd.Index([0, 1], name="frame"),
-        )
-        fp = temp_dir / "test.csv"
-
-        TestDF.write_csv(df, fp)
-        result = TestDF.read_csv(fp)
-
-        pd.testing.assert_frame_equal(df, result)
 
 
 class TestDFMixinNoSchema:
