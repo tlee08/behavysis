@@ -79,6 +79,14 @@ if __name__ == "__main__":
         overwrite=overwrite,
     )
 
+    proj.analyse(
+        funcs=(
+            in_roi,
+            speed,
+            distance,
+        )
+    )
+
     # Step 5: Extract features for classifier
     # Only run step 5-8 if you are using classified behavs pipeline
     proj.extract_features(overwrite=overwrite)
@@ -94,13 +102,6 @@ if __name__ == "__main__":
     proj.analyse_behavs()
 
     # Step 9: Analyze results
-    proj.analyse(
-        funcs=(
-            in_roi,
-            speed,
-            distance,
-        )
-    )
     proj.combine_analysis()
     proj.collate_analysis()
 

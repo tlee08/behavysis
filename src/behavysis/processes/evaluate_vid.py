@@ -1,4 +1,3 @@
-import logging
 from abc import ABC, abstractmethod
 from pathlib import Path
 
@@ -6,6 +5,7 @@ import cv2
 import numpy as np
 import pandas as pd
 import pyqtgraph as pg
+from loguru import logger
 from pyqtgraph.exporters import ImageExporter
 from tqdm import trange
 
@@ -18,8 +18,6 @@ from behavysis.df_classes.keypoints_df import (
 from behavysis.models.experiment_configs import ExperimentConfigs
 from behavysis.utils.diagnostics_utils import file_exists_msg
 from behavysis.utils.qt_utils import qt2cv
-
-logger = logging.getLogger(__name__)
 
 
 class EvaluateVid:

@@ -15,13 +15,13 @@ str
     The outcome of the process.
 """
 
-import logging
 from pathlib import Path
 
 import cv2
 import numpy as np
 import pandas as pd
 import seaborn as sns
+from loguru import logger
 from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
 
@@ -37,8 +37,6 @@ from behavysis.df_classes.keypoints_df import (
     KeypointsDf,
 )
 from behavysis.models.experiment_configs import ExperimentConfigs
-
-logger = logging.getLogger(__name__)
 
 
 def in_roi(

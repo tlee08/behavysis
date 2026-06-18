@@ -15,15 +15,13 @@ str
     Description of the function's outcome.
 """
 
-import logging
 from pathlib import Path
 from typing import Literal
 
+from loguru import logger
 from pydantic import ValidationError
 
 from behavysis.models.experiment_configs import ExperimentConfigs
-
-logger = logging.getLogger(__name__)
 
 
 def update_configs(
@@ -69,10 +67,7 @@ def update_configs(
         configs = default_configs
         logger.info("Updating all configs.")
     else:
-        msg = (
-            f'Invalid overwrite value: "{overwrite}"\n'
-            f'  Expected: "user" or "all"'
-        )
+        msg = f'Invalid overwrite value: "{overwrite}"\n  Expected: "user" or "all"'
         raise ValueError(msg)
     # Writing new configs to JSON file
     configs_fp.write_text(configs.model_dump_json(indent=2))

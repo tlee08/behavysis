@@ -1,6 +1,5 @@
 """Data loading and preprocessing for behavioral classifier."""
 
-import logging
 from pathlib import Path
 
 import numpy as np
@@ -18,8 +17,6 @@ from behavysis.utils.io_utils import (
     async_read_files_run,
 )
 from behavysis.utils.misc_utils import array2listofvect, listofvects2array
-
-logger = logging.getLogger(__name__)
 
 
 def combine_dfs(src_dir: Path) -> pd.DataFrame:

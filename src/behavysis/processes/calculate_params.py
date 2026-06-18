@@ -13,11 +13,11 @@ str
     The outcome of the process.
 """
 
-import logging
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
+from loguru import logger
 
 from behavysis.df_classes.keypoints_df import (
     CoordsCols,
@@ -25,8 +25,6 @@ from behavysis.df_classes.keypoints_df import (
     KeypointsDf,
 )
 from behavysis.models.experiment_configs import ExperimentConfigs
-
-logger = logging.getLogger(__name__)
 
 
 def start_frame_from_likelihood(

@@ -1,4 +1,3 @@
-import logging
 from pathlib import Path
 
 import numpy as np
@@ -7,8 +6,6 @@ from behavysis.df_classes.analysis_agg_df import AnalysisBinnedDf
 from behavysis.df_classes.analysis_df import FBF, AnalysisDf
 from behavysis.df_classes.behav_df import BehavScoredDf, BehavValues
 from behavysis.models.experiment_configs import ExperimentConfigs
-
-logger = logging.getLogger(__name__)
 
 
 def analyse_behavs(

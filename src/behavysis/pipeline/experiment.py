@@ -7,6 +7,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 import numpy as np
+from loguru import logger
 
 from behavysis.constants import (
     ANALYSIS_DIR,
@@ -27,8 +28,7 @@ from behavysis.processes import (
     predictedbehavs2scoredbehavs,
     update_configs,
 )
-
-logger = logging.getLogger(__name__)
+from behavysis.utils.logger_utils import trace
 
 
 class Experiment:
@@ -54,7 +54,8 @@ class Experiment:
             msg = (
                 f'No files named "{name}" found in "{root_dir}".\n'
                 f"  Expected files in one of these folders:{folders_ls_msg}\n"
-                f"  Tip: Check the experiment name matches your file names (without extension)."
+                "  Tip: Check the experiment name matches your file names "
+                "(without extension)."
             )
             raise ValueError(msg)
 
@@ -65,10 +66,7 @@ class Experiment:
                 folder = Folders(folder)
             except ValueError as e:
                 valid = "".join([f"\n    - {f.value}" for f in Folders])
-                msg = (
-                    f'Invalid folder: "{folder}"\n'
-                    f"  Valid folders:{valid}"
-                )
+                msg = f'Invalid folder: "{folder}"\n  Valid folders:{valid}'
                 raise ValueError(msg) from e
         file_ext: FileExts = getattr(FileExts, folder.name)
         return self.root_dir / folder.value / f"{self.name}.{file_ext.value}"
@@ -81,8 +79,6 @@ class Experiment:
         This allows the caller to pass all available kwargs without
         worrying about which function needs which parameters.
         """
-        f_names_ls_msg = "".join([f"\n    - {f.__name__}" for f in funcs])
-        logger.info("Processing experiment, %s, with:%s", self.name, f_names_ls_msg)
         results = ProcessResultCollection(experiment=self.name)
         for f in funcs:
             f_name = f.__name__
@@ -98,11 +94,9 @@ class Experiment:
                 result.mark_complete(success=False, error_message=str(e))
             results.results[f_name] = result
         results.mark_complete()
-        logger.info(
-            "Finished processing experiment, %s, with:%s", self.name, f_names_ls_msg
-        )
         return results
 
+    @trace
     def update_configs(
         self, default_configs_fp: str, *, overwrite: str
     ) -> ProcessResultCollection:
@@ -114,6 +108,7 @@ class Experiment:
             overwrite=overwrite,
         )
 
+    @trace
     def format_vid(self, *, overwrite: bool) -> ProcessResultCollection:
         """Formats the video with ffmpeg to fit the formatted configs."""
         return self._run_funcs_with_filtered_kwargs(
@@ -124,6 +119,7 @@ class Experiment:
             overwrite=overwrite,
         )
 
+    @trace
     def run_dlc(
         self, gputouse: int | None, *, overwrite: bool
     ) -> ProcessResultCollection:
@@ -137,6 +133,7 @@ class Experiment:
             overwrite=overwrite,
         )
 
+    @trace
     def calculate_parameters(
         self, funcs: tuple[Callable, ...]
     ) -> ProcessResultCollection:
@@ -147,6 +144,7 @@ class Experiment:
             configs_fp=self.get_fp(Folders.CONFIGS),
         )
 
+    @trace
     def preprocess(
         self, funcs: tuple[Callable, ...], *, overwrite: bool
     ) -> ProcessResultCollection:
@@ -170,6 +168,7 @@ class Experiment:
             experiment=self.name, results={**results0.results, **results1.results}
         )
 
+    @trace
     def extract_features(self, *, overwrite: bool) -> ProcessResultCollection:
         """Extracts features from the preprocessed dlc file."""
         return self._run_funcs_with_filtered_kwargs(
@@ -180,6 +179,7 @@ class Experiment:
             overwrite=overwrite,
         )
 
+    @trace
     def classify_behavs(self, *, overwrite: bool) -> ProcessResultCollection:
         """Classify behaviours using trained models."""
         return self._run_funcs_with_filtered_kwargs(
@@ -190,6 +190,7 @@ class Experiment:
             overwrite=overwrite,
         )
 
+    @trace
     def export_behavs(self, *, overwrite: bool) -> ProcessResultCollection:
         """Export predicted behaviours to scored behaviours."""
         return self._run_funcs_with_filtered_kwargs(
@@ -200,6 +201,7 @@ class Experiment:
             overwrite=overwrite,
         )
 
+    @trace
     def analyse(self, funcs: tuple[Callable, ...]) -> ProcessResultCollection:
         """Analyse preprocessed keypoints data."""
         return self._run_funcs_with_filtered_kwargs(
@@ -210,6 +212,7 @@ class Experiment:
             configs_fp=self.get_fp(Folders.CONFIGS),
         )
 
+    @trace
     def analyse_behavs(self) -> ProcessResultCollection:
         """Analyse scored behaviours."""
         return self._run_funcs_with_filtered_kwargs(
@@ -219,6 +222,7 @@ class Experiment:
             dst_dir=self.root_dir / ANALYSIS_DIR,
         )
 
+    @trace
     def combine_analysis(self) -> ProcessResultCollection:
         """Combine the experiment's analysis into a single df."""
         return self._run_funcs_with_filtered_kwargs(
@@ -229,6 +233,7 @@ class Experiment:
             overwrite=True,
         )
 
+    @trace
     def evaluate_vid(self, *, overwrite: bool) -> ProcessResultCollection:
         """Generate annotated evaluation video."""
         return self._run_funcs_with_filtered_kwargs(
@@ -241,6 +246,7 @@ class Experiment:
             overwrite=overwrite,
         )
 
+    @trace
     def export2csv(
         self, src_dir: str, dst_dir: str | Path, *, overwrite: bool
     ) -> ProcessResultCollection:

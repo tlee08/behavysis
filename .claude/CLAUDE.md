@@ -93,6 +93,7 @@ File extensions are defined in `FileExts` enum—most data files use Parquet for
 ## Entry Points
 
 Defined in `pyproject.toml`:
+
 - `behavysis-init` — Initialize new project
 - `behavysis-make-project` — Create project structure
 - `behavysis-project-gui` — Launch GUI
@@ -101,7 +102,7 @@ Defined in `pyproject.toml`:
 
 ## Logging
 
-Call `setup_logging()` once at import time (done in `__init__.py`). Use `logging.getLogger(__name__)` in modules. Logs go to console (INFO+) and `~/.behavysis/debug.log` (DEBUG+).
+Call `configure_logger()` once at import time (done in `__init__.py`). Use `logging.getLogger(__name__)` in modules. Logs go to console (INFO+) and `~/.behavysis/debug.log` (DEBUG+).
 
 ## Code Style
 

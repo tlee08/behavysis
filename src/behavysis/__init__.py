@@ -48,13 +48,13 @@ from behavysis.processes import (
     stop_frame_from_likelihood,
     update_configs,
 )
-from behavysis.utils.logging_utils import setup_logging
+from behavysis.utils.logger_utils import configure_logger
 
 #####################################################################
 #              SETTING UP LOGGING
 #####################################################################
 
-setup_logging()
+configure_logger()
 
 #####################################################################
 #           INITIALISE MPL PLOTTING PARAMETERS

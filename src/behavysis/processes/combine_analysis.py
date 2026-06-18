@@ -1,13 +1,11 @@
-import logging
 from pathlib import Path
 
 import pandas as pd
+from loguru import logger
 
 from behavysis.df_classes.analysis_combined_df import AnalysisCombinedDf
 from behavysis.df_classes.analysis_df import FBF, AnalysisDf
 from behavysis.utils.diagnostics_utils import file_exists_msg
-
-logger = logging.getLogger(__name__)
 
 
 def combine_analysis(

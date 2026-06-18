@@ -20,12 +20,12 @@ str
     The outcome of the process.
 """
 
-import logging
 import os
 import re
 from pathlib import Path
 
 import pandas as pd
+from loguru import logger
 
 from behavysis.constants import CACHE_DIR
 from behavysis.df_classes.keypoints_df import CoordsCols, KeypointsDf
@@ -34,8 +34,6 @@ from behavysis.utils.diagnostics_utils import file_exists_msg
 from behavysis.utils.io_utils import silent_remove
 from behavysis.utils.subproc_utils import run_subproc_console
 from behavysis.utils.template_utils import save_template
-
-logger = logging.getLogger(__name__)
 
 DLC_HDF_KEY = "data"
 

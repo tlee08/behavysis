@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
 from joblib import dump, load
+from loguru import logger
 
 from behavysis.behav_classifier.clf_models.base_torch_model import BaseTorchModel
 from behavysis.behav_classifier.clf_models.clf_templates import CLF_TEMPLATES, CNN1
@@ -28,8 +28,6 @@ from behavysis.models.behav_classifier_configs import BehavClassifierConfigs
 
 if TYPE_CHECKING:
     from behavysis.pipeline.project import Project
-
-logger = logging.getLogger(__name__)
 
 
 class BehavClassifier:

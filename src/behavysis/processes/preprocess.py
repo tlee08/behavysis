@@ -18,11 +18,11 @@ str
 
 """
 
-import logging
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
+from loguru import logger
 
 from behavysis.df_classes.keypoints_df import (
     CoordsCols,
@@ -32,8 +32,6 @@ from behavysis.df_classes.keypoints_df import (
 from behavysis.models.experiment_configs import ExperimentConfigs
 from behavysis.utils.diagnostics_utils import file_exists_msg
 
-logger = logging.getLogger(__name__)
-
 
 def start_stop_trim(
     src_fp: Path,
@@ -42,7 +40,9 @@ def start_stop_trim(
     *,
     overwrite: bool,
 ) -> None:
-    """Filters the rows of a DLC formatted dataframe to include only rows within the start
+    """Filters the rows of a DLC formatted dataframe.
+
+    Includes only rows within the start
     and end time of the experiment, given a corresponding configs dict.
 
     Parameters

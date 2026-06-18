@@ -1,16 +1,13 @@
-import logging
-
 import numpy as np
 import pandas as pd
 import torch
+from loguru import logger
 from sklearn.model_selection import train_test_split
 from torch import nn, optim
 from torch.utils.data import DataLoader, Dataset, TensorDataset
 from tqdm import tqdm
 
 from behavysis.utils.misc_utils import array2listofvect, listofvects2array
-
-logger = logging.getLogger(__name__)
 
 
 class BaseTorchModel(nn.Module):

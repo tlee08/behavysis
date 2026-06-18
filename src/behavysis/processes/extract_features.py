@@ -1,10 +1,10 @@
 """Feature extraction from preprocessed keypoints using SimBA."""
 
-import logging
 import os
 from pathlib import Path
 
 import pandas as pd
+from loguru import logger
 
 from behavysis.constants import CACHE_DIR
 from behavysis.df_classes.features_df import FeaturesDf
@@ -26,8 +26,6 @@ from behavysis.utils.template_utils import save_template
 #####################################################################
 #               FEATURE EXTRACTION FOR SIMBA
 #####################################################################
-
-logger = logging.getLogger(__name__)
 
 
 def extract_features(

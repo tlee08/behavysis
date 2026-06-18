@@ -4,17 +4,13 @@ NOTE: These tests require proper keypoints data with the correct column structur
 They are marked as integration tests because they need realistic data.
 """
 
-import logging
 from pathlib import Path
 
-import numpy as np
-import pandas as pd
 import pytest
+from loguru import logger
 
 from behavysis.models.experiment_configs import ExperimentConfigs
 from behavysis.processes.calculate_params import stop_frame_from_dur
-
-logger = logging.getLogger(__name__)
 
 
 class TestStopFrameFromDur:
@@ -80,7 +76,6 @@ class TestStartFrameFromLikelihood:
     @pytest.mark.skip(reason="Requires proper keypoints parquet fixture")
     def test_detects_start_frame(self, tmp_path: Path) -> None:
         """Should detect when subject entered frame based on likelihood."""
-        pass
 
 
 @pytest.mark.integration
@@ -93,4 +88,3 @@ class TestDurFramesFromLikelihood:
     @pytest.mark.skip(reason="Requires proper keypoints parquet fixture")
     def test_calculates_duration(self, tmp_path: Path) -> None:
         """Should calculate experiment duration from likelihood patterns."""
-        pass

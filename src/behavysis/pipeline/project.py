@@ -1,7 +1,6 @@
 """Project class for batch processing multiple experiments."""
 
 import json
-import logging
 import re
 from collections.abc import Callable
 from pathlib import Path
@@ -11,6 +10,7 @@ import dask
 import numpy as np
 import pandas as pd
 from dask.distributed import LocalCluster
+from loguru import logger
 from natsort import natsorted
 
 from behavysis.constants import (
@@ -30,8 +30,6 @@ from behavysis.pipeline.experiment import Experiment
 from behavysis.processes.run_dlc import ma_dlc_run_batch
 from behavysis.utils.dask_utils import cluster_process
 from behavysis.utils.multiproc_utils import get_gpu_ids
-
-logger = logging.getLogger(__name__)
 
 
 class Project:
@@ -93,10 +91,9 @@ class Project:
     def _run_and_save_diagnostics(
         self,
         _func: Callable[..., ProcessResultCollection],
-        **kwargs: Any,
+        **kwargs,
     ) -> None:
         """Run a method on all experiments and save diagnostics."""
-        logger.info("Running %s for all experiments.", _func.__name__)
         runner = self._run_sequential if self.nprocs == 1 else self._run_parallel
         results = runner(_func, **kwargs)
         if not results:

@@ -1,5 +1,6 @@
-import logging
 from pathlib import Path
+
+from loguru import logger
 
 from behavysis.behav_classifier.behav_classifier import BehavClassifier
 from behavysis.df_classes.behav_df import (
@@ -10,8 +11,6 @@ from behavysis.models.bouts import BoutStruct
 from behavysis.models.experiment_configs import ExperimentConfigs
 from behavysis.utils.df_mixin import DFMixin
 from behavysis.utils.diagnostics_utils import file_exists_msg
-
-logger = logging.getLogger(__name__)
 
 
 def df2df(

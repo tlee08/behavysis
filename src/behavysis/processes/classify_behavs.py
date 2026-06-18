@@ -1,10 +1,13 @@
 """Classify Behaviours."""
 
-import logging
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
+
+# TODO: handle reading the model file whilst in multiprocessing
+# TODO: auto-remove anything with only 1 frame of behaviour (probably a spike)
+from loguru import logger
 
 from behavysis.behav_classifier.behav_classifier import BehavClassifier
 from behavysis.df_classes.behav_df import (
@@ -17,11 +20,6 @@ from behavysis.df_classes.behav_df import (
 from behavysis.df_classes.features_df import FeaturesDf
 from behavysis.models.experiment_configs import ExperimentConfigs
 from behavysis.utils.diagnostics_utils import file_exists_msg
-
-# TODO: handle reading the model file whilst in multiprocessing
-# TODO: auto-remove anything with only 1 frame of behaviour (probably a spike)
-
-logger = logging.getLogger(__name__)
 
 
 def classify_behavs(

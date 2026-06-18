@@ -67,8 +67,7 @@ class BehavPredictedDf(BehavDf):
         actual_outcomes = set(df.columns.unique(cls.CN.OUTCOMES.value))
         expected = {e.value for e in cls.OutcomesCols}
         assert actual_outcomes == expected, (
-            f"Expected ONLY {expected} outcomes columns.\n"
-            f"Found: {actual_outcomes}"
+            f"Expected ONLY {expected} outcomes columns.\nFound: {actual_outcomes}"
         )
 
 
@@ -81,8 +80,7 @@ class BehavScoredDf(BehavDf):
         exclude = {OutcomesPredictedCols.PROB.value}
         actual = set(df.columns.unique(cls.CN.OUTCOMES.value))
         assert not (actual & exclude), (
-            f"Expected NOT to find {exclude} in outcomes.\n"
-            f"Found: {actual}"
+            f"Expected NOT to find {exclude} in outcomes.\nFound: {actual}"
         )
 
     @classmethod
@@ -110,7 +108,11 @@ class BehavScoredDf(BehavDf):
             status = row["Behavior type"]
             if behav not in behavs_ls:
                 continue
-            val = BehavValues.BEHAV.value if status == "START" else BehavValues.NON_BEHAV.value
+            val = (
+                BehavValues.BEHAV.value
+                if status == "START"
+                else BehavValues.NON_BEHAV.value
+            )
             df.loc[frame:, (behav, cls.OutcomesCols.ACTUAL.value)] = val
             df.loc[frame:, (behav, cls.OutcomesCols.PRED.value)] = val
         return cls._clean_and_validate(df)
@@ -148,10 +150,9 @@ class BehavScoredDf(BehavDf):
             scored_df[(behav, cls.OutcomesCols.PRED.value)] = df[
                 (behav, OutcomesPredictedCols.PRED.value)
             ].to_numpy()
-            scored_df[(behav, cls.OutcomesCols.ACTUAL.value)] = (
-                scored_df[(behav, cls.OutcomesCols.PRED.value)]
-                .replace(BehavValues.BEHAV.value, BehavValues.UNDETERMINED.value)
-            )
+            scored_df[(behav, cls.OutcomesCols.ACTUAL.value)] = scored_df[
+                (behav, cls.OutcomesCols.PRED.value)
+            ].replace(BehavValues.BEHAV.value, BehavValues.UNDETERMINED.value)
             for user_col in bout.user_defined:
                 scored_df[(behav, user_col)] = BehavValues.NON_BEHAV.value
         return cls._clean_and_validate(scored_df)
@@ -166,7 +167,8 @@ class BehavScoredDf(BehavDf):
         start = np.flatnonzero(~z[:-1] & z[1:])
         stop = np.flatnonzero(z[:-1] & ~z[1:]) - 1
         bouts_df = (
-            pd.DataFrame({BoutCols.START.value: start, BoutCols.STOP.value: stop}) + offset
+            pd.DataFrame({BoutCols.START.value: start, BoutCols.STOP.value: stop})
+            + offset
         )
         bouts_df[BoutCols.DUR.value] = (
             bouts_df[BoutCols.STOP.value] - bouts_df[BoutCols.START.value] + 1
@@ -183,7 +185,9 @@ class BehavScoredDf(BehavDf):
                 behav_df[cls.OutcomesCols.PRED.value] == BehavValues.BEHAV.value
             )
             for _, row in bouts_df.iterrows():
-                bout_frames = behav_df.loc[row[BoutCols.START.value] : row[BoutCols.STOP.value]]
+                bout_frames = behav_df.loc[
+                    row[BoutCols.START.value] : row[BoutCols.STOP.value]
+                ]
                 bout = Bout(
                     start=row[BoutCols.START.value],
                     stop=row[BoutCols.STOP.value],
@@ -214,18 +218,20 @@ class BehavScoredDf(BehavDf):
             for user_col in bout_struct.user_defined:
                 df[(behav, user_col)] = BehavValues.NON_BEHAV.value
         for bout in bouts.bouts:
-            df.loc[bout.start : bout.stop, (bout.behav, cls.OutcomesCols.PRED.value)] = (
-                BehavValues.BEHAV.value
-            )
-            df.loc[bout.start : bout.stop, (bout.behav, cls.OutcomesCols.ACTUAL.value)] = (
-                bout.actual
-            )
+            df.loc[
+                bout.start : bout.stop, (bout.behav, cls.OutcomesCols.PRED.value)
+            ] = BehavValues.BEHAV.value
+            df.loc[
+                bout.start : bout.stop, (bout.behav, cls.OutcomesCols.ACTUAL.value)
+            ] = bout.actual
             for k, v in bout.user_defined.items():
                 df.loc[bout.start : bout.stop, (bout.behav, k)] = v
         return cls._clean_and_validate(df)
 
     @classmethod
-    def fps_scale(cls, df: pd.DataFrame, src_fps: float, dst_fps: float) -> pd.DataFrame:
+    def fps_scale(
+        cls, df: pd.DataFrame, src_fps: float, dst_fps: float
+    ) -> pd.DataFrame:
         """Resample DataFrame to a different frame rate."""
         fps_scale = dst_fps / src_fps
         df = cls._clean_and_validate(df)

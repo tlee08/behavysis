@@ -1,16 +1,14 @@
 """Video formatting with ffmpeg."""
 
-import logging
 from pathlib import Path
 
 import cv2
+from loguru import logger
 
 from behavysis.models.experiment_configs import ExperimentConfigs
 from behavysis.models.processes.format_vid import VidMetadata
 from behavysis.utils.diagnostics_utils import file_exists_msg
 from behavysis.utils.subproc_utils import run_subproc_console
-
-logger = logging.getLogger(__name__)
 
 
 def format_vid(
@@ -52,7 +50,13 @@ def format_vid(
         cmd += ["-t", str(duration)]
 
     cmd += [
-        "-c:v", "h264", "-preset", "fast", "-crf", "20", "-y",
+        "-c:v",
+        "h264",
+        "-preset",
+        "fast",
+        "-crf",
+        "20",
+        "-y",
         str(formatted_vid_fp),
     ]
 

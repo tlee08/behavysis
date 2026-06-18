@@ -1,7 +1,6 @@
 """Evaluation metrics and visualization for behavioral classifier."""
 
 import json
-import logging
 from enum import Enum
 from pathlib import Path
 
@@ -15,8 +14,6 @@ from sklearn.metrics import classification_report, confusion_matrix
 from behavysis.df_classes.behav_classifier_df import BehavClassifierEvalDf
 from behavysis.df_classes.behav_df import BehavScoredDf
 from behavysis.utils.df_mixin import DFMixin
-
-logger = logging.getLogger(__name__)
 
 
 class GenericBehavLabels(Enum):
@@ -96,7 +93,7 @@ def eval_logc(y_true: np.ndarray, y_prob: np.ndarray) -> Figure:
     y_prob : np.ndarray
         Predicted probabilities.
 
-    Returns
+    Returns:
     -------
     Figure
         Matplotlib figure with logistic curve.
@@ -136,7 +133,7 @@ def eval_bouts(y_true: np.ndarray, y_pred: np.ndarray) -> pd.DataFrame:
     y_pred : np.ndarray
         Predicted labels.
 
-    Returns
+    Returns:
     -------
     pd.DataFrame
         Summary of prediction accuracy per bout.
@@ -202,7 +199,7 @@ def save_evaluation_results(
     index_ls : list[np.ndarray]
         List of index arrays for each dataframe.
 
-    Returns
+    Returns:
     -------
     tuple
         (eval_df, report_dict, conf_matr_fig, pcutoffs_fig, logc_fig)
@@ -222,7 +219,9 @@ def save_evaluation_results(
     logc_fig = eval_logc(y_true, y_prob)
 
     # Save outputs
-    BehavClassifierEvalDf.write(eval_df, eval_dir / f"{name}_eval.{BehavClassifierEvalDf.IO}")
+    BehavClassifierEvalDf.write(
+        eval_df, eval_dir / f"{name}_eval.{BehavClassifierEvalDf.IO}"
+    )
     (eval_dir / f"{name}_report.json").write_text(json.dumps(report_dict, indent=2))
     conf_matr_fig.savefig(eval_dir / f"{name}_confm.png")
     pcutoffs_fig.savefig(eval_dir / f"{name}_pcutoffs.png")

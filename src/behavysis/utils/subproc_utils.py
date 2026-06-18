@@ -1,9 +1,6 @@
 """Utility functions."""
 
-import logging
 import subprocess
-
-logger = logging.getLogger(__name__)
 
 
 def run_subproc_console(cmd: list[str], **kwargs) -> None:
