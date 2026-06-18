@@ -81,7 +81,15 @@ def keypoints_df_data() -> pd.DataFrame:
         Columns: (scorer, individuals, bodyparts, coords) - multi-level
     """
     n_frames = 100
-    bodyparts = ["Nose", "BodyCentre", "TailBase1", "LeftEar", "RightEar", "LeftFlankMid", "RightFlankMid"]
+    bodyparts = [
+        "Nose",
+        "BodyCentre",
+        "TailBase1",
+        "LeftEar",
+        "RightEar",
+        "LeftFlankMid",
+        "RightFlankMid",
+    ]
     individuals = ["mouse1marked", "mouse2unmarked"]
     coords = ["x", "y", "likelihood"]
     scorer = [" scorer"]

@@ -18,6 +18,7 @@ class TestEnumValues:
 
     def test_enum_input(self) -> None:
         """Enum input should return tuple of values."""
+
         class Color(Enum):
             RED = "red"
             GREEN = "green"
@@ -29,6 +30,7 @@ class TestEnumValues:
 
     def test_int_enum_input(self) -> None:
         """IntEnum should work correctly."""
+
         class Numbers(Enum):
             ONE = 1
             TWO = 2

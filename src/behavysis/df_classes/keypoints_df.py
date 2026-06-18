@@ -99,9 +99,9 @@ class KeypointsAnnotationsDf(DFMixin):
     def keypoint2annotationsdf(cls, keypoints_df: pd.DataFrame) -> pd.DataFrame:
         """Convert keypoints to flat column format: 'indiv_bpt_coord'."""
         df = KeypointsDf._clean_and_validate(keypoints_df)
-        filter_mask = ~df.columns.get_level_values(KeypointsDf.CN.INDIVIDUALS.value).isin(
-            [IndivCols.PROCESSED.value]
-        )
+        filter_mask = ~df.columns.get_level_values(
+            KeypointsDf.CN.INDIVIDUALS.value
+        ).isin([IndivCols.PROCESSED.value])
         df = df.loc[:, filter_mask]
         xy_cols = df.columns[
             df.columns.get_level_values(KeypointsDf.CN.COORDS.value).isin(
@@ -127,7 +127,10 @@ class KeypointsAnnotationsDf(DFMixin):
             "_", expand=True
         )
         parts = parts.iloc[:, :2]
-        parts.columns = [KeypointsDf.CN.INDIVIDUALS.value, KeypointsDf.CN.BODYPARTS.value]
+        parts.columns = [
+            KeypointsDf.CN.INDIVIDUALS.value,
+            KeypointsDf.CN.BODYPARTS.value,
+        ]
         return parts.drop_duplicates().reset_index(drop=True)
 
     @classmethod
