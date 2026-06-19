@@ -34,7 +34,7 @@ def combine_dfs(src_dir: Path) -> pd.DataFrame:
     """
     data_dict = {i.stem: DFMixin.read(src_dir / i) for i in src_dir.iterdir()}
     df = pd.concat(data_dict.values(), axis=0, keys=data_dict.keys())
-    df = BehavClassifierCombinedDf.basic_clean(df)
+    df = BehavClassifierCombinedDf.clean_and_validate(df)
     return df
 
 

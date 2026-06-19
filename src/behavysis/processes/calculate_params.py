@@ -14,6 +14,7 @@ str
 """
 
 from pathlib import Path
+from typing import Protocol
 
 import numpy as np
 import pandas as pd
@@ -25,6 +26,18 @@ from behavysis.df_classes.keypoints_df import (
     KeypointsDf,
 )
 from behavysis.models.experiment_configs import ExperimentConfigs
+
+
+class CalculateParamsFunc(Protocol):
+    """Protocol for calculate_params functions."""
+
+    def __call__(
+        self,
+        keypoints_fp: Path,
+        configs_fp: Path,
+    ) -> None:
+        """Protocol for calculate_params functions."""
+        ...
 
 
 def start_frame_from_likelihood(

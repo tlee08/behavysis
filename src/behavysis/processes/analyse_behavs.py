@@ -33,7 +33,7 @@ def analyse_behavs(
         invert=True,
     )
     behavs_df = behavs_df.loc[:, columns]
-    behavs_df = AnalysisDf.basic_clean(behavs_df)
+    behavs_df = AnalysisDf.clean_and_validate(behavs_df)
     # Writing the behavs_df to the fbf file
     fbf_fp = dst_subdir / FBF / f"{name}.{AnalysisDf.IO}"
     AnalysisDf.write(behavs_df, fbf_fp)

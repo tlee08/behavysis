@@ -19,6 +19,7 @@ str
 """
 
 from pathlib import Path
+from typing import Protocol
 
 import numpy as np
 import pandas as pd
@@ -31,6 +32,20 @@ from behavysis.df_classes.keypoints_df import (
 )
 from behavysis.models.experiment_configs import ExperimentConfigs
 from behavysis.utils.io_utils import file_exists_msg
+
+
+class PreprocessFunc(Protocol):
+    """Protocol for preprocess functions."""
+
+    def __call__(
+        self,
+        src_fp: Path,
+        dst_fp: Path,
+        configs_fp: Path,
+        *,
+        overwrite: bool,
+    ) -> None:
+        """Protocol for preprocess functions."""
 
 
 def start_stop_trim(

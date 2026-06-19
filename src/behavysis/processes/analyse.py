@@ -16,6 +16,7 @@ str
 """
 
 from pathlib import Path
+from typing import Protocol
 
 import cv2
 import numpy as np
@@ -37,6 +38,19 @@ from behavysis.df_classes.keypoints_df import (
     KeypointsDf,
 )
 from behavysis.models.experiment_configs import ExperimentConfigs
+
+
+class AnalyseFunc(Protocol):
+    """Protocol for analyse functions."""
+
+    def __call__(
+        self,
+        keypoints_fp: Path,
+        formatted_vid_fp: Path,
+        dst_dir: Path,
+        configs_fp: Path,
+    ) -> None:
+        """Protocol for analyse functions."""
 
 
 def in_roi(

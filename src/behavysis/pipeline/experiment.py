@@ -24,6 +24,8 @@ from behavysis.processes import (
     predictedbehavs2scoredbehavs,
     update_configs,
 )
+from behavysis.processes.calculate_params import CalculateParamsFunc
+from behavysis.processes.preprocess import PreprocessFunc
 from behavysis.utils.logger_utils import trace
 
 
@@ -103,7 +105,7 @@ class Experiment:
         )
 
     @trace
-    def calculate_parameters(self, funcs: tuple[Callable, ...]) -> None:
+    def calculate_parameters(self, funcs: tuple[CalculateParamsFunc, ...]) -> None:
         """Calculate parameters of the keypoints file."""
         for func in funcs:
             func(
@@ -112,7 +114,7 @@ class Experiment:
             )
 
     @trace
-    def preprocess(self, funcs: tuple[Callable, ...], *, overwrite: bool) -> None:
+    def preprocess(self, funcs: tuple[PreprocessFunc, ...], *, overwrite: bool) -> None:
         """Preprocessing pipeline for keypoints data."""
         df2df(
             src_fp=self.get_fp(Folders.KEYPOINTS),
