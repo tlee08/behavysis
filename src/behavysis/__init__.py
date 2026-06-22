@@ -13,6 +13,7 @@ This pipeline includes:
 - Extracting meaningful data analysis from the preprocessed coordinates file
 """
 
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import seaborn as sns
 
@@ -29,6 +30,9 @@ configure_logger()
 #####################################################################
 #           INITIALISE MPL PLOTTING PARAMETERS
 #####################################################################
+
+# Makes graphs non-interactive (saves memory)
+mpl.use("Agg")  # QtAgg
 
 sns.set_theme(style=PLOT_STYLE)
 
