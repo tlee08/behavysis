@@ -1,24 +1,4 @@
-"""Functions have the following format:
-
-Parameters
-----------
-vid_fp : str
-    The formatted video filepath.
-dst_fp : str
-    The dlc output filepath.
-configs_fp : str
-    The JSON configs filepath.
-gputouse : int
-    The GPU's number so computation is done on this GPU.
-    If None, then tries to select the best GPU (if it exists).
-overwrite : bool
-    Whether to overwrite the output file (if it exists).
-
-Returns:
--------
-str
-    The outcome of the process.
-"""
+"""Functions have the following format."""
 
 import os
 import re
@@ -147,8 +127,6 @@ def _run_dlc_subproc(
     NOTE: any dlc processing error for each video that occur during the subprocess
     will be logged to the console and the process will continue to the next video.
     """
-    # TODO: try for each video and get errors?? Maybe save a log to a file
-    # TODO: check cache_dir for save_template
     # Saving the script to a file.
     script_fp = temp_dir / f"dlc_subproc_{gputouse}.py"
     save_template(

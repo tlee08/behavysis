@@ -14,16 +14,22 @@ from behavysis.utils.df_mixin import DFMixin
 
 
 class OutcomesPredictedCols(Enum):
+    """OutcomesPredictedCols."""
+
     PROB = "prob"
     PRED = "pred"
 
 
 class OutcomesScoredCols(Enum):
+    """OutcomesScoredCols."""
+
     PRED = "pred"
     ACTUAL = "actual"
 
 
 class BehavValues(Enum):
+    """BehavValues."""
+
     TRUE_POS = 1
     TRUE_NEG = 0
     FALSE_POS = -1
@@ -31,17 +37,23 @@ class BehavValues(Enum):
 
 
 class BoutCols(Enum):
+    """BoutCols."""
+
     START = "start"
     STOP = "stop"
     DUR = "dur"
 
 
 class BehavCN(Enum):
+    """BehavCN."""
+
     BEHAVS = "behavs"
     OUTCOMES = "outcomes"
 
 
 class BehavDf(DFMixin):
+    """BehavDf."""
+
     NULLABLE = False
     IN = FramesIN
     CN = BehavCN
@@ -60,6 +72,8 @@ class BehavDf(DFMixin):
 
 
 class BehavPredictedDf(BehavDf):
+    """BehavPredictedDf."""
+
     OutcomesCols = OutcomesPredictedCols
 
     @classmethod
@@ -73,6 +87,8 @@ class BehavPredictedDf(BehavDf):
 
 
 class BehavScoredDf(BehavDf):
+    """BehavScoredDf."""
+
     OutcomesCols = OutcomesScoredCols
 
     @classmethod

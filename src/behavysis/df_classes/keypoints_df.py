@@ -10,21 +10,29 @@ from behavysis.utils.df_mixin import DFMixin
 
 
 class FramesIN(Enum):
+    """FramesIN."""
+
     FRAME = "frame"
 
 
 class CoordsCols(Enum):
+    """CoordsCols."""
+
     X = "x"
     Y = "y"
     LIKELIHOOD = "likelihood"
 
 
 class IndivCols(Enum):
+    """IndivCols."""
+
     SINGLE = "single"
     PROCESSED = "processed"
 
 
 class KeypointsCN(Enum):
+    """KeypointsCN."""
+
     SCORER = "scorer"
     INDIVIDUALS = "individuals"
     BODYPARTS = "bodyparts"
@@ -32,6 +40,8 @@ class KeypointsCN(Enum):
 
 
 class KeypointsDf(DFMixin):
+    """KeypointsDf."""
+
     NULLABLE = False
     IN = FramesIN
     CN = KeypointsCN
@@ -42,10 +52,12 @@ class KeypointsDf(DFMixin):
 
     @classmethod
     def check_bpts_exist(cls, df: pd.DataFrame, bodyparts: list) -> None:
+        """Check if bodyparts exists."""
         missing = [b for b in bodyparts if b not in df.columns.unique("bodyparts")]
         if missing:
-            available = df.columns.unique("bodyparts").to_list()[:5]
-            suffix = "..." if len(df.columns.unique("bodyparts")) > 5 else ""
+            max_list = 5
+            available = df.columns.unique("bodyparts").to_list()[:max_list]
+            suffix = "..." if len(df.columns.unique("bodyparts")) > max_list else ""
             msg = (
                 f"Bodyparts not found in keypoints data: {missing}\n"
                 f"  Available: {', '.join(available)}{suffix}\n"
@@ -88,10 +100,14 @@ class KeypointsDf(DFMixin):
 
 
 class KeyptsAnnotationsCN(Enum):
+    """KeyptsAnnotationsCN."""
+
     ATTRIBUTES = "attributes"
 
 
 class KeypointsAnnotationsDf(DFMixin):
+    """KeypointsAnnotationsDf."""
+
     IN = FramesIN
     CN = KeyptsAnnotationsCN
 

@@ -31,6 +31,8 @@ def _validate_in_set(v: str, valid_values: list[str]) -> str:
 
 
 class EvaluateVidConfigs(BaseModel):
+    """EvaluateVidConfigs."""
+
     funcs: list[str] | str = ["keypoints", "analysis"]
     pcutoff: float | str = 0.8
     colour_level: str = KeypointsDf.CN.INDIVIDUALS.value
@@ -40,11 +42,13 @@ class EvaluateVidConfigs(BaseModel):
 
     @field_validator("cmap")
     @classmethod
-    def validate_cmap(cls, v):
+    def validate_cmap(cls, v) -> str:
+        """validate_cmap."""
         return _validate_in_set(v, plt.colormaps())
 
     @field_validator("colour_level")
     @classmethod
-    def validate_colour_level(cls, v):
+    def validate_colour_level(cls, v) -> str:
+        """validate_colour_level."""
         vals = [e.value for e in KeypointsDf.CN]
         return _validate_in_set(v, vals)

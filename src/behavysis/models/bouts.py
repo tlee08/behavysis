@@ -4,6 +4,8 @@ from pydantic import BaseModel
 
 
 class Bout(BaseModel):
+    """Single Bout."""
+
     start: int
     stop: int
     dur: int
@@ -13,11 +15,15 @@ class Bout(BaseModel):
 
 
 class BoutStruct(BaseModel):
+    """Bout Structure."""
+
     behav: str
     user_defined: list[str]
 
 
 class Bouts(BaseModel):
+    """Bouts."""
+
     start: int
     stop: int
     bouts: list[Bout]

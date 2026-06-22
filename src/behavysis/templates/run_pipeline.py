@@ -13,7 +13,7 @@ Before running:
 from pathlib import Path
 
 from behavysis import Project
-from behavysis.processes import (
+from behavysis.funcs import (
     distance,
     dur_frames_from_likelihood,
     in_roi,

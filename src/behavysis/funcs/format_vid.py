@@ -6,8 +6,8 @@ from pathlib import Path
 import cv2
 from loguru import logger
 
-from behavysis.models.experiment_configs import ExperimentConfigs
-from behavysis.models.processes.format_vid import VidMetadata
+from behavysis.models import ExperimentConfigs
+from behavysis.models.funcs import VidMetadata
 from behavysis.utils.io_utils import file_exists_msg
 
 

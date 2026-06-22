@@ -4,6 +4,8 @@ from pydantic import BaseModel
 
 
 class BehavClassifierConfigs(BaseModel):
+    """Behaviour Classifier Config Model."""
+
     proj_dir: Path = Path("project_dir")
     behav_name: str = "behav_name"
     seed: int = 42

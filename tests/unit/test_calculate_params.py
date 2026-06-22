@@ -9,8 +9,8 @@ from pathlib import Path
 import pytest
 from loguru import logger
 
+from behavysis.funcs.calculate_params import stop_frame_from_dur
 from behavysis.models.experiment_configs import ExperimentConfigs
-from behavysis.processes.calculate_params import stop_frame_from_dur
 
 
 class TestStopFrameFromDur:

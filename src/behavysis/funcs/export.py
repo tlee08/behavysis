@@ -88,6 +88,7 @@ def boris2behav(
     *,
     overwrite: bool,
 ) -> None:
+    """Boris to Behaviour."""
     if not overwrite and dst_fp.exists():
         logger.warning(file_exists_msg(dst_fp))
         return

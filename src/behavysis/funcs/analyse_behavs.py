@@ -23,7 +23,7 @@ def analyse_behavs(
     behavs_df = BehavScoredDf.read(behavs_fp)
     # Setting all na and undetermined behav to non-behav
     behavs_df = behavs_df.fillna(0).replace(
-        BehavValues.UNDETERMINED.value, BehavValues.NON_BEHAV.value
+        BehavValues.UNSURE.value, BehavValues.FALSE_POS.value
     )
     # Getting the behaviour names and each user_defined for the behaviour
     # Not incl. the `pred` or `prob` (`prob` shouldn't be here anyway) columns

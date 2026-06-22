@@ -7,10 +7,14 @@ from behavysis.utils.df_mixin import DFMixin
 
 
 class FeaturesCN(Enum):
+    """FeaturesCN."""
+
     FEATURES = "features"
 
 
 class FeaturesDf(DFMixin):
+    """FeaturesDf."""
+
     NULLABLE = False
     IN = FramesIN
     CN = FeaturesCN

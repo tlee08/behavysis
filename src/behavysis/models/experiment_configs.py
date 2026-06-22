@@ -1,7 +1,5 @@
 """Experiment configuration models for the behavysis pipeline."""
 
-from typing import Any
-
 from pydantic import BaseModel, ConfigDict
 
 from behavysis.constants import (
@@ -11,23 +9,24 @@ from behavysis.constants import (
     BPTS_SIMBA,
     INDIVS_SIMBA,
 )
-from behavysis.models.processes.analyse import (
+
+from .funcs.analyse import (
     AnalyseConfigs,
     FreezingConfigs,
     InRoiConfigs,
     SocialDistanceConfigs,
     SpeedConfigs,
 )
-from behavysis.models.processes.calculate_params import (
+from .funcs.calculate_params import (
     CalculateParamsConfigs,
     FromLikelihoodConfigs,
 )
-from behavysis.models.processes.classify_behavs import ClassifyBehavConfigs
-from behavysis.models.processes.evaluate_vid import EvaluateVidConfigs
-from behavysis.models.processes.extract_features import ExtractFeaturesConfigs
-from behavysis.models.processes.format_vid import FormatVidConfigs, VidMetadata
-from behavysis.models.processes.preprocess import PreprocessConfigs, RefineIdsConfigs
-from behavysis.models.processes.run_dlc import RunDlcConfigs
+from .funcs.classify_behavs import ClassifyBehavConfigs
+from .funcs.evaluate_vid import EvaluateVidConfigs
+from .funcs.extract_features import ExtractFeaturesConfigs
+from .funcs.format_vid import FormatVidConfigs, VidMetadata
+from .funcs.preprocess import PreprocessConfigs, RefineIdsConfigs
+from .funcs.run_dlc import RunDlcConfigs
 
 
 class AnalysisConfigs(BaseModel):
@@ -42,6 +41,8 @@ class AnalysisConfigs(BaseModel):
 
 
 class UserConfigs(BaseModel):
+    """User Configs."""
+
     format_vid: FormatVidConfigs = FormatVidConfigs()
     run_dlc: RunDlcConfigs = RunDlcConfigs()
     calculate_params: CalculateParamsConfigs = CalculateParamsConfigs()
@@ -53,6 +54,8 @@ class UserConfigs(BaseModel):
 
 
 class AutoConfigs(BaseModel):
+    """Auto Configs."""
+
     raw_vid: VidMetadata = VidMetadata()
     formatted_vid: VidMetadata = VidMetadata()
 
@@ -63,15 +66,19 @@ class AutoConfigs(BaseModel):
 
 
 class RefConfigs(BaseModel):
+    """Ref Configs."""
+
     model_config = ConfigDict(extra="allow")
 
 
 class ExperimentConfigs(BaseModel):
+    """Experiment Configs."""
+
     user: UserConfigs = UserConfigs()
     auto: AutoConfigs = AutoConfigs()
     ref: RefConfigs = RefConfigs()
 
-    def get_ref(self, val: Any) -> Any:
+    def get_ref[T](self, val: T | str) -> T:
         """Resolve reference values from the ref section.
 
         If val is in reference format (`"--<ref_name>"`), returns the
@@ -89,14 +96,17 @@ class ExperimentConfigs(BaseModel):
         """
         # Check if the value is in the reference format
         if isinstance(val, str) and val.startswith("--"):
+            val_str = str(val)
             # Remove the '--' from the val
-            val = val[2:]
+            val_str_ref = val_str[2:]
             # Check if the value exists in the reference store
-            assert hasattr(self.ref, val), (
-                f"Value '{val}' can't be found in the configs reference section."
+            assert hasattr(self.ref, val_str_ref), (
+                f"Value '{val_str_ref}' can't be found "
+                "in the configs reference section."
             )
-            return getattr(self.ref, val)
-        return val
+            return getattr(self.ref, val_str_ref)
+        # Otherwise, return value itself
+        return val  # ty:ignore[invalid-return-type]
 
     def get_analysis_configs(self) -> "AnalysisConfigs":
         """Get validated analysis configuration parameters.
@@ -126,6 +136,7 @@ class ExperimentConfigs(BaseModel):
 
 
 def get_default_configs() -> ExperimentConfigs:
+    """Get default configs."""
     return ExperimentConfigs(
         user=UserConfigs(
             format_vid=FormatVidConfigs(width_px=960, height_px=540, fps=15),

@@ -69,7 +69,7 @@ def start_stop_trim(
     configs_fp : Path
         The file path of the configs dict.
     overwrite : bool
-        If True, overwrite the output file if it already exists. If False, skip processing
+        If True, overwrite the output file if it already exists. If False, skip
         if the output file already exists.
 
     Returns:
@@ -109,24 +109,11 @@ def interpolate_stationary(
     *,
     overwrite: bool,
 ) -> None:
-    """If the point detection (above a certain threshold) is below a certain proportion, then the x and y coordinates are set to the given values (usually corners).
+    """If the point detection (above a certain threshold) is below a certain proportion.
+
+    Then the x and y coordinates are set to the given values (usually corners).
     Otherwise, does nothing (encouraged to run Preprocess.interpolate afterwards).
 
-    Notes:
-    -----
-    The config file must contain the following parameters:
-    ```
-    - user
-        - preprocess
-            - interpolate_stationary
-                [
-                    - bodypart: str (assumed to be the "single" individual)
-                    - pcutoff: float (between 0 and 1)
-                    - pcutoff_all: float (between 0 and 1)
-                    - x: float (between 0 and 1 - proportion of the video width)
-                    - y: float (between 0 and 1 - proportion of the video height)
-                ]
-    ```
     """
     if not overwrite and dst_fp.exists():
         logger.warning(file_exists_msg(dst_fp))
@@ -163,7 +150,8 @@ def interpolate_stationary(
             keypoints_df[(scorer, "single", bodypart, CoordsCols.LIKELIHOOD.value)]
             >= pcutoff
         )
-        # If the bodypart is detected in less than the given proportion of the video, then set the x and y coordinates to the given values
+        # If the bodypart is detected in less than the given proportion of the video,
+        # then set the x and y coordinates to the given values
         if is_detected.mean() < pcutoff_all:
             keypoints_df[(scorer, "single", bodypart, CoordsCols.X.value)] = x
             keypoints_df[(scorer, "single", bodypart, CoordsCols.Y.value)] = y
@@ -208,7 +196,8 @@ def interpolate(
                 - pcutoff: float
     ```
     """
-    # TODO: have error checking for any columns that have NO points above the pcutoff (so they are all NaN)
+    # Have error checking for any columns that have NO points above the pcutoff
+    # (so they are all NaN)
     if not overwrite and dst_fp.exists():
         logger.warning(file_exists_msg(dst_fp))
         return
@@ -238,7 +227,6 @@ def interpolate(
     # Also imputing nan points with 0 (if the ENTIRE column is nan, then it's imputed)
     keypoints_df = keypoints_df.interpolate(method="linear").bfill().ffill()
     # if df.isna().to_numpy().any() then the entire column is nan (log warning)
-    # keypoints_df = keypoints_df.fillna(0)
     KeypointsDf.write(keypoints_df, dst_fp)
 
 
@@ -246,6 +234,7 @@ def refine_ids(
     src_fp: Path, dst_fp: Path, configs_fp: Path, *, overwrite: bool
 ) -> None:
     """Ensures that the identity is correctly tracked for maDLC.
+
     Assumes interpolate_points has already been run.
 
     Notes:

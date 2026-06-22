@@ -87,7 +87,7 @@ def start_frame_from_csv(keypoints_fp: Path, configs_fp: Path) -> None:
     - user
         - calculate_params
             - start_frame_from_csv
-                - csv_fp: str
+                - csv_fp: Path
                 - name: None | str
     ```
     """

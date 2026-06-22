@@ -2,6 +2,8 @@ from pydantic import BaseModel
 
 
 class FormatVidConfigs(BaseModel):
+    """FormatVidConfigs."""
+
     width_px: None | int | str = None
     height_px: None | int | str = None
     fps: None | float | str = None
@@ -10,6 +12,8 @@ class FormatVidConfigs(BaseModel):
 
 
 class VidMetadata(BaseModel):
+    """VidMetadata."""
+
     width_px: int = -1
     height_px: int = -1
     fps: float = -1

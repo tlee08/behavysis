@@ -4,16 +4,22 @@ from behavysis.constants import BPTS_CORNERS, BPTS_SIMBA
 
 
 class SpeedConfigs(BaseModel):
+    """SpeedConfigs."""
+
     smoothing_sec: float | str = 1
     bodyparts: list[str] | str = BPTS_SIMBA
 
 
 class SocialDistanceConfigs(BaseModel):
+    """SocialDistanceConfigs."""
+
     smoothing_sec: float | str = 1
     bodyparts: list[str] | str = BPTS_SIMBA
 
 
 class FreezingConfigs(BaseModel):
+    """FreezingConfigs."""
+
     window_sec: float | str = 2
     thresh_mm: float | str = 5
     smoothing_sec: float | str = 0.2
@@ -21,6 +27,8 @@ class FreezingConfigs(BaseModel):
 
 
 class InRoiConfigs(BaseModel):
+    """InRoiConfigs."""
+
     roi_name: str = "in_my_roi"
     is_in: bool | str = True
     padding_mm: float | str = 0
@@ -29,6 +37,8 @@ class InRoiConfigs(BaseModel):
 
 
 class AnalyseConfigs(BaseModel):
+    """AnalyseConfigs."""
+
     bins_sec: list[int] | str = [30, 60, 120]
     custom_bins_sec: list[int] | str = [60, 120, 300, 600]
 

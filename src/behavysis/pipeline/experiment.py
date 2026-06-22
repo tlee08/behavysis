@@ -11,8 +11,10 @@ from behavysis.constants import (
     FileExts,
     Folders,
 )
-from behavysis.processes import (
+from behavysis.funcs import (
+    CalculateParamsFunc,
     EvaluateVid,
+    PreprocessFunc,
     analyse_behavs,
     classify_behavs,
     combine_analysis,
@@ -24,8 +26,6 @@ from behavysis.processes import (
     predictedbehavs2scoredbehavs,
     update_configs,
 )
-from behavysis.processes.calculate_params import CalculateParamsFunc
-from behavysis.processes.preprocess import PreprocessFunc
 from behavysis.utils.logger_utils import trace
 
 

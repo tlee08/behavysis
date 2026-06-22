@@ -153,8 +153,6 @@ def _run_simba_subproc(
     silent_remove(script_fp)
     save_template(
         "simba_subproc.py",
-        "behavysis",
-        "templates",
         script_fp,
         simba_dir=simba_dir,
         keypoints_dir=keypoints_dir,

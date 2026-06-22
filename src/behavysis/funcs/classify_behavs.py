@@ -4,8 +4,6 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-
-# TODO: handle reading the model file whilst in multiprocessing
 from loguru import logger
 
 from behavysis.behav_classifier.behav_classifier import BehavClassifier
@@ -144,11 +142,11 @@ def _merge_bouts(vect: pd.Series, min_window_frames: int) -> pd.Series:
     """
     vect = vect.copy()
     # Getting start, stop, and duration of each non-behav bout
-    nonbouts_df = BehavScoredDf.vect2bouts_df(vect == BehavValues.NON_BEHAV.value)
+    nonbouts_df = BehavScoredDf.vect2bouts_df(vect == BehavValues.FALSE_POS.value)
     # For each non-behav bout, if less than min_window_frames, then call it a behav
     for _, row in nonbouts_df.iterrows():
         if row[BoutCols.DUR.value] < min_window_frames:
             vect.loc[row[BoutCols.START.value] : row[BoutCols.STOP.value]] = (
-                BehavValues.BEHAV.value
+                BehavValues.TRUE_POS.value
             )
     return vect

@@ -21,6 +21,8 @@ from behavysis.utils.qt_utils import qt2cv
 
 
 class EvaluateVid:
+    """EvaluateVid."""
+
     @classmethod
     def evaluate_vid(
         cls,
@@ -65,7 +67,8 @@ class EvaluateVid:
             keypoints_df = KeypointsDf.read(keypoints_fp)
         except FileNotFoundError:
             logger.warning(
-                "Keypoints file not found or could not be loaded.Disregarding keypoints."
+                "Keypoints file not found or could not be loaded. "
+                "Disregarding keypoints."
             )
             keypoints_df = KeypointsDf.init_df(reserve_index)
         # Getting analysis combined df
@@ -73,7 +76,8 @@ class EvaluateVid:
             analysis_df = AnalysisCombinedDf.read(analysis_combined_fp)
         except FileNotFoundError:
             logger.warning(
-                "Analysis combined file not found or could not be loaded.Disregarding analysis."
+                "Analysis combined file not found or could not be loaded. "
+                "Disregarding analysis."
             )
             analysis_df = AnalysisCombinedDf.init_df(pd.Series(reserve_index))
 
@@ -150,10 +154,12 @@ class Johansson(EvalVidFuncBase):
     name = "johansson"
 
     def __init__(self, width_input: int, height_input: int, **kwargs) -> None:
+        """Init."""
         self.width_output = width_input
         self.heigth_output = height_input
 
     def __call__(self, frame: np.ndarray, idx: int) -> np.ndarray:
+        """Call."""
         return np.full(
             shape=(self.heigth_output, self.width_output, 3),
             fill_value=(0, 0, 0),

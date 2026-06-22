@@ -20,9 +20,9 @@ from behavysis.df_classes.analysis_collated_df import (
     AnalysisBinnedCollatedDf,
     AnalysisSummaryCollatedDf,
 )
+from behavysis.funcs.run_dlc import ma_dlc_run_batch
 from behavysis.models.experiment_configs import ExperimentConfigs
 from behavysis.pipeline.experiment import Experiment
-from behavysis.processes.run_dlc import ma_dlc_run_batch
 from behavysis.utils.dask_utils import cluster_process
 from behavysis.utils.multiproc_utils import get_gpu_ids
 

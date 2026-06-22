@@ -9,11 +9,15 @@ FBF = "fbf"
 
 
 class AnalysisCN(Enum):
+    """AnalysisCN."""
+
     INDIVIDUALS = "individuals"
     MEASURES = "measures"
 
 
 class AnalysisDf(DFMixin):
+    """AnalysisDf."""
+
     NULLABLE = False
     IN = FramesIN
     CN = AnalysisCN

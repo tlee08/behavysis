@@ -3,6 +3,7 @@
 from .analyse import distance, freezing, in_roi, speed
 from .analyse_behavs import analyse_behavs
 from .calculate_params import (
+    CalculateParamsFunc,
     dur_frames_from_likelihood,
     px_per_mm,
     start_frame_from_csv,
@@ -16,12 +17,20 @@ from .evaluate_vid import EvaluateVid
 from .export import boris2behav, df2csv, df2df, predictedbehavs2scoredbehavs
 from .extract_features import extract_features
 from .format_vid import format_vid
-from .preprocess import interpolate, interpolate_stationary, refine_ids, start_stop_trim
+from .preprocess import (
+    PreprocessFunc,
+    interpolate,
+    interpolate_stationary,
+    refine_ids,
+    start_stop_trim,
+)
 from .run_dlc import ma_dlc_run_batch, ma_dlc_run_single
 from .update_configs import update_configs
 
 __all__ = [
+    "CalculateParamsFunc",
     "EvaluateVid",
+    "PreprocessFunc",
     "analyse_behavs",
     "boris2behav",
     "classify_behavs",

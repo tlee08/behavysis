@@ -19,25 +19,35 @@ CUSTOM = "custom"
 
 
 class AnalysisSummaryIN(Enum):
+    """AnalysisSummaryIN."""
+
     INDIVIDUALS = "individuals"
     MEASURES = "measures"
 
 
 class AnalysisSummaryCN(Enum):
+    """AnalysisSummaryCN."""
+
     AGGS = "aggs"
 
 
 class AnalysisBinnedIN(Enum):
+    """AnalysisBinnedIN."""
+
     BIN_SEC = "bin_sec"
 
 
 class AnalysisBinnedCN(Enum):
+    """AnalysisBinnedCN."""
+
     INDIVIDUALS = "individuals"
     MEASURES = "measures"
     AGGS = "aggs"
 
 
 class AnalysisSummaryDf(DFMixin):
+    """AnalysisSummaryDf."""
+
     NULLABLE = False
     IN = AnalysisSummaryIN
     CN = AnalysisSummaryCN
@@ -104,6 +114,8 @@ class AnalysisSummaryDf(DFMixin):
 
 
 class AnalysisBinnedDf(DFMixin):
+    """AnalysisBinnedDf."""
+
     NULLABLE = False
     IN = AnalysisBinnedIN
     CN = AnalysisBinnedCN

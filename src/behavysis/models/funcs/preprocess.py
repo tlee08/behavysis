@@ -6,10 +6,14 @@ from behavysis.constants import BPTS_SIMBA
 
 
 class InterpolateConfigs(BaseModel):
+    """InterpolateConfigs."""
+
     pcutoff: float | str = 0.5
 
 
 class InterpolateStationaryConfigs(BaseModel):
+    """InterpolateStationaryConfigs."""
+
     bodypart: str = "bodypart"
     pcutoff: float = 0.8
     pcutoff_all: float = 0.6
@@ -18,15 +22,19 @@ class InterpolateStationaryConfigs(BaseModel):
 
 
 class RefineIdsConfigs(BaseModel):
+    """RefineIdsConfigs."""
+
     marked: str = "marked"
     unmarked: str = "unmarked"
     marking: str = "marking"
     bodyparts: list[str] | str = BPTS_SIMBA
     window_sec: float | str = 0.5
-    metric: Literal["current", "rolling", "binned"] | str = "current"
+    metric: Literal["current", "rolling", "binned"] = "current"
 
 
 class PreprocessConfigs(BaseModel):
+    """PreprocessConfigs."""
+
     interpolate: InterpolateConfigs = InterpolateConfigs()
     interpolate_stationary: list[InterpolateStationaryConfigs] = []
     refine_ids: RefineIdsConfigs = RefineIdsConfigs()
