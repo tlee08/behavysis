@@ -315,6 +315,7 @@ def _compute_movement(
 
 def speed(
     keypoints_fp: Path,
+    formatted_vid_fp: Path,  # noqa: ARG001
     dst_dir: Path,
     configs_fp: Path,
 ) -> None:
@@ -367,6 +368,7 @@ def speed(
 
 def distance(
     keypoints_fp: Path,
+    formatted_vid_fp: Path,  # noqa: ARG001
     dst_dir: Path,
     configs_fp: Path,
 ) -> None:
@@ -407,6 +409,7 @@ def distance(
 
 def social_distance(
     keypoints_fp: Path,
+    formatted_vid_fp: Path,  # noqa: ARG001
     dst_dir: Path,
     configs_fp: Path,
 ) -> None:
@@ -468,6 +471,7 @@ def social_distance(
 
 def freezing(
     keypoints_fp: Path,
+    formatted_vid_fp: Path,  # noqa: ARG001
     dst_dir: Path,
     configs_fp: Path,
 ) -> None:
