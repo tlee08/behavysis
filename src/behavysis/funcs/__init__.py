@@ -1,6 +1,6 @@
 """Processing functions."""
 
-from .analyse import distance, freezing, in_roi, speed
+from .analyse import AnalyseFunc, distance, freezing, in_roi, speed
 from .analyse_behavs import analyse_behavs
 from .calculate_params import (
     CalculateParamsFunc,
@@ -28,6 +28,7 @@ from .run_dlc import ma_dlc_run_batch, ma_dlc_run_single
 from .update_configs import update_configs
 
 __all__ = [
+    "AnalyseFunc",
     "CalculateParamsFunc",
     "EvaluateVid",
     "PreprocessFunc",

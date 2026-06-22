@@ -1,6 +1,5 @@
 """Experiment class for processing a single experiment in the behavysis pipeline."""
 
-from collections.abc import Callable
 from pathlib import Path
 from typing import Literal
 
@@ -12,6 +11,7 @@ from behavysis.constants import (
     Folders,
 )
 from behavysis.funcs import (
+    AnalyseFunc,
     CalculateParamsFunc,
     EvaluateVid,
     PreprocessFunc,
@@ -164,7 +164,7 @@ class Experiment:
         )
 
     @trace
-    def analyse(self, funcs: tuple[Callable, ...]) -> None:
+    def analyse(self, funcs: tuple[AnalyseFunc, ...]) -> None:
         """Analyse preprocessed keypoints data."""
         for func in funcs:
             func(
