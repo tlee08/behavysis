@@ -59,7 +59,7 @@ class Experiment:
 
     def get_log_context(self) -> dict:
         """Log context for loguru context."""
-        return {"experiment": str(self.root_dir)}
+        return {"experiment": str(self.name)}
 
     def get_fp(self, folder: Folders | str) -> Path:
         """Returns the experiment's file path from the given folder."""
