@@ -16,10 +16,8 @@ This pipeline includes:
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-from behavysis.behav_classifier import __all__ as behav_classifier_all
 from behavysis.constants import PLOT_DPI, PLOT_STYLE
-from behavysis.funcs import __all__ as funcs_all
-from behavysis.pipeline import __all__ as pipeline_all
+from behavysis.pipeline import Experiment, Project
 from behavysis.utils.logger_utils import configure_logger
 
 #####################################################################
@@ -42,9 +40,7 @@ plt.rcParams["savefig.dpi"] = PLOT_DPI
 #          IMPORTING CLASSES
 #####################################################################
 
-
-__all__ = [  # noqa: PLE0604
-    *behav_classifier_all,
-    *pipeline_all,
-    *funcs_all,
+__all__ = [
+    "Experiment",
+    "Project",
 ]

@@ -6,7 +6,7 @@ All outcomes for experiment processing is stored in csv files in the `proj_dir/d
 
 ```python
 from behavysis import Project
-from behavysis.processes import *
+from behavysis.funcs import *
 ```
 
 ## Making the project and importing all experiments

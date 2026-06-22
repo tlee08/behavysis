@@ -1,23 +1,23 @@
-<!-- ::: behavysis.processes -->
+<!-- ::: behavysis.funcs -->
 
-::: behavysis.processes.update_configs
+::: behavysis.funcs.update_configs
 
-::: behavysis.processes.format_vid
+::: behavysis.funcs.format_vid
 
-::: behavysis.processes.run_dlc
+::: behavysis.funcs.run_dlc
 
-::: behavysis.processes.calculate_params
+::: behavysis.funcs.calculate_params
 
-::: behavysis.processes.preprocess
+::: behavysis.funcs.preprocess
 
-::: behavysis.processes.extract_features
+::: behavysis.funcs.extract_features
 
-::: behavysis.processes.classify_behavs
+::: behavysis.funcs.classify_behavs
 
-::: behavysis.processes.analyse_behavs
+::: behavysis.funcs.analyse_behavs
 
-::: behavysis.processes.analyse
+::: behavysis.funcs.analyse
 
-::: behavysis.processes.combine_analysis
+::: behavysis.funcs.combine_analysis
 
-::: behavysis.processes.evaluate_vid
+::: behavysis.funcs.evaluate_vid
