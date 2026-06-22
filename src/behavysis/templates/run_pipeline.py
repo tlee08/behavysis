@@ -12,6 +12,7 @@ Before running:
 
 from pathlib import Path
 
+from behavysis import Project
 from behavysis.funcs import (
     distance,
     dur_frames_from_likelihood,
@@ -23,7 +24,6 @@ from behavysis.funcs import (
     start_stop_trim,
     stop_frame_from_dur,
 )
-from behavysis import Project
 
 if __name__ == "__main__":
     overwrite = False
