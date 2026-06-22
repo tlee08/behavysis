@@ -13,17 +13,12 @@ This pipeline includes:
 - Extracting meaningful data analysis from the preprocessed coordinates file
 """
 
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-from behavysis.behav_classifier.behav_classifier import BehavClassifier
+from behavysis.behav_classifier import __all__ as behav_classifier_all
 from behavysis.constants import PLOT_DPI, PLOT_STYLE
-
-#####################################################################
-#           IMPORTING SUBMODULES
-#####################################################################
-from behavysis.pipeline.project import __all__ as pipeline_all
+from behavysis.pipeline import __all__ as pipeline_all
 from behavysis.processes import __all__ as processes_all
 from behavysis.utils.logger_utils import configure_logger
 
@@ -37,9 +32,6 @@ configure_logger()
 #           INITIALISE MPL PLOTTING PARAMETERS
 #####################################################################
 
-# Makes graphs non-interactive (saves memory)
-mpl.use("Agg")  # QtAgg
-
 sns.set_theme(style=PLOT_STYLE)
 
 plt.rcParams["figure.dpi"] = PLOT_DPI
@@ -51,5 +43,8 @@ plt.rcParams["savefig.dpi"] = PLOT_DPI
 #####################################################################
 
 
-__all__ = []
-__all__ += processes_all
+__all__ = [  # noqa: PLE0604
+    *behav_classifier_all,
+    *pipeline_all,
+    *processes_all,
+]
