@@ -98,9 +98,6 @@ class DFMixin:
         cn_names = _enum_values(cls.CN)
 
         if in_names:
-            # First try to convert any columns to index
-            for _i in in_names:
-                
             # Check index
             if df.index.nlevels != len(in_names):
                 msg = (
