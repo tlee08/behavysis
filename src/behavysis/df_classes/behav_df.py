@@ -24,9 +24,10 @@ class OutcomesScoredCols(Enum):
 
 
 class BehavValues(Enum):
-    BEHAV = 1
-    NON_BEHAV = 0
-    UNDETERMINED = -1
+    TRUE_POS = 1
+    TRUE_NEG = 0
+    FALSE_POS = -1
+    UNSURE = -2
 
 
 class BoutCols(Enum):
@@ -100,8 +101,8 @@ class BehavScoredDf(BehavDf):
             f"BORIS: {df_boris['Behavior'].unique()}"
         )
         for behav in behavs_ls:
-            df[(behav, cls.OutcomesCols.ACTUAL.value)] = BehavValues.NON_BEHAV.value
-            df[(behav, cls.OutcomesCols.PRED.value)] = BehavValues.NON_BEHAV.value
+            df[(behav, cls.OutcomesCols.ACTUAL.value)] = BehavValues.TRUE_NEG.value
+            df[(behav, cls.OutcomesCols.PRED.value)] = BehavValues.TRUE_NEG.value
         for _, row in df_boris.iterrows():
             behav = row["Behavior"]
             frame = row["Image index"]
@@ -109,9 +110,9 @@ class BehavScoredDf(BehavDf):
             if behav not in behavs_ls:
                 continue
             val = (
-                BehavValues.BEHAV.value
+                BehavValues.TRUE_POS.value
                 if status == "START"
-                else BehavValues.NON_BEHAV.value
+                else BehavValues.TRUE_NEG.value
             )
             df.loc[frame:, (behav, cls.OutcomesCols.ACTUAL.value)] = val
             df.loc[frame:, (behav, cls.OutcomesCols.PRED.value)] = val
@@ -152,9 +153,9 @@ class BehavScoredDf(BehavDf):
             ].to_numpy()
             scored_df[(behav, cls.OutcomesCols.ACTUAL.value)] = scored_df[
                 (behav, cls.OutcomesCols.PRED.value)
-            ].replace(BehavValues.BEHAV.value, BehavValues.UNDETERMINED.value)
+            ].replace(BehavValues.TRUE_POS.value, BehavValues.UNSURE.value)
             for user_col in bout.user_defined:
-                scored_df[(behav, user_col)] = BehavValues.NON_BEHAV.value
+                scored_df[(behav, user_col)] = BehavValues.TRUE_NEG.value
         return cls.clean_and_validate(scored_df)
 
     @classmethod
@@ -182,7 +183,7 @@ class BehavScoredDf(BehavDf):
         for behav in df.columns.unique(cls.CN.BEHAVS.value):
             behav_df = df[behav]
             bouts_df = cls.vect2bouts_df(
-                behav_df[cls.OutcomesCols.PRED.value] == BehavValues.BEHAV.value
+                behav_df[cls.OutcomesCols.PRED.value] == BehavValues.TRUE_POS.value
             )
             for _, row in bouts_df.iterrows():
                 bout_frames = behav_df.loc[
@@ -213,14 +214,14 @@ class BehavScoredDf(BehavDf):
         df = cls.init_df(pd.Series(np.arange(bouts.start, bouts.stop)))
         for bout_struct in bouts.bouts_struct:
             behav = bout_struct.behav
-            df[(behav, cls.OutcomesCols.PRED.value)] = BehavValues.NON_BEHAV.value
-            df[(behav, cls.OutcomesCols.ACTUAL.value)] = BehavValues.NON_BEHAV.value
+            df[(behav, cls.OutcomesCols.PRED.value)] = BehavValues.TRUE_NEG.value
+            df[(behav, cls.OutcomesCols.ACTUAL.value)] = BehavValues.TRUE_NEG.value
             for user_col in bout_struct.user_defined:
-                df[(behav, user_col)] = BehavValues.NON_BEHAV.value
+                df[(behav, user_col)] = BehavValues.TRUE_NEG.value
         for bout in bouts.bouts:
             df.loc[
                 bout.start : bout.stop, (bout.behav, cls.OutcomesCols.PRED.value)
-            ] = BehavValues.BEHAV.value
+            ] = BehavValues.TRUE_POS.value
             df.loc[
                 bout.start : bout.stop, (bout.behav, cls.OutcomesCols.ACTUAL.value)
             ] = bout.actual
