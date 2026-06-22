@@ -57,6 +57,10 @@ class Experiment:
             )
             raise ValueError(msg)
 
+    def get_log_context(self) -> dict:
+        """Log context for loguru context."""
+        return {"experiment": str(self.root_dir)}
+
     def get_fp(self, folder: Folders | str) -> Path:
         """Returns the experiment's file path from the given folder."""
         if isinstance(folder, str):
