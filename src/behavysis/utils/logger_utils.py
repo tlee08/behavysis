@@ -38,7 +38,7 @@ def configure_logger(
         format=(
             "<green>{time:YYYY-MM-DD HH:mm:ss}</green> | "
             "<level>{level: <8}</level> | "
-            "<cyan>{extra[func_name]}</cyan> | "
+            "<cyan>{extra}</cyan> | "
             "<level>{message}</level>"
         ),
     )
@@ -55,7 +55,7 @@ def configure_logger(
             "{time:YYYY-MM-DD HH:mm:ss.SSS} | "
             "{level} | "
             "{name}:{function}:{line} | "
-            "{extra[func_name]} | "
+            "{extra} | "
             "{message}"
         ),
     )
