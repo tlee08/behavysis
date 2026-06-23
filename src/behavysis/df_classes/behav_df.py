@@ -25,38 +25,41 @@ from behavysis.models.bouts import Bout, Bouts, BoutStruct
 
 from .df_mixin import DFMixin
 
+# TODO: depend on configs, rather than inference to build BoutStruct
+# Consider making vect2bouts and predicted2scored into standalone functions
 
-class BehavDf(DFMixin):
-    """BehavDf."""
+
+class BehavPredictedDf(DFMixin):
+    """BehavPredictedDf."""
 
     is_nullable = False
     index_names = (FRAME,)
     column_names = (BEHAVS, OUTCOMES)
 
-
-class BehavPredictedDf(BehavDf):
-    """BehavPredictedDf."""
-
     @classmethod
     def _validate(cls, df: pd.DataFrame) -> None:
         super()._validate(df)
-        actual_outcomes = set(df.columns.unique(OUTCOMES))
-        expected = [PROB, PRED]
-        assert actual_outcomes == expected, (
-            f"Expected ONLY {expected} outcomes columns.\nFound: {actual_outcomes}"
+        expected = {PROB, PRED}
+        actual = set(df.columns.unique(OUTCOMES))
+        assert actual == expected, (
+            f"Expected ONLY {expected} outcomes columns.\nFound: {actual}"
         )
 
 
-class BehavScoredDf(BehavDf):
+class BehavScoredDf(DFMixin):
     """BehavScoredDf."""
+
+    is_nullable = False
+    index_names = (FRAME,)
+    column_names = (BEHAVS, OUTCOMES)
 
     @classmethod
     def _validate(cls, df: pd.DataFrame) -> None:
         super()._validate(df)
-        exclude = {PROB}
+        expected = {PRED, ACTUAL}
         actual = set(df.columns.unique(OUTCOMES))
-        assert not (actual & exclude), (
-            f"Expected NOT to find {exclude} in outcomes.\nFound: {actual}"
+        assert actual.issubset(expected), (
+            f"Expected to include subset {expected} outcomes columns.\nFound: {actual}"
         )
 
     @classmethod

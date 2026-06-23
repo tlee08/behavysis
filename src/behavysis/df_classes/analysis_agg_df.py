@@ -238,6 +238,7 @@ class AnalysisBinnedDf(DFMixin):
         cbins_ls: list,
     ) -> None:
         """Generate binned summaries for standard and custom bins."""
+        analysis_df = analysis_df.copy()
         # Offset frames index to start from 0
         index_df = analysis_df.index.to_frame(index=False)
         frame_name = AnalysisDf.index_names[0]

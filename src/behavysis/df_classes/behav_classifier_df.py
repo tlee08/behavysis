@@ -2,7 +2,7 @@
 
 # TODO: simplify along with behav classifier
 
-from behavysis.df_classes.behav_df import ACTUAL, PRED, PROB, BehavPredictedDf
+from behavysis.constants import BEHAVS, FRAME, OUTCOMES
 
 from .df_mixin import DFMixin
 
@@ -11,9 +11,12 @@ class BehavClassifierCombinedDf(DFMixin):
     """BehavClassifierCombinedDf."""
 
     index_names = ("video", "frame")
+    column_names = (BEHAVS, OUTCOMES)
 
 
-class BehavClassifierEvalDf(BehavPredictedDf):
+class BehavClassifierEvalDf(DFMixin):
     """BehavClassifierEvalDf."""
 
-    OutcomesCols = (PROB, PRED, ACTUAL)
+    is_nullable = False
+    index_names = (FRAME,)
+    column_names = (BEHAVS, OUTCOMES)
