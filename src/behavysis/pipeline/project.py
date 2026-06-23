@@ -261,7 +261,7 @@ class Project:
                     in_fp = (
                         subdir
                         / f"binned_{bin_size}"
-                        / f"{exp.name}.{AnalysisBinnedDf.IO}"
+                        / f"{exp.name}.{AnalysisBinnedDf.io_format}"
                     )
                     if in_fp.is_file():
                         df_ls.append(AnalysisBinnedDf.read(in_fp))
@@ -273,7 +273,8 @@ class Project:
                 ).fillna(0)
                 AnalysisBinnedCollatedDf.write(
                     df,
-                    subdir / f"__ALL_binned_{bin_size}.{AnalysisBinnedCollatedDf.IO}",
+                    subdir
+                    / f"__ALL_binned_{bin_size}.{AnalysisBinnedCollatedDf.io_format}",
                 )
                 AnalysisBinnedCollatedDf.write(
                     df, subdir / f"__ALL_binned_{bin_size}.csv", fmt="csv"
@@ -291,7 +292,7 @@ class Project:
                 continue
             df_ls, names_ls = [], []
             for exp in self.experiments:
-                in_fp = subdir / "summary" / f"{exp.name}.{AnalysisSummaryDf.IO}"
+                in_fp = subdir / "summary" / f"{exp.name}.{AnalysisSummaryDf.io_format}"
                 if in_fp.is_file():
                     df_ls.append(AnalysisSummaryDf.read(in_fp))
                     names_ls.append(exp.name)
@@ -299,6 +300,6 @@ class Project:
                 continue
             df = pd.concat(df_ls, keys=names_ls, names=["experiment"], axis=0).fillna(0)
             AnalysisSummaryCollatedDf.write(
-                df, subdir / f"__ALL_summary.{AnalysisSummaryCollatedDf.IO}"
+                df, subdir / f"__ALL_summary.{AnalysisSummaryCollatedDf.io_format}"
             )
             AnalysisSummaryCollatedDf.write(df, subdir / "__ALL_summary.csv", fmt="csv")

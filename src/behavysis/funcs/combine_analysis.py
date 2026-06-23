@@ -3,8 +3,9 @@ from pathlib import Path
 import pandas as pd
 from loguru import logger
 
+from behavysis.constants import ANALYSIS, FBF
 from behavysis.df_classes.analysis_combined_df import AnalysisCombinedDf
-from behavysis.df_classes.analysis_df import FBF, AnalysisDf
+from behavysis.df_classes.analysis_df import AnalysisDf
 from behavysis.utils.io_utils import file_exists_msg
 
 
@@ -36,7 +37,7 @@ def combine_analysis(
     # Reading in each fbf analysis df
     comb_df_ls = [
         AnalysisDf.read(
-            analysis_dir / analysis_subdir / FBF / f"{name}.{AnalysisDf.IO}"
+            analysis_dir / analysis_subdir / FBF / f"{name}.{AnalysisDf.io_format}"
         )
         for analysis_subdir in analysis_subdir_ls
     ]
@@ -45,7 +46,7 @@ def combine_analysis(
         comb_df_ls,
         axis=1,
         keys=analysis_subdir_ls,
-        names=[AnalysisCombinedDf.CN.ANALYSIS.value],
+        names=[ANALYSIS],
     )
     # Writing to file
     AnalysisCombinedDf.write(comb_df, analysis_combined_fp)

@@ -9,10 +9,18 @@ from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import FunctionTransformer, MinMaxScaler
 
+from behavysis.df_classes import DFMixin
 from behavysis.df_classes.behav_classifier_df import BehavClassifierCombinedDf
-from behavysis.df_classes.behav_df import BehavScoredDf, BehavValues
+from behavysis.df_classes.behav_df import (
+    ACTUAL,
+    FALSE_POS,
+    OUTCOMES,
+    PRED,
+    TRUE_POS,
+    UNSURE,
+    BehavScoredDf,
+)
 from behavysis.df_classes.features_df import FeaturesDf
-from behavysis.utils.df_mixin import DFMixin
 from behavysis.utils.io_utils import (
     async_read_files_run,
 )
@@ -53,16 +61,14 @@ def wrangle_columns_y(y: pd.DataFrame) -> pd.DataFrame:
     """
     # Filtering out the pred columns (in the `outcomes` level)
     columns_filter = np.isin(
-        y.columns.get_level_values(BehavScoredDf.CN.OUTCOMES.value),
-        [BehavScoredDf.OutcomesCols.PRED.value],
+        y.columns.get_level_values(OUTCOMES),
+        [PRED],
         invert=True,
     )
     y = y.loc[:, columns_filter]
     # Setting the column names from `(behav, outcome)` to `{behav}__{outcome}`
     y.columns = [
-        f"{behav_name}"
-        if outcome_name == BehavScoredDf.OutcomesCols.ACTUAL.value
-        else f"{behav_name}__{outcome_name}"
+        f"{behav_name}" if outcome_name == ACTUAL else f"{behav_name}__{outcome_name}"
         for behav_name, outcome_name in y.columns
     ]
     return y
@@ -138,10 +144,11 @@ def oversample(x: np.ndarray, y: np.ndarray, ratio: float) -> np.ndarray:
     """
     assert x.shape[0] == y.shape[0]
     index = np.arange(y.shape[0])
-    t = index[y == BehavValues.BEHAV.value]
-    f = index[y == BehavValues.NON_BEHAV.value]
+    t = index[y == TRUE_POS]
+    f = index[y == FALSE_POS]
     new_t_size = int(np.round(f.shape[0] * ratio))
-    t = np.random.choice(t, size=new_t_size, replace=True)
+    rng = np.random.default_rng()
+    t = rng.choice(t, size=new_t_size, replace=True)
     new_index = np.concatenate([t, f])
     return x[new_index]
 
@@ -165,10 +172,11 @@ def undersample(x: np.ndarray, y: np.ndarray, ratio: float) -> np.ndarray:
     """
     assert x.shape[0] == y.shape[0]
     index = np.arange(y.shape[0])
-    t = index[y == BehavValues.BEHAV.value]
-    f = index[y == BehavValues.NON_BEHAV.value]
+    t = index[y == TRUE_POS]
+    f = index[y == FALSE_POS]
     new_f_size = int(np.round(t.shape[0] / ratio))
-    f = np.random.choice(f, size=new_f_size, replace=False)
+    rng = np.random.default_rng()
+    f = rng.choice(f, size=new_f_size, replace=False)
     new_index = np.concatenate([t, f])
     return x[new_index]
 
@@ -213,12 +221,7 @@ def prepare_training_data(
     y_df_ls = async_read_files_run(y_fp_ls, BehavScoredDf.read)
 
     # Format y dfs: select behavior column, replace UNDETERMINED
-    y_df_ls = [
-        y[(behav_name, BehavScoredDf.OutcomesCols.ACTUAL.value)].replace(
-            BehavValues.UNDETERMINED.value, BehavValues.NON_BEHAV.value
-        )
-        for y in y_df_ls
-    ]
+    y_df_ls = [y[(behav_name, ACTUAL)].replace(UNSURE, FALSE_POS) for y in y_df_ls]
 
     # Align x and y indices
     index_df_ls = [

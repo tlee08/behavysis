@@ -1,6 +1,7 @@
 from matplotlib import pyplot as plt
 from pydantic import BaseModel, field_validator
 
+from behavysis.constants import INDIVIDUALS
 from behavysis.df_classes.keypoints_df import KeypointsDf
 
 
@@ -35,7 +36,7 @@ class EvaluateVidConfigs(BaseModel):
 
     funcs: list[str] | str = ["keypoints", "analysis"]
     pcutoff: float | str = 0.8
-    colour_level: str = KeypointsDf.CN.INDIVIDUALS.value
+    colour_level: str = INDIVIDUALS
     radius: int | str = 3
     cmap: str = "rainbow"
     padding: int = 30
@@ -50,5 +51,4 @@ class EvaluateVidConfigs(BaseModel):
     @classmethod
     def validate_colour_level(cls, v) -> str:
         """validate_colour_level."""
-        vals = [e.value for e in KeypointsDf.CN]
-        return _validate_in_set(v, vals)
+        return _validate_in_set(v, list(KeypointsDf.column_names))

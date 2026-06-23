@@ -6,37 +6,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from behavysis.utils.df_mixin import DFMixin, _enum_values
-
-
-class TestEnumValues:
-    """Tests for the _enum_values helper function."""
-
-    def test_none_input(self) -> None:
-        """None input should return None."""
-        assert _enum_values(None) is None
-
-    def test_enum_input(self) -> None:
-        """Enum input should return tuple of values."""
-
-        class Color(Enum):
-            RED = "red"
-            GREEN = "green"
-            BLUE = "blue"
-
-        result = _enum_values(Color)
-        assert result == ("red", "green", "blue")
-        assert isinstance(result, tuple)
-
-    def test_int_enum_input(self) -> None:
-        """IntEnum should work correctly."""
-
-        class Numbers(Enum):
-            ONE = 1
-            TWO = 2
-            THREE = 3
-
-        assert _enum_values(Numbers) == (1, 2, 3)
+from behavysis.df_classes import DFMixin
 
 
 class TestDF(DFMixin):
@@ -48,7 +18,7 @@ class TestDF(DFMixin):
     class CN(Enum):
         VALUE = "value"
 
-    NULLABLE = True
+    is_nullable = True
 
 
 class TestDFMultiIndex(DFMixin):
@@ -62,7 +32,7 @@ class TestDFMultiIndex(DFMixin):
         COORD = "coord"
         BODYPART = "bodypart"
 
-    NULLABLE = True
+    is_nullable = True
 
 
 class TestDFNonNullable(DFMixin):
@@ -74,14 +44,14 @@ class TestDFNonNullable(DFMixin):
     class CN(Enum):
         VALUE = "value"
 
-    NULLABLE = False
+    is_nullable = False
 
 
 class TestDFNoSchema(DFMixin):
     """Test DataFrame class without schema (IN and CN are None)."""
 
-    IN = None
-    CN = None
+    index_names = None
+    column_names = None
 
 
 class TestDFMixinInit:

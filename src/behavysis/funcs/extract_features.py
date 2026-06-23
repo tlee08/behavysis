@@ -7,9 +7,9 @@ from pathlib import Path
 import pandas as pd
 from loguru import logger
 
-from behavysis.constants import CACHE_DIR
+from behavysis.constants import CACHE_DIR, LIKELIHOOD, X, Y
 from behavysis.df_classes.features_df import FeaturesDf
-from behavysis.df_classes.keypoints_df import CoordsCols, KeypointsDf
+from behavysis.df_classes.keypoints_df import KeypointsDf
 from behavysis.models.experiment_configs import ExperimentConfigs
 from behavysis.utils.io_utils import file_exists_msg, silent_remove
 from behavysis.utils.multiproc_utils import get_cpid
@@ -116,7 +116,7 @@ def _select_cols(keypoints_df: pd.DataFrame, configs_fp: Path) -> pd.DataFrame:
     KeypointsDf.check_bpts_exist(keypoints_df, bpts)
     # Selecting given columns
     idx = pd.IndexSlice
-    coords = [e.value for e in CoordsCols]
+    coords = [X, Y, LIKELIHOOD]
     keypoints_df = keypoints_df.loc[:, idx[:, indivs, bpts, coords]]
     return keypoints_df
 

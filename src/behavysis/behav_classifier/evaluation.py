@@ -1,7 +1,6 @@
 """Evaluation metrics and visualization for behavioral classifier."""
 
 import json
-from enum import Enum
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -11,21 +10,18 @@ import seaborn as sns
 from matplotlib.figure import Figure
 from sklearn.metrics import classification_report, confusion_matrix
 
+from behavysis.constants import ACTUAL, PRED, PROB
+from behavysis.df_classes import DFMixin
 from behavysis.df_classes.behav_classifier_df import BehavClassifierEvalDf
-from behavysis.df_classes.behav_df import BehavScoredDf
-from behavysis.utils.df_mixin import DFMixin
 
-
-class GenericBehavLabels(Enum):
-    """Standard behavior label names for classification reports."""
-
-    NIL = "nil"
-    BEHAV = "behav"
+NIL = "nil"
+BEHAV = "behav"
+LABELS = [NIL, BEHAV]
 
 
 def eval_report(y_true: np.ndarray, y_pred: np.ndarray) -> dict:
     """Generate classification report with precision, recall, f1-score."""
-    labels = [e.value for e in GenericBehavLabels]
+    labels = LABELS
     return classification_report(
         y_true=y_true,
         y_pred=y_pred,
@@ -36,7 +32,7 @@ def eval_report(y_true: np.ndarray, y_pred: np.ndarray) -> dict:
 
 def eval_conf_matr(y_true: np.ndarray, y_pred: np.ndarray) -> Figure:
     """Generate confusion matrix heatmap."""
-    labels = [e.value for e in GenericBehavLabels]
+    labels = LABELS
     fig, ax = plt.subplots(figsize=(7, 7))
     sns.heatmap(
         confusion_matrix(y_true, y_pred),
@@ -55,7 +51,7 @@ def eval_conf_matr(y_true: np.ndarray, y_pred: np.ndarray) -> Figure:
 
 def eval_metrics_pcutoffs(y_true: np.ndarray, y_prob: np.ndarray) -> Figure:
     """Plot precision, recall, f1, and accuracy across probability cutoffs."""
-    labels = [e.value for e in GenericBehavLabels]
+    labels = LABELS
     pcutoffs = np.linspace(0, 1, 101)
     precisions = np.zeros(pcutoffs.shape[0])
     recalls = np.zeros(pcutoffs.shape[0])
@@ -70,9 +66,9 @@ def eval_metrics_pcutoffs(y_true: np.ndarray, y_prob: np.ndarray) -> Figure:
             target_names=labels,
             output_dict=True,
         )
-        precisions[i] = report[GenericBehavLabels.BEHAV.value]["precision"]
-        recalls[i] = report[GenericBehavLabels.BEHAV.value]["recall"]
-        f1[i] = report[GenericBehavLabels.BEHAV.value]["f1-score"]
+        precisions[i] = report[BEHAV]["precision"]
+        recalls[i] = report[BEHAV]["recall"]
+        f1[i] = report[BEHAV]["f1-score"]
         accuracies[i] = report["accuracy"]
 
     fig, ax = plt.subplots(figsize=(10, 7))
@@ -161,7 +157,7 @@ def save_training_history(history: pd.DataFrame, eval_dir: Path) -> None:
     eval_dir : Path
         Directory for evaluation outputs.
     """
-    DFMixin.write(history, eval_dir / f"history.{DFMixin.IO}")
+    DFMixin.write(history, eval_dir / f"history.{DFMixin.io_format}")
     fig, ax = plt.subplots(figsize=(10, 7))
     sns.lineplot(data=history, ax=ax)
     fig.savefig(eval_dir / "history.png")
@@ -208,9 +204,9 @@ def save_evaluation_results(
     eval_df = BehavClassifierEvalDf.init_df(
         pd.Series(np.arange(np.concatenate(index_ls).shape[0]))
     )
-    eval_df[(behav_name, BehavClassifierEvalDf.OutcomesCols.PROB.value)] = y_prob
-    eval_df[(behav_name, BehavClassifierEvalDf.OutcomesCols.PRED.value)] = y_pred
-    eval_df[(behav_name, BehavScoredDf.OutcomesCols.ACTUAL.value)] = y_true
+    eval_df[(behav_name, PROB)] = y_prob
+    eval_df[(behav_name, PRED)] = y_pred
+    eval_df[(behav_name, ACTUAL)] = y_true
 
     # Generate reports
     report_dict = eval_report(y_true, y_pred)
@@ -220,7 +216,7 @@ def save_evaluation_results(
 
     # Save outputs
     BehavClassifierEvalDf.write(
-        eval_df, eval_dir / f"{name}_eval.{BehavClassifierEvalDf.IO}"
+        eval_df, eval_dir / f"{name}_eval.{BehavClassifierEvalDf.io_format}"
     )
     (eval_dir / f"{name}_report.json").write_text(json.dumps(report_dict, indent=2))
     conf_matr_fig.savefig(eval_dir / f"{name}_confm.png")

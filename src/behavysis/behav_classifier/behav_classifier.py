@@ -23,7 +23,7 @@ from behavysis.behav_classifier.evaluation import (
     save_training_history,
 )
 from behavysis.constants import Folders
-from behavysis.df_classes.behav_df import BehavPredictedDf
+from behavysis.df_classes.behav_df import PRED, PROB, BehavPredictedDf
 from behavysis.models.behav_classifier_configs import BehavClassifierConfigs
 
 if TYPE_CHECKING:
@@ -370,11 +370,7 @@ class BehavClassifier:
         y_pred = (y_prob > self.configs.pcutoff).astype(int)
 
         pred_df = BehavPredictedDf.init_df(pd.Series(index))
-        pred_df[(self.configs.behav_name, BehavPredictedDf.OutcomesCols.PROB.value)] = (
-            y_prob
-        )
-        pred_df[(self.configs.behav_name, BehavPredictedDf.OutcomesCols.PRED.value)] = (
-            y_pred
-        )
+        pred_df[(self.configs.behav_name, PROB)] = y_prob
+        pred_df[(self.configs.behav_name, PRED)] = y_pred
 
         return pred_df

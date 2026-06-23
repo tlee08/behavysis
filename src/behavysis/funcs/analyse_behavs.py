@@ -2,9 +2,12 @@ from pathlib import Path
 
 import numpy as np
 
+from behavysis.constants import FALSE_POS, FBF, OUTCOMES, PRED, UNSURE
 from behavysis.df_classes.analysis_agg_df import AnalysisBinnedDf
-from behavysis.df_classes.analysis_df import FBF, AnalysisDf
-from behavysis.df_classes.behav_df import BehavScoredDf, BehavValues
+from behavysis.df_classes.analysis_df import AnalysisDf
+from behavysis.df_classes.behav_df import (
+    BehavScoredDf,
+)
 from behavysis.models.experiment_configs import ExperimentConfigs
 
 
@@ -22,20 +25,18 @@ def analyse_behavs(
     # Loading in dataframe
     behavs_df = BehavScoredDf.read(behavs_fp)
     # Setting all na and undetermined behav to non-behav
-    behavs_df = behavs_df.fillna(0).replace(
-        BehavValues.UNSURE.value, BehavValues.FALSE_POS.value
-    )
+    behavs_df = behavs_df.fillna(0).replace(UNSURE, FALSE_POS)
     # Getting the behaviour names and each user_defined for the behaviour
     # Not incl. the `pred` or `prob` (`prob` shouldn't be here anyway) columns
     columns = np.isin(
-        behavs_df.columns.get_level_values(BehavScoredDf.CN.OUTCOMES.value),
-        [BehavScoredDf.OutcomesCols.PRED.value],
+        behavs_df.columns.get_level_values(OUTCOMES),
+        [PRED],
         invert=True,
     )
     behavs_df = behavs_df.loc[:, columns]
     behavs_df = AnalysisDf.clean_and_validate(behavs_df)
     # Writing the behavs_df to the fbf file
-    fbf_fp = dst_subdir / FBF / f"{name}.{AnalysisDf.IO}"
+    fbf_fp = dst_subdir / FBF / f"{name}.{AnalysisDf.io_format}"
     AnalysisDf.write(behavs_df, fbf_fp)
     # Making the summary and binned dataframes
     AnalysisBinnedDf.summary_binned_behavs(

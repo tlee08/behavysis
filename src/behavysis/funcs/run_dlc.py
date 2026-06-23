@@ -8,8 +8,8 @@ from pathlib import Path
 import pandas as pd
 from loguru import logger
 
-from behavysis.constants import CACHE_DIR
-from behavysis.df_classes.keypoints_df import CoordsCols, KeypointsDf
+from behavysis.constants import CACHE_DIR, LIKELIHOOD
+from behavysis.df_classes.keypoints_df import KeypointsDf
 from behavysis.models.experiment_configs import ExperimentConfigs
 from behavysis.utils.io_utils import file_exists_msg, silent_remove
 from behavysis.utils.template_utils import save_template
@@ -75,7 +75,7 @@ def ma_dlc_run_batch(
         vid_fp_ls = [
             vid_fp
             for vid_fp in vid_fp_ls
-            if not (keypoints_dir / f"{vid_fp.stem}.{KeypointsDf.IO}").exists()
+            if not (keypoints_dir / f"{vid_fp.stem}.{KeypointsDf.io_format}").exists()
         ]
 
     # If there are no videos to process, return
@@ -169,10 +169,10 @@ def _export2df(name: str, src_dir: Path, dst_dir: Path) -> None:
         # Imputing na values with 0
         df = df.fillna(0)
         # Clipping likelihood values between 0 and 1
-        lhoods_idx = pd.IndexSlice[:, :, :, CoordsCols.LIKELIHOOD.value]
+        lhoods_idx = pd.IndexSlice[:, :, :, LIKELIHOOD]
         df.loc[:, lhoods_idx] = df.loc[:, lhoods_idx].clip(0, 1)
         # Writing the file
-        KeypointsDf.write(df, dst_dir / f"{name}.{KeypointsDf.IO}")
+        KeypointsDf.write(df, dst_dir / f"{name}.{KeypointsDf.io_format}")
         logger.info("Outputted DLC file.")
 
     else:

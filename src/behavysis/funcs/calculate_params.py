@@ -20,11 +20,8 @@ import numpy as np
 import pandas as pd
 from loguru import logger
 
-from behavysis.df_classes.keypoints_df import (
-    CoordsCols,
-    IndivCols,
-    KeypointsDf,
-)
+from behavysis.constants import LIKELIHOOD, SINGLE
+from behavysis.df_classes.keypoints_df import KeypointsDf
 from behavysis.models.experiment_configs import ExperimentConfigs
 
 
@@ -232,19 +229,19 @@ def px_per_mm(keypoints_fp: Path, configs_fp: Path) -> None:
     # Checking that the two reference points are valid
     KeypointsDf.check_bpts_exist(keypoints_df, [pt_a, pt_b])
     # Getting calibration points (x, y, likelihood) values
-    pt_a_df = keypoints_df[IndivCols.SINGLE.value, pt_a]
-    pt_b_df = keypoints_df[IndivCols.SINGLE.value, pt_b]
+    pt_a_df = keypoints_df[SINGLE, pt_a]
+    pt_b_df = keypoints_df[SINGLE, pt_b]
     for pt_df, pt in ([pt_a_df, pt_a], [pt_b_df, pt_b]):
-        assert np.any(pt_df[CoordsCols.LIKELIHOOD.value] > pcutoff), (
+        assert np.any(pt_df[LIKELIHOOD] > pcutoff), (
             f'No points for "{pt}" are above the pcutoff of {pcutoff}.\n'
             "Consider lowering the pcutoff in the configs file.\n"
             f'The highest likelihood value in "{pt}" is '
-            f"{np.nanmax(pt_df[CoordsCols.LIKELIHOOD.value])}."
+            f"{np.nanmax(pt_df[LIKELIHOOD])}."
         )
     # Interpolating points which are below a likelihood threshold (linear)
-    pt_a_df.loc[pt_a_df[CoordsCols.LIKELIHOOD.value] < pcutoff] = np.nan
+    pt_a_df.loc[pt_a_df[LIKELIHOOD] < pcutoff] = np.nan
     pt_a_df = pt_a_df.interpolate(method="linear", axis=0).bfill().ffill()
-    pt_b_df.loc[pt_b_df[CoordsCols.LIKELIHOOD.value] < pcutoff] = np.nan
+    pt_b_df.loc[pt_b_df[LIKELIHOOD] < pcutoff] = np.nan
     pt_b_df = pt_b_df.interpolate(method="linear", axis=0).bfill().ffill()
     # Getting distance between calibration points
     dist_px = np.nanmean(
@@ -301,13 +298,12 @@ def _calc_exists_from_likelihood(
     # Getting likehoods of subject (given bpts) existing in each frame
     KeypointsDf.check_bpts_exist(keypoints_df, bpts)
     idx = pd.IndexSlice
-    lhood_name = CoordsCols.LIKELIHOOD.value
     lhood_df = pd.DataFrame(index=keypoints_df.index)
     indivs, _ = KeypointsDf.get_indivs_bpts(keypoints_df)
     for indiv in indivs:
         # Calculating likelihood of subject existing at each frame from median
         lhood_df[(indiv, "current")] = keypoints_df.loc[
-            :, idx[indiv, bpts, lhood_name]
+            :, idx[indiv, bpts, LIKELIHOOD]
         ].apply(np.nanmedian, axis=1)
         # Calculating likelihood of subject existing over time window
         lhood_df[(indiv, "rolling")] = (

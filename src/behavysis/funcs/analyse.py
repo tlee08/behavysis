@@ -26,17 +26,11 @@ from loguru import logger
 from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
 
+from behavysis.constants import FBF, INDIVIDUALS, MEASURES, SINGLE, X, Y
 from behavysis.df_classes.analysis_agg_df import AnalysisBinnedDf
-from behavysis.df_classes.analysis_df import (
-    FBF,
-    AnalysisDf,
-)
+from behavysis.df_classes.analysis_df import AnalysisDf
 from behavysis.df_classes.behav_df import BehavScoredDf
-from behavysis.df_classes.keypoints_df import (
-    CoordsCols,
-    IndivCols,
-    KeypointsDf,
-)
+from behavysis.df_classes.keypoints_df import KeypointsDf
 from behavysis.models.experiment_configs import ExperimentConfigs
 
 
@@ -83,8 +77,6 @@ def in_roi(
     corners_df_ls = []
     roi_names_ls = []
     # For each roi, calculate the in-roi status of the subject
-    x = CoordsCols.X.value
-    y = CoordsCols.Y.value
     idx = pd.IndexSlice
     for configs_filt in configs_filt_ls:
         # Getting necessary config parameters
@@ -100,21 +92,21 @@ def in_roi(
         KeypointsDf.check_bpts_exist(keypoints_df, roi_corners)
         # Getting average corner coordinates. This assumes ROI corners do not move.
         corners_i_df = pd.DataFrame(
-            [keypoints_df[(IndivCols.SINGLE.value, pt)].mean() for pt in roi_corners]
+            [keypoints_df[(SINGLE, pt)].mean() for pt in roi_corners]
         ).drop(columns=["likelihood"])
         # Adjusting x-y to have `padding_px` dilation/erosion from the points themselves
         roi_center = corners_i_df.mean()
         for i in corners_i_df.index:
             # Calculating angle from centre to point (going out from centre)
             theta = np.arctan2(
-                corners_i_df.loc[i, y] - roi_center[y],
-                corners_i_df.loc[i, x] - roi_center[x],
+                corners_i_df.loc[i, Y] - roi_center[Y],
+                corners_i_df.loc[i, X] - roi_center[X],
             )
             # Getting x, y distances so point is `padding_px` padded (away) from center
-            corners_i_df.loc[i, x] = corners_i_df.loc[i, x] + (
+            corners_i_df.loc[i, X] = corners_i_df.loc[i, X] + (
                 padding_px * np.cos(theta)
             )
-            corners_i_df.loc[i, y] = corners_i_df.loc[i, y] + (
+            corners_i_df.loc[i, Y] = corners_i_df.loc[i, Y] + (
                 padding_px * np.sin(theta)
             )
         # Making the res_df
@@ -122,11 +114,11 @@ def in_roi(
         # For each individual, getting the in-roi status
         for indiv in indivs:
             # Getting average body center (x, y) for each individual
-            analysis_i_df[(indiv, x)] = (
-                keypoints_df.loc[:, idx[indiv, bpts, x]].mean(axis=1).to_numpy()
+            analysis_i_df[(indiv, X)] = (
+                keypoints_df.loc[:, idx[indiv, bpts, X]].mean(axis=1).to_numpy()
             )
-            analysis_i_df[(indiv, y)] = (
-                keypoints_df.loc[:, idx[indiv, bpts, y]].mean(axis=1).to_numpy()
+            analysis_i_df[(indiv, Y)] = (
+                keypoints_df.loc[:, idx[indiv, bpts, Y]].mean(axis=1).to_numpy()
             )
             # Determining if the indiv body center is in the ROI
             analysis_i_df[(indiv, roi_name)] = analysis_i_df[indiv].apply(
@@ -150,7 +142,7 @@ def in_roi(
     )
     corners_df = corners_df.reset_index(level="roi")
     # Saving analysis_df
-    fbf_fp = dst_subdir / FBF / f"{name}.{AnalysisDf.IO}"
+    fbf_fp = dst_subdir / FBF / f"{name}.{AnalysisDf.io_format}"
     AnalysisDf.write(analysis_df, fbf_fp)
     # Making scatter plot
     formatted_vid_cap = cv2.VideoCapture(formatted_vid_fp)
@@ -185,17 +177,15 @@ def _pt_in_roi(
     first_corner = pd.DataFrame(corners_df.iloc[0]).T
     corners_df = pd.concat((corners_df, first_corner), axis=0, ignore_index=True)
     # Making x and y aliases
-    x = CoordsCols.X.value
-    y = CoordsCols.Y.value
     # For each edge
     for i in range(corners_df.shape[0] - 1):
         # Getting corner points of edge
         c1 = corners_df.iloc[i]
         c2 = corners_df.iloc[i + 1]
         # Getting whether point-y is between corners-y
-        y_between = (c1[y] > pt[y]) != (c2[y] > pt[y])
+        y_between = (c1[Y] > pt[Y]) != (c2[Y] > pt[Y])
         # Getting whether point-x is to the left (le) the intersection of corners-x
-        x_left_of = pt[x] < (c2[x] - c1[x]) * (pt[y] - c1[y]) / (c2[y] - c1[y]) + c1[x]
+        x_left_of = pt[X] < (c2[X] - c1[X]) * (pt[Y] - c1[Y]) / (c2[Y] - c1[Y]) + c1[X]
         if y_between and x_left_of:
             crossings += 1
     # Odd number of crossings means point is in region
@@ -213,8 +203,8 @@ def _make_location_scatterplot(
     Expects df index_levels=(frame,), column_levels=(individual, measure).
     """
     # Getting list of individuals and measures
-    indivs_ls = scatter_df.columns.unique(AnalysisDf.CN.INDIVIDUALS.value)
-    roi_ls = scatter_df.columns.unique(AnalysisDf.CN.MEASURES.value)
+    indivs_ls = scatter_df.columns.unique(INDIVIDUALS)
+    roi_ls = scatter_df.columns.unique(MEASURES)
     roi_ls = roi_ls[np.isin(roi_ls, ["x", "y"], invert=True)]
     # "Looping" ROI bounding corners (to make closed polygons)
     corners_df = pd.concat(
@@ -241,8 +231,8 @@ def _make_location_scatterplot(
             # bpts scatter plot
             sns.scatterplot(
                 data=pd.DataFrame(scatter_df[indiv]),
-                x=CoordsCols.X.value,
-                y=CoordsCols.Y.value,
+                x=X,
+                y=Y,
                 hue=roi,
                 palette={0: "orange", 1: "green"},
                 alpha=0.3,
@@ -255,8 +245,8 @@ def _make_location_scatterplot(
             # ROI polygon plot
             sns.lineplot(
                 data=corners_df[corners_df["roi"] == roi],
-                x=CoordsCols.X.value,
-                y=CoordsCols.Y.value,
+                x=X,
+                y=Y,
                 linewidth=1,
                 marker="+",
                 markeredgecolor=(1, 0, 0),
@@ -353,7 +343,7 @@ def speed(
             columns=[(indiv, "DistMM"), (indiv, "DistMMSmoothed")]
         )
 
-    fbf_fp = dst_subdir / FBF / f"{name}.{AnalysisDf.IO}"
+    fbf_fp = dst_subdir / FBF / f"{name}.{AnalysisDf.io_format}"
     AnalysisDf.write(analysis_df, fbf_fp)
 
     AnalysisBinnedDf.summary_binned_quantitative(
@@ -394,7 +384,7 @@ def distance(
         keypoints_df, bpts, indivs, analysis_configs.px_per_mm, smoothing_frames
     )
 
-    fbf_fp = dst_subdir / FBF / f"{name}.{AnalysisDf.IO}"
+    fbf_fp = dst_subdir / FBF / f"{name}.{AnalysisDf.io_format}"
     AnalysisDf.write(analysis_df, fbf_fp)
 
     AnalysisBinnedDf.summary_binned_quantitative(
@@ -455,7 +445,7 @@ def social_distance(
         .agg(np.nanmean)
     )
     # Saving analysis_df
-    fbf_fp = dst_subdir / FBF / f"{name}.{AnalysisDf.IO}"
+    fbf_fp = dst_subdir / FBF / f"{name}.{AnalysisDf.io_format}"
     AnalysisDf.write(analysis_df, fbf_fp)
 
     # Summarising and binning analysis_df
@@ -542,7 +532,7 @@ def freezing(
             if row["dur"] < window_frames:
                 analysis_df.loc[row["start"] : row["stop"], (indiv, "freezing")] = 0
     # Saving analysis_df
-    fbf_fp = dst_subdir / FBF / f"{name}.{AnalysisDf.IO}"
+    fbf_fp = dst_subdir / FBF / f"{name}.{AnalysisDf.io_format}"
     AnalysisDf.write(analysis_df, fbf_fp)
 
     # Summarising and binning analysis_df

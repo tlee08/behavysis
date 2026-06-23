@@ -1,56 +1,34 @@
 """Aggregated analysis DataFrames for summary and binned statistics."""
 
 from collections.abc import Callable
-from enum import Enum
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import seaborn as sns
 
-from behavysis.df_classes.analysis_df import AnalysisDf
-from behavysis.df_classes.behav_df import BehavScoredDf
-from behavysis.utils.df_mixin import DFMixin
+from behavysis.constants import (
+    AGGS,
+    BIN_SEC,
+    BINNED,
+    CUSTOM,
+    INDIVIDUALS,
+    MEASURES,
+    PLOT,
+    SUMMARY,
+)
 
-SUMMARY = "summary"
-BINNED = "binned"
-PLOT = "plot"
-CUSTOM = "custom"
-
-
-class AnalysisSummaryIN(Enum):
-    """AnalysisSummaryIN."""
-
-    INDIVIDUALS = "individuals"
-    MEASURES = "measures"
-
-
-class AnalysisSummaryCN(Enum):
-    """AnalysisSummaryCN."""
-
-    AGGS = "aggs"
-
-
-class AnalysisBinnedIN(Enum):
-    """AnalysisBinnedIN."""
-
-    BIN_SEC = "bin_sec"
-
-
-class AnalysisBinnedCN(Enum):
-    """AnalysisBinnedCN."""
-
-    INDIVIDUALS = "individuals"
-    MEASURES = "measures"
-    AGGS = "aggs"
+from .analysis_df import AnalysisDf
+from .behav_df import BehavScoredDf
+from .df_mixin import DFMixin
 
 
 class AnalysisSummaryDf(DFMixin):
     """AnalysisSummaryDf."""
 
-    NULLABLE = False
-    IN = AnalysisSummaryIN
-    CN = AnalysisSummaryCN
+    is_nullable = False
+    index_names = (INDIVIDUALS, MEASURES)
+    column_names = (AGGS,)
 
     @classmethod
     def agg_quantitative(cls, analysis_df: pd.DataFrame, fps: float) -> pd.DataFrame:
@@ -116,9 +94,9 @@ class AnalysisSummaryDf(DFMixin):
 class AnalysisBinnedDf(DFMixin):
     """AnalysisBinnedDf."""
 
-    NULLABLE = False
-    IN = AnalysisBinnedIN
-    CN = AnalysisBinnedCN
+    is_nullable = False
+    index_names = (BIN_SEC,)
+    column_names = (INDIVIDUALS, MEASURES, AGGS)
 
     @classmethod
     def make_binned(
@@ -138,15 +116,12 @@ class AnalysisBinnedDf(DFMixin):
         bin_sec = pd.cut(x=timestamps, bins=bins, labels=bins[1:], include_lowest=True)
         grouped_df = analysis_df.groupby(bin_sec)
 
-        in_names = [e.value for e in AnalysisSummaryDf.IN]
-        cn_names = [e.value for e in cls.CN]
-
         binned_df = grouped_df.apply(
             lambda x: (
                 summary_func(x, fps)
-                .unstack(in_names)
-                .reorder_levels(cn_names)
-                .sort_index(level=in_names)
+                .unstack(AnalysisSummaryDf.index_names)
+                .reorder_levels(cls.column_names)
+                .sort_index(level=AnalysisSummaryDf.index_names)
             )
         )
         return cls.clean_and_validate(binned_df)
@@ -156,13 +131,14 @@ class AnalysisBinnedDf(DFMixin):
         cls, binned_df: pd.DataFrame, dst_fp: Path, agg_column: str
     ) -> None:
         """Plot binned data over time."""
-        in_names = [e.value for e in AnalysisSummaryDf.IN]
         binned_stacked_df = (
-            binned_df.stack(in_names)[agg_column].rename("value").reset_index()
+            binned_df.stack(AnalysisSummaryDf.index_names)[agg_column]
+            .rename("value")
+            .reset_index()
         )
         g = sns.relplot(
             data=binned_stacked_df,
-            x=cls.IN.BIN_SEC.value,
+            x=cls.index_names[0],
             y="value",
             hue="measures",
             col="individuals",
@@ -229,7 +205,7 @@ class AnalysisBinnedDf(DFMixin):
         for i, col in enumerate(analysis_df.columns):
             vect = analysis_df[col]
             vect = pd.Series([0]) if len(vect) == 0 else vect.astype(np.float64)
-            index = vect.index.get_level_values(AnalysisDf.IN.FRAME.value) / fps
+            index = vect.index.get_level_values(AnalysisDf.index_names[0]) / fps
             latency_df_ls[i] = (
                 pd.Series(
                     {"latency": index[vect == 1][0] if np.any(vect == 1) else -1},
@@ -246,7 +222,7 @@ class AnalysisBinnedDf(DFMixin):
         summary_df = pd.concat([summary_df, latency_df], axis=1)
         summary_df = AnalysisSummaryDf.clean_and_validate(summary_df)
 
-        summary_fp = dst_dir / SUMMARY / f"{name}.{cls.IO}"
+        summary_fp = dst_dir / SUMMARY / f"{name}.{cls.io_format}"
         AnalysisSummaryDf.write(summary_df, summary_fp)
 
     @classmethod
@@ -264,20 +240,20 @@ class AnalysisBinnedDf(DFMixin):
         """Generate binned summaries for standard and custom bins."""
         # Offset frames index to start from 0
         index_df = analysis_df.index.to_frame(index=False)
-        frame_name = AnalysisDf.IN.FRAME.value
+        frame_name = AnalysisDf.index_names[0]
         index_df[frame_name] = index_df[frame_name] - index_df[frame_name].iloc[0]
         analysis_df.index = pd.MultiIndex.from_frame(index_df)
 
         # Generate summary
-        summary_fp = dst_dir / SUMMARY / f"{name}.{cls.IO}"
+        summary_fp = dst_dir / SUMMARY / f"{name}.{cls.io_format}"
         summary_df = summary_func(analysis_df, fps)
         AnalysisSummaryDf.write(summary_df, summary_fp)
 
-        timestamps = analysis_df.index.get_level_values(AnalysisDf.IN.FRAME.value) / fps
+        timestamps = analysis_df.index.get_level_values(AnalysisDf.index_names[0]) / fps
 
         # Standard bins
         for bin_sec in bins_ls:
-            binned_fp = dst_dir / f"{BINNED}_{bin_sec}" / f"{name}.{cls.IO}"
+            binned_fp = dst_dir / f"{BINNED}_{bin_sec}" / f"{name}.{cls.io_format}"
             binned_plot_fp = dst_dir / f"{BINNED}_{bin_sec}_{PLOT}" / f"{name}.png"
             bins = np.arange(0, np.max(timestamps) + bin_sec, bin_sec)
             binned_df = cls.make_binned(analysis_df, fps, bins, summary_func)
@@ -286,7 +262,7 @@ class AnalysisBinnedDf(DFMixin):
 
         # Custom bins
         if cbins_ls:
-            binned_fp = dst_dir / f"{BINNED}_{CUSTOM}" / f"{name}.{cls.IO}"
+            binned_fp = dst_dir / f"{BINNED}_{CUSTOM}" / f"{name}.{cls.io_format}"
             binned_plot_fp = dst_dir / f"{BINNED}_{CUSTOM}_{PLOT}" / f"{name}.png"
             binned_df = cls.make_binned(analysis_df, fps, cbins_ls, summary_func)
             cls.write(binned_df, binned_fp)

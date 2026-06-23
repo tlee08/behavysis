@@ -9,9 +9,9 @@ from loguru import logger
 from pyqtgraph.exporters import ImageExporter
 from tqdm import trange
 
+from behavysis.constants import ANALYSIS, INDIVIDUALS, LIKELIHOOD, MEASURES, X, Y
 from behavysis.df_classes.analysis_combined_df import AnalysisCombinedDf
 from behavysis.df_classes.keypoints_df import (
-    CoordsCols,
     KeypointsAnnotationsDf,
     KeypointsDf,
 )
@@ -208,12 +208,12 @@ class Keypoints(EvalVidFuncBase):
             return frame
         # Making the bpts keypoints annot
         for i, indiv, bpt in self.indivs_bpts_df.itertuples(name=None):
-            if row[f"{indiv}_{bpt}_{CoordsCols.LIKELIHOOD.value}"] >= self.pcutoff:
+            if row[f"{indiv}_{bpt}_{LIKELIHOOD}"] >= self.pcutoff:
                 cv2.circle(
                     img=frame,
                     center=(
-                        int(row[f"{indiv}_{bpt}_{CoordsCols.X.value}"]),
-                        int(row[f"{indiv}_{bpt}_{CoordsCols.Y.value}"]),
+                        int(row[f"{indiv}_{bpt}_{X}"]),
+                        int(row[f"{indiv}_{bpt}_{Y}"]),
                     ),
                     radius=self.radius,
                     color=self.colours[i],
@@ -260,9 +260,7 @@ class Analysis(EvalVidFuncBase):
         self.plots_layout = pg.GraphicsLayoutWidget()
         # Getting the uniques analysis group names
         # And calculating each plot's height
-        analysis_ls = self.analysis_df.columns.unique(
-            AnalysisCombinedDf.CN.ANALYSIS.value
-        )
+        analysis_ls = self.analysis_df.columns.unique(ANALYSIS)
         height_plot = int(np.round(self.height_output / len(analysis_ls)))
         # Making list of lists to store each plot (for "analysis")
         self.plot_arr = []
@@ -270,9 +268,7 @@ class Analysis(EvalVidFuncBase):
         for i, analysis_i in enumerate(analysis_ls):
             # Getting the uniques individual names in the analysis group
             # And calculating the width of each plot in the current row
-            indivs_ls = self.analysis_df[(analysis_i,)].columns.unique(
-                AnalysisCombinedDf.CN.INDIVIDUALS.value
-            )
+            indivs_ls = self.analysis_df[(analysis_i,)].columns.unique(INDIVIDUALS)
             width_plot = int(np.round(self.width_output / len(indivs_ls)))
             # Making list to store each plot (for "individuals")
             plot_arr_i = []
@@ -281,7 +277,7 @@ class Analysis(EvalVidFuncBase):
                 # Getting measures_ls, based on current analysis_i and indivs_j
                 measures_vect = pd.Series(
                     self.analysis_df[(analysis_i, indivs_j)]
-                    .columns.to_frame(index=False)[AnalysisCombinedDf.CN.MEASURES.value]
+                    .columns.to_frame(index=False)[MEASURES]
                     .unique()
                 )
                 # Making plot
@@ -399,8 +395,9 @@ class Analysis(EvalVidFuncBase):
 
 
 class VidFuncsRunner:
-    """Given a list of the EvalVidFuncBase funcs to run in the constructor,
-    it can be called as a function to convert a video frame and df index
+    """Given a list of the EvalVidFuncBase funcs to run in the constructor.
+
+    It can be called as a function to convert a video frame and df index
     (corresponding to keypoints_df, behav_df, and analysis_fbf_df) to an
     "evaluation frame", which is annotated with keypoints and tiled with
     analysis/behav graphs.

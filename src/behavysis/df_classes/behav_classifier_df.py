@@ -1,39 +1,19 @@
 """Behavior classifier evaluation DataFrames."""
 
-from enum import Enum
+# TODO: simplify along with behav classifier
 
-from behavysis.df_classes.behav_df import BehavPredictedDf
-from behavysis.utils.df_mixin import DFMixin
+from behavysis.df_classes.behav_df import ACTUAL, PRED, PROB, BehavPredictedDf
 
-
-class CombinedFramesIN(Enum):
-    """CombinedFramesIN."""
-
-    VIDEO = "video"
-    FRAME = "frame"
-
-
-class BehavClassifierYCN(Enum):
-    """BehavClassifierYCN."""
-
-    BEHAVS = "behavs"
-
-
-class OutcomesEvalCols(Enum):
-    """OutcomesEvalCols."""
-
-    PROB = "prob"
-    PRED = "pred"
-    ACTUAL = "actual"
+from .df_mixin import DFMixin
 
 
 class BehavClassifierCombinedDf(DFMixin):
     """BehavClassifierCombinedDf."""
 
-    IN = CombinedFramesIN
+    index_names = ("video", "frame")
 
 
 class BehavClassifierEvalDf(BehavPredictedDf):
     """BehavClassifierEvalDf."""
 
-    OutcomesCols = OutcomesEvalCols
+    OutcomesCols = (PROB, PRED, ACTUAL)

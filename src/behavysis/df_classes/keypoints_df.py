@@ -1,50 +1,30 @@
 """Keypoints DataFrame for pose estimation data."""
 
-from enum import Enum
-
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-from behavysis.utils.df_mixin import DFMixin
+from behavysis.constants import (
+    BODYPARTS,
+    COORDS,
+    FRAME,
+    INDIVIDUALS,
+    PROCESSED,
+    SCORER,
+    SINGLE,
+    X,
+    Y,
+)
 
-
-class FramesIN(Enum):
-    """FramesIN."""
-
-    FRAME = "frame"
-
-
-class CoordsCols(Enum):
-    """CoordsCols."""
-
-    X = "x"
-    Y = "y"
-    LIKELIHOOD = "likelihood"
-
-
-class IndivCols(Enum):
-    """IndivCols."""
-
-    SINGLE = "single"
-    PROCESSED = "processed"
-
-
-class KeypointsCN(Enum):
-    """KeypointsCN."""
-
-    SCORER = "scorer"
-    INDIVIDUALS = "individuals"
-    BODYPARTS = "bodyparts"
-    COORDS = "coords"
+from .df_mixin import DFMixin
 
 
 class KeypointsDf(DFMixin):
     """KeypointsDf."""
 
-    NULLABLE = False
-    IN = FramesIN
-    CN = KeypointsCN
+    is_nullable = False
+    index_names = (FRAME,)
+    column_names = (SCORER, INDIVIDUALS, BODYPARTS, COORDS)
 
     @classmethod
     def _validate(cls, df: pd.DataFrame) -> None:
@@ -68,8 +48,8 @@ class KeypointsDf(DFMixin):
     @classmethod
     def get_indivs_bpts(cls, df: pd.DataFrame) -> tuple[list[str], list[str]]:
         """Get individuals and bodyparts (excluding 'single' and 'processed')."""
-        filter_mask = ~df.columns.get_level_values(cls.CN.INDIVIDUALS.value).isin(
-            [IndivCols.PROCESSED.value, IndivCols.SINGLE.value]
+        filter_mask = ~df.columns.get_level_values(INDIVIDUALS).isin(
+            [PROCESSED, SINGLE]
         )
         columns = df.columns[filter_mask]
         indivs = columns.unique("individuals").to_list()
@@ -82,7 +62,11 @@ class KeypointsDf(DFMixin):
         df = df.copy()
         columns = df.columns.to_frame(index=False)
         columns = columns[
-            [cls.CN.INDIVIDUALS.value, cls.CN.BODYPARTS.value, cls.CN.COORDS.value]
+            [
+                INDIVIDUALS,
+                BODYPARTS,
+                COORDS,
+            ]
         ]
         df.columns = pd.MultiIndex.from_frame(columns)
         return df
@@ -94,36 +78,24 @@ class KeypointsDf(DFMixin):
         """Scale x and y coordinates."""
         df = cls.clean_and_validate(df)
         idx = pd.IndexSlice
-        df.loc[:, idx[:, :, :, CoordsCols.X.value]] *= width_x_scale
-        df.loc[:, idx[:, :, :, CoordsCols.Y.value]] *= height_y_scale
+        df.loc[:, idx[:, :, :, X]] *= width_x_scale
+        df.loc[:, idx[:, :, :, Y]] *= height_y_scale
         return cls.clean_and_validate(df)
-
-
-class KeyptsAnnotationsCN(Enum):
-    """KeyptsAnnotationsCN."""
-
-    ATTRIBUTES = "attributes"
 
 
 class KeypointsAnnotationsDf(DFMixin):
     """KeypointsAnnotationsDf."""
 
-    IN = FramesIN
-    CN = KeyptsAnnotationsCN
+    index_names = (FRAME,)
+    column_names = ("attributes",)
 
     @classmethod
     def keypoint2annotationsdf(cls, keypoints_df: pd.DataFrame) -> pd.DataFrame:
         """Convert keypoints to flat column format: 'indiv_bpt_coord'."""
         df = KeypointsDf.clean_and_validate(keypoints_df)
-        filter_mask = ~df.columns.get_level_values(
-            KeypointsDf.CN.INDIVIDUALS.value
-        ).isin([IndivCols.PROCESSED.value])
+        filter_mask = ~df.columns.get_level_values(INDIVIDUALS).isin([PROCESSED])
         df = df.loc[:, filter_mask]
-        xy_cols = df.columns[
-            df.columns.get_level_values(KeypointsDf.CN.COORDS.value).isin(
-                [CoordsCols.X.value, CoordsCols.Y.value]
-            )
-        ]
+        xy_cols = df.columns[df.columns.get_level_values(COORDS).isin([X, Y])]
         df[xy_cols] = df[xy_cols].round(0).astype(int)
         df.columns = [f"{indiv}_{bpt}_{coord}" for _, indiv, bpt, coord in df.columns]
         return cls.clean_and_validate(df)
@@ -133,22 +105,12 @@ class KeypointsAnnotationsDf(DFMixin):
         """Get unique (indiv, bpt) pairs from flat columns."""
         df = cls.clean_and_validate(df)
         if df.columns.shape[0] == 0:
-            return pd.DataFrame(
-                columns=pd.Index(
-                    [
-                        KeypointsDf.CN.INDIVIDUALS.value,
-                        KeypointsDf.CN.BODYPARTS.value,
-                    ]
-                )
-            )
-        parts = df.columns.to_frame(index=False)[cls.CN.ATTRIBUTES.value].str.split(
+            return pd.DataFrame(columns=pd.Index([INDIVIDUALS, BODYPARTS]))
+        parts = df.columns.to_frame(index=False)["attributes"].str.split(
             "_", expand=True
         )
         parts = parts.iloc[:, :2]
-        parts.columns = [
-            KeypointsDf.CN.INDIVIDUALS.value,
-            KeypointsDf.CN.BODYPARTS.value,
-        ]
+        parts.columns = [INDIVIDUALS, BODYPARTS]
         return parts.drop_duplicates().reset_index(drop=True)
 
     @classmethod

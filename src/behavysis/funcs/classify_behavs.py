@@ -7,13 +7,8 @@ import pandas as pd
 from loguru import logger
 
 from behavysis.behav_classifier.behav_classifier import BehavClassifier
-from behavysis.df_classes.behav_df import (
-    BehavPredictedDf,
-    BehavScoredDf,
-    BehavValues,
-    BoutCols,
-    OutcomesPredictedCols,
-)
+from behavysis.constants import DUR, FALSE_POS, PRED, PROB, START, STOP, TRUE_POS
+from behavysis.df_classes.behav_df import BehavPredictedDf, BehavScoredDf
 from behavysis.df_classes.features_df import FeaturesDf
 from behavysis.models.experiment_configs import ExperimentConfigs
 from behavysis.utils.io_utils import file_exists_msg
@@ -80,8 +75,8 @@ def classify_behavs(
         # Running the clf pipeline
         behav_df_i = behav_model.pipeline_inference(features_df)
         # Getting prob and pred column names
-        prob_col = (behav_name, OutcomesPredictedCols.PROB.value)
-        pred_col = (behav_name, OutcomesPredictedCols.PRED.value)
+        prob_col = (behav_name, PROB)
+        pred_col = (behav_name, PRED)
         # Using pcutoff to get binary predictions
         behav_df_i[pred_col] = (behav_df_i[prob_col] > pcutoff).astype(int)
         # Filling in small non-behav bouts
@@ -142,11 +137,9 @@ def _merge_bouts(vect: pd.Series, min_window_frames: int) -> pd.Series:
     """
     vect = vect.copy()
     # Getting start, stop, and duration of each non-behav bout
-    nonbouts_df = BehavScoredDf.vect2bouts_df(vect == BehavValues.FALSE_POS.value)
+    nonbouts_df = BehavScoredDf.vect2bouts_df(vect == FALSE_POS)
     # For each non-behav bout, if less than min_window_frames, then call it a behav
     for _, row in nonbouts_df.iterrows():
-        if row[BoutCols.DUR.value] < min_window_frames:
-            vect.loc[row[BoutCols.START.value] : row[BoutCols.STOP.value]] = (
-                BehavValues.TRUE_POS.value
-            )
+        if row[DUR] < min_window_frames:
+            vect.loc[row[START] : row[STOP]] = TRUE_POS
     return vect

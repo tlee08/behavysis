@@ -1,28 +1,10 @@
-"""DataFrame mixin providing unified read/write with schema validation.
+"""DataFrame mixin providing unified read/write with schema validation."""
 
-Usage:
-    class KeypointsDf(DFMixin):
-        IN = FramesIN  # Enum for index names
-        CN = KeypointsCN  # Enum for column names
-        NULLABLE = False  # Set to True to allow NaN values
-
-    df = KeypointsDf.read(path)
-    KeypointsDf.write(df, path)
-"""
-
-from enum import EnumType
 from pathlib import Path
 
 import pandas as pd
 
 from behavysis.constants import DF_IO_FORMAT
-
-
-def _enum_values(e: type | None) -> tuple | None:
-    """Extract tuple of values from an enum, or None if not an enum."""
-    if e is None:
-        return None
-    return tuple(i.value for i in e)
 
 
 class DFMixin:
@@ -32,17 +14,17 @@ class DFMixin:
     Default IO format is Parquet.
     """
 
-    NULLABLE = True
-    IN: EnumType | None = None
-    CN: EnumType | None = None
-    IO: str = DF_IO_FORMAT
+    is_nullable = True
+    index_names: tuple | None = None
+    column_names: tuple | None = None
+    io_format: str = DF_IO_FORMAT
 
     @classmethod
     def read(cls, fp: Path, fmt: str | None = None) -> pd.DataFrame:
         """Read dataframe from file, validate schema, and sort."""
-        fmt = fmt or cls.IO
-        index_levels = len(_enum_values(cls.IN) or (None,))
-        column_levels = len(_enum_values(cls.CN) or (None,))
+        fmt = fmt or cls.io_format
+        index_levels = len(cls.index_names or (None,))
+        column_levels = len(cls.column_names or (None,))
 
         if fmt == "csv":
             df = pd.read_csv(
@@ -68,7 +50,7 @@ class DFMixin:
         df = cls.clean_and_validate(df)
         fp.parent.mkdir(parents=True, exist_ok=True)
 
-        fmt = fmt or cls.IO
+        fmt = fmt or cls.io_format
         if fmt == "csv":
             df.to_csv(fp)
         elif fmt == "h5":
@@ -84,42 +66,38 @@ class DFMixin:
     @classmethod
     def init_df(cls, index: pd.Series | pd.Index) -> pd.DataFrame:
         """Create empty dataframe with schema-defined index structure."""
-        in_names = _enum_values(cls.IN)
-        cn_names = _enum_values(cls.CN)
         return pd.DataFrame(
-            index=pd.MultiIndex.from_frame(index.to_frame(), names=in_names),
-            columns=pd.MultiIndex.from_tuples((), names=cn_names),
+            index=pd.MultiIndex.from_frame(index.to_frame(), names=cls.index_names),
+            columns=pd.MultiIndex.from_tuples((), names=cls.column_names),
         )
 
     @classmethod
     def clean_and_validate(cls, df: pd.DataFrame) -> pd.DataFrame:
         """Set index/column names, sort, and validate schema."""
-        in_names = _enum_values(cls.IN)
-        cn_names = _enum_values(cls.CN)
-
-        if in_names:
+        if cls.index_names:
             # Check index
-            if df.index.nlevels != len(in_names):
+            if df.index.nlevels != len(cls.index_names):
                 msg = (
-                    f"Index has {df.index.nlevels} levels, expected {len(in_names)}.\n"
-                    f"  Expected index: {in_names}\n"
+                    f"Index has {df.index.nlevels} levels, "
+                    "expected {len(cls.index_names)}.\n"
+                    f"  Expected index: {cls.index_names}\n"
                     "  Tip: "
                     "Check that your data file has the correct column structure."
                 )
                 raise AssertionError(msg)
-            df.index = df.index.set_names(in_names)
+            df.index = df.index.set_names(cls.index_names)
 
-        if cn_names:
-            if df.columns.nlevels != len(cn_names):
+        if cls.column_names:
+            if df.columns.nlevels != len(cls.column_names):
                 msg = (
                     f"Columns have {df.columns.nlevels} levels, "
-                    f"expected {len(cn_names)}.\n"
-                    f"  Expected columns: {cn_names}\n"
+                    f"expected {len(cls.column_names)}.\n"
+                    f"  Expected columns: {cls.column_names}\n"
                     "  Tip: "
                     "Check that your data file has the correct header structure."
                 )
                 raise AssertionError(msg)
-            df.columns = df.columns.set_names(cn_names)
+            df.columns = df.columns.set_names(cls.column_names)
 
         df = df.sort_index()
         df = df.sort_index(axis=1)
@@ -132,6 +110,6 @@ class DFMixin:
         """Override to add custom validation. Called on read and write."""
         assert isinstance(df, pd.DataFrame), "Must be a pandas DataFrame"
 
-        if not cls.NULLABLE and df.isna().to_numpy().any():
-            msg = "DataFrame contains NaN values but NULLABLE=False."
+        if not cls.is_nullable and df.isna().to_numpy().any():
+            msg = "DataFrame contains NaN values but is_nullable=False."
             raise AssertionError(msg)

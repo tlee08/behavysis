@@ -1,23 +1,13 @@
 """Frame-by-frame analysis DataFrame."""
 
-from enum import Enum
+from behavysis.constants import FRAME, INDIVIDUALS, MEASURES
 
-from behavysis.df_classes.keypoints_df import FramesIN
-from behavysis.utils.df_mixin import DFMixin
-
-FBF = "fbf"
-
-
-class AnalysisCN(Enum):
-    """AnalysisCN."""
-
-    INDIVIDUALS = "individuals"
-    MEASURES = "measures"
+from .df_mixin import DFMixin
 
 
 class AnalysisDf(DFMixin):
     """AnalysisDf."""
 
-    NULLABLE = False
-    IN = FramesIN
-    CN = AnalysisCN
+    is_nullable = False
+    index_names = (FRAME,)
+    column_names = (INDIVIDUALS, MEASURES)

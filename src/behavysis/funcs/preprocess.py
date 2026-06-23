@@ -25,11 +25,8 @@ import numpy as np
 import pandas as pd
 from loguru import logger
 
-from behavysis.df_classes.keypoints_df import (
-    CoordsCols,
-    IndivCols,
-    KeypointsDf,
-)
+from behavysis.constants import LIKELIHOOD, SCORER, SINGLE, X, Y
+from behavysis.df_classes.keypoints_df import KeypointsDf
 from behavysis.models.experiment_configs import ExperimentConfigs
 from behavysis.utils.io_utils import file_exists_msg
 
@@ -133,7 +130,7 @@ def interpolate_stationary(
     # Reading file
     keypoints_df = KeypointsDf.read(src_fp)
     # Getting the scorer name
-    scorer = keypoints_df.columns.unique(KeypointsDf.CN.SCORER.value)[0]
+    scorer = keypoints_df.columns.unique(SCORER)[0]
     # For each bodypart, filling in the given point
     for configs_filt in configs_filt_ls:
         # Getting config parameters
@@ -146,18 +143,13 @@ def interpolate_stationary(
         x = x * width_px
         y = y * height_px
         # Getting "is_detected" for each frame for the bodypart
-        is_detected = (
-            keypoints_df[(scorer, "single", bodypart, CoordsCols.LIKELIHOOD.value)]
-            >= pcutoff
-        )
+        is_detected = keypoints_df[(scorer, "single", bodypart, LIKELIHOOD)] >= pcutoff
         # If the bodypart is detected in less than the given proportion of the video,
         # then set the x and y coordinates to the given values
         if is_detected.mean() < pcutoff_all:
-            keypoints_df[(scorer, "single", bodypart, CoordsCols.X.value)] = x
-            keypoints_df[(scorer, "single", bodypart, CoordsCols.Y.value)] = y
-            keypoints_df[(scorer, "single", bodypart, CoordsCols.LIKELIHOOD.value)] = (
-                pcutoff
-            )
+            keypoints_df[(scorer, "single", bodypart, X)] = x
+            keypoints_df[(scorer, "single", bodypart, Y)] = y
+            keypoints_df[(scorer, "single", bodypart, LIKELIHOOD)] = pcutoff
             logger.info(
                 f"{bodypart} is detected in less than {pcutoff_all} of the video."
                 f" Setting x and y coordinates to ({x}, {y})."
@@ -211,16 +203,13 @@ def interpolate(
     # Setting low-likelihood points to Nan to later interpolate
     for scorer, indiv, bp in unique_cols:
         # Imputing Nan likelihood points with 0
-        keypoints_df[(scorer, indiv, bp, CoordsCols.LIKELIHOOD.value)] = keypoints_df[
-            (scorer, indiv, bp, CoordsCols.LIKELIHOOD.value)
+        keypoints_df[(scorer, indiv, bp, LIKELIHOOD)] = keypoints_df[
+            (scorer, indiv, bp, LIKELIHOOD)
         ].fillna(value=0)
         # Setting x and y coordinates of points that have low likelihood to Nan
-        to_remove = (
-            keypoints_df[(scorer, indiv, bp, CoordsCols.LIKELIHOOD.value)]
-            < configs_filt.pcutoff
-        )
-        keypoints_df.loc[to_remove, (scorer, indiv, bp, CoordsCols.X.value)] = np.nan
-        keypoints_df.loc[to_remove, (scorer, indiv, bp, CoordsCols.Y.value)] = np.nan
+        to_remove = keypoints_df[(scorer, indiv, bp, LIKELIHOOD)] < configs_filt.pcutoff
+        keypoints_df.loc[to_remove, (scorer, indiv, bp, X)] = np.nan
+        keypoints_df.loc[to_remove, (scorer, indiv, bp, Y)] = np.nan
     # linearly interpolating Nan x and y points.
     # Also backfilling points at the start.
     # Also forward filling points at the end.
@@ -323,11 +312,11 @@ def _get_mark_dists_df(
     l0 = keypoints_df.columns.unique(0)[0]
     mark_dists_df = pd.DataFrame(index=keypoints_df.index)
     indivs = [marked_indiv, unmarked_indiv]
-    for coord in [CoordsCols.X.value, CoordsCols.Y.value]:
+    for coord in [X, Y]:
         idx = pd.IndexSlice
         # Getting the coordinates of the colour marking in each frame
         mark_dists_df[("mark", coord)] = keypoints_df.loc[
-            :, idx[l0, IndivCols.SINGLE.value, mark_pts, coord]
+            :, idx[l0, SINGLE, mark_pts, coord]
         ].mean(axis=1)
         for indiv in indivs:
             # Getting the coordinates of each individual (average of the bpts list)
@@ -338,14 +327,8 @@ def _get_mark_dists_df(
     # and the colour marking in each frame
     for indiv in indivs:
         mark_dists_df[(indiv, "dist")] = np.sqrt(
-            np.square(
-                mark_dists_df[(indiv, CoordsCols.X.value)]
-                - mark_dists_df[("mark", CoordsCols.X.value)]
-            )
-            + np.square(
-                mark_dists_df[(indiv, CoordsCols.Y.value)]
-                - mark_dists_df[("mark", CoordsCols.Y.value)]
-            )
+            np.square(mark_dists_df[(indiv, X)] - mark_dists_df[("mark", X)])
+            + np.square(mark_dists_df[(indiv, Y)] - mark_dists_df[("mark", Y)])
         )
     # Formatting columns as a MultiIndex
     mark_dists_df.columns = pd.MultiIndex.from_tuples(mark_dists_df.columns)
