@@ -123,7 +123,7 @@ class BehavScoredDf(DFMixin):
         """Convert boolean vector to bouts DataFrame with start/stop/dur."""
         offset = 0
         if len(vect) > 0:
-            offset = vect.index.get_level_values(cls.index_names[0])[0]
+            offset = vect.index.get_level_values(FRAME)[0]
         z = np.concatenate(([0], vect, [0]))
         start = np.flatnonzero(~z[:-1] & z[1:])
         stop = np.flatnonzero(z[:-1] & ~z[1:]) - 1
@@ -153,8 +153,8 @@ class BehavScoredDf(DFMixin):
                         bout.user_defined[str(outcome)] = int(mode(values).mode)
                 bouts_ls.append(bout)
         return Bouts(
-            start=df.index.get_level_values(cls.index_names[0])[0],
-            stop=df.index.get_level_values(cls.index_names[0])[-1] + 1,
+            start=df.index.get_level_values(FRAME)[0],
+            stop=df.index.get_level_values(FRAME)[-1] + 1,
             bouts=bouts_ls,
             bouts_struct=cls.get_bouts_struct(df),
         )

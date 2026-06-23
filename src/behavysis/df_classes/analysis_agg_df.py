@@ -12,13 +12,13 @@ from behavysis.constants import (
     BIN_SEC,
     BINNED,
     CUSTOM,
+    FRAME,
     INDIVIDUALS,
     MEASURES,
     PLOT,
     SUMMARY,
 )
 
-from .analysis_df import AnalysisDf
 from .behav_df import BehavScoredDf
 from .df_mixin import DFMixin
 
@@ -138,7 +138,7 @@ class AnalysisBinnedDf(DFMixin):
         )
         g = sns.relplot(
             data=binned_stacked_df,
-            x=cls.index_names[0],
+            x=INDIVIDUALS,
             y="value",
             hue="measures",
             col="individuals",
@@ -205,7 +205,7 @@ class AnalysisBinnedDf(DFMixin):
         for i, col in enumerate(analysis_df.columns):
             vect = analysis_df[col]
             vect = pd.Series([0]) if len(vect) == 0 else vect.astype(np.float64)
-            index = vect.index.get_level_values(AnalysisDf.index_names[0]) / fps
+            index = vect.index.get_level_values(FRAME) / fps
             latency_df_ls[i] = (
                 pd.Series(
                     {"latency": index[vect == 1][0] if np.any(vect == 1) else -1},
@@ -241,8 +241,7 @@ class AnalysisBinnedDf(DFMixin):
         analysis_df = analysis_df.copy()
         # Offset frames index to start from 0
         index_df = analysis_df.index.to_frame(index=False)
-        frame_name = AnalysisDf.index_names[0]
-        index_df[frame_name] = index_df[frame_name] - index_df[frame_name].iloc[0]
+        index_df[FRAME] = index_df[FRAME] - index_df[FRAME].iloc[0]
         analysis_df.index = pd.MultiIndex.from_frame(index_df)
 
         # Generate summary
@@ -250,7 +249,7 @@ class AnalysisBinnedDf(DFMixin):
         summary_df = summary_func(analysis_df, fps)
         AnalysisSummaryDf.write(summary_df, summary_fp)
 
-        timestamps = analysis_df.index.get_level_values(AnalysisDf.index_names[0]) / fps
+        timestamps = analysis_df.index.get_level_values(FRAME) / fps
 
         # Standard bins
         for bin_sec in bins_ls:
