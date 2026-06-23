@@ -4,7 +4,6 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from scipy import ndimage
 from scipy.stats import mode
 
 from behavysis.constants import (
@@ -93,14 +92,6 @@ class BehavScoredDf(DFMixin):
         return cls.clean_and_validate(df)
 
     @classmethod
-    def update_behav(cls, df: pd.DataFrame, old: str, new: str) -> pd.DataFrame:
-        """Rename a behavior column."""
-        columns = df.columns.to_frame(index=False)
-        columns[BEHAVS] = columns[BEHAVS].replace(old, new)
-        df.columns = pd.MultiIndex.from_frame(columns)
-        return cls.clean_and_validate(df)
-
-    @classmethod
     def get_bouts_struct(cls, df: pd.DataFrame) -> list[BoutStruct]:
         """Extract BoutStruct from DataFrame columns."""
         bouts_struct = []
@@ -113,10 +104,9 @@ class BehavScoredDf(DFMixin):
 
     @classmethod
     def predicted2scored(
-        cls, df: pd.DataFrame, bouts_struct: list[BoutStruct] | None = None
+        cls, df: pd.DataFrame, bouts_struct: list[BoutStruct]
     ) -> pd.DataFrame:
         """Convert predicted DataFrame to scored DataFrame."""
-        bouts_struct = bouts_struct or cls.get_bouts_struct(df)
         scored_df = cls.init_df(df.index)
         for bout in bouts_struct:
             behav = bout.behav
@@ -185,20 +175,6 @@ class BehavScoredDf(DFMixin):
             for k, v in bout.user_defined.items():
                 df.loc[bout.start : bout.stop, (bout.behav, k)] = v
         return cls.clean_and_validate(df)
-
-    @classmethod
-    def fps_scale(
-        cls, df: pd.DataFrame, src_fps: float, dst_fps: float
-    ) -> pd.DataFrame:
-        """Resample DataFrame to a different frame rate."""
-        fps_scale = dst_fps / src_fps
-        df = cls.clean_and_validate(df)
-        columns = df.columns
-        index = df.index
-        scaled_vals = np.ceil(ndimage.zoom(df, (fps_scale, 1))).astype(int)
-        index_scaled = np.round(ndimage.zoom(index, fps_scale) * fps_scale).astype(int)
-        scaled_df = pd.DataFrame(scaled_vals, index=index_scaled, columns=columns)
-        return cls.clean_and_validate(scaled_df)
 
 
 if __name__ == "__main__":

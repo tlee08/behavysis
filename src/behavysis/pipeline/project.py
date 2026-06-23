@@ -16,7 +16,7 @@ from behavysis.constants import (
     Folders,
 )
 from behavysis.df_classes.analysis_agg_df import AnalysisBinnedDf, AnalysisSummaryDf
-from behavysis.df_classes.analysis_collated_df import (
+from behavysis.df_classes.analysis_df import (
     AnalysisBinnedCollatedDf,
     AnalysisSummaryCollatedDf,
 )
