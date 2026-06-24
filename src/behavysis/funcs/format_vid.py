@@ -10,6 +10,8 @@ from behavysis.models import ExperimentConfigs
 from behavysis.models.funcs import VidMetadata
 from behavysis.utils.io_utils import file_exists_msg
 
+# TODO: clean up metadata updates
+
 
 def format_vid(
     raw_vid_fp: Path,
@@ -19,12 +21,16 @@ def format_vid(
     overwrite: bool,
 ) -> None:
     """Format video with ffmpeg and save metadata to configs."""
-    if not overwrite and formatted_vid_fp.exists():
-        logger.warning(file_exists_msg(formatted_vid_fp))
-        return
-
     configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
     cfg = configs.user.format_vid
+
+    if not overwrite and formatted_vid_fp.exists():
+        logger.warning(file_exists_msg(formatted_vid_fp))
+        # Save metadata to configs
+        configs.auto.raw_vid = _get_vid_metadata(raw_vid_fp)
+        configs.auto.formatted_vid = _get_vid_metadata(formatted_vid_fp)
+        configs_fp.write_text(configs.model_dump_json(indent=2))
+        return
 
     # Build ffmpeg command
     cmd = ["ffmpeg"]
