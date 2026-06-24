@@ -132,7 +132,7 @@ def _run_dlc_subproc(
     save_template(
         "dlc_subproc.py",
         script_fp,
-        vid_fp_ls=vid_fp_ls,
+        vid_fp_ls=[str(_i) for _i in vid_fp_ls],
         model_fp=model_fp,
         temp_dlc_dir=temp_dlc_dir,
         gputouse=gputouse,
