@@ -10,8 +10,6 @@ from behavysis.models import ExperimentConfigs
 from behavysis.models.funcs import VidMetadata
 from behavysis.utils.io_utils import file_exists_msg
 
-# TODO: clean up metadata updates
-
 
 def format_vid(
     raw_vid_fp: Path,
