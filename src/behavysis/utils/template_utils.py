@@ -22,6 +22,9 @@ def confirm(prompt: str, *, default: bool = False) -> bool:
 
 def save_template(template_name: str, dst: Path, **kwargs: Any) -> None:
     """Render and save a template."""
-    env = Environment(loader=PackageLoader("behavysis", "templates"), autoescape=True)
+    env = Environment(
+        loader=PackageLoader("behavysis", "templates"),
+        autoescape=False,
+    )
     dst.parent.mkdir(parents=True, exist_ok=True)
     dst.write_text(env.get_template(template_name).render(**kwargs))
