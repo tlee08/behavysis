@@ -2,30 +2,17 @@
 
 from pydantic import BaseModel, ConfigDict
 
-from behavysis.constants import (
-    BPTS_CENTRE,
-    BPTS_CORNERS,
-    BPTS_FRONT,
-    BPTS_SIMBA,
-    INDIVS_SIMBA,
-)
-
 from .funcs.analyse import (
     AnalyseConfig,
-    FreezingConfig,
-    InRoiConfig,
-    SocialDistanceConfig,
-    SpeedConfig,
 )
 from .funcs.calculate_params import (
     CalculateParamsConfig,
-    FromLikelihoodConfig,
 )
 from .funcs.classify_behaviour import ClassifyBehaviourConfig
 from .funcs.evaluate_vid import EvaluateVidConfig
 from .funcs.extract_features import ExtractFeaturesConfig
 from .funcs.format_vid import FormatVidConfig, VidMetadata
-from .funcs.preprocess import PreprocessConfig, RefineIdsConfig
+from .funcs.preprocess import PreprocessConfig
 from .funcs.run_dlc import RunDlcConfig
 
 
@@ -132,39 +119,3 @@ class ExperimentConfig(BaseModel):
             bins_sec=list(self.get_ref(self.user.analyse.bins_sec)),
             custom_bins_sec=list(self.get_ref(self.user.analyse.custom_bins_sec)),
         )
-
-
-def get_default_config() -> ExperimentConfig:
-    """Get default config."""
-    return ExperimentConfig(
-        user=UserConfig(
-            format_vid=FormatVidConfig(width_px=960, height_px=540, fps=15),
-            calculate_params=CalculateParamsConfig(
-                from_likelihood=FromLikelihoodConfig(bodyparts="--bpts_simba")
-            ),
-            preprocess=PreprocessConfig(
-                refine_ids=RefineIdsConfig(bodyparts="--bpts_centre")
-            ),
-            extract_features=ExtractFeaturesConfig(
-                individuals="--indivs_simba", bodyparts="--bpts_simba"
-            ),
-            classify_behaviour=[ClassifyBehaviourConfig()],
-            analyse=AnalyseConfig(
-                in_roi=[
-                    InRoiConfig(roi_corners="--bpts_corners", bodyparts="--bpts_front")
-                ],
-                speed=SpeedConfig(bodyparts="--bpts_centre"),
-                social_distance=SocialDistanceConfig(bodyparts="--bpts_centre"),
-                freezing=FreezingConfig(bodyparts="--bpts_centre"),
-            ),
-        ),
-        ref=RefConfig.model_validate(
-            {
-                "indivs_simba": INDIVS_SIMBA,
-                "bpts_simba": BPTS_SIMBA,
-                "bpts_centre": BPTS_CENTRE,
-                "bpts_front": BPTS_FRONT,
-                "bpts_corners": BPTS_CORNERS,
-            }
-        ),
-    )

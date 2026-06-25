@@ -2,13 +2,13 @@
 
 from .behaviour_classifier_config import BehaviourClassifierConfig
 from .bouts import Bout, Bouts, BoutStruct
+from .examples import get_default_config
 from .experiment_config import (
     AnalysisConfig,
     AutoConfig,
     ExperimentConfig,
     RefConfig,
     UserConfig,
-    get_default_config,
 )
 from .funcs import (
     AnalyseConfig,
