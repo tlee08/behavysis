@@ -20,8 +20,8 @@ class SocialDistanceConfig(BaseModel):
 class FreezingConfig(BaseModel):
     """FreezingConfig."""
 
-    window_sec: float | str = 2
-    thresh_mm: float | str = 5
+    window_sec: float | str = 2.0
+    thresh_mm: float | str = 5.0
     smoothing_sec: float | str = 0.2
     bodyparts: list[str] | str = BPTS_SIMBA
 
@@ -31,7 +31,7 @@ class InRoiConfig(BaseModel):
 
     roi_name: str = "in_my_roi"
     is_in: bool | str = True
-    padding_mm: float | str = 0
+    padding_mm: float | str = 0.0
     roi_corners: list[str] | str = BPTS_CORNERS
     bodyparts: list[str] | str = BPTS_SIMBA
 

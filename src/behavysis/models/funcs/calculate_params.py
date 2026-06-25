@@ -23,7 +23,7 @@ class StartFrameFromCsvConfig(BaseModel):
 class StopFrameFromDurConfig(BaseModel):
     """StopFrameFromDurConfig."""
 
-    dur_sec: float | str = 6000
+    dur_sec: float | str = 6000.0
 
 
 class PxPerMmConfig(BaseModel):
@@ -32,7 +32,7 @@ class PxPerMmConfig(BaseModel):
     pt_a: str = "pt_a"
     pt_b: str = "pt_b"
     pcutoff: float | str = 0.5
-    dist_mm: float | str = 400
+    dist_mm: float | str = 400.0
 
 
 class CalculateParamsConfig(BaseModel):

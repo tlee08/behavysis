@@ -7,7 +7,7 @@
   "cells": [
     {
       "id": "setup",
-      "code_hash": "d8b0bf483c6091a9659399d9d37693c0",
+      "code_hash": "28e04d64740a3344a79291f9e46f8344",
       "outputs": [
         {
           "type": "data",
@@ -34,19 +34,40 @@
     {
       "id": "MJUe",
       "code_hash": "e8e64aad76b5e90611a251e9cbdbe876",
-      "outputs": [],
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
       "console": []
     },
     {
       "id": "vblA",
       "code_hash": "dabafa4a8f25d92e87391781052a4f42",
-      "outputs": [],
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
       "console": []
     },
     {
       "id": "bkHC",
       "code_hash": "94b2e4be0d1dd7207c4332eaab4ce31d",
-      "outputs": [],
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
       "console": []
     },
     {
@@ -64,30 +85,123 @@
     },
     {
       "id": "PKri",
-      "code_hash": "43eec52e1ba3a15bd6e4abf4a7404585",
-      "outputs": [],
-      "console": []
-    },
-    {
-      "id": "Xref",
-      "code_hash": "2f3acd0645c9128e1148f81f0d39af77",
-      "outputs": [],
-      "console": []
-    },
-    {
-      "id": "SFPL",
-      "code_hash": "d5267807324aaa02c22dfe659122c126",
-      "outputs": [],
-      "console": []
-    },
-    {
-      "id": "BYtC",
-      "code_hash": "3b86d31072b14b2e06bc2486360b2dca",
+      "code_hash": "870cf2a76246026b604caec5cbcbf7e1",
       "outputs": [
         {
           "type": "data",
           "data": {
-            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"load-project\">Load Project</h2></span>"
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "Xref",
+      "code_hash": "58f4d99109958844d145782261d2cd26",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/html": "<div style='display: flex;flex: 1;flex-direction: column;justify-content: flex-start;align-items: normal;flex-wrap: nowrap;gap: 0.5rem'><marimo-ui-element object-id='PKri-0' random-id='9ab6794b-28c1-d9cf-4b0e-a26add946a89'><marimo-switch data-initial-value='false' data-label='&quot;&#92;u003cspan class=&#92;&quot;markdown prose dark:prose-invert contents&#92;&quot;&#92;u003e&#92;u003cspan class=&#92;&quot;paragraph&#92;&quot;&#92;u003eOverwrite files&#92;u003c/span&#92;u003e&#92;u003c/span&#92;u003e&quot;' data-disabled='false'></marimo-switch></marimo-ui-element><marimo-ui-element object-id='PKri-1' random-id='fdc7f408-938d-7995-f6f2-96a45d0a7ccf'><marimo-text data-initial-value='&quot;/Users/timlee/Desktop/dev/bowenlab/behavysis&quot;' data-label='&quot;&#92;u003cspan class=&#92;&quot;markdown prose dark:prose-invert contents&#92;&quot;&#92;u003e&#92;u003cspan class=&#92;&quot;paragraph&#92;&quot;&#92;u003eProject folder&#92;u003c/span&#92;u003e&#92;u003c/span&#92;u003e&quot;' data-placeholder='&quot;&quot;' data-kind='&quot;text&quot;' data-full-width='true' data-disabled='false' data-debounce='true'></marimo-text></marimo-ui-element><marimo-ui-element object-id='PKri-2' random-id='bee02a5f-eeec-f047-1e1b-7ad96ff8ea1b'><marimo-text data-initial-value='&quot;/Users/timlee/Desktop/dev/bowenlab/behavysis/default_config.json&quot;' data-label='&quot;&#92;u003cspan class=&#92;&quot;markdown prose dark:prose-invert contents&#92;&quot;&#92;u003e&#92;u003cspan class=&#92;&quot;paragraph&#92;&quot;&#92;u003eDefault config&#92;u003c/span&#92;u003e&#92;u003c/span&#92;u003e&quot;' data-placeholder='&quot;&quot;' data-kind='&quot;text&quot;' data-full-width='true' data-disabled='false' data-debounce='true'></marimo-text></marimo-ui-element><marimo-ui-element object-id='PKri-3' random-id='99b6af01-d504-d161-a9b1-9d08f50d20b2'><marimo-number data-initial-value='5' data-label='&quot;&#92;u003cspan class=&#92;&quot;markdown prose dark:prose-invert contents&#92;&quot;&#92;u003e&#92;u003cspan class=&#92;&quot;paragraph&#92;&quot;&#92;u003eNumber of parallel processes&#92;u003c/span&#92;u003e&#92;u003c/span&#92;u003e&quot;' data-debounce='false' data-full-width='false' data-disabled='false'></marimo-number></marimo-ui-element></div>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "hRrH",
+      "code_hash": "c5a54dfad8bec8049c3b555b62c2ea20",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"inspect-default-config\">Inspect default config</h2></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "vSAB",
+      "code_hash": "8363d252911109fbc221b626c5053cb0",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><span class=\"paragraph\">Config file does not exist!</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "XMZi",
+      "code_hash": "9871f45c751edbc899b12e5c4e9ff999",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/html": "<marimo-accordion data-labels='[&quot;&#92;u003cspan class=&#92;&quot;markdown prose dark:prose-invert contents&#92;&quot;&#92;u003e&#92;u003cspan class=&#92;&quot;paragraph&#92;&quot;&#92;u003eSee default configs template&#92;u003c/span&#92;u003e&#92;u003c/span&#92;u003e&quot;]' data-multiple='false'><div><marimo-json-output data-json-data='{&quot;user&quot;:{&quot;format_vid&quot;:{&quot;width_px&quot;:960,&quot;height_px&quot;:540,&quot;fps&quot;:&quot;text/plain+float:15.0&quot;,&quot;start_sec&quot;:null,&quot;stop_sec&quot;:null},&quot;run_dlc&quot;:{&quot;model_fp&quot;:&quot;text/plain:path/to/DEEPLABCUT_model/config.yaml&quot;},&quot;calculate_params&quot;:{&quot;from_likelihood&quot;:{&quot;bodyparts&quot;:&quot;--bpts_simba&quot;,&quot;window_sec&quot;:&quot;text/plain+float:1.0&quot;,&quot;pcutoff&quot;:&quot;text/plain+float:0.8&quot;},&quot;start_frame_from_csv&quot;:{&quot;csv_fp&quot;:&quot;text/plain:path_to/start_times.csv&quot;,&quot;name&quot;:null},&quot;stop_frame_from_dur&quot;:{&quot;dur_sec&quot;:6000},&quot;px_per_mm&quot;:{&quot;pt_a&quot;:&quot;pt_a&quot;,&quot;pt_b&quot;:&quot;pt_b&quot;,&quot;pcutoff&quot;:&quot;text/plain+float:0.5&quot;,&quot;dist_mm&quot;:400}},&quot;preprocess&quot;:{&quot;interpolate&quot;:{&quot;pcutoff&quot;:&quot;text/plain+float:0.5&quot;},&quot;interpolate_stationary&quot;:[],&quot;refine_ids&quot;:{&quot;marked&quot;:&quot;marked&quot;,&quot;unmarked&quot;:&quot;unmarked&quot;,&quot;marking&quot;:&quot;marking&quot;,&quot;bodyparts&quot;:&quot;--bpts_centre&quot;,&quot;window_sec&quot;:&quot;text/plain+float:0.5&quot;,&quot;metric&quot;:&quot;current&quot;}},&quot;extract_features&quot;:{&quot;individuals&quot;:&quot;--indivs_simba&quot;,&quot;bodyparts&quot;:&quot;--bpts_simba&quot;},&quot;classify_behavs&quot;:[{&quot;proj_dir&quot;:&quot;text/plain:path/to/project_dir&quot;,&quot;behav_name&quot;:&quot;behav_name&quot;,&quot;pcutoff&quot;:-1,&quot;min_empty_window_secs&quot;:&quot;text/plain+float:0.2&quot;,&quot;user_defined&quot;:[]}],&quot;analyse&quot;:{&quot;bins_sec&quot;:[30,60,120],&quot;custom_bins_sec&quot;:[60,120,300,600],&quot;speed&quot;:{&quot;smoothing_sec&quot;:1,&quot;bodyparts&quot;:&quot;--bpts_centre&quot;},&quot;social_distance&quot;:{&quot;smoothing_sec&quot;:1,&quot;bodyparts&quot;:&quot;--bpts_centre&quot;},&quot;freezing&quot;:{&quot;window_sec&quot;:2,&quot;thresh_mm&quot;:5,&quot;smoothing_sec&quot;:&quot;text/plain+float:0.2&quot;,&quot;bodyparts&quot;:&quot;--bpts_centre&quot;},&quot;in_roi&quot;:[{&quot;roi_name&quot;:&quot;in_my_roi&quot;,&quot;is_in&quot;:true,&quot;padding_mm&quot;:0,&quot;roi_corners&quot;:&quot;--bpts_corners&quot;,&quot;bodyparts&quot;:&quot;--bpts_front&quot;}]},&quot;evaluate_vid&quot;:{&quot;funcs&quot;:[&quot;keypoints&quot;,&quot;analysis&quot;],&quot;pcutoff&quot;:&quot;text/plain+float:0.8&quot;,&quot;colour_level&quot;:&quot;individuals&quot;,&quot;radius&quot;:3,&quot;cmap&quot;:&quot;rainbow&quot;,&quot;padding&quot;:30}},&quot;auto&quot;:{&quot;raw_vid&quot;:{&quot;width_px&quot;:-1,&quot;height_px&quot;:-1,&quot;fps&quot;:-1,&quot;total_frames&quot;:-1},&quot;formatted_vid&quot;:{&quot;width_px&quot;:-1,&quot;height_px&quot;:-1,&quot;fps&quot;:-1,&quot;total_frames&quot;:-1},&quot;px_per_mm&quot;:-1,&quot;start_frame&quot;:-1,&quot;stop_frame&quot;:-1,&quot;dur_frames&quot;:-1},&quot;ref&quot;:{&quot;indivs_simba&quot;:[&quot;mouse1marked&quot;,&quot;mouse2unmarked&quot;],&quot;bpts_simba&quot;:[&quot;LeftEar&quot;,&quot;RightEar&quot;,&quot;Nose&quot;,&quot;BodyCentre&quot;,&quot;LeftFlankMid&quot;,&quot;RightFlankMid&quot;,&quot;TailBase1&quot;,&quot;TailTip4&quot;],&quot;bpts_centre&quot;:[&quot;LeftFlankMid&quot;,&quot;BodyCentre&quot;,&quot;RightFlankMid&quot;,&quot;LeftFlankRear&quot;,&quot;RightFlankRear&quot;,&quot;TailBase1&quot;],&quot;bpts_front&quot;:[&quot;LeftEar&quot;,&quot;RightEar&quot;,&quot;Nose&quot;,&quot;BodyCentre&quot;],&quot;bpts_corners&quot;:[&quot;TopLeft&quot;,&quot;TopRight&quot;,&quot;BottomRight&quot;,&quot;BottomLeft&quot;]}}' data-value-types='&quot;python&quot;'></marimo-json-output></div></marimo-accordion>"
+          }
+        }
+      ],
+      "console": [
+        {
+          "type": "stream",
+          "name": "stderr",
+          "text": "/Users/timlee/Desktop/dev/bowenlab/behavysis/.venv/lib/python3.14/site-packages/pydantic/main.py:464: UserWarning: Pydantic serializer warnings:\n  PydanticSerializationUnexpectedValue(Unexpected Value)\n  PydanticSerializationUnexpectedValue(Expected `str` - serialized value may not be as expected [field_name='dur_sec', input_value=6000, input_type=int])\n  PydanticSerializationUnexpectedValue(Unexpected Value)\n  PydanticSerializationUnexpectedValue(Expected `str` - serialized value may not be as expected [field_name='dist_mm', input_value=400, input_type=int])\n  PydanticSerializationUnexpectedValue(Unexpected Value)\n  PydanticSerializationUnexpectedValue(Expected `str` - serialized value may not be as expected [field_name='pcutoff', input_value=-1, input_type=int])\n  PydanticSerializationUnexpectedValue(Unexpected Value)\n  PydanticSerializationUnexpectedValue(Expected `str` - serialized value may not be as expected [field_name='smoothing_sec', input_value=1, input_type=int])\n  PydanticSerializationUnexpectedValue(Unexpected Value)\n  PydanticSerializationUnexpectedValue(Expected `str` - serialized value may not be as expected [field_name='smoothing_sec', input_value=1, input_type=int])\n  PydanticSerializationUnexpectedValue(Unexpected Value)\n  PydanticSerializationUnexpectedValue(Expected `str` - serialized value may not be as expected [field_name='window_sec', input_value=2, input_type=int])\n  PydanticSerializationUnexpectedValue(Unexpected Value)\n  PydanticSerializationUnexpectedValue(Expected `str` - serialized value may not be as expected [field_name='thresh_mm', input_value=5, input_type=int])\n  PydanticSerializationUnexpectedValue(Unexpected Value)\n  PydanticSerializationUnexpectedValue(Expected `str` - serialized value may not be as expected [field_name='padding_mm', input_value=0, input_type=int])\n  return self.__pydantic_serializer__.to_python(\n",
+          "mimetype": "text/plain"
+        }
+      ]
+    },
+    {
+      "id": "PgGs",
+      "code_hash": "f2bb03dbdf1b735118d946b0e5a06371",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"choose-functions-to-run\">Choose functions to run</h2></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "SFPL",
+      "code_hash": "bab846611d775cebb83095bb5aa53c95",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "ebGo",
+      "code_hash": "b398ef16f9fb1c17bade48aa630f27ce",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/html": "<div style='display: flex;flex: 1;flex-direction: column;justify-content: flex-start;align-items: normal;flex-wrap: nowrap;gap: 0.5rem'><marimo-ui-element object-id='SFPL-0' random-id='b38c497e-b2bc-7247-f7c1-1f9c87cb31b8'><marimo-checkbox data-initial-value='true' data-label='&quot;&#92;u003cspan class=&#92;&quot;markdown prose dark:prose-invert contents&#92;&quot;&#92;u003e&#92;u003cspan class=&#92;&quot;paragraph&#92;&quot;&#92;u003eStep 0: Update configs&#92;u003c/span&#92;u003e&#92;u003c/span&#92;u003e&quot;' data-disabled='false'></marimo-checkbox></marimo-ui-element><marimo-ui-element object-id='SFPL-1' random-id='96787409-f6bc-1dc7-f01f-25685472a55c'><marimo-checkbox data-initial-value='true' data-label='&quot;&#92;u003cspan class=&#92;&quot;markdown prose dark:prose-invert contents&#92;&quot;&#92;u003e&#92;u003cspan class=&#92;&quot;paragraph&#92;&quot;&#92;u003eStep 1: Format videos&#92;u003c/span&#92;u003e&#92;u003c/span&#92;u003e&quot;' data-disabled='false'></marimo-checkbox></marimo-ui-element><marimo-ui-element object-id='SFPL-2' random-id='3f5b4ec7-4476-245a-bcfd-3b4ab9b12c51'><marimo-checkbox data-initial-value='true' data-label='&quot;&#92;u003cspan class=&#92;&quot;markdown prose dark:prose-invert contents&#92;&quot;&#92;u003e&#92;u003cspan class=&#92;&quot;paragraph&#92;&quot;&#92;u003eStep 2: Run DeepLabCut pose estimation&#92;u003c/span&#92;u003e&#92;u003c/span&#92;u003e&quot;' data-disabled='false'></marimo-checkbox></marimo-ui-element><marimo-ui-element object-id='SFPL-3' random-id='370ae7ef-eb5d-3921-37dd-acf00210115e'><marimo-checkbox data-initial-value='true' data-label='&quot;&#92;u003cspan class=&#92;&quot;markdown prose dark:prose-invert contents&#92;&quot;&#92;u003e&#92;u003cspan class=&#92;&quot;paragraph&#92;&quot;&#92;u003eStep 3: Calculate experiment parameters&#92;u003c/span&#92;u003e&#92;u003c/span&#92;u003e&quot;' data-disabled='false'></marimo-checkbox></marimo-ui-element><marimo-callout-output data-html='&quot;&#92;u003cdiv style=&#x27;display: flex;flex: 1;flex-direction: column;justify-content: flex-start;align-items: normal;flex-wrap: nowrap;gap: 0.5rem&#x27;&#92;u003e&#92;u003cdiv style=&#x27;display: flex;flex: 1;flex-direction: row;justify-content: space-between;align-items: normal;flex-wrap: nowrap;gap: 0.5rem&#x27;&#92;u003e&#92;u003cmarimo-ui-element object-id=&#x27;SFPL-10&#x27; random-id=&#x27;64c1fff6-6796-c772-c7e2-67d4328e1fdd&#x27;&#92;u003e&#92;u003cmarimo-checkbox data-initial-value=&#x27;true&#x27; data-label=&#x27;&amp;quot;&amp;#92;u003cspan class=&amp;#92;&amp;quot;markdown prose dark:prose-invert contents&amp;#92;&amp;quot;&amp;#92;u003e&amp;#92;u003cspan class=&amp;#92;&amp;quot;paragraph&amp;#92;&amp;quot;&amp;#92;u003estart_frame_from_likelihood&amp;#92;u003c/span&amp;#92;u003e&amp;#92;u003c/span&amp;#92;u003e&amp;quot;&#x27; data-disabled=&#x27;false&#x27;&#92;u003e&#92;u003c/marimo-checkbox&#92;u003e&#92;u003c/marimo-ui-element&#92;u003e&#92;u003cspan&#92;u003eDetermines start frame based on when subject &amp;quot;likely&amp;quot; entered the frame.&#92;u003c/span&#92;u003e&#92;u003c/div&#92;u003e&#92;u003cdiv style=&#x27;display: flex;flex: 1;flex-direction: row;justify-content: space-between;align-items: normal;flex-wrap: nowrap;gap: 0.5rem&#x27;&#92;u003e&#92;u003cmarimo-ui-element object-id=&#x27;SFPL-11&#x27; random-id=&#x27;1d994e62-009c-be74-030a-25060f042dc4&#x27;&#92;u003e&#92;u003cmarimo-checkbox data-initial-value=&#x27;true&#x27; data-label=&#x27;&amp;quot;&amp;#92;u003cspan class=&amp;#92;&amp;quot;markdown prose dark:prose-invert contents&amp;#92;&amp;quot;&amp;#92;u003e&amp;#92;u003cspan class=&amp;#92;&amp;quot;paragraph&amp;#92;&amp;quot;&amp;#92;u003estop_frame_from_dur&amp;#92;u003c/span&amp;#92;u003e&amp;#92;u003c/span&amp;#92;u003e&amp;quot;&#x27; data-disabled=&#x27;false&#x27;&#92;u003e&#92;u003c/marimo-checkbox&#92;u003e&#92;u003c/marimo-ui-element&#92;u003e&#92;u003cspan&#92;u003eCalculates the end time according to the following equation.&#92;u003c/span&#92;u003e&#92;u003c/div&#92;u003e&#92;u003cdiv style=&#x27;display: flex;flex: 1;flex-direction: row;justify-content: space-between;align-items: normal;flex-wrap: nowrap;gap: 0.5rem&#x27;&#92;u003e&#92;u003cmarimo-ui-element object-id=&#x27;SFPL-12&#x27; random-id=&#x27;55a1fd9f-42e1-697c-6527-1658ac873757&#x27;&#92;u003e&#92;u003cmarimo-checkbox data-initial-value=&#x27;true&#x27; data-label=&#x27;&amp;quot;&amp;#92;u003cspan class=&amp;#92;&amp;quot;markdown prose dark:prose-invert contents&amp;#92;&amp;quot;&amp;#92;u003e&amp;#92;u003cspan class=&amp;#92;&amp;quot;paragraph&amp;#92;&amp;quot;&amp;#92;u003edur_frames_from_likelihood&amp;#92;u003c/span&amp;#92;u003e&amp;#92;u003c/span&amp;#92;u003e&amp;quot;&#x27; data-disabled=&#x27;false&#x27;&#92;u003e&#92;u003c/marimo-checkbox&#92;u003e&#92;u003c/marimo-ui-element&#92;u003e&#92;u003cspan&#92;u003eDetermines duration in seconds, from subject first to last seen in vid.&#92;u003c/span&#92;u003e&#92;u003c/div&#92;u003e&#92;u003cdiv style=&#x27;display: flex;flex: 1;flex-direction: row;justify-content: space-between;align-items: normal;flex-wrap: nowrap;gap: 0.5rem&#x27;&#92;u003e&#92;u003cmarimo-ui-element object-id=&#x27;SFPL-13&#x27; random-id=&#x27;f4032a16-d1fe-2d88-8293-4d3fe7f6ff80&#x27;&#92;u003e&#92;u003cmarimo-checkbox data-initial-value=&#x27;true&#x27; data-label=&#x27;&amp;quot;&amp;#92;u003cspan class=&amp;#92;&amp;quot;markdown prose dark:prose-invert contents&amp;#92;&amp;quot;&amp;#92;u003e&amp;#92;u003cspan class=&amp;#92;&amp;quot;paragraph&amp;#92;&amp;quot;&amp;#92;u003epx_per_mm&amp;#92;u003c/span&amp;#92;u003e&amp;#92;u003c/span&amp;#92;u003e&amp;quot;&#x27; data-disabled=&#x27;false&#x27;&#92;u003e&#92;u003c/marimo-checkbox&#92;u003e&#92;u003c/marimo-ui-element&#92;u003e&#92;u003cspan&#92;u003eCalculates the pixels per mm conversion for the video.&#92;u003c/span&#92;u003e&#92;u003c/div&#92;u003e&#92;u003c/div&#92;u003e&quot;' data-kind='&quot;info&quot;'></marimo-callout-output><marimo-ui-element object-id='SFPL-4' random-id='127d049b-cddc-3401-7dd5-fa249ecdff96'><marimo-checkbox data-initial-value='true' data-label='&quot;&#92;u003cspan class=&#92;&quot;markdown prose dark:prose-invert contents&#92;&quot;&#92;u003e&#92;u003cspan class=&#92;&quot;paragraph&#92;&quot;&#92;u003eStep 4: Preprocess keypoints&#92;u003c/span&#92;u003e&#92;u003c/span&#92;u003e&quot;' data-disabled='false'></marimo-checkbox></marimo-ui-element><marimo-callout-output data-html='&quot;&#92;u003cdiv style=&#x27;display: flex;flex: 1;flex-direction: column;justify-content: flex-start;align-items: normal;flex-wrap: nowrap;gap: 0.5rem&#x27;&#92;u003e&#92;u003cdiv style=&#x27;display: flex;flex: 1;flex-direction: row;justify-content: space-between;align-items: normal;flex-wrap: nowrap;gap: 0.5rem&#x27;&#92;u003e&#92;u003cmarimo-ui-element object-id=&#x27;SFPL-14&#x27; random-id=&#x27;dfb60b3e-4ca6-b7db-c01e-a411683334dd&#x27;&#92;u003e&#92;u003cmarimo-checkbox data-initial-value=&#x27;true&#x27; data-label=&#x27;&amp;quot;&amp;#92;u003cspan class=&amp;#92;&amp;quot;markdown prose dark:prose-invert contents&amp;#92;&amp;quot;&amp;#92;u003e&amp;#92;u003cspan class=&amp;#92;&amp;quot;paragraph&amp;#92;&amp;quot;&amp;#92;u003estart_stop_trim&amp;#92;u003c/span&amp;#92;u003e&amp;#92;u003c/span&amp;#92;u003e&amp;quot;&#x27; data-disabled=&#x27;false&#x27;&#92;u003e&#92;u003c/marimo-checkbox&#92;u003e&#92;u003c/marimo-ui-element&#92;u003e&#92;u003cspan&#92;u003eFilters the rows of a DLC formatted dataframe.&#92;u003c/span&#92;u003e&#92;u003c/div&#92;u003e&#92;u003cdiv style=&#x27;display: flex;flex: 1;flex-direction: row;justify-content: space-between;align-items: normal;flex-wrap: nowrap;gap: 0.5rem&#x27;&#92;u003e&#92;u003cmarimo-ui-element object-id=&#x27;SFPL-15&#x27; random-id=&#x27;bbf6c52c-16db-6dce-9772-72b1d1c98582&#x27;&#92;u003e&#92;u003cmarimo-checkbox data-initial-value=&#x27;true&#x27; data-label=&#x27;&amp;quot;&amp;#92;u003cspan class=&amp;#92;&amp;quot;markdown prose dark:prose-invert contents&amp;#92;&amp;quot;&amp;#92;u003e&amp;#92;u003cspan class=&amp;#92;&amp;quot;paragraph&amp;#92;&amp;quot;&amp;#92;u003einterpolate&amp;#92;u003c/span&amp;#92;u003e&amp;#92;u003c/span&amp;#92;u003e&amp;quot;&#x27; data-disabled=&#x27;false&#x27;&#92;u003e&#92;u003c/marimo-checkbox&#92;u003e&#92;u003c/marimo-ui-element&#92;u003e&#92;u003cspan&#92;u003eSmooths noticeable jitter of points.&#92;u003c/span&#92;u003e&#92;u003c/div&#92;u003e&#92;u003c/div&#92;u003e&quot;' data-kind='&quot;info&quot;'></marimo-callout-output><marimo-ui-element object-id='SFPL-5' random-id='8231ce8c-685e-f4cb-1975-1b626a3ace66'><marimo-checkbox data-initial-value='true' data-label='&quot;&#92;u003cspan class=&#92;&quot;markdown prose dark:prose-invert contents&#92;&quot;&#92;u003e&#92;u003cspan class=&#92;&quot;paragraph&#92;&quot;&#92;u003eStep 5: Simple Analysis&#92;u003c/span&#92;u003e&#92;u003c/span&#92;u003e&quot;' data-disabled='false'></marimo-checkbox></marimo-ui-element><marimo-callout-output data-html='&quot;&#92;u003cdiv style=&#x27;display: flex;flex: 1;flex-direction: column;justify-content: flex-start;align-items: normal;flex-wrap: nowrap;gap: 0.5rem&#x27;&#92;u003e&#92;u003cdiv style=&#x27;display: flex;flex: 1;flex-direction: row;justify-content: space-between;align-items: normal;flex-wrap: nowrap;gap: 0.5rem&#x27;&#92;u003e&#92;u003cmarimo-ui-element object-id=&#x27;SFPL-16&#x27; random-id=&#x27;587944cb-768f-9e4c-c399-f8c0a13caabf&#x27;&#92;u003e&#92;u003cmarimo-checkbox data-initial-value=&#x27;true&#x27; data-label=&#x27;&amp;quot;&amp;#92;u003cspan class=&amp;#92;&amp;quot;markdown prose dark:prose-invert contents&amp;#92;&amp;quot;&amp;#92;u003e&amp;#92;u003cspan class=&amp;#92;&amp;quot;paragraph&amp;#92;&amp;quot;&amp;#92;u003ein_roi&amp;#92;u003c/span&amp;#92;u003e&amp;#92;u003c/span&amp;#92;u003e&amp;quot;&#x27; data-disabled=&#x27;false&#x27;&#92;u003e&#92;u003c/marimo-checkbox&#92;u003e&#92;u003c/marimo-ui-element&#92;u003e&#92;u003cspan&#92;u003eDetermines frames where subject is inside ROI from average bpts.&#92;u003c/span&#92;u003e&#92;u003c/div&#92;u003e&#92;u003cdiv style=&#x27;display: flex;flex: 1;flex-direction: row;justify-content: space-between;align-items: normal;flex-wrap: nowrap;gap: 0.5rem&#x27;&#92;u003e&#92;u003cmarimo-ui-element object-id=&#x27;SFPL-17&#x27; random-id=&#x27;ed5af235-0681-f939-dc7c-306777fc7d7a&#x27;&#92;u003e&#92;u003cmarimo-checkbox data-initial-value=&#x27;true&#x27; data-label=&#x27;&amp;quot;&amp;#92;u003cspan class=&amp;#92;&amp;quot;markdown prose dark:prose-invert contents&amp;#92;&amp;quot;&amp;#92;u003e&amp;#92;u003cspan class=&amp;#92;&amp;quot;paragraph&amp;#92;&amp;quot;&amp;#92;u003espeed&amp;#92;u003c/span&amp;#92;u003e&amp;#92;u003c/span&amp;#92;u003e&amp;quot;&#x27; data-disabled=&#x27;false&#x27;&#92;u003e&#92;u003c/marimo-checkbox&#92;u003e&#92;u003c/marimo-ui-element&#92;u003e&#92;u003cspan&#92;u003eDetermines the speed of the subject in each frame.&#92;u003c/span&#92;u003e&#92;u003c/div&#92;u003e&#92;u003cdiv style=&#x27;display: flex;flex: 1;flex-direction: row;justify-content: space-between;align-items: normal;flex-wrap: nowrap;gap: 0.5rem&#x27;&#92;u003e&#92;u003cmarimo-ui-element object-id=&#x27;SFPL-18&#x27; random-id=&#x27;29287deb-a5bb-7730-f13e-146e7af86975&#x27;&#92;u003e&#92;u003cmarimo-checkbox data-initial-value=&#x27;true&#x27; data-label=&#x27;&amp;quot;&amp;#92;u003cspan class=&amp;#92;&amp;quot;markdown prose dark:prose-invert contents&amp;#92;&amp;quot;&amp;#92;u003e&amp;#92;u003cspan class=&amp;#92;&amp;quot;paragraph&amp;#92;&amp;quot;&amp;#92;u003edistance&amp;#92;u003c/span&amp;#92;u003e&amp;#92;u003c/span&amp;#92;u003e&amp;quot;&#x27; data-disabled=&#x27;false&#x27;&#92;u003e&#92;u003c/marimo-checkbox&#92;u003e&#92;u003c/marimo-ui-element&#92;u003e&#92;u003cspan&#92;u003eDetermines the distance travelled by the subject in each frame.&#92;u003c/span&#92;u003e&#92;u003c/div&#92;u003e&#92;u003c/div&#92;u003e&quot;' data-kind='&quot;info&quot;'></marimo-callout-output><marimo-ui-element object-id='SFPL-6' random-id='bfca04b0-4af8-d2d0-fdcc-4c7c3329a416'><marimo-checkbox data-initial-value='true' data-label='&quot;&#92;u003cspan class=&#92;&quot;markdown prose dark:prose-invert contents&#92;&quot;&#92;u003e&#92;u003cspan class=&#92;&quot;paragraph&#92;&quot;&#92;u003eStep 6: Extract features for classifier&#92;u003c/span&#92;u003e&#92;u003c/span&#92;u003e&quot;' data-disabled='false'></marimo-checkbox></marimo-ui-element><marimo-ui-element object-id='SFPL-7' random-id='003ae7c3-66fd-4702-f96e-1e367ef97925'><marimo-checkbox data-initial-value='true' data-label='&quot;&#92;u003cspan class=&#92;&quot;markdown prose dark:prose-invert contents&#92;&quot;&#92;u003e&#92;u003cspan class=&#92;&quot;paragraph&#92;&quot;&#92;u003eStep 7: Classify behaviours&#92;u003c/span&#92;u003e&#92;u003c/span&#92;u003e&quot;' data-disabled='false'></marimo-checkbox></marimo-ui-element><span class=\"markdown prose dark:prose-invert contents\"><span class=\"paragraph\">Step 8: Run <code>behavysis-viewer</code> to verify the classified behaviour</span></span><marimo-ui-element object-id='SFPL-8' random-id='cb6466db-067e-d108-a756-196529db9887'><marimo-checkbox data-initial-value='true' data-label='&quot;&#92;u003cspan class=&#92;&quot;markdown prose dark:prose-invert contents&#92;&quot;&#92;u003e&#92;u003cspan class=&#92;&quot;paragraph&#92;&quot;&#92;u003eStep 9: Make the analysis for the verified behaviour&#92;u003c/span&#92;u003e&#92;u003c/span&#92;u003e&quot;' data-disabled='false'></marimo-checkbox></marimo-ui-element><marimo-ui-element object-id='SFPL-9' random-id='db610d44-309a-f4d1-b1ab-1e4338c792be'><marimo-checkbox data-initial-value='true' data-label='&quot;&#92;u003cspan class=&#92;&quot;markdown prose dark:prose-invert contents&#92;&quot;&#92;u003e&#92;u003cspan class=&#92;&quot;paragraph&#92;&quot;&#92;u003eStep 10: Analyze results&#92;u003c/span&#92;u003e&#92;u003c/span&#92;u003e&quot;' data-disabled='false'></marimo-checkbox></marimo-ui-element><marimo-ui-element object-id='SFPL-19' random-id='8a625271-9017-b616-c6fd-98381c751efd'><marimo-button data-initial-value='0' data-label='&quot;&#92;u003cspan class=&#92;&quot;markdown prose dark:prose-invert contents&#92;&quot;&#92;u003e&#92;u003cspan class=&#92;&quot;paragraph&#92;&quot;&#92;u003eRun Pipeline&#92;u003c/span&#92;u003e&#92;u003c/span&#92;u003e&quot;' data-kind='&quot;neutral&quot;' data-disabled='false' data-full-width='false'></marimo-button></marimo-ui-element></div>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "BYtC",
+      "code_hash": "857b32148bab7cec79a97227e45f1d70",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"running-project\">Running Project</h2></span>"
           }
         }
       ],
@@ -95,234 +209,20 @@
     },
     {
       "id": "RGSE",
-      "code_hash": "b4cb93c55bcd5569366a14326471e279",
-      "outputs": [],
-      "console": []
-    },
-    {
-      "id": "Kclp",
-      "code_hash": "0dd20cb45d30adb6e3b09c47251e2607",
+      "code_hash": "a720759b0e3f448f00cba8636c50aee2",
       "outputs": [
         {
           "type": "data",
           "data": {
-            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"step-0-update-configs\">Step 0: Update configs</h2></span>"
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><span class=\"paragraph\">Click the 'Run Pipeline' button once you're happy to run</span></span>"
           }
         }
       ],
       "console": []
     },
     {
-      "id": "emfo",
-      "code_hash": "c4ea1ce5ded41efbd57546a7af942421",
-      "outputs": [],
-      "console": []
-    },
-    {
-      "id": "Hstk",
-      "code_hash": "4920fff0b483075e07efb321c9a0150d",
-      "outputs": [
-        {
-          "type": "data",
-          "data": {
-            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"step-1-format-videos\">Step 1: Format videos</h2></span>"
-          }
-        }
-      ],
-      "console": []
-    },
-    {
-      "id": "nWHF",
-      "code_hash": "897cffe2691b9283888c24381a1a7704",
-      "outputs": [],
-      "console": []
-    },
-    {
-      "id": "iLit",
-      "code_hash": "6cb49dc85e7cc1568fc407403a53e341",
-      "outputs": [
-        {
-          "type": "data",
-          "data": {
-            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"step-2-run-deeplabcut-pose-estimation\">Step 2: Run DeepLabCut pose estimation</h2></span>"
-          }
-        }
-      ],
-      "console": []
-    },
-    {
-      "id": "ZHCJ",
-      "code_hash": "4d19b0c3339a598c6001bc9a538420f2",
-      "outputs": [],
-      "console": []
-    },
-    {
-      "id": "ROlb",
-      "code_hash": "9570ad34217d09f38768229dacfc8abe",
-      "outputs": [
-        {
-          "type": "data",
-          "data": {
-            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"step-3-calculate-experiment-parameters\">Step 3: Calculate experiment parameters</h2></span>"
-          }
-        }
-      ],
-      "console": []
-    },
-    {
-      "id": "qnkX",
-      "code_hash": "f8d04ded1fc9675b367cc560a0c90106",
-      "outputs": [],
-      "console": []
-    },
-    {
-      "id": "TqIu",
-      "code_hash": "05fb7e5c2072757f0db0efa767897e29",
-      "outputs": [],
-      "console": []
-    },
-    {
-      "id": "Vxnm",
-      "code_hash": "b1fc430bcb485834922b373cce424a10",
-      "outputs": [
-        {
-          "type": "data",
-          "data": {
-            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"step-4-preprocess-keypoints\">Step 4: Preprocess keypoints</h2></span>"
-          }
-        }
-      ],
-      "console": []
-    },
-    {
-      "id": "DnEU",
-      "code_hash": "278b61971ba06224faf608bbaae89937",
-      "outputs": [],
-      "console": []
-    },
-    {
-      "id": "ulZA",
-      "code_hash": "97b84b41786738c63979b413d3cb73fc",
-      "outputs": [],
-      "console": []
-    },
-    {
-      "id": "ecfG",
-      "code_hash": "9dd416c9ef728def8c7d5086a63f6fd9",
-      "outputs": [
-        {
-          "type": "data",
-          "data": {
-            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"step-5-simple-analysis\">Step 5: Simple Analysis</h2></span>"
-          }
-        }
-      ],
-      "console": []
-    },
-    {
-      "id": "Pvdt",
-      "code_hash": "dcca47ded3afc33f90fed459c5faa34e",
-      "outputs": [],
-      "console": []
-    },
-    {
-      "id": "ZBYS",
-      "code_hash": "702083f70973744c66b998702a807fcb",
-      "outputs": [],
-      "console": []
-    },
-    {
-      "id": "aLJB",
-      "code_hash": "adc12a11a7b1bb69b17cc13a1dca2dc5",
-      "outputs": [],
-      "console": []
-    },
-    {
-      "id": "nHfw",
-      "code_hash": "29826c4d8865902d46faefda029de1fe",
-      "outputs": [
-        {
-          "type": "data",
-          "data": {
-            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"step-6-extract-features-for-classifier\">Step 6: Extract features for classifier</h2>\n<span class=\"paragraph\">Only run step 6-9 if you are using classified behaviour pipeline</span></span>"
-          }
-        }
-      ],
-      "console": []
-    },
-    {
-      "id": "xXTn",
-      "code_hash": "597460e1f2dd132229a9b25b8f3f538a",
-      "outputs": [],
-      "console": []
-    },
-    {
-      "id": "AjVT",
-      "code_hash": "6e0f550af03856d7b24895919a3e6c69",
-      "outputs": [
-        {
-          "type": "data",
-          "data": {
-            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"step-7-classify-behaviours\">Step 7: Classify behaviours</h2></span>"
-          }
-        }
-      ],
-      "console": []
-    },
-    {
-      "id": "pHFh",
-      "code_hash": "55dceddedd7097229967049c2f86b1c6",
-      "outputs": [],
-      "console": []
-    },
-    {
-      "id": "NCOB",
-      "code_hash": "51a7d500e7eba9734f1f5444ecaa46e2",
-      "outputs": [
-        {
-          "type": "data",
-          "data": {
-            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"step-8-run-behavysis-viewer-to-verify-the-classified-behaviour\">Step 8: Run <code>behavysis-viewer</code> to verify the classified behaviour</h2></span>"
-          }
-        }
-      ],
-      "console": []
-    },
-    {
-      "id": "aqbW",
-      "code_hash": "34e29e998767224356d5bd4dc1712ee0",
-      "outputs": [
-        {
-          "type": "data",
-          "data": {
-            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"step-9-make-the-analysis-for-the-verified-behaviour\">Step 9: Make the analysis for the verified behaviour</h2></span>"
-          }
-        }
-      ],
-      "console": []
-    },
-    {
-      "id": "TRpd",
-      "code_hash": "d846b5c56009201de7098737a2fc9a57",
-      "outputs": [],
-      "console": []
-    },
-    {
-      "id": "TXez",
-      "code_hash": "44fa022f94f296d017e120b4047e72fa",
-      "outputs": [
-        {
-          "type": "data",
-          "data": {
-            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"step-10-analyze-results\">Step 10: Analyze results</h2></span>"
-          }
-        }
-      ],
-      "console": []
-    },
-    {
-      "id": "dNNg",
-      "code_hash": "adc12a11a7b1bb69b17cc13a1dca2dc5",
+      "id": "AcML",
+      "code_hash": null,
       "outputs": [],
       "console": []
     }

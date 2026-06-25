@@ -8,6 +8,6 @@ class ClassifyBehaviourConfig(BaseModel):
 
     proj_dir: Path = Path("path") / "to" / "project_dir"
     behav_name: str = "behav_name"
-    pcutoff: float | str = -1
+    pcutoff: float | str = -1.0
     min_empty_window_secs: float | str = 0.2
     user_defined: list[str] | str = []

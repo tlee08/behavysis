@@ -10,6 +10,8 @@ with app.setup:
     import marimo as mo
 
     from behavysis import Project
+    from behavysis.constants import DEFAULT_CONFIG_FP
+    from behavysis.models import ExperimentConfig, get_default_config
     from behavysis.funcs import (
         distance,
         dur_frames_from_likelihood,
@@ -28,6 +30,7 @@ def _():
     mo.md(r"""
     # Behavysis Pipeline Runner
     """)
+    return
 
 
 @app.function
@@ -66,128 +69,120 @@ def _():
     mo.md(r"""
     ## Set up pipeline to run
     """)
+    return
 
 
 @app.cell
-def _(DEFAULT_CONFIG_FP):
+def _():
     overwrite = mo.ui.switch(label="Overwrite files")
-    project_fp = mo.ui.text(label="Project folder", value=Path.cwd(), full_width=True)
-    configs_fp = mo.ui.text(
-        label="Project folder",
-        value=Path.cwd() / DEFAULT_CONFIG_FP,
+    project_fp = mo.ui.text(
+        label="Project folder", value=str(Path.cwd()), full_width=True
+    )
+    config_fp = mo.ui.text(
+        label="Default config",
+        value=str(Path.cwd() / DEFAULT_CONFIG_FP),
         full_width=True,
     )
     nprocs = mo.ui.number(label="Number of parallel processes", value=5)
-
-    run_btn = mo.ui.run_button(label="Run Pipeline")
-    return configs_fp, nprocs, overwrite, project_fp, run_btn
+    return config_fp, nprocs, overwrite, project_fp
 
 
 @app.cell
-def _(configs_fp, nprocs, overwrite, project_fp, run_btn):
+def _(config_fp, nprocs, overwrite, project_fp):
     mo.vstack(
         [
             overwrite,
             project_fp,
-            configs_fp,
+            config_fp,
             nprocs,
-            run_btn,
         ]
     )
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    ## Inspect default config
+    """)
+    return
+
+
+@app.cell
+def _(config_fp):
+    config_fp_path = Path(config_fp.value)
+
+    mo.stop(not config_fp_path.exists(), mo.md("Config file does not exist!"))
+
+    ExperimentConfig.model_validate_json(config_fp_path.read_text())
+    return
 
 
 @app.cell
 def _():
-    update_config_checkbox = mo.ui.checkbox(label="Step 0: Update configs")
-    format_vid_checkbox = mo.ui.checkbox(label="Step 1: Format videos")
-    format_vid_checkbox = mo.ui.checkbox(label="Step 2: Format videos")
-    calculate_experiment_checkbox = mo.ui.checkbox(
-        label="Step 3: Calculate experiment parameters"
+    mo.accordion(
+        {
+            "See default configs template": get_default_config().model_dump(),
+        }
     )
-    preprocess_checkbox = mo.ui.checkbox(label="Step 4: Preprocess keypoints")
-    analysis_checkbox = mo.ui.checkbox(label="Step 5: Simple Analysis")
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    ## Choose functions to run
+    """)
+    return
+
+
+@app.cell
+def _():
+    # Each Step
+    update_config_checkbox = mo.ui.checkbox(
+        label="Step 0: Update config", value=True
+    )
+    format_vid_checkbox = mo.ui.checkbox(
+        label="Step 1: Format videos",
+        value=True,
+    )
+    run_dlc_checkbox = mo.ui.checkbox(
+        label="Step 2: Run DeepLabCut pose estimation",
+        value=True,
+    )
+    calculate_parameters_checkbox = mo.ui.checkbox(
+        label="Step 3: Calculate experiment parameters",
+        value=True,
+    )
+    preprocess_checkbox = mo.ui.checkbox(
+        label="Step 4: Preprocess keypoints",
+        value=True,
+    )
+    analyse_checkbox = mo.ui.checkbox(
+        label="Step 5: Simple Analysis",
+        value=True,
+    )
     extract_features_checkbox = mo.ui.checkbox(
-        label="Step 6: Extract features for classifier"
+        label="Step 6: Extract features for classifier",
+        value=True,
     )
-    classify_behaviour = mo.ui.checkbox(label="Step 7: Classify behaviours")
-    manually_check_labels = mo.md(
-        "Step 8: Run `behavysis-viewer` to verify the classified behaviour"
+    classify_behaviour_checkbox = mo.ui.checkbox(
+        label="Step 7: Classify behaviours",
+        value=True,
     )
-    analyse_behaviour = mo.ui.checkbox(
-        label="Step 9: Make the analysis for the verified behaviour"
+    manually_check_labels_msg = mo.md(
+        "Step 8: Run `behavysis-viewer` to verify the classified behaviour",
     )
-    mo.ui.checkbox(label="Step 10: Analyze results")
-
-
-@app.cell(hide_code=True)
-def _():
-    mo.md(r"""
-    ## Load Project
-    """)
-
-
-@app.cell
-def _(nprocs, project_fp, run_btn):
-    if run_btn.value:
-        proj = Project(Path.cwd(project_fp.value))
-        proj.nprocs = nprocs.value
-        proj.import_experiments()
-    return (proj,)
-
-
-@app.cell(hide_code=True)
-def _():
-    mo.md(r"""
-    ## Step 0: Update configs
-    """)
-
-
-@app.cell
-def _(configs_fp, proj):
-    proj.update_config(
-        default_config_fp=configs_fp.value,
-        overwrite="user",
+    analyse_behaviour_checkbox = mo.ui.checkbox(
+        label="Step 9: Make the analysis for the verified behaviour",
+        value=True,
+    )
+    analyse_results_checkbox = mo.ui.checkbox(
+        label="Step 10: Analyze results",
+        value=True,
     )
 
-
-@app.cell(hide_code=True)
-def _():
-    mo.md(r"""
-    ## Step 1: Format videos
-    """)
-
-
-@app.cell
-def _(overwrite, proj):
-    proj.format_vid(
-        overwrite=overwrite.value,
-    )
-
-
-@app.cell(hide_code=True)
-def _():
-    mo.md(r"""
-    ## Step 2: Run DeepLabCut pose estimation
-    """)
-
-
-@app.cell
-def _(overwrite, proj):
-    proj.run_dlc(
-        gputouse=None,
-        overwrite=overwrite.value,
-    )
-
-
-@app.cell(hide_code=True)
-def _():
-    mo.md(r"""
-    ## Step 3: Calculate experiment parameters
-    """)
-
-
-@app.cell
-def _():
+    # For choosing funcs
     calculate_parameters_funcs_ls = create_funcs_checkbox_list(
         [
             (start_frame_from_likelihood, True),
@@ -196,55 +191,12 @@ def _():
             (px_per_mm, True),
         ]
     )
-
-    get_checkbox_list(calculate_parameters_funcs_ls)
-    return (calculate_parameters_funcs_ls,)
-
-
-@app.cell
-def _(calculate_parameters_funcs_ls, proj):
-    proj.calculate_parameters(
-        funcs=get_funcs_to_run_list(calculate_parameters_funcs_ls),
-    )
-
-
-@app.cell(hide_code=True)
-def _():
-    mo.md(r"""
-    ## Step 4: Preprocess keypoints
-    """)
-
-
-@app.cell
-def _():
     preprocess_funcs_ls = create_funcs_checkbox_list(
         [
             (start_stop_trim, True),
             (interpolate, True),
         ]
     )
-
-    get_checkbox_list(preprocess_funcs_ls)
-    return (preprocess_funcs_ls,)
-
-
-@app.cell
-def _(overwrite, preprocess_funcs_ls, proj):
-    proj.preprocess(
-        funcs=get_funcs_to_run_list(preprocess_funcs_ls),
-        overwrite=overwrite.value,
-    )
-
-
-@app.cell(hide_code=True)
-def _():
-    mo.md(r"""
-    ## Step 5: Simple Analysis
-    """)
-
-
-@app.cell
-def _():
     analyse_funcs_ls = create_funcs_checkbox_list(
         [
             (in_roi, True),
@@ -253,83 +205,165 @@ def _():
         ]
     )
 
-    get_checkbox_list(analyse_funcs_ls)
-    return (analyse_funcs_ls,)
-
-
-@app.cell
-def _(analyse_funcs_ls, proj):
-    proj.analyse(
-        funcs=get_funcs_to_run_list(analyse_funcs_ls),
+    # Run button
+    run_btn = mo.ui.run_button(label="Run Pipeline")
+    return (
+        analyse_behaviour_checkbox,
+        analyse_checkbox,
+        analyse_funcs_ls,
+        analyse_results_checkbox,
+        calculate_parameters_checkbox,
+        calculate_parameters_funcs_ls,
+        classify_behaviour_checkbox,
+        extract_features_checkbox,
+        format_vid_checkbox,
+        manually_check_labels_msg,
+        preprocess_checkbox,
+        preprocess_funcs_ls,
+        run_btn,
+        run_dlc_checkbox,
+        update_config_checkbox,
     )
 
 
 @app.cell
-def _(proj):
-    proj.combine_analysis()
-    proj.collate_analysis()
+def _(
+    analyse_behaviour_checkbox,
+    analyse_checkbox,
+    analyse_funcs_ls,
+    analyse_results_checkbox,
+    calculate_parameters_checkbox,
+    calculate_parameters_funcs_ls,
+    classify_behaviour_checkbox,
+    extract_features_checkbox,
+    format_vid_checkbox,
+    manually_check_labels_msg,
+    preprocess_checkbox,
+    preprocess_funcs_ls,
+    run_btn,
+    run_dlc_checkbox,
+    update_config_checkbox,
+):
+    mo.vstack(
+        [
+            update_config_checkbox,
+            format_vid_checkbox,
+            run_dlc_checkbox,
+            calculate_parameters_checkbox,
+            mo.callout(
+                get_checkbox_list(calculate_parameters_funcs_ls), kind="info"
+            ),
+            preprocess_checkbox,
+            mo.callout(get_checkbox_list(preprocess_funcs_ls), kind="info"),
+            analyse_checkbox,
+            mo.callout(get_checkbox_list(analyse_funcs_ls), kind="info"),
+            extract_features_checkbox,
+            classify_behaviour_checkbox,
+            manually_check_labels_msg,
+            analyse_behaviour_checkbox,
+            analyse_results_checkbox,
+            run_btn,
+        ]
+    )
+    return
 
 
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    ## Step 6: Extract features for classifier
-
-    Only run step 6-9 if you are using classified behaviour pipeline
+    ## Running Project
     """)
+    return
 
 
 @app.cell
-def _(overwrite, proj):
-    proj.extract_features(
-        overwrite=overwrite.value,
+def _(
+    analyse_behaviour_checkbox,
+    analyse_checkbox,
+    analyse_funcs_ls,
+    analyse_results_checkbox,
+    calculate_parameters_checkbox,
+    calculate_parameters_funcs_ls,
+    classify_behaviour_checkbox,
+    config_fp,
+    extract_features_checkbox,
+    format_vid_checkbox,
+    nprocs,
+    overwrite,
+    preprocess_checkbox,
+    preprocess_funcs_ls,
+    project_fp,
+    run_btn,
+    run_dlc_checkbox,
+    update_config_checkbox,
+):
+    mo.stop(
+        not run_btn.value,
+        mo.md("""Click the 'Run Pipeline' button once you're happy to run"""),
     )
 
+    proj = Project(Path.cwd(project_fp.value))
+    proj.nprocs = nprocs.value
+    proj.import_experiments()
 
-@app.cell(hide_code=True)
-def _():
-    mo.md(r"""
-    ## Step 7: Classify behaviours
-    """)
+    if update_config_checkbox.value:
+        proj.update_config(
+            default_config_fp=config_fp.value,
+            overwrite="user",
+        )
+
+    if format_vid_checkbox.value:
+        proj.format_vid(
+            overwrite=overwrite.value,
+        )
+
+    if run_dlc_checkbox.value:
+        proj.run_dlc(
+            gputouse=None,
+            overwrite=overwrite.value,
+        )
+
+    if calculate_parameters_checkbox.value:
+        proj.calculate_parameters(
+            funcs=get_funcs_to_run_list(calculate_parameters_funcs_ls),
+        )
+
+    if preprocess_checkbox.value:
+        proj.preprocess(
+            funcs=get_funcs_to_run_list(preprocess_funcs_ls),
+            overwrite=overwrite.value,
+        )
+
+    if analyse_checkbox.value:
+        proj.analyse(
+            funcs=get_funcs_to_run_list(analyse_funcs_ls),
+        )
+        proj.combine_analysis()
+        proj.collate_analysis()
+
+    if extract_features_checkbox.value:
+        proj.extract_features(
+            overwrite=overwrite.value,
+        )
+
+    if classify_behaviour_checkbox.value:
+        proj.classify_behaviour(overwrite=overwrite.value)
+        proj.export_behaviour(overwrite=overwrite.value)
+
+    # manually_check_labels_msg
+
+    if analyse_behaviour_checkbox.value:
+        proj.analyse_behaviour()
+
+    if analyse_results_checkbox.value:
+        proj.combine_analysis()
+        proj.collate_analysis()
+    return
 
 
 @app.cell
-def _(overwrite, proj):
-    # Requires: user.classify_behaviour with trained model paths
-    proj.classify_behaviour(overwrite=overwrite.value)
-    proj.export_behaviour(overwrite=overwrite.value)
-
-
-@app.cell(hide_code=True)
 def _():
-    mo.md(r"""
-    ## Step 8: Run `behavysis-viewer` to verify the classified behaviour
-    """)
-
-
-@app.cell(hide_code=True)
-def _():
-    mo.md(r"""
-    ## Step 9: Make the analysis for the verified behaviour
-    """)
-
-
-@app.cell
-def _(proj):
-    proj.analyse_behaviour()
-
-
-@app.cell(hide_code=True)
-def _():
-    mo.md(r"""
-    ## Step 10: Analyze results
-    """)
-
-
-@app.cell
-def _(proj):
-    proj.combine_analysis()
-    proj.collate_analysis()
+    return
 
 
 if __name__ == "__main__":
