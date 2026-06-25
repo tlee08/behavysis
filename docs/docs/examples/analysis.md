@@ -55,7 +55,7 @@ The following code processes and analyses all experiments that have been importe
 Formatting the raw mp4 videos so it can be fed through the DLC pose estimation algorithm.
 
 ```python
-proj.format_vid(
+proj.format_video(
     (
         FormatVid.format_vid,
         FormatVid.get_vid_metadata,

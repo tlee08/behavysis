@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 from loguru import logger
 
-from behavysis.behav_classifier.behav_classifier import BehaviourClassifier
+from behavysis.behaviour_classifier import BehaviourClassifier
 from behavysis.constants import DUR, FALSE_POS, PRED, PROB, START, STOP, TRUE_POS
 from behavysis.df_classes import BehaviourPredictedDf, BehaviourScoredDf, FeaturesDf
 from behavysis.models import ExperimentConfig

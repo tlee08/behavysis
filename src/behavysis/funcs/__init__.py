@@ -16,7 +16,7 @@ from .combine_analysis import combine_analysis
 from .evaluate_vid import EvaluateVid
 from .export import boris2behaviour, df2csv, df2df, predictedbehaviour2scoredbehaviour
 from .extract_features import extract_features
-from .format_vid import format_vid
+from .format_video import format_video
 from .preprocess import (
     PreprocessFunc,
     interpolate,
@@ -33,7 +33,7 @@ __all__ = [
     "EvaluateVid",
     "PreprocessFunc",
     "analyse_behaviour",
-    "boris2behav",
+    "boris2behaviour",
     "classify_behaviour",
     "combine_analysis",
     "df2csv",
@@ -41,7 +41,7 @@ __all__ = [
     "distance",
     "dur_frames_from_likelihood",
     "extract_features",
-    "format_vid",
+    "format_video",
     "freezing",
     "in_roi",
     "interpolate",

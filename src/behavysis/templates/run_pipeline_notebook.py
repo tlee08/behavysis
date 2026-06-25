@@ -11,7 +11,6 @@ with app.setup:
 
     from behavysis import Project
     from behavysis.constants import DEFAULT_CONFIG_FP
-    from behavysis.models import ExperimentConfig, get_default_config
     from behavysis.funcs import (
         distance,
         dur_frames_from_likelihood,
@@ -23,6 +22,7 @@ with app.setup:
         start_stop_trim,
         stop_frame_from_dur,
     )
+    from behavysis.models import ExperimentConfig, get_default_config
 
 
 @app.cell(hide_code=True)
@@ -30,13 +30,12 @@ def _():
     mo.md(r"""
     # Behavysis Pipeline Runner
     """)
-    return
 
 
 @app.function
 def create_funcs_checkbox_list(
     funcs_ls: list[tuple[Callable, bool]],
-) -> list[Callable, object]:
+) -> list[tuple[Callable, object]]:
     funcs_checkbox_dict = [
         (
             _func,
@@ -69,7 +68,6 @@ def _():
     mo.md(r"""
     ## Set up pipeline to run
     """)
-    return
 
 
 @app.cell
@@ -97,7 +95,6 @@ def _(config_fp, nprocs, overwrite, project_fp):
             nprocs,
         ]
     )
-    return
 
 
 @app.cell(hide_code=True)
@@ -105,7 +102,6 @@ def _():
     mo.md(r"""
     ## Inspect default config
     """)
-    return
 
 
 @app.cell
@@ -115,7 +111,6 @@ def _(config_fp):
     mo.stop(not config_fp_path.exists(), mo.md("Config file does not exist!"))
 
     ExperimentConfig.model_validate_json(config_fp_path.read_text())
-    return
 
 
 @app.cell
@@ -125,7 +120,6 @@ def _():
             "See default configs template": get_default_config().model_dump(),
         }
     )
-    return
 
 
 @app.cell(hide_code=True)
@@ -133,15 +127,12 @@ def _():
     mo.md(r"""
     ## Choose functions to run
     """)
-    return
 
 
 @app.cell
 def _():
     # Each Step
-    update_config_checkbox = mo.ui.checkbox(
-        label="Step 0: Update config", value=True
-    )
+    update_config_checkbox = mo.ui.checkbox(label="Step 0: Update config", value=True)
     format_vid_checkbox = mo.ui.checkbox(
         label="Step 1: Format videos",
         value=True,
@@ -250,9 +241,7 @@ def _(
             format_vid_checkbox,
             run_dlc_checkbox,
             calculate_parameters_checkbox,
-            mo.callout(
-                get_checkbox_list(calculate_parameters_funcs_ls), kind="info"
-            ),
+            mo.callout(get_checkbox_list(calculate_parameters_funcs_ls), kind="info"),
             preprocess_checkbox,
             mo.callout(get_checkbox_list(preprocess_funcs_ls), kind="info"),
             analyse_checkbox,
@@ -265,7 +254,6 @@ def _(
             run_btn,
         ]
     )
-    return
 
 
 @app.cell(hide_code=True)
@@ -273,7 +261,6 @@ def _():
     mo.md(r"""
     ## Running Project
     """)
-    return
 
 
 @app.cell
@@ -302,7 +289,7 @@ def _(
         mo.md("""Click the 'Run Pipeline' button once you're happy to run"""),
     )
 
-    proj = Project(Path.cwd(project_fp.value))
+    proj = Project(Path(project_fp.value))
     proj.nprocs = nprocs.value
     proj.import_experiments()
 
@@ -313,7 +300,7 @@ def _(
         )
 
     if format_vid_checkbox.value:
-        proj.format_vid(
+        proj.format_video(
             overwrite=overwrite.value,
         )
 
@@ -358,12 +345,130 @@ def _(
     if analyse_results_checkbox.value:
         proj.combine_analysis()
         proj.collate_analysis()
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    ## Export standalone pipeline script
+
+    Generates a standalone Python script that reproduces the configured pipeline.
+    """)
     return
 
 
 @app.cell
-def _():
-    return
+def _(
+    analyse_behaviour_checkbox,
+    analyse_checkbox,
+    analyse_funcs_ls,
+    analyse_results_checkbox,
+    calculate_parameters_checkbox,
+    calculate_parameters_funcs_ls,
+    classify_behaviour_checkbox,
+    config_fp,
+    extract_features_checkbox,
+    format_vid_checkbox,
+    nprocs,
+    overwrite,
+    preprocess_checkbox,
+    preprocess_funcs_ls,
+    project_fp,
+    run_dlc_checkbox,
+    update_config_checkbox,
+):
+    import marimo as mo
+
+    def _build_script():
+        calc_funcs = get_funcs_to_run_list(calculate_parameters_funcs_ls)
+        prep_funcs = get_funcs_to_run_list(preprocess_funcs_ls)
+        anal_funcs = get_funcs_to_run_list(analyse_funcs_ls)
+        all_funcs = calc_funcs + prep_funcs + anal_funcs
+
+        lines = []
+        lines.append("# Auto-generated Behavysis pipeline script")
+        lines.append("# Regenerate from the marimo notebook to update.")
+        lines.append("from pathlib import Path")
+        lines.append("")
+        lines.append("from behavysis import Project")
+        if all_funcs:
+            lines.append("from behavysis.funcs import (")
+            seen = set()
+            for f in all_funcs:
+                if f.__name__ not in seen:
+                    lines.append(f"    {f.__name__},")
+                    seen.add(f.__name__)
+            lines.append(")")
+        lines.append("")
+        lines.append("")
+        lines.append(f"proj = Project(Path({project_fp.value!r}))")
+        lines.append(f"proj.nprocs = {nprocs.value}")
+        lines.append("proj.import_experiments()")
+
+        if update_config_checkbox.value:
+            lines.append("")
+            lines.append(
+                f"proj.update_config(default_config_fp=Path({config_fp.value!r}), "
+                f"overwrite='user')"
+            )
+
+        if format_vid_checkbox.value:
+            lines.append("")
+            lines.append(f"proj.format_video(overwrite={overwrite.value})")
+
+        if run_dlc_checkbox.value:
+            lines.append("")
+            lines.append(f"proj.run_dlc(gputouse=None, overwrite={overwrite.value})")
+
+        if calculate_parameters_checkbox.value and calc_funcs:
+            lines.append("")
+            fnames = ", ".join(f.__name__ for f in calc_funcs)
+            lines.append(f"proj.calculate_parameters(funcs=({fnames},))")
+
+        if preprocess_checkbox.value and prep_funcs:
+            lines.append("")
+            fnames = ", ".join(f.__name__ for f in prep_funcs)
+            lines.append(f"proj.preprocess(funcs=({fnames},), overwrite={overwrite.value})")
+
+        if analyse_checkbox.value and anal_funcs:
+            lines.append("")
+            fnames = ", ".join(f.__name__ for f in anal_funcs)
+            lines.append(f"proj.analyse(funcs=({fnames},))")
+            lines.append("proj.combine_analysis()")
+            lines.append("proj.collate_analysis()")
+
+        if extract_features_checkbox.value:
+            lines.append("")
+            lines.append(f"proj.extract_features(overwrite={overwrite.value})")
+
+        if classify_behaviour_checkbox.value:
+            lines.append("")
+            lines.append(f"proj.classify_behaviour(overwrite={overwrite.value})")
+            lines.append(f"proj.export_behaviour(overwrite={overwrite.value})")
+
+        if analyse_behaviour_checkbox.value:
+            lines.append("")
+            lines.append("proj.analyse_behaviour()")
+
+        if analyse_results_checkbox.value:
+            lines.append("")
+            lines.append("proj.combine_analysis()")
+            lines.append("proj.collate_analysis()")
+
+        lines.append("")
+        return "\n".join(lines)
+
+    export_download = mo.download(
+        data=lambda: _build_script().encode("utf-8"),
+        filename="run_pipeline.py",
+        mimetype="text/x-python",
+        label="Export Pipeline Code (.py)",
+    )
+
+    mo.hstack(
+        [mo.md("Click to download the configured pipeline as a standalone script:"), export_download]
+    )
+    return (export_download,)
 
 
 if __name__ == "__main__":

@@ -6,14 +6,14 @@ from behavysis.constants import BPTS_CORNERS, BPTS_SIMBA
 class SpeedConfig(BaseModel):
     """SpeedConfig."""
 
-    smoothing_sec: float | str = 1
+    smoothing_sec: float | str = 1.0
     bodyparts: list[str] | str = BPTS_SIMBA
 
 
 class SocialDistanceConfig(BaseModel):
     """SocialDistanceConfig."""
 
-    smoothing_sec: float | str = 1
+    smoothing_sec: float | str = 1.0
     bodyparts: list[str] | str = BPTS_SIMBA
 
 

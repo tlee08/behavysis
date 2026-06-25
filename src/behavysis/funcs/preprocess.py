@@ -124,7 +124,7 @@ def interpolate_stationary(
         msg = (
             f"Video dimensions not set for experiment.\n"
             f"  width_px={width_px}, height_px={height_px}\n"
-            f"  Run proj.format_vid() first to set these values."
+            f"  Run proj.format_video() first to set these values."
         )
         raise ValueError(msg)
     # Reading file

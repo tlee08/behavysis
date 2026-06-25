@@ -21,7 +21,7 @@ from behavysis.funcs import (
     df2csv,
     df2df,
     extract_features,
-    format_vid,
+    format_video,
     ma_dlc_run_single,
     predictedbehaviour2scoredbehaviour,
     update_config,
@@ -90,7 +90,7 @@ class Experiment:
     @trace
     def format_video(self, *, overwrite: bool) -> None:
         """Formats the video with ffmpeg to fit the formatted config."""
-        format_vid(
+        format_video(
             raw_vid_fp=self.get_fp(Folders.RAW_VID),
             formatted_vid_fp=self.get_fp(Folders.FORMATTED_VID),
             config_fp=self.get_fp(Folders.CONFIG),

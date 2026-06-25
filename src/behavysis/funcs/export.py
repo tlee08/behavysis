@@ -2,7 +2,7 @@ from pathlib import Path
 
 from loguru import logger
 
-from behavysis.behav_classifier.behav_classifier import BehaviourClassifier
+from behavysis.behaviour_classifier import BehaviourClassifier
 from behavysis.df_classes import BehaviourPredictedDf, BehaviourScoredDf, DFMixin
 from behavysis.models import BoutStruct, ExperimentConfig
 from behavysis.utils.io_utils import file_exists_msg

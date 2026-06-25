@@ -10,7 +10,7 @@ from behavysis.models import ExperimentConfig, VidMetadata
 from behavysis.utils.io_utils import file_exists_msg
 
 
-def format_vid(
+def format_video(
     raw_vid_fp: Path,
     formatted_vid_fp: Path,
     config_fp: Path,

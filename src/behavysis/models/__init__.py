@@ -1,6 +1,6 @@
 """Pydantic Models."""
 
-from .behav_classifier_config import BehaviourClassifierConfig
+from .behaviour_classifier_config import BehaviourClassifierConfig
 from .bouts import Bout, Bouts, BoutStruct
 from .experiment_config import (
     AnalysisConfig,

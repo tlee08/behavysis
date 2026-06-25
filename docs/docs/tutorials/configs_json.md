@@ -348,7 +348,7 @@ Check that `user.run_dlc.model_fp` points to an existing `.yaml` file:
 
 ### "Width and height must be provided"
 
-Run `proj.format_vid()` first - it populates `auto.formatted_vid` dimensions.
+Run `proj.format_video()` first - it populates `auto.formatted_vid` dimensions.
 
 ### "Bodyparts not found in keypoints data"
 
