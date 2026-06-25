@@ -1,6 +1,6 @@
 """Behavysis Pipeline Script.
 
-This script runs the full behavioral analysis pipeline.
+This script runs the full behavioural analysis pipeline.
 
 Documentation: https://tlee08.github.io/behavysis/
 Config Reference: https://tlee08.github.io/behavysis/tutorials/config_json/
@@ -85,18 +85,18 @@ if __name__ == "__main__":
     )
 
     # Step 5: Extract features for classifier
-    # Only run step 5-8 if you are using classified behavs pipeline
+    # Only run step 5-8 if you are using classified behaviour pipeline
     proj.extract_features(overwrite=overwrite)
 
-    # Step 6: Classify behaviors
-    # Requires: user.classify_behavs with trained model paths
-    proj.classify_behavs(overwrite=overwrite)
-    proj.export_behavs(overwrite=overwrite)
+    # Step 6: Classify behaviours
+    # Requires: user.classify_behaviour with trained model paths
+    proj.classify_behaviour(overwrite=overwrite)
+    proj.export_behaviour(overwrite=overwrite)
 
-    # Step 7: Run `behavysis-viewer` to verify the classified behavs
+    # Step 7: Run `behavysis-viewer` to verify the classified behaviour
 
-    # Step 8: Make the analysis for the verified behavs
-    proj.analyse_behavs()
+    # Step 8: Make the analysis for the verified behaviour
+    proj.analyse_behaviour()
 
     # Step 9: Analyze results
     proj.combine_analysis()

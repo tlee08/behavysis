@@ -15,7 +15,7 @@ from behavysis.constants import FBF, INDIVIDUALS, MEASURES, SINGLE, X, Y
 from behavysis.df_classes import (
     AnalysisBinnedDf,
     AnalysisDf,
-    BehavScoredDf,
+    BehaviourScoredDf,
     KeypointsDf,
 )
 from behavysis.models import ExperimentConfig
@@ -143,7 +143,7 @@ def in_roi(
     plot_fp = dst_subdir / "scatter_plot" / f"{name}.png"
     _make_location_scatterplot(scatter_df, corners_df, frame, plot_fp)
     # Summarising and binning analysis_df
-    AnalysisBinnedDf.summary_binned_behavs(
+    AnalysisBinnedDf.summary_binned_behaviour(
         analysis_df,
         dst_subdir,
         name,
@@ -510,7 +510,7 @@ def freezing(
         ).astype(np.int8)
 
         # Getting start, stop, and duration of each freezing behav bout
-        freezingbouts_df = BehavScoredDf.vect2bouts_df(
+        freezingbouts_df = BehaviourScoredDf.vect2bouts_df(
             analysis_df[(indiv, "freezing")] == 1
         )
         # For each freezing bout, if there is less than window_frames, tehn
@@ -523,7 +523,7 @@ def freezing(
     AnalysisDf.write(analysis_df, fbf_fp)
 
     # Summarising and binning analysis_df
-    AnalysisBinnedDf.summary_binned_behavs(
+    AnalysisBinnedDf.summary_binned_behaviour(
         analysis_df,
         dst_subdir,
         name,

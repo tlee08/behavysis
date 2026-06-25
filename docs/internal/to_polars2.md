@@ -94,13 +94,13 @@ df.with_columns(pl.col("x") * width_scale, pl.col("y") * height_scale)
 
 ```
 index: frame
-columns: (behavs, outcomes) → ("grooming", "pred"), ("grooming", "actual"), ...
+columns: (behaviour, outcomes) → ("grooming", "pred"), ("grooming", "actual"), ...
 ```
 
 **BeahvDf after:**
 
 ```python
-shape: (N_frames × N_behavs, 5)
+shape: (N_frames × N_behaviour, 5)
 ┌───────┬──────────┬──────┬──────┬────────┐
 │ frame ┆ behav    ┆ prob ┆ pred ┆ actual │
 │ i64   ┆ str      ┆ f64  ┆ i64  ┆ i64    │
@@ -174,14 +174,14 @@ df.with_columns(
 
 ## Recommendation: Paradigm A with tactical B
 
-| Data type           | Storage form                                               | Why                                                                                               |
-| ------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| `KeypointsDf`       | Long (frame, scorer, indiv, bpt, x, y, likelihood)         | Natural fit. 48 tuple accesses collapse to filters.                                               |
-| `BehavDf`           | Long (frame, behav, prob, pred, actual)                    | Behaviors are observations, not columns. `bouts2frames`/`frames2bouts` become groupby operations. |
-| `AnalysisDf`        | Long (frame, indiv, measure, value)                        | Same as keypoints — measurements per individual are observations.                                 |
-| `FeaturesDf`        | Wide-ish (frame, feature_1, feature_2, ...)                | Features ARE columns. ML models expect this shape. Keep wide.                                     |
-| `AnalysisSummaryDf` | Long (indiv, measure, agg, value) or wide with agg columns | Aggregations are naturally columnar.                                                              |
-| `AnalysisBinnedDf`  | Long (bin_sec, indiv, measure, agg, value)                 | Similar. Pivot for plotting.                                                                      |
+| Data type           | Storage form                                               | Why                                                                                                |
+| ------------------- | ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `KeypointsDf`       | Long (frame, scorer, indiv, bpt, x, y, likelihood)         | Natural fit. 48 tuple accesses collapse to filters.                                                |
+| `BehavDf`           | Long (frame, behav, prob, pred, actual)                    | Behaviours are observations, not columns. `bouts2frames`/`frames2bouts` become groupby operations. |
+| `AnalysisDf`        | Long (frame, indiv, measure, value)                        | Same as keypoints — measurements per individual are observations.                                  |
+| `FeaturesDf`        | Wide-ish (frame, feature_1, feature_2, ...)                | Features ARE columns. ML models expect this shape. Keep wide.                                      |
+| `AnalysisSummaryDf` | Long (indiv, measure, agg, value) or wide with agg columns | Aggregations are naturally columnar.                                                               |
+| `AnalysisBinnedDf`  | Long (bin_sec, indiv, measure, agg, value)                 | Similar. Pivot for plotting.                                                                       |
 
 ---
 
@@ -241,7 +241,7 @@ Phase 5: Remove pandas
 
 2. **Do you need pandas interop?** If DLC outputs pandas, and downstream tools (SimBA, BORIS) expect pandas, you may need a long hybrid period. Measuring the real cost of `pl.from_pandas()` / `df.to_pandas()` at each boundary.
 
-3. **Test coverage?** `test_df_mixin.py` tests pandas MultiIndex behavior directly. All 352 lines become obsolete. Do you have integration/functional tests that verify pipeline output correctness regardless of internal data representation?
+3. **Test coverage?** `test_df_mixin.py` tests pandas MultiIndex behaviour directly. All 352 lines become obsolete. Do you have integration/functional tests that verify pipeline output correctness regardless of internal data representation?
 
 4. **GUI viewer?** `viewer/windows/main.py` accesses `BehavScoredDf.frames2bouts`, `bouts2frames`. The viewer would need to work with polars DataFrames or convert at the boundary.
 

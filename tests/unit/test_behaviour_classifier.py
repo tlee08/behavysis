@@ -1,4 +1,4 @@
-"""Unit tests for behavioral classifier dataloaders."""
+"""Unit tests for behavioural classifier dataloaders."""
 
 import numpy as np
 

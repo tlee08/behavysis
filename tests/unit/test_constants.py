@@ -20,8 +20,8 @@ class TestFolders:
         assert Folders.KEYPOINTS.value == "3_keypoints"
         assert Folders.PREPROCESSED.value == "4_preprocessed"
         assert Folders.FEATURES_EXTRACTED.value == "5_features_extracted"
-        assert Folders.PREDICTED_BEHAVS.value == "6_predicted_behavs"
-        assert Folders.SCORED_BEHAVS.value == "7_scored_behavs"
+        assert Folders.PREDICTED_BEHAVIOUR.value == "6_predicted_behaviour"
+        assert Folders.SCORED_BEHAVIOUR.value == "7_scored_behaviour"
         assert Folders.ANALYSIS_COMBINED.value == "9_analysis_combined"
         assert Folders.EVALUATE_VID.value == "10_evaluate_vid"
 

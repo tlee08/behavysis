@@ -455,7 +455,7 @@ class VidFuncsRunner:
         # # vid panel
         self.height_out = self.height_input
         # # behav panel
-        # if self.behavs:
+        # if self.behaviour:
         #     self.h_o = self.h_o * 2
 
     def __call__(self, vid_frame: np.ndarray, idx: int):

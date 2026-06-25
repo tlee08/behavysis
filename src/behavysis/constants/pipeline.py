@@ -15,8 +15,8 @@ class Folders(Enum):
     KEYPOINTS = "3_keypoints"
     PREPROCESSED = "4_preprocessed"
     FEATURES_EXTRACTED = "5_features_extracted"
-    PREDICTED_BEHAVS = "6_predicted_behaviour"
-    SCORED_BEHAVS = "7_scored_behaviour"
+    PREDICTED_BEHAVIOUR = "6_predicted_behaviour"
+    SCORED_BEHAVIOUR = "7_scored_behaviour"
     ANALYSIS_COMBINED = "9_analysis_combined"
     EVALUATE_VID = "10_evaluate_video"
 

@@ -2,7 +2,9 @@ from pathlib import Path
 
 import pandas as pd
 
-from behavysis import BehavClassifier, Export, Project
+from behavysis import Project
+from behavysis.behaviour_classifier import BehaviourClassifier
+from behavysis.funcs import boris2behaviour
 
 if __name__ == "__main__":
     root_dir = Path.cwd()
@@ -10,35 +12,35 @@ if __name__ == "__main__":
 
     # Option 1: From BORIS
     # Define behaviours in BORIS
-    behavs_ls = ["potential huddling", "huddling"]
+    behaviour_ls = ["potential huddling", "huddling"]
     # Paths
     boris_dir = root_dir / "boris"
-    behav_dir = root_dir / "7_scored_behavs"
+    behav_dir = root_dir / "7_scored_behaviour"
     config_dir = root_dir / "0_config"
     for i in boris_dir.iterdir():
         name = i.stem
         print(name)
-        outcome = Export.boris2behav(
+        outcome = boris2behaviour(
             src_fp=boris_dir / f"{name}.tsv",
             dst_fp=behav_dir / f"{name}.parquet",
             config_fp=config_dir / f"{name}.json",
-            behavs_ls=behavs_ls,
+            behaviour_ls=behaviour_ls,
             overwrite=overwrite,
         )
-    # Making BehavClassifier objects
-    for behav in behavs_ls:
-        BehavClassifier.create_from_project_dir(root_dir)
+    # Making BehaviourClassifier objects
+    for behaviour in behaviour_ls:
+        BehaviourClassifier.create_from_project_dir(root_dir)
 
     # Option 2: From previous behavysis project
     proj = Project(root_dir)
     proj.import_experiments()
-    # Making BehavClassifier objects
-    BehavClassifier.create_from_project(proj)
+    # Making BehaviourClassifier objects
+    BehaviourClassifier.create_from_project(proj)
 
     # Loading a BehavModel
-    behav = "fight"
-    model_fp = root_dir / "behav_models" / behav
-    model = BehavClassifier.load(model_fp)
+    behaviour = "fight"
+    model_fp = root_dir / "behav_models" / behaviour
+    model = BehaviourClassifier.load(model_fp, behaviour)
     # Testing all different classifiers
     model.pipeline_training_all()
     # MANUALLY LOOK AT THE BEST CLASSIFIER AND SELECT
@@ -46,13 +48,13 @@ if __name__ == "__main__":
 
     # Example of evaluating model with novel data
     x = pd.read_parquet("path/to/features_extracted")
-    y = pd.read_parquet("path/to/scored_behavs")
+    y = pd.read_parquet("path/to/scored_behaviour")
     # Evaluating classifier (results stored in "eval" folder)
     model.clf_eval_save_performance(x, y)
 
     # Example of using model for inference
     # Loading a BehavModel
-    model = BehavClassifier.load(model_fp)
+    model = BehaviourClassifier.load(model_fp, behaviour)
     # Getting data
     x = pd.read_parquet("path/to/features_extracted.parquet")
     # Running inference

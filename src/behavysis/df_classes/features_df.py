@@ -1,4 +1,4 @@
-"""Features DataFrame for extracted behavioral features."""
+"""Features DataFrame for extracted behavioural features."""
 
 from behavysis.constants import FEATURES, FRAME
 

@@ -1,4 +1,4 @@
-"""Behavioral classifier for training and inference on animal behavior data."""
+"""Behavioural classifier for training and inference on animal behaviour data."""
 
 from __future__ import annotations
 
@@ -10,13 +10,9 @@ import pandas as pd
 from joblib import dump, load
 from loguru import logger
 
-from behavysis.behav_classifier.evaluation import (
-    save_evaluation_results,
-    save_training_history,
-)
 from behavysis.constants import PRED, PROB, Folders
-from behavysis.df_classes import BehavPredictedDf
-from behavysis.models import BehavClassifierConfig
+from behavysis.df_classes import BehaviourPredictedDf
+from behavysis.models import BehaviourClassifierConfig
 
 from .clf_models.base_torch_model import BaseTorchModel
 from .clf_models.clf_templates import CLF_TEMPLATES, CNN1
@@ -26,23 +22,24 @@ from .data import (
     preproc_x_transform,
     wrangle_columns_y,
 )
+from .evaluation import save_evaluation_results, save_training_history
 
 if TYPE_CHECKING:
     from behavysis.pipeline.project import Project
 
 
-class BehavClassifier:
-    """Behavioral classifier for training and inference.
+class BehaviourClassifier:
+    """Behavioural classifier for training and inference.
 
-    Manages model training, evaluation, and prediction for animal behavior
+    Manages model training, evaluation, and prediction for animal behaviour
     classification from pose estimation features.
 
     Attributes:
     ----------
     proj_dir : Path
-        Project directory containing features and scored behaviors.
+        Project directory containing features and scored behaviours.
     behav_name : str
-        Name of the behavior being classified.
+        Name of the behaviour being classified.
     clf : BaseTorchModel
         The trained classifier model.
     """
@@ -52,37 +49,37 @@ class BehavClassifier:
     _clf: BaseTorchModel
 
     def __init__(self, proj_dir: Path, behav_name: str) -> None:
-        """Initialize classifier for a specific behavior.
+        """Initialize classifier for a specific behaviour.
 
         Parameters
         ----------
         proj_dir : Path
             Project directory path.
         behav_name : str
-            Name of behavior to classify.
+            Name of behaviour to classify.
 
         Raises:
         ------
         AssertionError
-            If behavior is not found in scored behaviors.
+            If behaviour is not found in scored behaviours.
         """
         self._proj_dir = proj_dir.resolve()
         self._behav_name = behav_name
 
-        # Verify behavior exists in scored data
+        # Verify behaviour exists in scored data
         y_df = wrangle_columns_y(combine_dfs(self.y_dir))
         assert np.isin(behav_name, y_df.columns), (
-            f"Behavior '{behav_name}' not found in scored behaviors"
+            f"Behaviour '{behav_name}' not found in scored behaviours"
         )
 
         # Load or create config
         try:
-            config = BehavClassifierConfig.model_validate_json(
+            config = BehaviourClassifierConfig.model_validate_json(
                 self.config_fp.read_text()
             )
             logger.debug("Loaded existing config")
         except FileNotFoundError:
-            config = BehavClassifierConfig()
+            config = BehaviourClassifierConfig()
             logger.debug("Created new model config")
 
         config.proj_dir = self._proj_dir
@@ -108,7 +105,7 @@ class BehavClassifier:
 
     @property
     def behav_name(self) -> str:
-        """Behavior name."""
+        """Behaviour name."""
         return self._behav_name
 
     @property
@@ -134,7 +131,7 @@ class BehavClassifier:
 
     @property
     def model_dir(self) -> Path:
-        """Model directory for this behavior."""
+        """Model directory for this behaviour."""
         return self.proj_dir / "behav_models" / self.behav_name
 
     @property
@@ -143,12 +140,12 @@ class BehavClassifier:
         return self.model_dir / "config.json"
 
     @property
-    def config(self) -> BehavClassifierConfig:
+    def config(self) -> BehaviourClassifierConfig:
         """Current model configuration."""
-        return BehavClassifierConfig.model_validate_json(self.config_fp.read_text())
+        return BehaviourClassifierConfig.model_validate_json(self.config_fp.read_text())
 
     @config.setter
-    def config(self, config: BehavClassifierConfig) -> None:
+    def config(self, config: BehaviourClassifierConfig) -> None:
         """Update model configuration."""
         try:
             if self.config == config:
@@ -190,16 +187,16 @@ class BehavClassifier:
 
     @property
     def y_dir(self) -> Path:
-        """Directory containing scored behavior files."""
-        return self.proj_dir / Folders.SCORED_BEHAVS.value
+        """Directory containing scored behaviour files."""
+        return self.proj_dir / Folders.SCORED_BEHAVIOUR.value
 
     #################################################
     # Factory Methods
     #################################################
 
     @classmethod
-    def create_from_project_dir(cls, proj_dir: Path) -> list[BehavClassifier]:
-        """Create classifiers for all behaviors in project.
+    def create_from_project_dir(cls, proj_dir: Path) -> list[BehaviourClassifier]:
+        """Create classifiers for all behaviours in project.
 
         Parameters
         ----------
@@ -209,15 +206,15 @@ class BehavClassifier:
         Returns:
         -------
         list[BehavClassifier]
-            List of BehavClassifier instances, one per behavior.
+            List of BehavClassifier instances, one per behaviour.
         """
         proj_dir = proj_dir.resolve()
-        y_df = wrangle_columns_y(combine_dfs(proj_dir / Folders.SCORED_BEHAVS.value))
-        behavs_ls = y_df.columns.to_list()
-        return [cls(proj_dir, behav) for behav in behavs_ls]
+        y_df = wrangle_columns_y(combine_dfs(proj_dir / Folders.SCORED_BEHAVIOUR.value))
+        behaviour_ls = y_df.columns.to_list()
+        return [cls(proj_dir, behav) for behav in behaviour_ls]
 
     @classmethod
-    def create_from_project(cls, proj: Project) -> list[BehavClassifier]:
+    def create_from_project(cls, proj: Project) -> list[BehaviourClassifier]:
         """Create classifiers from Project instance.
 
         Parameters
@@ -233,7 +230,7 @@ class BehavClassifier:
         return cls.create_from_project_dir(proj.root_dir)
 
     @classmethod
-    def load(cls, proj_dir: Path, behav_name: str) -> BehavClassifier:
+    def load(cls, proj_dir: Path, behav_name: str) -> BehaviourClassifier:
         """Load existing classifier.
 
         Parameters
@@ -241,7 +238,7 @@ class BehavClassifier:
         proj_dir : Path
             Project directory path.
         behav_name : str
-            Behavior name.
+            Behaviour name.
 
         Returns:
         -------
@@ -256,10 +253,10 @@ class BehavClassifier:
         proj_dir = proj_dir.resolve()
         config_fp = proj_dir / "behav_models" / behav_name / "config.json"
         try:
-            BehavClassifierConfig.model_validate_json(config_fp.read_text())
+            BehaviourClassifierConfig.model_validate_json(config_fp.read_text())
         except (FileNotFoundError, OSError) as e:
             msg = (
-                f'Model in "{proj_dir}" with behavior "{behav_name}" not found. '
+                f'Model in "{proj_dir}" with behaviour "{behav_name}" not found. '
                 "Check file path."
             )
             raise ValueError(msg) from e
@@ -370,7 +367,7 @@ class BehavClassifier:
         )
         y_pred = (y_prob > self.config.pcutoff).astype(int)
 
-        pred_df = BehavPredictedDf.init_df(pd.Series(index))
+        pred_df = BehaviourPredictedDf.init_df(pd.Series(index))
         pred_df[(self.config.behav_name, PROB)] = y_prob
         pred_df[(self.config.behav_name, PRED)] = y_pred
 

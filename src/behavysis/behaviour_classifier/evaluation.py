@@ -1,4 +1,4 @@
-"""Evaluation metrics and visualization for behavioral classifier."""
+"""Evaluation metrics and visualization for behavioural classifier."""
 
 import json
 from pathlib import Path
@@ -11,7 +11,7 @@ from matplotlib.figure import Figure
 from sklearn.metrics import classification_report, confusion_matrix
 
 from behavysis.constants import ACTUAL, PRED, PROB
-from behavysis.df_classes import BehavClassifierEvalDf, DFMixin
+from behavysis.df_classes import BehaviourClassifierEvalDf, DFMixin
 
 NIL = "nil"
 BEHAV = "behav"
@@ -119,7 +119,7 @@ def eval_logc(y_true: np.ndarray, y_prob: np.ndarray) -> Figure:
 
 
 def eval_bouts(y_true: np.ndarray, y_pred: np.ndarray) -> pd.DataFrame:
-    """Analyze prediction accuracy by behavioral bout.
+    """Analyze prediction accuracy by behavioural bout.
 
     Parameters
     ----------
@@ -184,7 +184,7 @@ def save_evaluation_results(
     y_pred : np.ndarray
         Predicted labels.
     behav_name : str
-        Name of the behavior.
+        Name of the behaviour.
     pcutoff : float
         Probability cutoff used.
     eval_dir : Path
@@ -200,7 +200,7 @@ def save_evaluation_results(
         (eval_df, report_dict, conf_matr_fig, pcutoffs_fig, logc_fig)
     """
     # Build evaluation dataframe
-    eval_df = BehavClassifierEvalDf.init_df(
+    eval_df = BehaviourClassifierEvalDf.init_df(
         pd.Series(np.arange(np.concatenate(index_ls).shape[0]))
     )
     eval_df[(behav_name, PROB)] = y_prob
@@ -214,8 +214,8 @@ def save_evaluation_results(
     logc_fig = eval_logc(y_true, y_prob)
 
     # Save outputs
-    BehavClassifierEvalDf.write(
-        eval_df, eval_dir / f"{name}_eval.{BehavClassifierEvalDf.io_format}"
+    BehaviourClassifierEvalDf.write(
+        eval_df, eval_dir / f"{name}_eval.{BehaviourClassifierEvalDf.io_format}"
     )
     (eval_dir / f"{name}_report.json").write_text(json.dumps(report_dict, indent=2))
     conf_matr_fig.savefig(eval_dir / f"{name}_confm.png")

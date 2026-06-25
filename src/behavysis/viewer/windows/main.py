@@ -24,7 +24,7 @@ from PySide6.QtWidgets import (
 from tqdm import trange
 
 from behavysis.constants import DF_IO_FORMAT, STATUS_MSG_TIMEOUT, VALUE2COLOR
-from behavysis.df_classes import BehavScoredDf
+from behavysis.df_classes import BehaviourScoredDf
 from behavysis.models import ExperimentConfig
 from behavysis.utils.qt_utils import toggle_window
 from behavysis.viewer.models.bout_inspect_list_model import BoutInspectListModel
@@ -184,7 +184,8 @@ class MainWindow(QMainWindow):
         m.layoutChanged.connect(
             lambda: self.ui.bout_inspect_widget.setEnabled(m.id >= 0)
         )
-        # Making bout_inspect select user-defined behavs enabled when bout "actual" is True
+        # Making bout_inspect select user-defined behaviour enabled
+        # when bout "actual" is True
         m.actual_signal.connect(
             lambda: self.ui.bout_inspect_view.setEnabled(m.bout.actual == 1)
         )
@@ -342,8 +343,8 @@ class MainWindow(QMainWindow):
             else:
                 self.keypoints_model.load_empty()
             # Loading data into keypoint model
-            if self.file_manager.behavs_df_fp.exists():
-                self.bouts_model.load(self.file_manager.behavs_df_fp, config)
+            if self.file_manager.behaviour_df_fp.exists():
+                self.bouts_model.load(self.file_manager.behaviour_df_fp, config)
             else:
                 self.bouts_model.load_empty()
             # Setting primitive attributes
@@ -444,7 +445,7 @@ class MainWindow(QMainWindow):
 
     def save(self) -> None:
         """__summary__."""
-        self.save_frames(self.file_manager.behavs_df_fp)
+        self.save_frames(self.file_manager.behaviour_df_fp)
 
     def save_frames(self, fp=None) -> None:
         """__summary__."""
@@ -456,10 +457,10 @@ class MainWindow(QMainWindow):
                 f"{DF_IO_FORMAT} dataframe (*.{DF_IO_FORMAT})",
             )[0]
         if fp:
-            # bouts to behavs_df
-            behavs_df = BehavScoredDf.bouts2frames(self.bouts_model.bouts)
+            # bouts to behaviour_df
+            behaviour_df = BehaviourScoredDf.bouts2frames(self.bouts_model.bouts)
             # Writing to file
-            BehavScoredDf.write(behavs_df, fp)
+            BehaviourScoredDf.write(behaviour_df, fp)
             self.ui.statusbar.showMessage(
                 f"Saved scored behaviour frames to {fp}", timeout=STATUS_MSG_TIMEOUT
             )
@@ -534,7 +535,7 @@ class MainWindow(QMainWindow):
         keypoints_model.load(file_manager.dlc_df_fp, config)
         # Make bouts model
         bouts_model = BoutsListModel()
-        bouts_model.load(file_manager.behavs_df_fp, config)
+        bouts_model.load(file_manager.behaviour_df_fp, config)
         # Make graph viewer, plot all data and set widget size
         graph_viewer = GraphView()
         graph_viewer.plot_bouts_init(bouts_model.bouts, config)

@@ -20,7 +20,7 @@ Use context7, tavily, karpathy guidelines, and caveman speak
 1. Schema enforcement at IO boundaries — catch bad data on read/write
 2. Consistent parquet IO — single pattern, one place to change format
 3. MultiIndex name standardization — enforces consistent naming (`frame`, `individuals`, `bodyparts`, `coords`, `behavs`, `outcomes` etc.)
-4. Prevents NaN in critical DataFrames (keypoints, behaviors)
+4. Prevents NaN in critical DataFrames (keypoints, behaviours)
 5. `init_df` pattern removes boilerplate for creating empty DataFrames with correct structure
 
 **Over-engineered aspects:**
@@ -78,7 +78,7 @@ Let me now present this analysis in caveman full mode and tie it to karpathy gui
 - Schema enforcement at IO boundaries (catching bad data on read/write)
 - Consistent parquet IO pattern, single place to change format
 - MultiIndex name standardization across pipeline
-- NaN prevention in critical data (keypoints, behaviors)
+- NaN prevention in critical data (keypoints, behaviours)
 - `init_df` removes boilerplate for empty DataFrames with correct structure
 
 **Over-engineered (question):**

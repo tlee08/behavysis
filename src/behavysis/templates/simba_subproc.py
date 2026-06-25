@@ -37,7 +37,7 @@ class FeatureExtractor:
     #################################################
 
     @staticmethod
-    def simba_make_proj(proj_dir: Path, behavs_ls: list[str]) -> None:
+    def simba_make_proj(proj_dir: Path, behaviour_ls: list[str]) -> None:
         """Pose number is from:
             - https://github.com/sgoldenlab/simba/blob/master/simba/pose_configurations/configuration_names/pose_config_names.csv
             - https://github.com/sgoldenlab/simba/blob/master/simba/pose_configurations/bp_names/bp_names.csv
@@ -46,7 +46,7 @@ class FeatureExtractor:
         ProjectConfigCreator(
             project_path=proj_dir.absolute().parent,
             project_name=proj_dir.name,
-            target_list=behavs_ls,
+            target_list=behaviour_ls,
             pose_estimation_bp_cnt="16",
             body_part_config_idx=6,  # bp_names.csv or pose_config_names.csv row minus 1
             animal_cnt=2,
@@ -161,16 +161,17 @@ class FeatureExtractor:
 
     @staticmethod
     def simba_label_scoring(
-        scored_fp, features_fp, targets_inserted_fp, behavs_ls
+        scored_fp, features_fp, targets_inserted_fp, behaviour_ls
     ) -> None:
         """Adding behaviour labels to features_extracted csv.
+
         DEPRICATED: store behav frame outcomes in different df.
         """
         # Reading in features_extracted csv
         df = pd.read_csv(features_fp, header=0, index_col=0)
         scored_df = pd.read_csv(scored_fp, header=0, index_col=0)
         # Adding labelled behaviour columns (if a column does not exist, imputes with 0)
-        for behav in behavs_ls:
+        for behav in behaviour_ls:
             try:
                 df[behav] = scored_df[behav]
             except KeyError:

@@ -23,8 +23,8 @@ class ExpFileManager:
         return self.root_dir / "2_formatted_video" / f"{self.name}.mp4"
 
     @property
-    def behavs_df_fp(self) -> Path:
-        return self.root_dir / "7_scored_behavs" / f"{self.name}.{DF_IO_FORMAT}"
+    def behaviour_df_fp(self) -> Path:
+        return self.root_dir / "7_scored_behaviour" / f"{self.name}.{DF_IO_FORMAT}"
 
     @property
     def dlc_df_fp(self) -> Path:

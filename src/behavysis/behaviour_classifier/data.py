@@ -1,4 +1,4 @@
-"""Data loading and preprocessing for behavioral classifier."""
+"""Data loading and preprocessing for behavioural classifier."""
 
 from pathlib import Path
 
@@ -11,8 +11,8 @@ from sklearn.preprocessing import FunctionTransformer, MinMaxScaler
 
 from behavysis.constants import ACTUAL, FALSE_POS, OUTCOMES, PRED, TRUE_POS, UNSURE
 from behavysis.df_classes import (
-    BehavClassifierCombinedDf,
-    BehavScoredDf,
+    BehaviourClassifierCombinedDf,
+    BehaviourScoredDf,
     DFMixin,
     FeaturesDf,
 )
@@ -37,7 +37,7 @@ def combine_dfs(src_dir: Path) -> pd.DataFrame:
     """
     data_dict = {i.stem: DFMixin.read(src_dir / i) for i in src_dir.iterdir()}
     df = pd.concat(data_dict.values(), axis=0, keys=data_dict.keys())
-    df = BehavClassifierCombinedDf.clean_and_validate(df)
+    df = BehaviourClassifierCombinedDf.clean_and_validate(df)
     return df
 
 
@@ -47,7 +47,7 @@ def wrangle_columns_y(y: pd.DataFrame) -> pd.DataFrame:
     Parameters
     ----------
     y : pd.DataFrame
-        Scored behaviors dataframe.
+        Scored behaviours dataframe.
 
     Returns:
     -------
@@ -185,16 +185,16 @@ def prepare_training_data(
     oversample_ratio: float,
     undersample_ratio: float,
 ) -> tuple[list[np.ndarray], list[np.ndarray], list[np.ndarray], list[np.ndarray]]:
-    """Load and prepare training data from features and scored behaviors.
+    """Load and prepare training data from features and scored behaviours.
 
     Parameters
     ----------
     x_dir : Path
         Directory containing feature files.
     y_dir : Path
-        Directory containing scored behavior files.
+        Directory containing scored behaviour files.
     behav_name : str
-        Name of behavior to train on.
+        Name of behaviour to train on.
     preproc_fp : Path
         Path to save preprocessing pipeline.
     test_split : float
@@ -209,13 +209,13 @@ def prepare_training_data(
     tuple
         (x_ls, y_ls, index_train_ls, index_test_ls)
     """
-    # Load feature and behavior files
+    # Load feature and behaviour files
     x_fp_ls = [x_dir / i for i in x_dir.iterdir()]
     y_fp_ls = [y_dir / i for i in y_dir.iterdir()]
     x_df_ls = async_read_files_run(x_fp_ls, FeaturesDf.read)
-    y_df_ls = async_read_files_run(y_fp_ls, BehavScoredDf.read)
+    y_df_ls = async_read_files_run(y_fp_ls, BehaviourScoredDf.read)
 
-    # Format y dfs: select behavior column, replace UNDETERMINED
+    # Format y dfs: select behaviour column, replace UNDETERMINED
     y_df_ls = [y[(behav_name, ACTUAL)].replace(UNSURE, FALSE_POS) for y in y_df_ls]
 
     # Align x and y indices

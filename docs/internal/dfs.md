@@ -40,7 +40,7 @@ Same functionality with tuple:
 
 ```python
 IN = ("frame",)           # ← index level names
-CN = ("behavs", "outcomes")  # ← column level names
+CN = ("behaviour", "outcomes")  # ← column level names
 ```
 
 Need semantic access to one name? Module constant. `FRAME = "frame"`. One import.
@@ -50,7 +50,7 @@ from behavysis.df_classes.constants import FRAME
 df.index.get_level_values(FRAME)  # ← clean, direct, no .value ceremony
 ```
 
-**Karpathy #2**: "No abstractions for single-use code." The enum adds zero behavioral value — just extra lines. A Python `tuple` is what pandas MultiIndex names API actually wants.
+**Karpathy #2**: "No abstractions for single-use code." The enum adds zero behavioural value — just extra lines. A Python `tuple` is what pandas MultiIndex names API actually wants.
 
 **Remove**: `_enum_values()` entirely. Dead function. Its only purpose is confirming you picked wrong container.
 

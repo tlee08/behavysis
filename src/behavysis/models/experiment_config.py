@@ -21,7 +21,7 @@ from .funcs.calculate_params import (
     CalculateParamsConfig,
     FromLikelihoodConfig,
 )
-from .funcs.classify_behavs import ClassifyBehavConfig
+from .funcs.classify_behaviour import ClassifyBehaviourConfig
 from .funcs.evaluate_vid import EvaluateVidConfig
 from .funcs.extract_features import ExtractFeaturesConfig
 from .funcs.format_vid import FormatVidConfig, VidMetadata
@@ -48,7 +48,7 @@ class UserConfig(BaseModel):
     calculate_params: CalculateParamsConfig = CalculateParamsConfig()
     preprocess: PreprocessConfig = PreprocessConfig()
     extract_features: ExtractFeaturesConfig = ExtractFeaturesConfig()
-    classify_behavs: list[ClassifyBehavConfig] = []
+    classify_behaviour: list[ClassifyBehaviourConfig] = []
     analyse: AnalyseConfig = AnalyseConfig()
     evaluate_vid: EvaluateVidConfig = EvaluateVidConfig()
 
@@ -148,7 +148,7 @@ def get_default_config() -> ExperimentConfig:
             extract_features=ExtractFeaturesConfig(
                 individuals="--indivs_simba", bodyparts="--bpts_simba"
             ),
-            classify_behavs=[ClassifyBehavConfig()],
+            classify_behaviour=[ClassifyBehaviourConfig()],
             analyse=AnalyseConfig(
                 in_roi=[
                     InRoiConfig(roi_corners="--bpts_corners", bodyparts="--bpts_front")

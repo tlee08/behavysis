@@ -2,7 +2,7 @@
 
 from .analyse import AnalyseConfig
 from .calculate_params import CalculateParamsConfig
-from .classify_behavs import ClassifyBehavConfig
+from .classify_behaviour import ClassifyBehaviourConfig
 from .evaluate_vid import EvaluateVidConfig
 from .extract_features import ExtractFeaturesConfig
 from .format_vid import FormatVidConfig, VidMetadata
@@ -12,7 +12,7 @@ from .run_dlc import RunDlcConfig
 __all__ = [
     "AnalyseConfig",
     "CalculateParamsConfig",
-    "ClassifyBehavConfig",
+    "ClassifyBehaviourConfig",
     "EvaluateVidConfig",
     "ExtractFeaturesConfig",
     "FormatVidConfig",

@@ -1,10 +1,10 @@
 # Behavysis
 
-This is the main package containing all core modules for the Behavysis behavioral analysis pipeline. Submodules include behavioral classification, dataframes for analysis, pipeline orchestration, processing steps, configuration models, utilities, and the viewer GUI.
+This is the main package containing all core modules for the Behavysis behavioural analysis pipeline. Submodules include behavioural classification, dataframes for analysis, pipeline orchestration, processing steps, configuration models, utilities, and the viewer GUI.
 
 ## Structure
 
-- `behav_classifier/`: Behavioral classification models and logic
+- `behav_classifier/`: Behavioural classification models and logic
 - `df_classes/`: DataFrame-based analysis classes
 - `pipeline/`: Project and experiment orchestration
 - `processes/`: Individual processing steps
@@ -99,8 +99,8 @@ flowchart TD
     F3@{ shape: st-rect, label: "3_keypoints"}
     F4@{ shape: st-rect, label: "4_preprocessed"}
     F5@{ shape: st-rect, label: "5_features_extracted"}
-    F6@{ shape: st-rect, label: "6_predicted_behavs"}
-    F7@{ shape: st-rect, label: "7_scored_behavs"}
+    F6@{ shape: st-rect, label: "6_predicted_behaviour"}
+    F7@{ shape: st-rect, label: "7_scored_behaviour"}
     F8@{ shape: st-rect, label: "8_analysis"}
     F9@{ shape: st-rect, label: "9_analysis_combined"}
     F10@{ shape: st-rect, label: "10_evaluate_vid"}

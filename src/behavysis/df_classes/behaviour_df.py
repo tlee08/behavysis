@@ -1,4 +1,4 @@
-"""Behavior DataFrame for behavioral classification data."""
+"""Behaviour DataFrame for behavioural classification data."""
 
 from pathlib import Path
 
@@ -8,7 +8,7 @@ from scipy.stats import mode
 
 from behavysis.constants import (
     ACTUAL,
-    BEHAVS,
+    BEHAVIOUR,
     DUR,
     FRAME,
     OUTCOMES,
@@ -28,12 +28,12 @@ from .df_mixin import DFMixin
 # Consider making vect2bouts and predicted2scored into standalone functions
 
 
-class BehavPredictedDf(DFMixin):
+class BehaviourPredictedDf(DFMixin):
     """BehavPredictedDf."""
 
     is_nullable = False
     index_names = (FRAME,)
-    column_names = (BEHAVS, OUTCOMES)
+    column_names = (BEHAVIOUR, OUTCOMES)
 
     @classmethod
     def _validate(cls, df: pd.DataFrame) -> None:
@@ -45,12 +45,12 @@ class BehavPredictedDf(DFMixin):
         )
 
 
-class BehavScoredDf(DFMixin):
-    """BehavScoredDf."""
+class BehaviourScoredDf(DFMixin):
+    """BehaviourScoredDf."""
 
     is_nullable = False
     index_names = (FRAME,)
-    column_names = (BEHAVS, OUTCOMES)
+    column_names = (BEHAVIOUR, OUTCOMES)
 
     @classmethod
     def _validate(cls, df: pd.DataFrame) -> None:
@@ -65,26 +65,26 @@ class BehavScoredDf(DFMixin):
     def import_boris_tsv(
         cls,
         fp: Path,
-        behavs_ls: list[str],
+        behaviour_ls: list[str],
         start_frame: int,
         stop_frame: int,
     ) -> pd.DataFrame:
         """Import Boris TSV file to scored DataFrame."""
         df = cls.init_df(pd.Series(np.arange(start_frame, stop_frame)))
         df_boris = pd.read_csv(fp, sep="\t")
-        assert np.isin(behavs_ls, df_boris["Behavior"].unique()).all(), (
-            f"Some behaviors not in BORIS file.\n"
-            f"Requested: {behavs_ls}\n"
-            f"BORIS: {df_boris['Behavior'].unique()}"
+        assert np.isin(behaviour_ls, df_boris["Behaviour"].unique()).all(), (
+            f"Some behaviours not in BORIS file.\n"
+            f"Requested: {behaviour_ls}\n"
+            f"BORIS: {df_boris['Behaviour'].unique()}"
         )
-        for behav in behavs_ls:
+        for behav in behaviour_ls:
             df[(behav, ACTUAL)] = TRUE_NEG
             df[(behav, PRED)] = TRUE_NEG
         for _, row in df_boris.iterrows():
-            behav = row["Behavior"]
+            behav = row["Behaviour"]
             frame = row["Image index"]
-            status = row["Behavior type"]
-            if behav not in behavs_ls:
+            status = row["Behaviour type"]
+            if behav not in behaviour_ls:
                 continue
             val = TRUE_POS if status == "START" else TRUE_NEG
             df.loc[frame:, (behav, ACTUAL)] = val
@@ -95,7 +95,7 @@ class BehavScoredDf(DFMixin):
     def get_bouts_struct(cls, df: pd.DataFrame) -> list[BoutStruct]:
         """Extract BoutStruct from DataFrame columns."""
         bouts_struct = []
-        for behav in df.columns.unique(BEHAVS):
+        for behav in df.columns.unique(BEHAVIOUR):
             user_defined = [
                 c for c in df[behav].columns.unique(OUTCOMES) if c not in [PRED, ACTUAL]
             ]
@@ -135,7 +135,7 @@ class BehavScoredDf(DFMixin):
     def frames2bouts(cls, df: pd.DataFrame) -> Bouts:
         """Convert frame-level DataFrame to Bouts model."""
         bouts_ls = []
-        for behav in df.columns.unique(BEHAVS):
+        for behav in df.columns.unique(BEHAVIOUR):
             behav_df = df[behav]
             bouts_df = cls.vect2bouts_df(behav_df[PRED] == TRUE_POS)
             for _, row in bouts_df.iterrows():
@@ -179,13 +179,13 @@ class BehavScoredDf(DFMixin):
 
 if __name__ == "__main__":
     v = np.array([0, 0, 1, 1, 1, 0, 1, 1, 0, 0, 1, 0, 1])
-    df0 = BehavScoredDf.init_df(pd.Series(np.arange(len(v))))
-    df0[(BEHAVS, PRED)] = v
-    df0[(BEHAVS, ACTUAL)] = v
-    df0 = BehavScoredDf.clean_and_validate(df0)
-    b1 = BehavScoredDf.frames2bouts(df0)
-    df1 = BehavScoredDf.bouts2frames(b1)
-    b2 = BehavScoredDf.frames2bouts(df1)
-    df2 = BehavScoredDf.bouts2frames(b2)
+    df0 = BehaviourScoredDf.init_df(pd.Series(np.arange(len(v))))
+    df0[(BEHAVIOUR, PRED)] = v
+    df0[(BEHAVIOUR, ACTUAL)] = v
+    df0 = BehaviourScoredDf.clean_and_validate(df0)
+    b1 = BehaviourScoredDf.frames2bouts(df0)
+    df1 = BehaviourScoredDf.bouts2frames(b1)
+    b2 = BehaviourScoredDf.frames2bouts(df1)
+    df2 = BehaviourScoredDf.bouts2frames(b2)
     assert df1.equals(df2), "DataFrames should be equal"
     assert b1 == b2, "Bouts should be equal"

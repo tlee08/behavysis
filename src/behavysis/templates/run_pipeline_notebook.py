@@ -72,7 +72,7 @@ def _():
 def _(DEFAULT_CONFIG_FP):
     overwrite = mo.ui.switch(label="Overwrite files")
     project_fp = mo.ui.text(label="Project folder", value=Path.cwd(), full_width=True)
-    config_fp = mo.ui.text(
+    configs_fp = mo.ui.text(
         label="Project folder",
         value=Path.cwd() / DEFAULT_CONFIG_FP,
         full_width=True,
@@ -80,16 +80,16 @@ def _(DEFAULT_CONFIG_FP):
     nprocs = mo.ui.number(label="Number of parallel processes", value=5)
 
     run_btn = mo.ui.run_button(label="Run Pipeline")
-    return config_fp, nprocs, overwrite, project_fp, run_btn
+    return configs_fp, nprocs, overwrite, project_fp, run_btn
 
 
 @app.cell
-def _(config_fp, nprocs, overwrite, project_fp, run_btn):
+def _(configs_fp, nprocs, overwrite, project_fp, run_btn):
     mo.vstack(
         [
             overwrite,
             project_fp,
-            config_fp,
+            configs_fp,
             nprocs,
             run_btn,
         ]
@@ -98,8 +98,25 @@ def _(config_fp, nprocs, overwrite, project_fp, run_btn):
 
 @app.cell
 def _():
-    update_config_checkbox = mo.ui.checkbox(label="Step 0: Update config")
+    update_config_checkbox = mo.ui.checkbox(label="Step 0: Update configs")
     format_vid_checkbox = mo.ui.checkbox(label="Step 1: Format videos")
+    format_vid_checkbox = mo.ui.checkbox(label="Step 2: Format videos")
+    calculate_experiment_checkbox = mo.ui.checkbox(
+        label="Step 3: Calculate experiment parameters"
+    )
+    preprocess_checkbox = mo.ui.checkbox(label="Step 4: Preprocess keypoints")
+    analysis_checkbox = mo.ui.checkbox(label="Step 5: Simple Analysis")
+    extract_features_checkbox = mo.ui.checkbox(
+        label="Step 6: Extract features for classifier"
+    )
+    classify_behaviour = mo.ui.checkbox(label="Step 7: Classify behaviours")
+    manually_check_labels = mo.md(
+        "Step 8: Run `behavysis-viewer` to verify the classified behaviour"
+    )
+    analyse_behaviour = mo.ui.checkbox(
+        label="Step 9: Make the analysis for the verified behaviour"
+    )
+    mo.ui.checkbox(label="Step 10: Analyze results")
 
 
 @app.cell(hide_code=True)
@@ -121,14 +138,14 @@ def _(nprocs, project_fp, run_btn):
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    ## Step 0: Update config
+    ## Step 0: Update configs
     """)
 
 
 @app.cell
-def _(config_fp, proj):
+def _(configs_fp, proj):
     proj.update_config(
-        default_config_fp=config_fp.value,
+        default_config_fp=configs_fp.value,
         overwrite="user",
     )
 
@@ -258,7 +275,7 @@ def _():
     mo.md(r"""
     ## Step 6: Extract features for classifier
 
-    Only run step 6-9 if you are using classified behavs pipeline
+    Only run step 6-9 if you are using classified behaviour pipeline
     """)
 
 
@@ -272,34 +289,34 @@ def _(overwrite, proj):
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    ## Step 7: Classify behaviors
+    ## Step 7: Classify behaviours
     """)
 
 
 @app.cell
 def _(overwrite, proj):
-    # Requires: user.classify_behavs with trained model paths
-    proj.classify_behavs(overwrite=overwrite.value)
-    proj.export_behavs(overwrite=overwrite.value)
+    # Requires: user.classify_behaviour with trained model paths
+    proj.classify_behaviour(overwrite=overwrite.value)
+    proj.export_behaviour(overwrite=overwrite.value)
 
 
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    ## Step 8: Run `behavysis-viewer` to verify the classified behavs
+    ## Step 8: Run `behavysis-viewer` to verify the classified behaviour
     """)
 
 
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    ## Step 9: Make the analysis for the verified behavs
+    ## Step 9: Make the analysis for the verified behaviour
     """)
 
 
 @app.cell
 def _(proj):
-    proj.analyse_behavs()
+    proj.analyse_behaviour()
 
 
 @app.cell(hide_code=True)

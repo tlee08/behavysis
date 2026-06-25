@@ -25,7 +25,7 @@ FEATURES = "features"
 # Behaviour
 
 OUTCOMES = "outcomes"
-BEHAVS = "behavs"
+BEHAVIOUR = "behaviour"
 
 PROB = "prob"
 PRED = "pred"

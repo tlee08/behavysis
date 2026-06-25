@@ -139,7 +139,7 @@ class TestExperimentConfig:
         assert restored.user.format_vid.width_px == 1920
         assert restored.user.format_vid.height_px == 1080
         assert restored.user.format_vid.fps == 60
-        # Note: ref extra fields may not roundtrip due to pydantic behavior
+        # Note: ref extra fields may not roundtrip due to pydantic behaviour
 
 
 class TestGetDefaultConfig:

@@ -51,7 +51,7 @@
         "bodyparts": ["Nose", "BodyCentre", "TailBase1"]
       },
       "eval_vid": {
-        "funcs": ["keypoints", "behavs"],
+        "funcs": ["keypoints", "behaviour"],
         "pcutoff": 0.5,
         "colour_level": "individuals",
         "radius": 4,
@@ -70,7 +70,7 @@
       ],
       "pcutoff": 0.4,
       "min_window_frames": 2,
-      "user_behavs": ["example", "another example"]
+      "user_behaviour": ["example", "another example"]
     },
     "analyse": {
       "thigmotaxis": {

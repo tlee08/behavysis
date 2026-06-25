@@ -146,11 +146,11 @@ Define values once, reference them with `--name`:
 }
 ```
 
-### Behavioral Classification
+### Behavioural Classification
 
 ```json
 {
-  "classify_behavs": [
+  "classify_behaviour": [
     {
       "proj_dir": "path/to/project",
       "behav_name": "fighting",
@@ -409,7 +409,7 @@ Your DLC model's bodypart names don't match the config. Check `ref.bpts_simba` m
       "individuals": "--indivs_simba",
       "bodyparts": "--bpts_simba"
     },
-    "classify_behavs": [
+    "classify_behaviour": [
       {
         "proj_dir": "path/to/project_dir",
         "behav_name": "behav_name",

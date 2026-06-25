@@ -20,7 +20,7 @@ uv run mkdocs serve
 
 ## Project Overview
 
-Behavysis is a behavioral analysis pipeline for lab mice using computer vision. It processes video footage through DeepLabCut pose estimation and behavioral classification.
+Behavysis is a behavioural analysis pipeline for lab mice using computer vision. It processes video footage through DeepLabCut pose estimation and behavioural classification.
 
 ## Core Architecture
 
@@ -82,13 +82,13 @@ Functions check `overwrite` first, read config with `ExperimentConfig.model_vali
 
 File extensions are defined in `FileExts` enum—most data files use Parquet format.
 
-## Behavioral Classifier (`behav_classifier/`)
+## Behavioural Classifier (`behav_classifier/`)
 
 `BehavClassifier` handles training and inference. Models stored in `proj_dir/behav_models/<behav_name>/`. Key methods:
 
 - `pipeline_training()` — trains model and saves evaluation
 - `pipeline_inference(x_df)` — runs prediction on features DataFrame
-- `create_from_project(proj)` — factory for all behaviors in project
+- `create_from_project(proj)` — factory for all behaviours in project
 
 ## Entry Points
 
@@ -97,7 +97,7 @@ Defined in `pyproject.toml`:
 - `behavysis-init` — Initialize new project
 - `behavysis-make-project` — Create project structure
 - `behavysis-project-gui` — Launch GUI
-- `behavysis-viewer` — Behavior annotation viewer
+- `behavysis-viewer` — Behaviour annotation viewer
 - `behavysis-make-dlc-builder` — DLC model builder
 
 ## Logging

@@ -2,8 +2,8 @@ from pathlib import Path
 
 from loguru import logger
 
-from behavysis.behav_classifier.behav_classifier import BehavClassifier
-from behavysis.df_classes import BehavPredictedDf, BehavScoredDf, DFMixin
+from behavysis.behav_classifier.behav_classifier import BehaviourClassifier
+from behavysis.df_classes import BehaviourPredictedDf, BehaviourScoredDf, DFMixin
 from behavysis.models import BoutStruct, ExperimentConfig
 from behavysis.utils.io_utils import file_exists_msg
 
@@ -38,14 +38,14 @@ def df2csv(
     logger.info("exported df to csv")
 
 
-def predictedbehavs2scoredbehavs(
+def predictedbehaviour2scoredbehaviour(
     src_fp: Path,
     dst_fp: Path,
     config_fp: Path,
     *,
     overwrite: bool,
 ) -> None:
-    """Converts a predicted_behavs df to a scored_behavs df.
+    """Converts a predicted_behaviour df to a scored_behaviour df.
 
     Namely:
     - Adds an "actual" column to the df.
@@ -57,7 +57,7 @@ def predictedbehavs2scoredbehavs(
         return
     # Reading the config file
     config = ExperimentConfig.model_validate_json(config_fp.read_text())
-    models_ls = config.user.classify_behavs
+    models_ls = config.user.classify_behaviour
     # Getting the behav_outcomes dict from the config file
     bouts_struct = []
     for model_config in models_ls:
@@ -65,21 +65,23 @@ def predictedbehavs2scoredbehavs(
         behav_name = config.get_ref(model_config.behav_name)
         user_defined = config.get_ref(model_config.user_defined)
         # Ensuring model exists
-        BehavClassifier.load(proj_dir, behav_name)
+        BehaviourClassifier.load(proj_dir, behav_name)
         # Adding to bouts_struct
         bouts_struct.append(BoutStruct(behav=behav_name, user_defined=user_defined))
-    # Getting scored behavs df from predicted behavs df and bouts_struct
-    behavs_predicted_df = BehavPredictedDf.read(src_fp)
-    behavs_scored_df = BehavScoredDf.predicted2scored(behavs_predicted_df, bouts_struct)
-    BehavScoredDf.write(behavs_scored_df, dst_fp)
-    logger.info("predicted_behavs to scored_behavs.")
+    # Getting scored behaviour df from predicted behaviour df and bouts_struct
+    behaviour_predicted_df = BehaviourPredictedDf.read(src_fp)
+    behaviour_scored_df = BehaviourScoredDf.predicted2scored(
+        behaviour_predicted_df, bouts_struct
+    )
+    BehaviourScoredDf.write(behaviour_scored_df, dst_fp)
+    logger.info("predicted_behaviour to scored_behaviour.")
 
 
-def boris2behav(
+def boris2behaviour(
     src_fp: Path,
     dst_fp: Path,
     config_fp: Path,
-    behavs_ls: list[str],
+    behaviour_ls: list[str],
     *,
     overwrite: bool,
 ) -> None:
@@ -92,6 +94,8 @@ def boris2behav(
     start_frame = config.get_ref(config.auto.start_frame)
     stop_frame = config.get_ref(config.auto.stop_frame) + 1
     # Importing the boris file to the Behav df format
-    df = BehavScoredDf.import_boris_tsv(src_fp, behavs_ls, start_frame, stop_frame)
-    BehavScoredDf.write(df, dst_fp)
+    df = BehaviourScoredDf.import_boris_tsv(
+        src_fp, behaviour_ls, start_frame, stop_frame
+    )
+    BehaviourScoredDf.write(df, dst_fp)
     logger.info("boris tsv to behav")

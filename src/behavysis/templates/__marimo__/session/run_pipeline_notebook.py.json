@@ -8,7 +8,14 @@
     {
       "id": "setup",
       "code_hash": "d8b0bf483c6091a9659399d9d37693c0",
-      "outputs": [],
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
       "console": []
     },
     {
@@ -99,7 +106,7 @@
         {
           "type": "data",
           "data": {
-            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"step-0-update-config\">Step 0: Update config</h2></span>"
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"step-0-update-configs\">Step 0: Update configs</h2></span>"
           }
         }
       ],
@@ -232,12 +239,12 @@
     },
     {
       "id": "nHfw",
-      "code_hash": "ef7418d93eb1952397ba4519e0cc1741",
+      "code_hash": "29826c4d8865902d46faefda029de1fe",
       "outputs": [
         {
           "type": "data",
           "data": {
-            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"step-6-extract-features-for-classifier\">Step 6: Extract features for classifier</h2>\n<span class=\"paragraph\">Only run step 6-9 if you are using classified behavs pipeline</span></span>"
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"step-6-extract-features-for-classifier\">Step 6: Extract features for classifier</h2>\n<span class=\"paragraph\">Only run step 6-9 if you are using classified behaviour pipeline</span></span>"
           }
         }
       ],
@@ -251,12 +258,12 @@
     },
     {
       "id": "AjVT",
-      "code_hash": "a1e7f69069579e605eb745c6966a8856",
+      "code_hash": "6e0f550af03856d7b24895919a3e6c69",
       "outputs": [
         {
           "type": "data",
           "data": {
-            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"step-7-classify-behaviors\">Step 7: Classify behaviors</h2></span>"
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"step-7-classify-behaviours\">Step 7: Classify behaviours</h2></span>"
           }
         }
       ],
@@ -270,12 +277,12 @@
     },
     {
       "id": "NCOB",
-      "code_hash": "47209b8965ec5fc16f6a958d7f25da71",
+      "code_hash": "51a7d500e7eba9734f1f5444ecaa46e2",
       "outputs": [
         {
           "type": "data",
           "data": {
-            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"step-8-run-behavysis-viewer-to-verify-the-classified-behavs\">Step 8: Run <code>behavysis-viewer</code> to verify the classified behavs</h2></span>"
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"step-8-run-behavysis-viewer-to-verify-the-classified-behaviour\">Step 8: Run <code>behavysis-viewer</code> to verify the classified behaviour</h2></span>"
           }
         }
       ],
@@ -283,12 +290,12 @@
     },
     {
       "id": "aqbW",
-      "code_hash": "95f81a99e79d0f14603037f75f3042f9",
+      "code_hash": "34e29e998767224356d5bd4dc1712ee0",
       "outputs": [
         {
           "type": "data",
           "data": {
-            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"step-9-make-the-analysis-for-the-verified-behavs\">Step 9: Make the analysis for the verified behavs</h2></span>"
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"step-9-make-the-analysis-for-the-verified-behaviour\">Step 9: Make the analysis for the verified behaviour</h2></span>"
           }
         }
       ],

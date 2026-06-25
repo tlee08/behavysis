@@ -12,9 +12,9 @@
 
 ::: behavysis.funcs.extract_features
 
-::: behavysis.funcs.classify_behavs
+::: behavysis.funcs.classify_behaviour
 
-::: behavysis.funcs.analyse_behavs
+::: behavysis.funcs.analyse_behaviour
 
 ::: behavysis.funcs.analyse
 

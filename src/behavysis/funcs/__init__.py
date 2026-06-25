@@ -1,7 +1,7 @@
 """Processing functions."""
 
 from .analyse import AnalyseFunc, distance, freezing, in_roi, speed
-from .analyse_behavs import analyse_behavs
+from .analyse_behaviour import analyse_behaviour
 from .calculate_params import (
     CalculateParamsFunc,
     dur_frames_from_likelihood,
@@ -11,10 +11,10 @@ from .calculate_params import (
     stop_frame_from_dur,
     stop_frame_from_likelihood,
 )
-from .classify_behavs import classify_behavs
+from .classify_behaviour import classify_behaviour
 from .combine_analysis import combine_analysis
 from .evaluate_vid import EvaluateVid
-from .export import boris2behav, df2csv, df2df, predictedbehavs2scoredbehavs
+from .export import boris2behaviour, df2csv, df2df, predictedbehaviour2scoredbehaviour
 from .extract_features import extract_features
 from .format_vid import format_vid
 from .preprocess import (
@@ -32,9 +32,9 @@ __all__ = [
     "CalculateParamsFunc",
     "EvaluateVid",
     "PreprocessFunc",
-    "analyse_behavs",
+    "analyse_behaviour",
     "boris2behav",
-    "classify_behavs",
+    "classify_behaviour",
     "combine_analysis",
     "df2csv",
     "df2df",
@@ -48,7 +48,7 @@ __all__ = [
     "interpolate_stationary",
     "ma_dlc_run_batch",
     "ma_dlc_run_single",
-    "predictedbehavs2scoredbehavs",
+    "predictedbehaviour2scoredbehaviour",
     "px_per_mm",
     "refine_ids",
     "speed",

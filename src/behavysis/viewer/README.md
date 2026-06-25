@@ -7,7 +7,7 @@ Contains the GUI and visualization components for Behavysis.
 
 ## Usage
 
-Run the viewer to interactively explore and visualize behavioral analysis results.
+Run the viewer to interactively explore and visualize behavioural analysis results.
 
 ```mermaid
 flowchart TD

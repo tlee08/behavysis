@@ -183,21 +183,21 @@ class Project:
             overwrite=overwrite,
         )
 
-    def classify_behavs(self, *, overwrite: bool) -> None:
+    def classify_behaviour(self, *, overwrite: bool) -> None:
         """Classify behaviours for all experiments."""
         # Temporarily use single processing due to IO issues
         nprocs = self.nprocs
         self.nprocs = 1
         self._run(
-            Experiment.classify_behavs,
+            Experiment.classify_behaviour,
             overwrite=overwrite,
         )
         self.nprocs = nprocs
 
-    def export_behavs(self, *, overwrite: bool) -> None:
+    def export_behaviour(self, *, overwrite: bool) -> None:
         """Export predicted behaviours for all experiments."""
         self._run(
-            Experiment.export_behavs,
+            Experiment.export_behaviour,
             overwrite=overwrite,
         )
 
@@ -208,10 +208,10 @@ class Project:
             funcs=funcs,
         )
 
-    def analyse_behavs(self) -> None:
+    def analyse_behaviour(self) -> None:
         """Analyse behaviours for all experiments."""
         self._run(
-            Experiment.analyse_behavs,
+            Experiment.analyse_behaviour,
         )
 
     def combine_analysis(self) -> None:

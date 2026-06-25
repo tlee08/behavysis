@@ -7,8 +7,11 @@ from .analysis_df import (
     AnalysisDf,
     AnalysisSummaryCollatedDf,
 )
-from .behav_classifier_df import BehavClassifierCombinedDf, BehavClassifierEvalDf
-from .behav_df import BehavPredictedDf, BehavScoredDf
+from .behaviour_classifier_df import (
+    BehaviourClassifierCombinedDf,
+    BehaviourClassifierEvalDf,
+)
+from .behaviour_df import BehaviourPredictedDf, BehaviourScoredDf
 from .df_mixin import DFMixin
 from .features_df import FeaturesDf
 from .keypoints_df import KeypointsAnnotationsDf, KeypointsDf
@@ -20,10 +23,10 @@ __all__ = [
     "AnalysisDf",
     "AnalysisSummaryCollatedDf",
     "AnalysisSummaryDf",
-    "BehavClassifierCombinedDf",
-    "BehavClassifierEvalDf",
-    "BehavPredictedDf",
-    "BehavScoredDf",
+    "BehaviourClassifierCombinedDf",
+    "BehaviourClassifierEvalDf",
+    "BehaviourPredictedDf",
+    "BehaviourScoredDf",
     "DFMixin",
     "FeaturesDf",
     "KeypointsAnnotationsDf",

@@ -12,7 +12,7 @@ from PySide6.QtGui import QImage
 from PySide6.QtWidgets import QApplication
 
 from behavysis.constants import VALUE2COLOR
-from behavysis.df_classes import BehavScoredDf
+from behavysis.df_classes import BehaviourScoredDf
 from behavysis.models import Bouts, ExperimentConfig
 from behavysis.utils.qt_utils import qt2cv
 
@@ -58,12 +58,12 @@ class GraphView(PlotWidget):
         # Getting data
         start_ls = np.array([i.start for i in bouts.bouts]) / fps
         stop_ls = np.array([i.stop for i in bouts.bouts]) / fps
-        behavs_ls = np.array([i.behav for i in bouts.bouts])
+        behaviour_ls = np.array([i.behav for i in bouts.bouts])
         actual_ls = np.array([i.actual for i in bouts.bouts])
         # Plotting data
-        self.plot_init(start_ls, stop_ls, behavs_ls, actual_ls)
+        self.plot_init(start_ls, stop_ls, behaviour_ls, actual_ls)
 
-    def plot_init(self, start_ls, stop_ls, behavs_ls, actual_ls, **kwargs) -> None:
+    def plot_init(self, start_ls, stop_ls, behaviour_ls, actual_ls, **kwargs) -> None:
         # Clearing plot and data
         self.clear()
         self.bars = {}
@@ -71,9 +71,9 @@ class GraphView(PlotWidget):
         self.time_marker_line.setPos(0)
         self.addItem(self.time_marker_line)
         # Plotting bouts as bars
-        behavs_ls_i, behavs_cat = pd.factorize(behavs_ls)
+        behaviour_ls_i, behaviour_cat = pd.factorize(behaviour_ls)
         for i, (start, stop, behav, actual) in enumerate(
-            zip(start_ls, stop_ls, behavs_ls_i, actual_ls, strict=False)
+            zip(start_ls, stop_ls, behaviour_ls_i, actual_ls, strict=False)
         ):
             # Making bar item
             bar_ = BarGraphItem(
@@ -91,8 +91,8 @@ class GraphView(PlotWidget):
             self.bars[i] = bar_
             # Adding to plot
             self.addItem(bar_)
-        # Setting y-ticks to behavs_cat (categorical)
-        self.getAxis("left").setTicks([[(i, v) for i, v in enumerate(behavs_cat)]])
+        # Setting y-ticks to behaviour_cat (categorical)
+        self.getAxis("left").setTicks([[(i, v) for i, v in enumerate(behaviour_cat)]])
         # Setting plot aesthetics
         self.set_plot_attr(**kwargs)
 
@@ -152,18 +152,18 @@ if __name__ == "__main__":
 
     # fp = "/Users/timothylee/Desktop/Work/dev/behavysis/viewer/tests/resources/2_Round1.1_20220530_AGG-MOA_test3-M3_a2.parquet"
 
-    behavs_df = BehavScoredDf.read(fp)
+    behaviour_df = BehaviourScoredDf.read(fp)
     # frames_df to bouts_dict
-    bouts_dict = BehavScoredDf.frames2bouts(behavs_df)
+    bouts_dict = BehaviourScoredDf.frames2bouts(behaviour_df)
     fps = 15
     # Updating graph_viewer
     start_ls = np.array([bout.start for bout in bouts_dict.bouts])
     stop_ls = np.array([bout.stop for bout in bouts_dict.bouts])
-    behavs_ls = np.array([bout.behav for bout in bouts_dict.bouts])
+    behaviour_ls = np.array([bout.behav for bout in bouts_dict.bouts])
     actual_ls = np.array([bout.actual for bout in bouts_dict.bouts])
     start_ls = start_ls / fps
     stop_ls = stop_ls / fps
-    graph_viewer.plot_init(start_ls, stop_ls, behavs_ls, actual_ls)
+    graph_viewer.plot_init(start_ls, stop_ls, behaviour_ls, actual_ls)
 
     i = 15
     v = 5

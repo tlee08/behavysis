@@ -15,15 +15,15 @@ from behavysis.funcs import (
     CalculateParamsFunc,
     EvaluateVid,
     PreprocessFunc,
-    analyse_behavs,
-    classify_behavs,
+    analyse_behaviour,
+    classify_behaviour,
     combine_analysis,
     df2csv,
     df2df,
     extract_features,
     format_vid,
     ma_dlc_run_single,
-    predictedbehavs2scoredbehavs,
+    predictedbehaviour2scoredbehaviour,
     update_config,
 )
 from behavysis.utils.logger_utils import trace
@@ -144,21 +144,21 @@ class Experiment:
         )
 
     @trace
-    def classify_behavs(self, *, overwrite: bool) -> None:
+    def classify_behaviour(self, *, overwrite: bool) -> None:
         """Classify behaviours using trained models."""
-        classify_behavs(
+        classify_behaviour(
             features_fp=self.get_fp(Folders.FEATURES_EXTRACTED),
-            behavs_fp=self.get_fp(Folders.PREDICTED_BEHAVS),
+            behaviour_fp=self.get_fp(Folders.PREDICTED_BEHAVIOUR),
             config_fp=self.get_fp(Folders.CONFIG),
             overwrite=overwrite,
         )
 
     @trace
-    def export_behavs(self, *, overwrite: bool) -> None:
+    def export_behaviour(self, *, overwrite: bool) -> None:
         """Export predicted behaviours to scored behaviours."""
-        predictedbehavs2scoredbehavs(
-            src_fp=self.get_fp(Folders.PREDICTED_BEHAVS),
-            dst_fp=self.get_fp(Folders.SCORED_BEHAVS),
+        predictedbehaviour2scoredbehaviour(
+            src_fp=self.get_fp(Folders.PREDICTED_BEHAVIOUR),
+            dst_fp=self.get_fp(Folders.SCORED_BEHAVIOUR),
             config_fp=self.get_fp(Folders.CONFIG),
             overwrite=overwrite,
         )
@@ -175,10 +175,10 @@ class Experiment:
             )
 
     @trace
-    def analyse_behavs(self) -> None:
+    def analyse_behaviour(self) -> None:
         """Analyse scored behaviours."""
-        analyse_behavs(
-            behavs_fp=self.get_fp(Folders.SCORED_BEHAVS),
+        analyse_behaviour(
+            behaviour_fp=self.get_fp(Folders.SCORED_BEHAVIOUR),
             config_fp=self.get_fp(Folders.CONFIG),
             dst_dir=self.root_dir / ANALYSIS_DIR,
         )

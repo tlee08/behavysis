@@ -1,4 +1,4 @@
-"""Bout data models for behavioral event tracking."""
+"""Bout data models for behavioural event tracking."""
 
 from pydantic import BaseModel
 

@@ -3,7 +3,7 @@ from pathlib import Path
 from pydantic import BaseModel
 
 
-class ClassifyBehavConfig(BaseModel):
+class ClassifyBehaviourConfig(BaseModel):
     """ClassifyBehavConfig."""
 
     proj_dir: Path = Path("path") / "to" / "project_dir"

@@ -19,7 +19,7 @@ from behavysis.constants import (
     SUMMARY,
 )
 
-from .behav_df import BehavScoredDf
+from .behaviour_df import BehaviourScoredDf
 from .df_mixin import DFMixin
 
 
@@ -60,12 +60,12 @@ class AnalysisSummaryDf(DFMixin):
         return cls.clean_and_validate(summary_df)
 
     @classmethod
-    def agg_behavs(cls, analysis_df: pd.DataFrame, fps: float) -> pd.DataFrame:
-        """Summarize behavioral data: bout frequency and duration stats."""
+    def agg_behaviour(cls, analysis_df: pd.DataFrame, fps: float) -> pd.DataFrame:
+        """Summarize behavioural data: bout frequency and duration stats."""
         summary_df_ls = np.zeros(analysis_df.shape[1], dtype="object")
         for i, col in enumerate(analysis_df.columns):
             vect = analysis_df[col]
-            bouts = BehavScoredDf.vect2bouts_df(vect == 1)["dur"] / fps
+            bouts = BehaviourScoredDf.vect2bouts_df(vect == 1)["dur"] / fps
             bout_freq = len(bouts)
             bouts = pd.Series([0]) if len(bouts) == 0 else bouts.astype(np.float64)
             summary_df_ls[i] = (
@@ -180,7 +180,7 @@ class AnalysisBinnedDf(DFMixin):
         )
 
     @classmethod
-    def summary_binned_behavs(
+    def summary_binned_behaviour(
         cls,
         analysis_df: pd.DataFrame,
         dst_dir: Path,
@@ -189,13 +189,13 @@ class AnalysisBinnedDf(DFMixin):
         bins_ls: list,
         cbins_ls: list,
     ) -> None:
-        """Generate binned summary for behavioral data including latency."""
+        """Generate binned summary for behavioural data including latency."""
         cls.summary_binned(
             analysis_df=analysis_df,
             dst_dir=dst_dir,
             name=name,
             fps=fps,
-            summary_func=AnalysisSummaryDf.agg_behavs,
+            summary_func=AnalysisSummaryDf.agg_behaviour,
             agg_column="bout_dur_total",
             bins_ls=bins_ls,
             cbins_ls=cbins_ls,
@@ -218,7 +218,7 @@ class AnalysisBinnedDf(DFMixin):
         latency_df.index = analysis_df.columns
         latency_df = AnalysisSummaryDf.clean_and_validate(latency_df)
 
-        summary_df = AnalysisSummaryDf.agg_behavs(analysis_df, fps)
+        summary_df = AnalysisSummaryDf.agg_behaviour(analysis_df, fps)
         summary_df = pd.concat([summary_df, latency_df], axis=1)
         summary_df = AnalysisSummaryDf.clean_and_validate(summary_df)
 

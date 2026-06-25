@@ -1,6 +1,6 @@
 """Pydantic Models."""
 
-from .behav_classifier_config import BehavClassifierConfig
+from .behav_classifier_config import BehaviourClassifierConfig
 from .bouts import Bout, Bouts, BoutStruct
 from .experiment_config import (
     AnalysisConfig,
@@ -13,7 +13,7 @@ from .experiment_config import (
 from .funcs import (
     AnalyseConfig,
     CalculateParamsConfig,
-    ClassifyBehavConfig,
+    ClassifyBehaviourConfig,
     EvaluateVidConfig,
     ExtractFeaturesConfig,
     FormatVidConfig,
@@ -26,12 +26,12 @@ __all__ = [
     "AnalyseConfig",
     "AnalysisConfig",
     "AutoConfig",
-    "BehavClassifierConfig",
+    "BehaviourClassifierConfig",
     "Bout",
     "BoutStruct",
     "Bouts",
     "CalculateParamsConfig",
-    "ClassifyBehavConfig",
+    "ClassifyBehaviourConfig",
     "EvaluateVidConfig",
     "ExperimentConfig",
     "ExtractFeaturesConfig",
