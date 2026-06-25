@@ -38,6 +38,7 @@ def qt2cv(img_qt: QtGui.QImage) -> np.ndarray:
 
 
 def toggle_window(widget) -> None:
+    """Toggle window."""
     if widget.isVisible():
         widget.hide()
     else:

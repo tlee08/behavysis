@@ -1,6 +1,5 @@
 """Pytest configuration and shared fixtures for behavysis tests."""
 
-import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -125,7 +124,7 @@ def keypoints_df_data() -> pd.DataFrame:
 @pytest.fixture
 def temp_dir(tmp_path: Path) -> Generator[Path, None, None]:
     """Provide a temporary directory for file operations."""
-    yield tmp_path
+    return tmp_path
     # Cleanup happens automatically via tmp_path fixture
 
 

@@ -1,7 +1,6 @@
 """Unit tests for behavioural classifier dataloaders."""
 
 import numpy as np
-
 from behavysis.behav_classifier.clf_models.base_torch_model import (
     BaseTorchModel,
     MemoizedTimeSeriesDataset,
