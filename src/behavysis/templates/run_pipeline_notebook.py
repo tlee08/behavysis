@@ -168,7 +168,7 @@ def _():
         label="Step 9: Make the analysis for the verified behaviour",
         value=True,
     )
-    analyse_results_checkbox = mo.ui.checkbox(
+    combine_analysis_checkbox = mo.ui.checkbox(
         label="Step 10: Analyze results",
         value=True,
     )
@@ -202,7 +202,7 @@ def _():
         analyse_behaviour_checkbox,
         analyse_checkbox,
         analyse_funcs_ls,
-        analyse_results_checkbox,
+        combine_analysis_checkbox,
         calculate_parameters_checkbox,
         calculate_parameters_funcs_ls,
         classify_behaviour_checkbox,
@@ -222,7 +222,7 @@ def _(
     analyse_behaviour_checkbox,
     analyse_checkbox,
     analyse_funcs_ls,
-    analyse_results_checkbox,
+    combine_analysis_checkbox,
     calculate_parameters_checkbox,
     calculate_parameters_funcs_ls,
     classify_behaviour_checkbox,
@@ -250,7 +250,7 @@ def _(
             classify_behaviour_checkbox,
             manually_check_labels_msg,
             analyse_behaviour_checkbox,
-            analyse_results_checkbox,
+            combine_analysis_checkbox,
             run_btn,
         ]
     )
@@ -268,7 +268,7 @@ def _(
     analyse_behaviour_checkbox,
     analyse_checkbox,
     analyse_funcs_ls,
-    analyse_results_checkbox,
+    combine_analysis_checkbox,
     calculate_parameters_checkbox,
     calculate_parameters_funcs_ls,
     classify_behaviour_checkbox,
@@ -342,7 +342,7 @@ def _(
     if analyse_behaviour_checkbox.value:
         proj.analyse_behaviour()
 
-    if analyse_results_checkbox.value:
+    if combine_analysis_checkbox.value:
         proj.combine_analysis()
         proj.collate_analysis()
 
@@ -354,7 +354,6 @@ def _():
 
     Generates a standalone Python script that reproduces the configured pipeline.
     """)
-    return
 
 
 @app.cell
@@ -362,7 +361,7 @@ def _(
     analyse_behaviour_checkbox,
     analyse_checkbox,
     analyse_funcs_ls,
-    analyse_results_checkbox,
+    combine_analysis_checkbox,
     calculate_parameters_checkbox,
     calculate_parameters_funcs_ls,
     classify_behaviour_checkbox,
@@ -379,84 +378,37 @@ def _(
 ):
     import marimo as mo
 
+    from behavysis.utils.template_utils import render_template
+
     def _build_script():
         calc_funcs = get_funcs_to_run_list(calculate_parameters_funcs_ls)
         prep_funcs = get_funcs_to_run_list(preprocess_funcs_ls)
         anal_funcs = get_funcs_to_run_list(analyse_funcs_ls)
-        all_funcs = calc_funcs + prep_funcs + anal_funcs
 
-        lines = []
-        lines.append("# Auto-generated Behavysis pipeline script")
-        lines.append("# Regenerate from the marimo notebook to update.")
-        lines.append("from pathlib import Path")
-        lines.append("")
-        lines.append("from behavysis import Project")
-        if all_funcs:
-            lines.append("from behavysis.funcs import (")
-            seen = set()
-            for f in all_funcs:
-                if f.__name__ not in seen:
-                    lines.append(f"    {f.__name__},")
-                    seen.add(f.__name__)
-            lines.append(")")
-        lines.append("")
-        lines.append("")
-        lines.append(f"proj = Project(Path({project_fp.value!r}))")
-        lines.append(f"proj.nprocs = {nprocs.value}")
-        lines.append("proj.import_experiments()")
+        all_func_names = {f.__name__ for f in calc_funcs + prep_funcs + anal_funcs}
 
-        if update_config_checkbox.value:
-            lines.append("")
-            lines.append(
-                f"proj.update_config(default_config_fp=Path({config_fp.value!r}), "
-                f"overwrite='user')"
-            )
-
-        if format_vid_checkbox.value:
-            lines.append("")
-            lines.append(f"proj.format_video(overwrite={overwrite.value})")
-
-        if run_dlc_checkbox.value:
-            lines.append("")
-            lines.append(f"proj.run_dlc(gputouse=None, overwrite={overwrite.value})")
-
-        if calculate_parameters_checkbox.value and calc_funcs:
-            lines.append("")
-            fnames = ", ".join(f.__name__ for f in calc_funcs)
-            lines.append(f"proj.calculate_parameters(funcs=({fnames},))")
-
-        if preprocess_checkbox.value and prep_funcs:
-            lines.append("")
-            fnames = ", ".join(f.__name__ for f in prep_funcs)
-            lines.append(f"proj.preprocess(funcs=({fnames},), overwrite={overwrite.value})")
-
-        if analyse_checkbox.value and anal_funcs:
-            lines.append("")
-            fnames = ", ".join(f.__name__ for f in anal_funcs)
-            lines.append(f"proj.analyse(funcs=({fnames},))")
-            lines.append("proj.combine_analysis()")
-            lines.append("proj.collate_analysis()")
-
-        if extract_features_checkbox.value:
-            lines.append("")
-            lines.append(f"proj.extract_features(overwrite={overwrite.value})")
-
-        if classify_behaviour_checkbox.value:
-            lines.append("")
-            lines.append(f"proj.classify_behaviour(overwrite={overwrite.value})")
-            lines.append(f"proj.export_behaviour(overwrite={overwrite.value})")
-
-        if analyse_behaviour_checkbox.value:
-            lines.append("")
-            lines.append("proj.analyse_behaviour()")
-
-        if analyse_results_checkbox.value:
-            lines.append("")
-            lines.append("proj.combine_analysis()")
-            lines.append("proj.collate_analysis()")
-
-        lines.append("")
-        return "\n".join(lines)
+        return render_template(
+            "run_pipeline_script.py",
+            project_fp_repr=repr(str(project_fp.value)),
+            config_fp_repr=repr(str(config_fp.value)),
+            nprocs=nprocs.value,
+            overwrite=overwrite.value,
+            update_config=update_config_checkbox.value,
+            format_vid=format_vid_checkbox.value,
+            run_dlc=run_dlc_checkbox.value,
+            calculate_parameters=calculate_parameters_checkbox.value
+            and bool(calc_funcs),
+            preprocess=preprocess_checkbox.value and bool(prep_funcs),
+            analyse=analyse_checkbox.value and bool(anal_funcs),
+            extract_features=extract_features_checkbox.value,
+            classify_behaviour=classify_behaviour_checkbox.value,
+            analyse_behaviour=analyse_behaviour_checkbox.value,
+            combine_analysis=combine_analysis_checkbox.value,
+            calc_funcs=[f.__name__ for f in calc_funcs],
+            prep_funcs=[f.__name__ for f in prep_funcs],
+            anal_funcs=[f.__name__ for f in anal_funcs],
+            func_imports=all_func_names,
+        )
 
     export_download = mo.download(
         data=lambda: _build_script().encode("utf-8"),
@@ -466,7 +418,10 @@ def _(
     )
 
     mo.hstack(
-        [mo.md("Click to download the configured pipeline as a standalone script:"), export_download]
+        [
+            mo.md("Click to download the configured pipeline as a standalone script:"),
+            export_download,
+        ]
     )
     return (export_download,)
 
