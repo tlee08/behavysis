@@ -9,8 +9,8 @@ import pandas as pd
 from loguru import logger
 
 from behavysis.constants import CACHE_DIR, LIKELIHOOD
-from behavysis.df_classes.keypoints_df import KeypointsDf
-from behavysis.models.experiment_configs import ExperimentConfigs
+from behavysis.df_classes import KeypointsDf
+from behavysis.models import ExperimentConfig
 from behavysis.utils.io_utils import file_exists_msg, silent_remove
 from behavysis.utils.template_utils import save_template
 
@@ -20,7 +20,7 @@ DLC_HDF_KEY = "data"
 def ma_dlc_run_single(
     formatted_vid_fp: Path,
     keypoints_fp: Path,
-    configs_fp: Path,
+    config_fp: Path,
     gputouse: int | None,
     *,
     overwrite: bool,
@@ -30,8 +30,8 @@ def ma_dlc_run_single(
         logger.warning(file_exists_msg(keypoints_fp))
         return
     # Getting model_fp
-    configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
-    model_fp = configs.get_ref(configs.user.run_dlc.model_fp)
+    config = ExperimentConfig.model_validate_json(config_fp.read_text())
+    model_fp = config.get_ref(config.user.run_dlc.model_fp)
     # Derive more parameters
     temp_dlc_dir = CACHE_DIR / f"dlc_{gputouse}"
     keypoints_dir = keypoints_fp.parent
@@ -58,7 +58,7 @@ def ma_dlc_run_single(
 def ma_dlc_run_batch(
     vid_fp_ls: list[Path],
     keypoints_dir: Path,
-    configs_dir: Path,
+    config_dir: Path,
     gputouse: int | None,
     *,
     overwrite: bool,
@@ -85,12 +85,10 @@ def ma_dlc_run_batch(
     # Getting the DLC model config path
     # Getting the names of the files that need processing
     dlc_fp_ls = [i.stem for i in vid_fp_ls]
-    # Getting their corresponding configs_fp
-    dlc_fp_ls = [configs_dir / f"{i}.json" for i in dlc_fp_ls]
-    # Reading their configs
-    dlc_fp_ls = [
-        ExperimentConfigs.model_validate_json(i.read_text()) for i in dlc_fp_ls
-    ]
+    # Getting their corresponding config_fp
+    dlc_fp_ls = [config_dir / f"{i}.json" for i in dlc_fp_ls]
+    # Reading their config
+    dlc_fp_ls = [ExperimentConfig.model_validate_json(i.read_text()) for i in dlc_fp_ls]
     # Getting their model_fp
     dlc_fp_ls = [i.user.run_dlc.model_fp for i in dlc_fp_ls]
     # Converting to a set

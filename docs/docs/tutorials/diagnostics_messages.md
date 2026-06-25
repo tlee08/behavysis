@@ -15,14 +15,14 @@ In the diagnostics file, an **error** is something that has caused the processin
 Common warnings and errors that may arise are shown below, grouped by the process they usually occur in:
 
 - updateConfigFiles
-  - The user-given value for `config_fp` may be an incorrect filepath or that cconfig file itself may not be in a valid JSON format (e.g., a bracket or a comma might be missing). You can use one of the configs templates.
+  - The user-given value for `config_fp` may be an incorrect filepath or that cconfig file itself may not be in a valid JSON format (e.g., a bracket or a comma might be missing). You can use one of the config templates.
 - formatVideos
   - The raw mp4 file may be missing or corrupted. Please try to open this file to see if this is the case.
   - Sometimes, the resolution is an uncommon value and the downsampling fails. When this happens, the video is instead copied and the diagnostics file notes that the video failed to downsample and was copied instead.
 - runDLC
   - The specified dlc_config_path may be missing or incorrect. Please check that the correct filepath is used.
 - calculateParams
-  - Throughout all the processes run within calculateParams, if any necessary parameter in the configs file are missing, then an error is added to the diagnostics file and the specific process stops. Future processes are usually affected by this error.
+  - Throughout all the processes run within calculateParams, if any necessary parameter in the config file are missing, then an error is added to the diagnostics file and the specific process stops. Future processes are usually affected by this error.
   - getVideoMetadata
     - If the video file does not exist or is corrupted, then a warning is added the diagnostics file.
   - calcStartFrame
@@ -34,7 +34,7 @@ Common warnings and errors that may arise are shown below, grouped by the proces
     - If the labels, "TopLeft", "TopRight", "BottomLeft", or "BottomRight", are missing from the dlc_csv file (i.e., if any of the box corners were not tracked), then an error message is added to the diagnostics file. Please ensure that you are using a DLC model that tracks the arena edges.
 - preprocessing
   - Please note that some processes run within preprocessing depend on calculateParams. If there were any failed processes in calculateParams, please troubleshoot them before moving onto here.
-  - Throughout all the processes run within preprocessing, if any necessary parameter in the configs file are missing, then an error is added to the diagnostics file and the specific process stops. Future processes are usually affected by this error.
+  - Throughout all the processes run within preprocessing, if any necessary parameter in the config file are missing, then an error is added to the diagnostics file and the specific process stops. Future processes are usually affected by this error.
   - InterpolatePoints:
     - If the bodypart listed in the config file is not in the dlc_csv file, then a warning is thrown and the invalid bodypart is ignored.
 - analysis

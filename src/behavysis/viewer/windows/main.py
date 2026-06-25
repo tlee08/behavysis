@@ -24,8 +24,8 @@ from PySide6.QtWidgets import (
 from tqdm import trange
 
 from behavysis.constants import DF_IO_FORMAT, STATUS_MSG_TIMEOUT, VALUE2COLOR
-from behavysis.df_classes.behav_df import BehavScoredDf
-from behavysis.models.experiment_configs import ExperimentConfigs
+from behavysis.df_classes import BehavScoredDf
+from behavysis.models import ExperimentConfig
 from behavysis.utils.qt_utils import toggle_window
 from behavysis.viewer.models.bout_inspect_list_model import BoutInspectListModel
 from behavysis.viewer.models.bouts_list_model import BoutsListModel
@@ -330,20 +330,20 @@ class MainWindow(QMainWindow):
         try:
             # Loading filenames in vid file manager
             self.file_manager.load(fp)
-            # Reading in configs
-            configs = ExperimentConfigs.model_validate_json(
-                self.file_manager.configs_fp.read_text()
+            # Reading in config
+            config = ExperimentConfig.model_validate_json(
+                self.file_manager.config_fp.read_text()
             )
             # Loading data into vid model
             self.vid_model.load(self.file_manager.vid_fp)
             # Loading data into bouts model
             if self.file_manager.dlc_df_fp.exists():
-                self.keypoints_model.load(self.file_manager.dlc_df_fp, configs)
+                self.keypoints_model.load(self.file_manager.dlc_df_fp, config)
             else:
                 self.keypoints_model.load_empty()
             # Loading data into keypoint model
             if self.file_manager.behavs_df_fp.exists():
-                self.bouts_model.load(self.file_manager.behavs_df_fp, configs)
+                self.bouts_model.load(self.file_manager.behavs_df_fp, config)
             else:
                 self.bouts_model.load_empty()
             # Setting primitive attributes
@@ -352,7 +352,7 @@ class MainWindow(QMainWindow):
             # Preparing slider
             self.ui.slider.setMaximum(self.vid_model.nframes)
             # Updating the graph_viewer with bouts data
-            self.ui.graph_viewer.plot_bouts_init(self.bouts_model.bouts, configs)
+            self.ui.graph_viewer.plot_bouts_init(self.bouts_model.bouts, config)
             # Writing msg to statusbar
             self.ui.statusbar.showMessage(
                 f"Opened video: {fp}", timeout=STATUS_MSG_TIMEOUT
@@ -522,22 +522,22 @@ class MainWindow(QMainWindow):
         # Need to make QApplication for graph_viewer
         app = QApplication()
 
-        # Get configs
-        configs = ExperimentConfigs.model_validate_json(
-            file_manager.configs_fp.read_text()
+        # Get config
+        config = ExperimentConfig.model_validate_json(
+            file_manager.config_fp.read_text()
         )
         # Make video model
         vid_model = VidModel()
         vid_model.load(file_manager.vid_fp)
         # Make keypoints model
         keypoints_model = KeypointsModel()
-        keypoints_model.load(file_manager.dlc_df_fp, configs)
+        keypoints_model.load(file_manager.dlc_df_fp, config)
         # Make bouts model
         bouts_model = BoutsListModel()
-        bouts_model.load(file_manager.behavs_df_fp, configs)
+        bouts_model.load(file_manager.behavs_df_fp, config)
         # Make graph viewer, plot all data and set widget size
         graph_viewer = GraphView()
-        graph_viewer.plot_bouts_init(bouts_model.bouts, configs)
+        graph_viewer.plot_bouts_init(bouts_model.bouts, config)
         graph_viewer.setFixedSize(w, h)
         # Must run to enable widget size
         graph_viewer.show()

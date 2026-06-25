@@ -10,12 +10,8 @@ from pyqtgraph.exporters import ImageExporter
 from tqdm import trange
 
 from behavysis.constants import ANALYSIS, INDIVIDUALS, LIKELIHOOD, MEASURES, X, Y
-from behavysis.df_classes.analysis_combined_df import AnalysisCombinedDf
-from behavysis.df_classes.keypoints_df import (
-    KeypointsAnnotationsDf,
-    KeypointsDf,
-)
-from behavysis.models.experiment_configs import ExperimentConfigs
+from behavysis.df_classes import AnalysisCombinedDf, KeypointsAnnotationsDf, KeypointsDf
+from behavysis.models import ExperimentConfig
 from behavysis.utils.io_utils import file_exists_msg
 from behavysis.utils.qt_utils import qt2cv
 
@@ -30,7 +26,7 @@ class EvaluateVid:
         keypoints_fp: Path,
         analysis_combined_fp: Path,
         eval_vid_fp: Path,
-        configs_fp: Path,
+        config_fp: Path,
         *,
         overwrite: bool,
     ) -> None:
@@ -39,18 +35,18 @@ class EvaluateVid:
             logger.warning(file_exists_msg(eval_vid_fp))
             return
         # Getting necessary config parameters
-        configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
-        configs_filt = configs.user.evaluate_vid
-        funcs_names = configs.get_ref(configs_filt.funcs)
-        pcutoff = configs.get_ref(configs_filt.pcutoff)
-        colour_level = configs.get_ref(configs_filt.colour_level)
-        radius = configs.get_ref(configs_filt.radius)
-        cmap = configs.get_ref(configs_filt.cmap)
-        padding = configs.get_ref(configs_filt.padding)
-        width_input = configs.auto.formatted_vid.width_px
-        height_input = configs.auto.formatted_vid.height_px
-        fps = configs.auto.formatted_vid.fps
-        total_frames = configs.auto.formatted_vid.total_frames
+        config = ExperimentConfig.model_validate_json(config_fp.read_text())
+        config_filt = config.user.evaluate_vid
+        funcs_names = config.get_ref(config_filt.funcs)
+        pcutoff = config.get_ref(config_filt.pcutoff)
+        colour_level = config.get_ref(config_filt.colour_level)
+        radius = config.get_ref(config_filt.radius)
+        cmap = config.get_ref(config_filt.cmap)
+        padding = config.get_ref(config_filt.padding)
+        width_input = config.auto.formatted_vid.width_px
+        height_input = config.auto.formatted_vid.height_px
+        fps = config.auto.formatted_vid.fps
+        total_frames = config.auto.formatted_vid.total_frames
 
         # Asserting input video metadata is valid
         assert_msg = "Input %s must be greater than 0. Run `exp.format_vid`."
@@ -61,7 +57,7 @@ class EvaluateVid:
 
         # Getting keypoints df
         reserve_index = pd.Series(
-            np.arange(configs.auto.start_frame, configs.auto.stop_frame)
+            np.arange(config.auto.start_frame, config.auto.stop_frame)
         )
         try:
             keypoints_df = KeypointsDf.read(keypoints_fp)
@@ -245,7 +241,7 @@ class Analysis(EvalVidFuncBase):
         **kwargs,
     ) -> None:
         # TODO make aspect-ratio-weighted value for w_i.
-        # Maybe have custom configs value `w_h_ratio`
+        # Maybe have custom config value `w_h_ratio`
         self.width_output = width_input
         self.height_output = height_input
         self.analysis_df = analysis_df

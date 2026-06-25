@@ -20,11 +20,11 @@ from behavysis.constants import (
     TRUE_POS,
     UNSURE,
 )
-from behavysis.models.bouts import Bout, Bouts, BoutStruct
+from behavysis.models import Bout, Bouts, BoutStruct
 
 from .df_mixin import DFMixin
 
-# TODO: depend on configs, rather than inference to build BoutStruct
+# TODO: depend on config, rather than inference to build BoutStruct
 # Consider making vect2bouts and predicted2scored into standalone functions
 
 

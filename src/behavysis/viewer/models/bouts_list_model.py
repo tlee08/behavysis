@@ -6,9 +6,8 @@ from PySide6.QtCore import QAbstractListModel, Qt
 from PySide6.QtGui import QColor
 
 from behavysis.constants import VALUE2COLOR
-from behavysis.df_classes.behav_df import BehavScoredDf
-from behavysis.models.bouts import Bouts
-from behavysis.models.experiment_configs import ExperimentConfigs
+from behavysis.df_classes import BehavScoredDf
+from behavysis.models import Bouts, ExperimentConfig
 
 
 class BoutsListModel(QAbstractListModel):
@@ -39,7 +38,7 @@ class BoutsListModel(QAbstractListModel):
         # self.dataChanged.emit(index, index)
         return True
 
-    def load(self, fp: str, configs: ExperimentConfigs) -> None:
+    def load(self, fp: str, config: ExperimentConfig) -> None:
         # Loading behaviour data
         df = BehavScoredDf.init_df(pd.Series())
         with contextlib.suppress(FileNotFoundError):

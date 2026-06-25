@@ -3,13 +3,8 @@ from pathlib import Path
 from loguru import logger
 
 from behavysis.behav_classifier.behav_classifier import BehavClassifier
-from behavysis.df_classes import DFMixin
-from behavysis.df_classes.behav_df import (
-    BehavPredictedDf,
-    BehavScoredDf,
-)
-from behavysis.models.bouts import BoutStruct
-from behavysis.models.experiment_configs import ExperimentConfigs
+from behavysis.df_classes import BehavPredictedDf, BehavScoredDf, DFMixin
+from behavysis.models import BoutStruct, ExperimentConfig
 from behavysis.utils.io_utils import file_exists_msg
 
 
@@ -46,7 +41,7 @@ def df2csv(
 def predictedbehavs2scoredbehavs(
     src_fp: Path,
     dst_fp: Path,
-    configs_fp: Path,
+    config_fp: Path,
     *,
     overwrite: bool,
 ) -> None:
@@ -60,15 +55,15 @@ def predictedbehavs2scoredbehavs(
     if not overwrite and dst_fp.exists():
         logger.warning(file_exists_msg(dst_fp))
         return
-    # Reading the configs file
-    configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
-    models_ls = configs.user.classify_behavs
-    # Getting the behav_outcomes dict from the configs file
+    # Reading the config file
+    config = ExperimentConfig.model_validate_json(config_fp.read_text())
+    models_ls = config.user.classify_behavs
+    # Getting the behav_outcomes dict from the config file
     bouts_struct = []
     for model_config in models_ls:
-        proj_dir = configs.get_ref(model_config.proj_dir)
-        behav_name = configs.get_ref(model_config.behav_name)
-        user_defined = configs.get_ref(model_config.user_defined)
+        proj_dir = config.get_ref(model_config.proj_dir)
+        behav_name = config.get_ref(model_config.behav_name)
+        user_defined = config.get_ref(model_config.user_defined)
         # Ensuring model exists
         BehavClassifier.load(proj_dir, behav_name)
         # Adding to bouts_struct
@@ -83,7 +78,7 @@ def predictedbehavs2scoredbehavs(
 def boris2behav(
     src_fp: Path,
     dst_fp: Path,
-    configs_fp: Path,
+    config_fp: Path,
     behavs_ls: list[str],
     *,
     overwrite: bool,
@@ -92,10 +87,10 @@ def boris2behav(
     if not overwrite and dst_fp.exists():
         logger.warning(file_exists_msg(dst_fp))
         return
-    # Reading the configs file
-    configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
-    start_frame = configs.get_ref(configs.auto.start_frame)
-    stop_frame = configs.get_ref(configs.auto.stop_frame) + 1
+    # Reading the config file
+    config = ExperimentConfig.model_validate_json(config_fp.read_text())
+    start_frame = config.get_ref(config.auto.start_frame)
+    stop_frame = config.get_ref(config.auto.stop_frame) + 1
     # Importing the boris file to the Behav df format
     df = BehavScoredDf.import_boris_tsv(src_fp, behavs_ls, start_frame, stop_frame)
     BehavScoredDf.write(df, dst_fp)

@@ -1,22 +1,22 @@
 """Process Config Models."""
 
-from .analyse import AnalyseConfigs
-from .calculate_params import CalculateParamsConfigs
-from .classify_behavs import ClassifyBehavConfigs
-from .evaluate_vid import EvaluateVidConfigs
-from .extract_features import ExtractFeaturesConfigs
-from .format_vid import FormatVidConfigs, VidMetadata
-from .preprocess import PreprocessConfigs
-from .run_dlc import RunDlcConfigs
+from .analyse import AnalyseConfig
+from .calculate_params import CalculateParamsConfig
+from .classify_behavs import ClassifyBehavConfig
+from .evaluate_vid import EvaluateVidConfig
+from .extract_features import ExtractFeaturesConfig
+from .format_vid import FormatVidConfig, VidMetadata
+from .preprocess import PreprocessConfig
+from .run_dlc import RunDlcConfig
 
 __all__ = [
-    "AnalyseConfigs",
-    "CalculateParamsConfigs",
-    "ClassifyBehavConfigs",
-    "EvaluateVidConfigs",
-    "ExtractFeaturesConfigs",
-    "FormatVidConfigs",
-    "PreprocessConfigs",
-    "RunDlcConfigs",
+    "AnalyseConfig",
+    "CalculateParamsConfig",
+    "ClassifyBehavConfig",
+    "EvaluateVidConfig",
+    "ExtractFeaturesConfig",
+    "FormatVidConfig",
+    "PreprocessConfig",
+    "RunDlcConfig",
     "VidMetadata",
 ]

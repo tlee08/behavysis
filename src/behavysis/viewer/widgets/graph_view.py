@@ -12,9 +12,8 @@ from PySide6.QtGui import QImage
 from PySide6.QtWidgets import QApplication
 
 from behavysis.constants import VALUE2COLOR
-from behavysis.df_classes.behav_df import BehavScoredDf
-from behavysis.models.bouts import Bouts
-from behavysis.models.experiment_configs import ExperimentConfigs
+from behavysis.df_classes import BehavScoredDf
+from behavysis.models import Bouts, ExperimentConfig
 from behavysis.utils.qt_utils import qt2cv
 
 if TYPE_CHECKING:
@@ -53,9 +52,9 @@ class GraphView(PlotWidget):
                 # padding=kwargs.get("ypadding", 0),  # type: ignore
             )
 
-    def plot_bouts_init(self, bouts: Bouts, configs: ExperimentConfigs) -> None:
-        # Getting necessary configs
-        fps = configs.auto.formatted_vid.fps
+    def plot_bouts_init(self, bouts: Bouts, config: ExperimentConfig) -> None:
+        # Getting necessary config
+        fps = config.auto.formatted_vid.fps
         # Getting data
         start_ls = np.array([i.start for i in bouts.bouts]) / fps
         stop_ls = np.array([i.stop for i in bouts.bouts]) / fps

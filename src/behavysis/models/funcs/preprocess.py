@@ -5,14 +5,14 @@ from pydantic import BaseModel
 from behavysis.constants import BPTS_SIMBA
 
 
-class InterpolateConfigs(BaseModel):
-    """InterpolateConfigs."""
+class InterpolateConfig(BaseModel):
+    """InterpolateConfig."""
 
     pcutoff: float | str = 0.5
 
 
-class InterpolateStationaryConfigs(BaseModel):
-    """InterpolateStationaryConfigs."""
+class InterpolateStationaryConfig(BaseModel):
+    """InterpolateStationaryConfig."""
 
     bodypart: str = "bodypart"
     pcutoff: float = 0.8
@@ -21,8 +21,8 @@ class InterpolateStationaryConfigs(BaseModel):
     y: float = 0
 
 
-class RefineIdsConfigs(BaseModel):
-    """RefineIdsConfigs."""
+class RefineIdsConfig(BaseModel):
+    """RefineIdsConfig."""
 
     marked: str = "marked"
     unmarked: str = "unmarked"
@@ -32,9 +32,9 @@ class RefineIdsConfigs(BaseModel):
     metric: Literal["current", "rolling", "binned"] = "current"
 
 
-class PreprocessConfigs(BaseModel):
-    """PreprocessConfigs."""
+class PreprocessConfig(BaseModel):
+    """PreprocessConfig."""
 
-    interpolate: InterpolateConfigs = InterpolateConfigs()
-    interpolate_stationary: list[InterpolateStationaryConfigs] = []
-    refine_ids: RefineIdsConfigs = RefineIdsConfigs()
+    interpolate: InterpolateConfig = InterpolateConfig()
+    interpolate_stationary: list[InterpolateStationaryConfig] = []
+    refine_ids: RefineIdsConfig = RefineIdsConfig()

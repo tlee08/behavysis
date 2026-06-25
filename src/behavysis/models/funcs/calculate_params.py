@@ -5,29 +5,29 @@ from pydantic import BaseModel
 from behavysis.constants import BPTS_SIMBA
 
 
-class FromLikelihoodConfigs(BaseModel):
-    """FromLikelihoodConfigs."""
+class FromLikelihoodConfig(BaseModel):
+    """FromLikelihoodConfig."""
 
     bodyparts: list[str] | str = BPTS_SIMBA
     window_sec: float | str = 1.0
     pcutoff: float | str = 0.8
 
 
-class StartFrameFromCsvConfigs(BaseModel):
-    """StartFrameFromCsvConfigs."""
+class StartFrameFromCsvConfig(BaseModel):
+    """StartFrameFromCsvConfig."""
 
     csv_fp: Path = Path("path_to") / "start_times.csv"
     name: str | None = None
 
 
-class StopFrameFromDurConfigs(BaseModel):
-    """StopFrameFromDurConfigs."""
+class StopFrameFromDurConfig(BaseModel):
+    """StopFrameFromDurConfig."""
 
     dur_sec: float | str = 6000
 
 
-class PxPerMmConfigs(BaseModel):
-    """PxPerMmConfigs."""
+class PxPerMmConfig(BaseModel):
+    """PxPerMmConfig."""
 
     pt_a: str = "pt_a"
     pt_b: str = "pt_b"
@@ -35,10 +35,10 @@ class PxPerMmConfigs(BaseModel):
     dist_mm: float | str = 400
 
 
-class CalculateParamsConfigs(BaseModel):
-    """CalculateParamsConfigs."""
+class CalculateParamsConfig(BaseModel):
+    """CalculateParamsConfig."""
 
-    from_likelihood: FromLikelihoodConfigs = FromLikelihoodConfigs()
-    start_frame_from_csv: StartFrameFromCsvConfigs = StartFrameFromCsvConfigs()
-    stop_frame_from_dur: StopFrameFromDurConfigs = StopFrameFromDurConfigs()
-    px_per_mm: PxPerMmConfigs = PxPerMmConfigs()
+    from_likelihood: FromLikelihoodConfig = FromLikelihoodConfig()
+    start_frame_from_csv: StartFrameFromCsvConfig = StartFrameFromCsvConfig()
+    stop_frame_from_dur: StopFrameFromDurConfig = StopFrameFromDurConfig()
+    px_per_mm: PxPerMmConfig = PxPerMmConfig()

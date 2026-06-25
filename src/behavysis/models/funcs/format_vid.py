@@ -1,8 +1,8 @@
 from pydantic import BaseModel
 
 
-class FormatVidConfigs(BaseModel):
-    """FormatVidConfigs."""
+class FormatVidConfig(BaseModel):
+    """FormatVidConfig."""
 
     width_px: None | int | str = None
     height_px: None | int | str = None

@@ -6,8 +6,8 @@ dlc_fp : str
     The input video filepath.
 dst_fp : str
     The output video filepath.
-configs_fp : str
-    The JSON configs filepath.
+config_fp : str
+    The JSON config filepath.
 overwrite : bool
     Whether to overwrite the output file (if it exists).
 
@@ -26,8 +26,8 @@ import pandas as pd
 from loguru import logger
 
 from behavysis.constants import LIKELIHOOD, SCORER, SINGLE, X, Y
-from behavysis.df_classes.keypoints_df import KeypointsDf
-from behavysis.models.experiment_configs import ExperimentConfigs
+from behavysis.df_classes import KeypointsDf
+from behavysis.models import ExperimentConfig
 from behavysis.utils.io_utils import file_exists_msg
 
 
@@ -38,7 +38,7 @@ class PreprocessFunc(Protocol):
         self,
         src_fp: Path,
         dst_fp: Path,
-        configs_fp: Path,
+        config_fp: Path,
         *,
         overwrite: bool,
     ) -> None:
@@ -48,14 +48,14 @@ class PreprocessFunc(Protocol):
 def start_stop_trim(
     src_fp: Path,
     dst_fp: Path,
-    configs_fp: Path,
+    config_fp: Path,
     *,
     overwrite: bool,
 ) -> None:
     """Filters the rows of a DLC formatted dataframe.
 
     Includes only rows within the start
-    and end time of the experiment, given a corresponding configs dict.
+    and end time of the experiment, given a corresponding config dict.
 
     Parameters
     ----------
@@ -63,8 +63,8 @@ def start_stop_trim(
         The file path of the input DLC formatted dataframe.
     dst_fp : Path
         The file path of the output trimmed dataframe.
-    configs_fp : Path
-        The file path of the configs dict.
+    config_fp : Path
+        The file path of the config dict.
     overwrite : bool
         If True, overwrite the output file if it already exists. If False, skip
         if the output file already exists.
@@ -89,9 +89,9 @@ def start_stop_trim(
         logger.warning(file_exists_msg(dst_fp))
         return
     # Getting necessary config parameters
-    configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
-    start_frame = configs.auto.start_frame
-    stop_frame = configs.auto.stop_frame
+    config = ExperimentConfig.model_validate_json(config_fp.read_text())
+    start_frame = config.auto.start_frame
+    stop_frame = config.auto.stop_frame
     # Reading file
     keypoints_df = KeypointsDf.read(src_fp)
     # Trimming dataframe between start and stop frames
@@ -102,7 +102,7 @@ def start_stop_trim(
 def interpolate_stationary(
     src_fp: Path,
     dst_fp: Path,
-    configs_fp: Path,
+    config_fp: Path,
     *,
     overwrite: bool,
 ) -> None:
@@ -116,10 +116,10 @@ def interpolate_stationary(
         logger.warning(file_exists_msg(dst_fp))
         return
     # Getting necessary config parameters list
-    configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
-    configs_filt_ls = configs.user.preprocess.interpolate_stationary
-    width_px = configs.auto.formatted_vid.width_px
-    height_px = configs.auto.formatted_vid.height_px
+    config = ExperimentConfig.model_validate_json(config_fp.read_text())
+    config_filt_ls = config.user.preprocess.interpolate_stationary
+    width_px = config.auto.formatted_vid.width_px
+    height_px = config.auto.formatted_vid.height_px
     if width_px <= 0 or height_px <= 0:
         msg = (
             f"Video dimensions not set for experiment.\n"
@@ -132,13 +132,13 @@ def interpolate_stationary(
     # Getting the scorer name
     scorer = keypoints_df.columns.unique(SCORER)[0]
     # For each bodypart, filling in the given point
-    for configs_filt in configs_filt_ls:
+    for config_filt in config_filt_ls:
         # Getting config parameters
-        bodypart = configs_filt.bodypart
-        pcutoff = configs_filt.pcutoff
-        pcutoff_all = configs_filt.pcutoff_all
-        x = configs_filt.x
-        y = configs_filt.y
+        bodypart = config_filt.bodypart
+        pcutoff = config_filt.pcutoff
+        pcutoff_all = config_filt.pcutoff_all
+        x = config_filt.x
+        y = config_filt.y
         # Converting x and y from video proportions to pixel coordinates
         x = x * width_px
         y = y * height_px
@@ -166,7 +166,7 @@ def interpolate_stationary(
 def interpolate(
     src_fp: Path,
     dst_fp: Path,
-    configs_fp: Path,
+    config_fp: Path,
     *,
     overwrite: bool,
 ) -> None:
@@ -194,8 +194,8 @@ def interpolate(
         logger.warning(file_exists_msg(dst_fp))
         return
     # Getting necessary config parameters
-    configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
-    configs_filt = configs.user.preprocess.interpolate
+    config = ExperimentConfig.model_validate_json(config_fp.read_text())
+    config_filt = config.user.preprocess.interpolate
     # Reading file
     keypoints_df = KeypointsDf.read(src_fp)
     # Gettings the unique groups of (individual, bodypart) groups.
@@ -207,7 +207,7 @@ def interpolate(
             (scorer, indiv, bp, LIKELIHOOD)
         ].fillna(value=0)
         # Setting x and y coordinates of points that have low likelihood to Nan
-        to_remove = keypoints_df[(scorer, indiv, bp, LIKELIHOOD)] < configs_filt.pcutoff
+        to_remove = keypoints_df[(scorer, indiv, bp, LIKELIHOOD)] < config_filt.pcutoff
         keypoints_df.loc[to_remove, (scorer, indiv, bp, X)] = np.nan
         keypoints_df.loc[to_remove, (scorer, indiv, bp, Y)] = np.nan
     # linearly interpolating Nan x and y points.
@@ -219,9 +219,7 @@ def interpolate(
     KeypointsDf.write(keypoints_df, dst_fp)
 
 
-def refine_ids(
-    src_fp: Path, dst_fp: Path, configs_fp: Path, *, overwrite: bool
-) -> None:
+def refine_ids(src_fp: Path, dst_fp: Path, config_fp: Path, *, overwrite: bool) -> None:
     """Ensures that the identity is correctly tracked for maDLC.
 
     Assumes interpolate_points has already been run.
@@ -246,15 +244,15 @@ def refine_ids(
     # Reading file
     keypoints_df = KeypointsDf.read(src_fp)
     # Getting necessary config parameters
-    configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
-    configs_filt = configs.user.preprocess.refine_ids
-    marked = configs.get_ref(configs_filt.marked)
-    unmarked = configs.get_ref(configs_filt.unmarked)
-    marking = configs.get_ref(configs_filt.marking)
-    window_sec = configs.get_ref(configs_filt.window_sec)
-    bpts = configs.get_ref(configs_filt.bodyparts)
-    metric = configs.get_ref(configs_filt.metric)
-    fps = configs.auto.formatted_vid.fps
+    config = ExperimentConfig.model_validate_json(config_fp.read_text())
+    config_filt = config.user.preprocess.refine_ids
+    marked = config.get_ref(config_filt.marked)
+    unmarked = config.get_ref(config_filt.unmarked)
+    marking = config.get_ref(config_filt.marking)
+    window_sec = config.get_ref(config_filt.window_sec)
+    bpts = config.get_ref(config_filt.bodyparts)
+    metric = config.get_ref(config_filt.metric)
+    fps = config.auto.formatted_vid.fps
     # Calculating more parameters
     window_frames = int(np.round(fps * window_sec, 0))
     # Error checking for invalid/non-existent column names marked, unmarked, and marking

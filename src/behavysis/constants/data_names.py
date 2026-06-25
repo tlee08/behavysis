@@ -12,6 +12,7 @@ COORDS = "coords"
 X = "x"
 Y = "y"
 LIKELIHOOD = "likelihood"
+COORDS_COLS = [X, Y, LIKELIHOOD]
 
 
 SINGLE = "single"

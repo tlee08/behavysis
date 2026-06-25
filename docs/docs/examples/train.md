@@ -18,7 +18,7 @@ if __name__ == "__main__":
     # Define behaviours in BORIS
     behavs_ls = ["potential huddling", "huddling"]
     # Paths
-    configs_dir = os.path.join(root_dir, "0_configs")
+    config_dir = os.path.join(root_dir, "0_config")
     boris_dir = os.path.join(root_dir, "boris")
     dst_dir = os.path.join(root_dir, "7_scored_behavs")
     # Getting names of all files
@@ -26,10 +26,10 @@ if __name__ == "__main__":
     for name in names:
         # Paths
         boris_fp = os.path.join(boris_dir, f"{name}.tsv")
-        configs_fp = os.path.join(configs_dir, f"{name}.json")
+        config_fp = os.path.join(config_dir, f"{name}.json")
         dst_fp = os.path.join(dst_dir, f"{name}.parquet")
         # Making df from BORIS
-        df = BehavMixin.import_boris_tsv(boris_fp, configs_fp, behavs_ls)
+        df = BehavMixin.import_boris_tsv(boris_fp, config_fp, behavs_ls)
         # Saving df
         df.to_feather(dst_fp)
     # Making BehavClassifier objects

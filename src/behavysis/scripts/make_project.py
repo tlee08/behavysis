@@ -1,7 +1,7 @@
 from pathlib import Path
 
-from behavysis.constants import Folders
-from behavysis.models.experiment_configs import get_default_configs
+from behavysis.constants import DEFAULT_CONFIG_FP, Folders
+from behavysis.models import get_default_config
 from behavysis.utils.template_utils import confirm, save_template
 
 
@@ -14,9 +14,9 @@ def main() -> None:
     if overwrite or not Path("run_pipeline.py").exists():
         save_template("run_pipeline.py", Path("run_pipeline.py"))
 
-    if overwrite or not Path("default_configs.json").exists():
-        Path("default_configs.json").write_text(
-            get_default_configs().model_dump_json(indent=2)
+    if overwrite or not Path(DEFAULT_CONFIG_FP).exists():
+        Path(DEFAULT_CONFIG_FP).write_text(
+            get_default_config().model_dump_json(indent=2)
         )
 
     for folder in Folders:

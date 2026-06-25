@@ -1,19 +1,4 @@
-"""Functions have the following format.
-
-Parameters
-----------
-keypoints_fp : str
-    The DLC dataframe filepath of the experiment to analyse.
-dst_dir : str
-    The analysis directory path.
-configs_fp : str
-    the experiment's JSON configs file.
-
-Returns:
--------
-str
-    The outcome of the process.
-"""
+"""Functions have the following format."""
 
 from pathlib import Path
 from typing import Protocol
@@ -27,11 +12,13 @@ from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
 
 from behavysis.constants import FBF, INDIVIDUALS, MEASURES, SINGLE, X, Y
-from behavysis.df_classes.analysis_agg_df import AnalysisBinnedDf
-from behavysis.df_classes.analysis_df import AnalysisDf
-from behavysis.df_classes.behav_df import BehavScoredDf
-from behavysis.df_classes.keypoints_df import KeypointsDf
-from behavysis.models.experiment_configs import ExperimentConfigs
+from behavysis.df_classes import (
+    AnalysisBinnedDf,
+    AnalysisDf,
+    BehavScoredDf,
+    KeypointsDf,
+)
+from behavysis.models import ExperimentConfig
 
 
 class AnalyseFunc(Protocol):
@@ -42,7 +29,7 @@ class AnalyseFunc(Protocol):
         keypoints_fp: Path,
         formatted_vid_fp: Path,
         dst_dir: Path,
-        configs_fp: Path,
+        config_fp: Path,
     ) -> None:
         """Protocol for analyse functions."""
 
@@ -51,7 +38,7 @@ def in_roi(
     keypoints_fp: Path,
     formatted_vid_fp: Path,
     dst_dir: Path,
-    configs_fp: Path,
+    config_fp: Path,
 ) -> None:
     """Determines frames where subject is inside ROI from average bpts.
 
@@ -60,10 +47,10 @@ def in_roi(
     name = keypoints_fp.stem
     dst_subdir = dst_dir / "in_roi"
     # Calculating deltas (changes in body position) between each frame for the subject
-    configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
-    analysis_configs = configs.get_analysis_configs()
-    start_frame = configs.auto.start_frame
-    configs_filt_ls = configs.user.analyse.in_roi
+    config = ExperimentConfig.model_validate_json(config_fp.read_text())
+    analysis_config = config.get_analysis_config()
+    start_frame = config.auto.start_frame
+    config_filt_ls = config.user.analyse.in_roi
     # Loading in dataframe
     keypoints_df = KeypointsDf.clean_headings(KeypointsDf.read(keypoints_fp))
     assert keypoints_df.shape[0] > 0, (
@@ -78,15 +65,15 @@ def in_roi(
     roi_names_ls = []
     # For each roi, calculate the in-roi status of the subject
     idx = pd.IndexSlice
-    for configs_filt in configs_filt_ls:
+    for config_filt in config_filt_ls:
         # Getting necessary config parameters
-        roi_name = configs.get_ref(configs_filt.roi_name)
-        is_in = configs.get_ref(configs_filt.is_in)
-        bpts = configs.get_ref(configs_filt.bodyparts)
-        padding_mm = configs.get_ref(configs_filt.padding_mm)
-        roi_corners = configs.get_ref(configs_filt.roi_corners)
+        roi_name = config.get_ref(config_filt.roi_name)
+        is_in = config.get_ref(config_filt.is_in)
+        bpts = config.get_ref(config_filt.bodyparts)
+        padding_mm = config.get_ref(config_filt.padding_mm)
+        roi_corners = config.get_ref(config_filt.roi_corners)
         # Calculating more parameters
-        padding_px = padding_mm / analysis_configs.px_per_mm
+        padding_px = padding_mm / analysis_config.px_per_mm
         # Checking bodyparts and roi_corners exist
         KeypointsDf.check_bpts_exist(keypoints_df, bpts)
         KeypointsDf.check_bpts_exist(keypoints_df, roi_corners)
@@ -160,9 +147,9 @@ def in_roi(
         analysis_df,
         dst_subdir,
         name,
-        analysis_configs.fps,
-        analysis_configs.bins_sec,
-        analysis_configs.custom_bins_sec,
+        analysis_config.fps,
+        analysis_config.bins_sec,
+        analysis_config.custom_bins_sec,
     )
 
 
@@ -307,18 +294,18 @@ def speed(
     keypoints_fp: Path,
     formatted_vid_fp: Path,  # noqa: ARG001
     dst_dir: Path,
-    configs_fp: Path,
+    config_fp: Path,
 ) -> None:
     """Determines the speed of the subject in each frame."""
     name = keypoints_fp.stem
     dst_subdir = dst_dir / "speed"
 
-    configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
-    analysis_configs = configs.get_analysis_configs()
-    configs_filt = configs.user.analyse.speed
-    bpts = configs.get_ref(configs_filt.bodyparts)
-    smoothing_sec = configs.get_ref(configs_filt.smoothing_sec)
-    smoothing_frames = int(smoothing_sec * analysis_configs.fps)
+    config = ExperimentConfig.model_validate_json(config_fp.read_text())
+    analysis_config = config.get_analysis_config()
+    config_filt = config.user.analyse.speed
+    bpts = config.get_ref(config_filt.bodyparts)
+    smoothing_sec = config.get_ref(config_filt.smoothing_sec)
+    smoothing_frames = int(smoothing_sec * analysis_config.fps)
 
     keypoints_df = KeypointsDf.clean_headings(KeypointsDf.read(keypoints_fp))
     assert keypoints_df.shape[0] > 0, (
@@ -329,14 +316,14 @@ def speed(
 
     # Compute movement and convert to speed (distance per second)
     analysis_df = _compute_movement(
-        keypoints_df, bpts, indivs, analysis_configs.px_per_mm, smoothing_frames
+        keypoints_df, bpts, indivs, analysis_config.px_per_mm, smoothing_frames
     )
     for indiv in indivs:
         analysis_df[(indiv, "SpeedMMperSec")] = (
-            analysis_df[(indiv, "DistMM")] * analysis_configs.fps
+            analysis_df[(indiv, "DistMM")] * analysis_config.fps
         )
         analysis_df[(indiv, "SpeedMMperSecSmoothed")] = (
-            analysis_df[(indiv, "DistMMSmoothed")] * analysis_configs.fps
+            analysis_df[(indiv, "DistMMSmoothed")] * analysis_config.fps
         )
         # Remove distance columns - we only want speed
         analysis_df = analysis_df.drop(
@@ -350,9 +337,9 @@ def speed(
         analysis_df,
         dst_subdir,
         name,
-        analysis_configs.fps,
-        analysis_configs.bins_sec,
-        analysis_configs.custom_bins_sec,
+        analysis_config.fps,
+        analysis_config.bins_sec,
+        analysis_config.custom_bins_sec,
     )
 
 
@@ -360,18 +347,18 @@ def distance(
     keypoints_fp: Path,
     formatted_vid_fp: Path,  # noqa: ARG001
     dst_dir: Path,
-    configs_fp: Path,
+    config_fp: Path,
 ) -> None:
     """Determines the distance travelled by the subject in each frame."""
     name = keypoints_fp.stem
     dst_subdir = dst_dir / "distance"
 
-    configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
-    analysis_configs = configs.get_analysis_configs()
-    configs_filt = configs.user.analyse.speed  # uses same config as speed
-    bpts = configs.get_ref(configs_filt.bodyparts)
-    smoothing_sec = configs.get_ref(configs_filt.smoothing_sec)
-    smoothing_frames = int(smoothing_sec * analysis_configs.fps)
+    config = ExperimentConfig.model_validate_json(config_fp.read_text())
+    analysis_config = config.get_analysis_config()
+    config_filt = config.user.analyse.speed  # uses same config as speed
+    bpts = config.get_ref(config_filt.bodyparts)
+    smoothing_sec = config.get_ref(config_filt.smoothing_sec)
+    smoothing_frames = int(smoothing_sec * analysis_config.fps)
 
     keypoints_df = KeypointsDf.clean_headings(KeypointsDf.read(keypoints_fp))
     assert keypoints_df.shape[0] > 0, (
@@ -381,7 +368,7 @@ def distance(
     indivs, _ = KeypointsDf.get_indivs_bpts(keypoints_df)
 
     analysis_df = _compute_movement(
-        keypoints_df, bpts, indivs, analysis_configs.px_per_mm, smoothing_frames
+        keypoints_df, bpts, indivs, analysis_config.px_per_mm, smoothing_frames
     )
 
     fbf_fp = dst_subdir / FBF / f"{name}.{AnalysisDf.io_format}"
@@ -391,9 +378,9 @@ def distance(
         analysis_df,
         dst_subdir,
         name,
-        analysis_configs.fps,
-        analysis_configs.bins_sec,
-        analysis_configs.custom_bins_sec,
+        analysis_config.fps,
+        analysis_config.bins_sec,
+        analysis_config.custom_bins_sec,
     )
 
 
@@ -401,19 +388,19 @@ def social_distance(
     keypoints_fp: Path,
     formatted_vid_fp: Path,  # noqa: ARG001
     dst_dir: Path,
-    configs_fp: Path,
+    config_fp: Path,
 ) -> None:
     """Determines the speed of the subject in each frame."""
     name = keypoints_fp.stem
     dst_subdir = dst_dir / "social_distance"
     # Calculating deltas (changes in body position) between each frame for the subject
-    configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
-    analysis_configs = configs.get_analysis_configs()
-    configs_filt = configs.user.analyse.social_distance
-    bpts = configs.get_ref(configs_filt.bodyparts)
-    smoothing_sec = configs.get_ref(configs_filt.smoothing_sec)
+    config = ExperimentConfig.model_validate_json(config_fp.read_text())
+    analysis_config = config.get_analysis_config()
+    config_filt = config.user.analyse.social_distance
+    bpts = config.get_ref(config_filt.bodyparts)
+    smoothing_sec = config.get_ref(config_filt.smoothing_sec)
     # Calculating more parameters
-    smoothing_frames = int(smoothing_sec * analysis_configs.fps)
+    smoothing_frames = int(smoothing_sec * analysis_config.fps)
 
     # Loading in dataframe
     keypoints_df = KeypointsDf.clean_headings(KeypointsDf.read(keypoints_fp))
@@ -438,7 +425,7 @@ def social_distance(
     dist_y = (keypoints_df.loc[:, idx_b] - keypoints_df.loc[:, idx_b]).mean(axis=1)
     dist = np.array(np.sqrt(np.power(dist_x, 2) + np.power(dist_y, 2)))
     # Adding mm distance to saved analysis_df table
-    analysis_df[(f"{indiv_a}_{indiv_b}", "DistMM")] = dist / analysis_configs.px_per_mm
+    analysis_df[(f"{indiv_a}_{indiv_b}", "DistMM")] = dist / analysis_config.px_per_mm
     analysis_df[(f"{indiv_a}_{indiv_b}", "DistMMSmoothed")] = (
         analysis_df[(f"{indiv_a}_{indiv_b}", "DistMM")]
         .rolling(window=smoothing_frames, min_periods=1, center=True)
@@ -453,9 +440,9 @@ def social_distance(
         analysis_df,
         dst_subdir,
         name,
-        analysis_configs.fps,
-        analysis_configs.bins_sec,
-        analysis_configs.custom_bins_sec,
+        analysis_config.fps,
+        analysis_config.bins_sec,
+        analysis_config.custom_bins_sec,
     )
 
 
@@ -463,7 +450,7 @@ def freezing(
     keypoints_fp: Path,
     formatted_vid_fp: Path,  # noqa: ARG001
     dst_dir: Path,
-    configs_fp: Path,
+    config_fp: Path,
 ) -> None:
     """Determines the frames in which the subject is frozen.
 
@@ -475,17 +462,17 @@ def freezing(
     name = keypoints_fp.stem
     dst_subdir = dst_dir / "freezing"
     # Calculating deltas (changes in body position) between each frame for the subject
-    configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
-    analysis_configs = configs.get_analysis_configs()
-    configs_filt = configs.user.analyse.freezing
-    bpts = configs.get_ref(configs_filt.bodyparts)
-    thresh_mm = configs.get_ref(configs_filt.thresh_mm)
-    smoothing_sec = configs.get_ref(configs_filt.smoothing_sec)
-    window_sec = configs.get_ref(configs_filt.window_sec)
+    config = ExperimentConfig.model_validate_json(config_fp.read_text())
+    analysis_config = config.get_analysis_config()
+    config_filt = config.user.analyse.freezing
+    bpts = config.get_ref(config_filt.bodyparts)
+    thresh_mm = config.get_ref(config_filt.thresh_mm)
+    smoothing_sec = config.get_ref(config_filt.smoothing_sec)
+    window_sec = config.get_ref(config_filt.window_sec)
     # Calculating more parameters
-    thresh_px = thresh_mm / analysis_configs.px_per_mm
-    smoothing_frames = int(smoothing_sec * analysis_configs.fps)
-    window_frames = int(np.round(analysis_configs.fps * window_sec, 0))
+    thresh_px = thresh_mm / analysis_config.px_per_mm
+    smoothing_frames = int(smoothing_sec * analysis_config.fps)
+    window_frames = int(np.round(analysis_config.fps * window_sec, 0))
 
     # Loading in dataframe
     keypoints_df = KeypointsDf.clean_headings(KeypointsDf.read(keypoints_fp))
@@ -540,7 +527,7 @@ def freezing(
         analysis_df,
         dst_subdir,
         name,
-        analysis_configs.fps,
-        analysis_configs.bins_sec,
-        analysis_configs.custom_bins_sec,
+        analysis_config.fps,
+        analysis_config.bins_sec,
+        analysis_config.custom_bins_sec,
     )

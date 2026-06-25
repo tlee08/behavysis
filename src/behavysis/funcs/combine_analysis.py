@@ -4,15 +4,14 @@ import pandas as pd
 from loguru import logger
 
 from behavysis.constants import ANALYSIS, FBF
-from behavysis.df_classes.analysis_combined_df import AnalysisCombinedDf
-from behavysis.df_classes.analysis_df import AnalysisDf
+from behavysis.df_classes import AnalysisCombinedDf, AnalysisDf
 from behavysis.utils.io_utils import file_exists_msg
 
 
 def combine_analysis(
     analysis_dir: Path,
     analysis_combined_fp: Path,
-    configs_fp: Path,
+    config_fp: Path,
     *,
     overwrite: bool,
 ) -> None:
@@ -25,7 +24,7 @@ def combine_analysis(
     if not overwrite and analysis_combined_fp:
         logger.warning(file_exists_msg(analysis_combined_fp))
         return
-    name = configs_fp.stem
+    name = config_fp.stem
     # For each analysis subdir, combining fbf files
     analysis_subdir_ls = [
         i for i in analysis_dir.iterdir() if (analysis_dir / i).is_dir()

@@ -8,9 +8,8 @@ import pandas as pd
 from loguru import logger
 
 from behavysis.constants import CACHE_DIR, LIKELIHOOD, X, Y
-from behavysis.df_classes.features_df import FeaturesDf
-from behavysis.df_classes.keypoints_df import KeypointsDf
-from behavysis.models.experiment_configs import ExperimentConfigs
+from behavysis.df_classes import FeaturesDf, KeypointsDf
+from behavysis.models import ExperimentConfig
 from behavysis.utils.io_utils import file_exists_msg, silent_remove
 from behavysis.utils.multiproc_utils import get_cpid
 from behavysis.utils.template_utils import save_template
@@ -30,7 +29,7 @@ from behavysis.utils.template_utils import save_template
 def extract_features(
     keypoints_fp: Path,
     features_fp: Path,
-    configs_fp: Path,
+    config_fp: Path,
     *,
     overwrite: bool,
 ) -> None:
@@ -42,8 +41,8 @@ def extract_features(
         Preprocessed keypoints filepath.
     features_fp : Path
         Filepath to save extracted_features dataframe.
-    configs_fp : Path
-        Configs JSON filepath.
+    config_fp : Path
+        Config JSON filepath.
     overwrite : bool
         Whether to overwrite the features_fp file (if it exists).
 
@@ -58,7 +57,7 @@ def extract_features(
     # Getting directory and file paths
     name = keypoints_fp.stem
     cpid = get_cpid()
-    configs_dir = configs_fp.parent
+    config_dir = config_fp.parent
     simba_in_dir = CACHE_DIR / f"input_{cpid}"
     simba_dir = CACHE_DIR / f"simba_proj_{cpid}"
     simba_features_dir = simba_dir / "project_folder" / "csv" / "features_extracted"
@@ -71,7 +70,7 @@ def extract_features(
     simba_in_fp = simba_in_dir / f"{name}.csv"
     # Selecting bodyparts for SimBA (8 bpts, 2 indivs)
     keypoints_df = KeypointsDf.read(keypoints_fp)
-    keypoints_df = _select_cols(keypoints_df, configs_fp)
+    keypoints_df = _select_cols(keypoints_df, config_fp)
     # Saving keypoints index to use in the SimBA features extraction df
     index = keypoints_df.index
     # Need to remove index name for SimBA to import correctly
@@ -79,7 +78,7 @@ def extract_features(
     # Saving as csv
     keypoints_df.to_csv(simba_in_fp)
     # Running SimBA env and script to run SimBA feature extraction
-    _run_simba_subproc(simba_dir, simba_in_dir, configs_dir, CACHE_DIR, cpid)
+    _run_simba_subproc(simba_dir, simba_in_dir, config_dir, CACHE_DIR, cpid)
     # Exporting SimBA feature extraction csv to disk
     _export2df(simba_features_fp, features_fp, index)
     # Removing temp folders
@@ -92,15 +91,15 @@ def extract_features(
 #####################################################################
 
 
-def _select_cols(keypoints_df: pd.DataFrame, configs_fp: Path) -> pd.DataFrame:
+def _select_cols(keypoints_df: pd.DataFrame, config_fp: Path) -> pd.DataFrame:
     """Selecting given keypoints columns to input to SimBA.
 
     Parameters
     ----------
     keypoints_df : pd.DataFrame
         Keypoints dataframe.
-    configs_fp : Path
-        Configs JSON filepath.
+    config_fp : Path
+        Config JSON filepath.
 
     Returns:
     -------
@@ -108,10 +107,10 @@ def _select_cols(keypoints_df: pd.DataFrame, configs_fp: Path) -> pd.DataFrame:
         Keypoints dataframe with selected columns.
     """
     # Getting necessary config parameters
-    configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
-    configs_filt = configs.user.extract_features
-    indivs = configs.get_ref(configs_filt.individuals)
-    bpts = configs.get_ref(configs_filt.bodyparts)
+    config = ExperimentConfig.model_validate_json(config_fp.read_text())
+    config_filt = config.user.extract_features
+    indivs = config.get_ref(config_filt.individuals)
+    bpts = config.get_ref(config_filt.bodyparts)
     # Checking that the bodyparts are all valid
     KeypointsDf.check_bpts_exist(keypoints_df, bpts)
     # Selecting given columns
@@ -124,7 +123,7 @@ def _select_cols(keypoints_df: pd.DataFrame, configs_fp: Path) -> pd.DataFrame:
 def _run_simba_subproc(
     simba_dir: Path,
     keypoints_dir: Path,
-    configs_dir: Path,
+    config_dir: Path,
     temp_dir: Path,
     cpid: int,
 ) -> None:
@@ -142,7 +141,7 @@ def _run_simba_subproc(
     keypoints_dir : Path
         Prepared keypoints dataframes directory. SimBA imports the entire directory.
         If only one file is being processed, put that file in a separate folder.
-    configs_dir : Path
+    config_dir : Path
         Directory path of config files corresponding to
         keypoints dataframes in keypoints_dir.
         For each keypoints dataframe file, there should be
@@ -156,7 +155,7 @@ def _run_simba_subproc(
         script_fp,
         simba_dir=simba_dir,
         keypoints_dir=keypoints_dir,
-        configs_dir=configs_dir,
+        config_dir=config_dir,
     )
     # Running the Simba subprocess in a separate conda env
     cmd = [

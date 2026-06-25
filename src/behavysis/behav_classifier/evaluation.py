@@ -11,8 +11,7 @@ from matplotlib.figure import Figure
 from sklearn.metrics import classification_report, confusion_matrix
 
 from behavysis.constants import ACTUAL, PRED, PROB
-from behavysis.df_classes import DFMixin
-from behavysis.df_classes.behav_classifier_df import BehavClassifierEvalDf
+from behavysis.df_classes import BehavClassifierEvalDf, DFMixin
 
 NIL = "nil"
 BEHAV = "behav"

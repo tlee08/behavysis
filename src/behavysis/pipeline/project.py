@@ -15,14 +15,15 @@ from behavysis.constants import (
     ANALYSIS_DIR,
     Folders,
 )
-from behavysis.df_classes.analysis_agg_df import AnalysisBinnedDf, AnalysisSummaryDf
-from behavysis.df_classes.analysis_df import (
+from behavysis.df_classes import (
     AnalysisBinnedCollatedDf,
+    AnalysisBinnedDf,
     AnalysisSummaryCollatedDf,
+    AnalysisSummaryDf,
 )
 from behavysis.funcs.run_dlc import ma_dlc_run_batch
-from behavysis.models.experiment_configs import ExperimentConfigs
-from behavysis.pipeline.experiment import Experiment
+from behavysis.models import ExperimentConfig
+from behavysis.pipeline import Experiment
 from behavysis.utils.dask_utils import cluster_process
 from behavysis.utils.multiproc_utils import get_gpu_ids
 
@@ -120,18 +121,18 @@ class Project:
         exp_ls_msg = "".join([f"\n    - {exp.name}" for exp in self.experiments])
         logger.info(f"Experiments imported:{exp_ls_msg}")
 
-    def update_configs(self, default_configs_fp: Path, *, overwrite: str) -> None:
-        """Update the configs for all experiments."""
+    def update_config(self, default_config_fp: Path, *, overwrite: str) -> None:
+        """Update the config for all experiments."""
         self._run(
-            Experiment.update_configs,
-            default_configs_fp=default_configs_fp,
+            Experiment.update_config,
+            default_config_fp=default_config_fp,
             overwrite=overwrite,
         )
 
-    def format_vid(self, *, overwrite: bool) -> None:
+    def format_video(self, *, overwrite: bool) -> None:
         """Format videos for all experiments."""
         self._run(
-            Experiment.format_vid,
+            Experiment.format_video,
             overwrite=overwrite,
         )
 
@@ -152,7 +153,7 @@ class Project:
                 dask.delayed(ma_dlc_run_batch)(
                     vid_fp_ls=[exp.get_fp(Folders.FORMATTED_VID) for exp in batch],
                     keypoints_dir=self.root_dir / Folders.KEYPOINTS.value,
-                    configs_dir=self.root_dir / Folders.CONFIGS.value,
+                    config_dir=self.root_dir / Folders.CONFIG.value,
                     gputouse=gpu,
                     overwrite=overwrite,
                 )
@@ -247,10 +248,10 @@ class Project:
         if not proj_analyse_dir.is_dir():
             return
 
-        configs = ExperimentConfigs.model_validate_json(
-            self.experiments[0].get_fp(Folders.CONFIGS).read_text()
+        config = ExperimentConfig.model_validate_json(
+            self.experiments[0].get_fp(Folders.CONFIG).read_text()
         )
-        bin_sizes = [*list(configs.get_ref(configs.user.analyse.bins_sec)), "custom"]
+        bin_sizes = [*list(config.get_ref(config.user.analyse.bins_sec)), "custom"]
 
         for subdir in proj_analyse_dir.iterdir():
             if not subdir.is_dir():

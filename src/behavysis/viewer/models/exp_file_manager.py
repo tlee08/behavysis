@@ -20,7 +20,7 @@ class ExpFileManager:
 
     @property
     def vid_fp(self) -> Path:
-        return self.root_dir / "2_formatted_vid" / f"{self.name}.mp4"
+        return self.root_dir / "2_formatted_video" / f"{self.name}.mp4"
 
     @property
     def behavs_df_fp(self) -> Path:
@@ -31,8 +31,8 @@ class ExpFileManager:
         return self.root_dir / "4_preprocessed" / f"{self.name}.{DF_IO_FORMAT}"
 
     @property
-    def configs_fp(self) -> Path:
-        return self.root_dir / "0_configs" / f"{self.name}.json"
+    def config_fp(self) -> Path:
+        return self.root_dir / "0_config" / f"{self.name}.json"
 
     @root_dir.setter
     def root_dir(self, value: Path) -> None:

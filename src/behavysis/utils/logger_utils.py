@@ -29,7 +29,7 @@ def configure_logger(
     """Configures logging."""
     # Clear defaults
     logger.remove()
-    # Set configs
+    # Set config
     logger.configure(extra={"func_name": "-"})
     # Console: human-readable format
     logger.add(

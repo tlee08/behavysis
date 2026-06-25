@@ -10,21 +10,22 @@ import pandas as pd
 from joblib import dump, load
 from loguru import logger
 
-from behavysis.behav_classifier.clf_models.base_torch_model import BaseTorchModel
-from behavysis.behav_classifier.clf_models.clf_templates import CLF_TEMPLATES, CNN1
-from behavysis.behav_classifier.data import (
+from behavysis.behav_classifier.evaluation import (
+    save_evaluation_results,
+    save_training_history,
+)
+from behavysis.constants import PRED, PROB, Folders
+from behavysis.df_classes import BehavPredictedDf
+from behavysis.models import BehavClassifierConfig
+
+from .clf_models.base_torch_model import BaseTorchModel
+from .clf_models.clf_templates import CLF_TEMPLATES, CNN1
+from .data import (
     combine_dfs,
     prepare_training_data,
     preproc_x_transform,
     wrangle_columns_y,
 )
-from behavysis.behav_classifier.evaluation import (
-    save_evaluation_results,
-    save_training_history,
-)
-from behavysis.constants import Folders
-from behavysis.df_classes.behav_df import PRED, PROB, BehavPredictedDf
-from behavysis.models.behav_classifier_configs import BehavClassifierConfigs
 
 if TYPE_CHECKING:
     from behavysis.pipeline.project import Project
@@ -74,19 +75,19 @@ class BehavClassifier:
             f"Behavior '{behav_name}' not found in scored behaviors"
         )
 
-        # Load or create configs
+        # Load or create config
         try:
-            configs = BehavClassifierConfigs.model_validate_json(
-                self.configs_fp.read_text()
+            config = BehavClassifierConfig.model_validate_json(
+                self.config_fp.read_text()
             )
-            logger.debug("Loaded existing configs")
+            logger.debug("Loaded existing config")
         except FileNotFoundError:
-            configs = BehavClassifierConfigs()
-            logger.debug("Created new model configs")
+            config = BehavClassifierConfig()
+            logger.debug("Created new model config")
 
-        configs.proj_dir = self._proj_dir
-        configs.behav_name = self._behav_name
-        self.configs = configs
+        config.proj_dir = self._proj_dir
+        config.behav_name = self._behav_name
+        self.config = config
 
         # Load or create classifier
         try:
@@ -127,9 +128,9 @@ class BehavClassifier:
             self._clf = clf
             logger.debug(f"Initialized classifier: {clf_name}")
 
-        configs = self.configs
-        configs.clf_struct = clf_name
-        self.configs = configs
+        config = self.config
+        config.clf_struct = clf_name
+        self.config = config
 
     @property
     def model_dir(self) -> Path:
@@ -137,25 +138,25 @@ class BehavClassifier:
         return self.proj_dir / "behav_models" / self.behav_name
 
     @property
-    def configs_fp(self) -> Path:
+    def config_fp(self) -> Path:
         """Path to model config file."""
-        return self.model_dir / "configs.json"
+        return self.model_dir / "config.json"
 
     @property
-    def configs(self) -> BehavClassifierConfigs:
+    def config(self) -> BehavClassifierConfig:
         """Current model configuration."""
-        return BehavClassifierConfigs.model_validate_json(self.configs_fp.read_text())
+        return BehavClassifierConfig.model_validate_json(self.config_fp.read_text())
 
-    @configs.setter
-    def configs(self, configs: BehavClassifierConfigs) -> None:
+    @config.setter
+    def config(self, config: BehavClassifierConfig) -> None:
         """Update model configuration."""
         try:
-            if self.configs == configs:
+            if self.config == config:
                 return
         except FileNotFoundError:
             pass
-        logger.debug("Configs changed. Updating on disk")
-        self.configs_fp.write_text(configs.model_dump_json(indent=2))
+        logger.debug("Config changed. Updating on disk")
+        self.config_fp.write_text(config.model_dump_json(indent=2))
 
     @property
     def clfs_dir(self) -> Path:
@@ -165,7 +166,7 @@ class BehavClassifier:
     @property
     def clf_dir(self) -> Path:
         """Directory for current classifier structure."""
-        return self.clfs_dir / self.configs.clf_struct
+        return self.clfs_dir / self.config.clf_struct
 
     @property
     def clf_fp(self) -> Path:
@@ -253,9 +254,9 @@ class BehavClassifier:
             If model config file not found.
         """
         proj_dir = proj_dir.resolve()
-        configs_fp = proj_dir / "behav_models" / behav_name / "configs.json"
+        config_fp = proj_dir / "behav_models" / behav_name / "config.json"
         try:
-            BehavClassifierConfigs.model_validate_json(configs_fp.read_text())
+            BehavClassifierConfig.model_validate_json(config_fp.read_text())
         except (FileNotFoundError, OSError) as e:
             msg = (
                 f'Model in "{proj_dir}" with behavior "{behav_name}" not found. '
@@ -270,17 +271,17 @@ class BehavClassifier:
 
     def pipeline_training(self) -> None:
         """Train classifier and save to model directory."""
-        logger.info(f"Training {self.configs.clf_struct}")
+        logger.info(f"Training {self.config.clf_struct}")
 
         # Prepare data
         x_ls, y_ls, index_train_ls, index_test_ls = prepare_training_data(
             self.x_dir,
             self.y_dir,
-            self.configs.behav_name,
+            self.config.behav_name,
             self.preproc_fp,
-            self.configs.test_split,
-            self.configs.oversample_ratio,
-            self.configs.undersample_ratio,
+            self.config.test_split,
+            self.config.oversample_ratio,
+            self.config.undersample_ratio,
         )
 
         # Train model
@@ -288,9 +289,9 @@ class BehavClassifier:
             x_ls=x_ls,
             y_ls=y_ls,
             index_ls=index_train_ls,
-            batch_size=self.configs.batch_size,
-            epochs=self.configs.epochs,
-            val_split=self.configs.val_split,
+            batch_size=self.config.batch_size,
+            epochs=self.config.epochs,
+            val_split=self.config.val_split,
         )
 
         # Save training history
@@ -321,20 +322,20 @@ class BehavClassifier:
         """Evaluate model on data split and save results."""
         y_true_ls = [y[index] for y, index in zip(y_ls, index_ls, strict=False)]
         y_prob_ls = [
-            self.clf.predict(x=x, index=index, batch_size=self.configs.batch_size)
+            self.clf.predict(x=x, index=index, batch_size=self.config.batch_size)
             for x, index in zip(x_ls, index_ls, strict=False)
         ]
 
         y_true = np.concatenate(y_true_ls)
         y_prob = np.concatenate(y_prob_ls)
-        y_pred = (y_prob > self.configs.pcutoff).astype(int)
+        y_pred = (y_prob > self.config.pcutoff).astype(int)
 
         save_evaluation_results(
             y_true,
             y_prob,
             y_pred,
-            self.configs.behav_name,
-            self.configs.pcutoff,
+            self.config.behav_name,
+            self.config.pcutoff,
             self.eval_dir,
             name,
             index_ls,
@@ -365,12 +366,12 @@ class BehavClassifier:
         y_prob = self.clf.predict(
             x=x,
             index=np.arange(x.shape[0]),
-            batch_size=self.configs.batch_size,
+            batch_size=self.config.batch_size,
         )
-        y_pred = (y_prob > self.configs.pcutoff).astype(int)
+        y_pred = (y_prob > self.config.pcutoff).astype(int)
 
         pred_df = BehavPredictedDf.init_df(pd.Series(index))
-        pred_df[(self.configs.behav_name, PROB)] = y_prob
-        pred_df[(self.configs.behav_name, PRED)] = y_pred
+        pred_df[(self.config.behav_name, PROB)] = y_prob
+        pred_df[(self.config.behav_name, PRED)] = y_pred
 
         return pred_df

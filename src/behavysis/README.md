@@ -93,7 +93,7 @@ flowchart LR
 ```mermaid
 flowchart TD
     %% File Nodes
-    F0@{ shape: st-rect, label: "0_configs<br>Stores how to process the experiment at each step<br>e.g. DLC model, cutoffs, etc." }
+    F0@{ shape: st-rect, label: "0_config<br>Stores how to process the experiment at each step<br>e.g. DLC model, cutoffs, etc." }
     F1@{ shape: st-rect, label: "1_raw_vid"}
     F2@{ shape: st-rect, label: "2_formatted_vid"}
     F3@{ shape: st-rect, label: "3_keypoints"}

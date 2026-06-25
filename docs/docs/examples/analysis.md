@@ -34,14 +34,14 @@ To see all imported experiments, see the `proj_dir/diagnostics/importExperiments
 
 If you would like the configurations (which are stored in config files) to be updated new parameters, define the JSON style of configuration parameters you would like to add and run the following lines.
 
-For more information about how a configurations file works, please see [here][configs-json-file].
+For more information about how a configurations file works, please see [here][config-json-file].
 
 ```python
-# Defining the default configs json path
-configs_fp = "path/to/default_configs.json"
-# Overwriting the configs
-proj.update_configs(
-    configs_fp,
+# Defining the default config json path
+config_fp = "path/to/default_config.json"
+# Overwriting the config
+proj.update_config(
+    config_fp,
     overwrite="user",
 )
 ```
@@ -98,7 +98,7 @@ proj.calculate_params(
 And see a collation of all experiments' inherent parameters to spot any anomolies before continuing
 
 ```python
-proj.collate_configs_auto()
+proj.collate_config_auto()
 ```
 
 ### Postprocessing

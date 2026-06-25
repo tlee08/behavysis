@@ -25,7 +25,7 @@ from .preprocess import (
     start_stop_trim,
 )
 from .run_dlc import ma_dlc_run_batch, ma_dlc_run_single
-from .update_configs import update_configs
+from .update_config import update_config
 
 __all__ = [
     "AnalyseFunc",
@@ -57,5 +57,5 @@ __all__ = [
     "start_stop_trim",
     "stop_frame_from_dur",
     "stop_frame_from_likelihood",
-    "update_configs",
+    "update_config",
 ]

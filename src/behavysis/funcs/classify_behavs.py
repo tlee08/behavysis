@@ -8,16 +8,15 @@ from loguru import logger
 
 from behavysis.behav_classifier.behav_classifier import BehavClassifier
 from behavysis.constants import DUR, FALSE_POS, PRED, PROB, START, STOP, TRUE_POS
-from behavysis.df_classes.behav_df import BehavPredictedDf, BehavScoredDf
-from behavysis.df_classes.features_df import FeaturesDf
-from behavysis.models.experiment_configs import ExperimentConfigs
+from behavysis.df_classes import BehavPredictedDf, BehavScoredDf, FeaturesDf
+from behavysis.models import ExperimentConfig
 from behavysis.utils.io_utils import file_exists_msg
 
 
 def classify_behavs(
     features_fp: Path,
     behavs_fp: Path,
-    configs_fp: Path,
+    config_fp: Path,
     *,
     overwrite: bool,
 ) -> None:
@@ -29,7 +28,7 @@ def classify_behavs(
         _description_
     dst_fp : Path
         _description_
-    configs_fp : Path
+    config_fp : Path
         _description_
     overwrite : bool
         Whether to overwrite the output file (if it exists).
@@ -53,24 +52,24 @@ def classify_behavs(
         logger.warning(file_exists_msg(behavs_fp))
         return
     # Getting necessary config parameters
-    configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
-    fps = configs.auto.formatted_vid.fps
-    model_configs_ls = configs.user.classify_behavs
+    config = ExperimentConfig.model_validate_json(config_fp.read_text())
+    fps = config.auto.formatted_vid.fps
+    model_config_ls = config.user.classify_behavs
     # Getting features data
     features_df = FeaturesDf.read(features_fp)
     # Initialising y_preds df
     # Getting predictions for each classifier model and saving
     # in a list of pd.DataFrames
     behavs_df_ls = []
-    for model_config in model_configs_ls:
-        proj_dir = configs.get_ref(model_config.proj_dir)
-        behav_name = configs.get_ref(model_config.behav_name)
+    for model_config in model_config_ls:
+        proj_dir = config.get_ref(model_config.proj_dir)
+        behav_name = config.get_ref(model_config.behav_name)
         behav_model = BehavClassifier.load(proj_dir, behav_name)
         pcutoff = _get_pcutoff(
-            configs.get_ref(model_config.pcutoff),
-            behav_model.configs.pcutoff,
+            config.get_ref(model_config.pcutoff),
+            behav_model.config.pcutoff,
         )
-        min_window_secs = configs.get_ref(model_config.min_empty_window_secs)
+        min_window_secs = config.get_ref(model_config.min_empty_window_secs)
         min_window_frames = int(np.round(min_window_secs * fps))
         # Running the clf pipeline
         behav_df_i = behav_model.pipeline_inference(features_df)
@@ -110,7 +109,7 @@ def _get_pcutoff(pcutoff: float, model_pcutoff: float) -> float:
         )
         return model_pcutoff
     assert 0 <= pcutoff <= 1, (
-        "pcutoff in configs must be between 0 and 1, or the special value -1.\n"
+        "pcutoff in config must be between 0 and 1, or the special value -1.\n"
         f"Instead it has value: {pcutoff}"
     )
     return pcutoff

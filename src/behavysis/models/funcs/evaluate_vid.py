@@ -1,8 +1,7 @@
 from matplotlib import pyplot as plt
 from pydantic import BaseModel, field_validator
 
-from behavysis.constants import INDIVIDUALS
-from behavysis.df_classes.keypoints_df import KeypointsDf
+from behavysis.constants import BODYPARTS, COORDS, INDIVIDUALS, SCORER
 
 
 def _validate_in_set(v: str, valid_values: list[str]) -> str:
@@ -31,8 +30,8 @@ def _validate_in_set(v: str, valid_values: list[str]) -> str:
     return v
 
 
-class EvaluateVidConfigs(BaseModel):
-    """EvaluateVidConfigs."""
+class EvaluateVidConfig(BaseModel):
+    """EvaluateVidConfig."""
 
     funcs: list[str] | str = ["keypoints", "analysis"]
     pcutoff: float | str = 0.8
@@ -51,4 +50,4 @@ class EvaluateVidConfigs(BaseModel):
     @classmethod
     def validate_colour_level(cls, v) -> str:
         """validate_colour_level."""
-        return _validate_in_set(v, list(KeypointsDf.column_names))
+        return _validate_in_set(v, [SCORER, INDIVIDUALS, BODYPARTS, COORDS])

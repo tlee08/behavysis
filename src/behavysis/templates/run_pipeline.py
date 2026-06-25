@@ -3,16 +3,13 @@
 This script runs the full behavioral analysis pipeline.
 
 Documentation: https://tlee08.github.io/behavysis/
-Config Reference: https://tlee08.github.io/behavysis/tutorials/configs_json/
-
-Before running:
-1. Edit default_configs.json with your DLC model path and arena dimensions
-2. Place raw videos in 1_raw_vid/ folder
+Config Reference: https://tlee08.github.io/behavysis/tutorials/config_json/
 """
 
 from pathlib import Path
 
 from behavysis import Project
+from behavysis.constants import DEFAULT_CONFIG_FP
 from behavysis.funcs import (
     distance,
     dur_frames_from_likelihood,
@@ -34,15 +31,15 @@ if __name__ == "__main__":
     proj.nprocs = 5
 
     # Apply config settings to all experiments
-    # See: https://tlee08.github.io/behavysis/tutorials/configs_json/
-    default_configs_fp = proj_dir / "default_configs.json"
-    proj.update_configs(
-        default_configs_fp=default_configs_fp,
+    # See: https://tlee08.github.io/behavysis/tutorials/config_json/
+    default_config_fp = proj_dir / DEFAULT_CONFIG_FP
+    proj.update_config(
+        default_config_fp=default_config_fp,
         overwrite="user",
     )
 
     # Step 1: Format videos
-    proj.format_vid(overwrite=overwrite)
+    proj.format_video(overwrite=overwrite)
 
     # Step 2: Run DeepLabCut pose estimation
     proj.run_dlc(

@@ -47,36 +47,36 @@ All DataFrame handlers inherit from `DFMixin` in `utils/df_mixin.py`. Key patter
 - `basic_clean()` validates schema and sorts indices
 - `check_df()` raises on schema mismatch
 
-### Configuration Model (`models/experiment_configs.py`)
+### Configuration Model (`models/experiment_config.py`)
 
-`ExperimentConfigs` is a Pydantic model with three sections:
+`ExperimentConfig` is a Pydantic model with three sections:
 
 - `user`: User-specified settings (formatting, preprocessing params)
 - `auto`: Auto-calculated values (fps, start_frame, px_per_mm)
 - `ref`: Reference values referenced via `"--ref_name"` strings
 
-Use `configs.get_ref(val)` to resolve reference strings. Use `configs.get_analysis_configs()` to get validated analysis parameters.
+Use `config.get_ref(val)` to resolve reference strings. Use `config.get_analysis_config()` to get validated analysis parameters.
 
 ### Processing Functions (`processes/`)
 
-Each function is stateless—configs and file paths are passed explicitly. Standard signature:
+Each function is stateless—config and file paths are passed explicitly. Standard signature:
 
 ```python
 def some_process(
     src_fp: Path,
     dst_fp: Path,
-    configs_fp: Path,
+    config_fp: Path,
     *,
     overwrite: bool,
 ) -> None:
 ```
 
-Functions check `overwrite` first, read configs with `ExperimentConfigs.model_validate_json()`, process data, and write output.
+Functions check `overwrite` first, read config with `ExperimentConfig.model_validate_json()`, process data, and write output.
 
 ## Pipeline Stages (from `constants/pipeline.py`)
 
 ```
-0_configs → 1_raw_vid → 2_formatted_vid → 3_keypoints → 4_preprocessed →
+0_config → 1_raw_vid → 2_formatted_vid → 3_keypoints → 4_preprocessed →
 5_features_extracted → 6_predicted_behavs → 7_scored_behavs → 8_analysis → 9_analysis_combined
 ```
 

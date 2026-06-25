@@ -1,6 +1,6 @@
 <!-- ::: behavysis.funcs -->
 
-::: behavysis.funcs.update_configs
+::: behavysis.funcs.update_config
 
 ::: behavysis.funcs.format_vid
 

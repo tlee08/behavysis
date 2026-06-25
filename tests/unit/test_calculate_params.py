@@ -9,8 +9,8 @@ from pathlib import Path
 import pytest
 from loguru import logger
 
-from behavysis.funcs.calculate_params import stop_frame_from_dur
-from behavysis.models.experiment_configs import ExperimentConfigs
+from behavysis.funcs import stop_frame_from_dur
+from behavysis.models import ExperimentConfig
 
 
 class TestStopFrameFromDur:
@@ -26,21 +26,21 @@ class TestStopFrameFromDur:
         dur_sec = 60
         total_frames = 1000
 
-        configs = ExperimentConfigs()
-        configs.user.calculate_params.stop_frame_from_dur.dur_sec = dur_sec
-        configs.auto.formatted_vid.fps = fps
-        configs.auto.start_frame = start_frame
-        configs.auto.formatted_vid.total_frames = total_frames
+        config = ExperimentConfig()
+        config.user.calculate_params.stop_frame_from_dur.dur_sec = dur_sec
+        config.auto.formatted_vid.fps = fps
+        config.auto.start_frame = start_frame
+        config.auto.formatted_vid.total_frames = total_frames
 
-        configs_fp = tmp_path / "configs.json"
-        configs_fp.write_text(configs.model_dump_json(indent=2))
+        config_fp = tmp_path / "config.json"
+        config_fp.write_text(config.model_dump_json(indent=2))
 
-        stop_frame_from_dur(configs_fp)
+        stop_frame_from_dur(config_fp)
 
-        configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
-        logger.info(configs.auto.model_dump_json(indent=2))
+        config = ExperimentConfig.model_validate_json(config_fp.read_text())
+        logger.info(config.auto.model_dump_json(indent=2))
 
-        assert configs.auto.stop_frame == start_frame + dur_sec * fps
+        assert config.auto.stop_frame == start_frame + dur_sec * fps
 
     def test_clamps_to_total_frames(self, tmp_path: Path) -> None:
         """Should not exceed total frames."""
@@ -49,20 +49,20 @@ class TestStopFrameFromDur:
         dur_sec = 600  # Would exceed total_frames
         total_frames = 1000
 
-        configs = ExperimentConfigs()
-        configs.user.calculate_params.stop_frame_from_dur.dur_sec = dur_sec
-        configs.auto.formatted_vid.fps = fps
-        configs.auto.start_frame = start_frame
-        configs.auto.formatted_vid.total_frames = total_frames
+        config = ExperimentConfig()
+        config.user.calculate_params.stop_frame_from_dur.dur_sec = dur_sec
+        config.auto.formatted_vid.fps = fps
+        config.auto.start_frame = start_frame
+        config.auto.formatted_vid.total_frames = total_frames
 
-        configs_fp = tmp_path / "configs.json"
-        configs_fp.write_text(configs.model_dump_json(indent=2))
+        config_fp = tmp_path / "config.json"
+        config_fp.write_text(config.model_dump_json(indent=2))
 
-        stop_frame_from_dur(configs_fp)
+        stop_frame_from_dur(config_fp)
 
-        configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
+        config = ExperimentConfig.model_validate_json(config_fp.read_text())
         # Stop frame should be calculated (even if it exceeds total_frames)
-        assert configs.auto.stop_frame == start_frame + dur_sec * fps
+        assert config.auto.stop_frame == start_frame + dur_sec * fps
 
 
 @pytest.mark.integration

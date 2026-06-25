@@ -9,18 +9,13 @@ from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import FunctionTransformer, MinMaxScaler
 
-from behavysis.df_classes import DFMixin
-from behavysis.df_classes.behav_classifier_df import BehavClassifierCombinedDf
-from behavysis.df_classes.behav_df import (
-    ACTUAL,
-    FALSE_POS,
-    OUTCOMES,
-    PRED,
-    TRUE_POS,
-    UNSURE,
+from behavysis.constants import ACTUAL, FALSE_POS, OUTCOMES, PRED, TRUE_POS, UNSURE
+from behavysis.df_classes import (
+    BehavClassifierCombinedDf,
     BehavScoredDf,
+    DFMixin,
+    FeaturesDf,
 )
-from behavysis.df_classes.features_df import FeaturesDf
 from behavysis.utils.io_utils import (
     async_read_files_run,
 )

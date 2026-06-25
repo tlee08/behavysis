@@ -19,17 +19,17 @@ class FeatureExtractor:
     """__summary__."""
 
     @staticmethod
-    def simba_update_configs(simba_dir: Path, update_dict: dict) -> None:
+    def simba_update_config(simba_dir: Path, update_dict: dict) -> None:
         """Updates project_config.ini file."""
-        simba_configs_fp = simba_dir / "project_folder" / "project_config.ini"
+        simba_config_fp = simba_dir / "project_folder" / "project_config.ini"
         # Making ConfigParser instance
         config = configparser.ConfigParser()
-        # Reading in existing simba project configs
-        config.read(simba_configs_fp)
-        # Updating with given configs
+        # Reading in existing simba project config
+        config.read(simba_config_fp)
+        # Updating with given config
         config.read_dict(update_dict)
-        # Writing updated configs to file
-        with simba_configs_fp.open("w", encoding="utf-8") as f:
+        # Writing updated config to file
+        with simba_config_fp.open("w", encoding="utf-8") as f:
             config.write(f)
 
     #################################################
@@ -75,10 +75,10 @@ class FeatureExtractor:
     #################################################
 
     @staticmethod
-    def simba_set_dims(simba_dir: Path, configs_dir: Path):
+    def simba_set_dims(simba_dir: Path, config_dir: Path):
         """Similar to `simba.set_video_parameters()` but gets specific vals from each config file."""
-        # simba_configs_fp = simba_dir / "project_folder" / "project_config.ini"
-        # set_video_parameters(config_path=simba_configs_fp, px_per_mm=PX_PER_MM, fps=FPS, resolution=RESOLUTION)
+        # simba_config_fp = simba_dir / "project_folder" / "project_config.ini"
+        # set_video_parameters(config_path=simba_config_fp, px_per_mm=PX_PER_MM, fps=FPS, resolution=RESOLUTION)
 
         # Initialising video dims df
         df = pd.DataFrame(
@@ -95,22 +95,22 @@ class FeatureExtractor:
         # Getting and saving the px/mm values to the df
         for fp in input_csv_dir.iterdir():
             name = fp.stem
-            # Getting configs JSON
-            configs_fp = configs_dir / f"{name}.json"
-            with configs_fp.open("r") as f:
-                configs = json.load(f)
-            vid_configs = configs["auto"]["formatted_vid"]
+            # Getting config JSON
+            config_fp = config_dir / f"{name}.json"
+            with config_fp.open("r") as f:
+                config = json.load(f)
+            vid_config = config["auto"]["formatted_vid"]
             row = (
                 pd.Series(
                     {
                         "Video": name,
-                        "fps": vid_configs["fps"],
-                        "Resolution_width": vid_configs["width_px"],
-                        "Resolution_height": vid_configs["height_px"],
-                        "Distance_in_mm": configs["user"]["calculate_params"][
+                        "fps": vid_config["fps"],
+                        "Resolution_width": vid_config["width_px"],
+                        "Resolution_height": vid_config["height_px"],
+                        "Distance_in_mm": config["user"]["calculate_params"][
                             "px_per_mm"
                         ]["dist_mm"],
-                        "pixels/mm": configs["auto"]["px_per_mm"],
+                        "pixels/mm": config["auto"]["px_per_mm"],
                     }
                 )
                 .to_frame()
@@ -135,15 +135,15 @@ class FeatureExtractor:
         The threshold is the criterion, C, multiplied by the median (or mean) of all frames.
         Any points above the threshold are set as the previously "valid" point.
         """
-        simba_configs_fp = simba_dir / "project_folder" / "project_config.ini"
-        OutlierCorrecterMovement(config_path=simba_configs_fp).run()
-        OutlierCorrecterLocation(config_path=simba_configs_fp).run()
+        simba_config_fp = simba_dir / "project_folder" / "project_config.ini"
+        OutlierCorrecterMovement(config_path=simba_config_fp).run()
+        OutlierCorrecterLocation(config_path=simba_config_fp).run()
 
     @staticmethod
     def simba_skip_outlier_correction(simba_dir) -> None:
         """Skipping."""
-        simba_configs_fp = simba_dir / "project_folder" / "project_config.ini"
-        OutlierCorrectionSkipper(config_path=simba_configs_fp).run()
+        simba_config_fp = simba_dir / "project_folder" / "project_config.ini"
+        OutlierCorrectionSkipper(config_path=simba_config_fp).run()
 
     #################################################
     #     SIMBA EXTRACT FEATURES
@@ -152,8 +152,8 @@ class FeatureExtractor:
     @staticmethod
     def simba_extract_features(simba_dir) -> None:
         """Extracting features."""
-        simba_configs_fp = simba_dir / "project_folder" / "project_config.ini"
-        ExtractFeaturesFrom16bps(config_path=simba_configs_fp).run()
+        simba_config_fp = simba_dir / "project_folder" / "project_config.ini"
+        ExtractFeaturesFrom16bps(config_path=simba_config_fp).run()
 
     #################################################
     #                LABEL FRAMES
@@ -187,14 +187,14 @@ def main() -> None:
     # Getting directories from cmd args
     simba_dir = Path(r"{{ simba_dir }}")
     keypoints_dir = Path(r"{{ keypoints_dir }}")
-    configs_dir = Path(r"{{ configs_dir }}")
+    config_dir = Path(r"{{ config_dir }}")
     # Making SimBA project
     if not simba_dir.exists():
         FeatureExtractor.simba_make_proj(simba_dir, ["placeholder"])
     # Importing keypoints dataframes to SimBA project
     FeatureExtractor.simba_import_files(simba_dir, keypoints_dir)
     # Setting video px per mm
-    FeatureExtractor.simba_set_dims(simba_dir, configs_dir)
+    FeatureExtractor.simba_set_dims(simba_dir, config_dir)
     # Outlier correction (skipping)
     FeatureExtractor.simba_skip_outlier_correction(simba_dir)
     # Extracting features

@@ -1,6 +1,6 @@
-# Configs JSON File
+# Config JSON File
 
-A configs JSON file is attached to each experiment. This file defines:
+A config JSON file is attached to each experiment. This file defines:
 
 1. **How** the experiment should be processed (e.g., which DLC model to use)
 2. **Inherent parameters** of the experiment (e.g., px/mm, start_frame)
@@ -12,16 +12,17 @@ A configs JSON file is attached to each experiment. This file defines:
 ## Quick Start
 
 1. Generate a default config file:
-    ```bash
-    behavysis-make-project
-    ```
 
-2. Edit `default_configs.json` - most experiments only need to change a few fields.
+   ```bash
+   behavysis-make-project
+   ```
 
-3. Apply configs to all experiments:
-    ```python
-    proj.update_configs(default_configs_fp="default_configs.json", overwrite="user")
-    ```
+2. Edit `default_config.json` - most experiments only need to change a few fields.
+
+3. Apply config to all experiments:
+   ```python
+   proj.update_config(default_config_fp="default_config.json", overwrite="user")
+   ```
 
 ---
 
@@ -29,10 +30,10 @@ A configs JSON file is attached to each experiment. This file defines:
 
 These fields **must** be configured for the pipeline to work:
 
-| Field | Description | Example |
-|-------|-------------|---------|
-| `user.run_dlc.model_fp` | Path to DeepLabCut model config.yaml | `"/models/my_model/config.yaml"` |
-| `user.calculate_params.px_per_mm.dist_mm` | Real-world distance between two arena corners | `400` (for 40cm arena) |
+| Field                                     | Description                                   | Example                          |
+| ----------------------------------------- | --------------------------------------------- | -------------------------------- |
+| `user.run_dlc.model_fp`                   | Path to DeepLabCut model config.yaml          | `"/models/my_model/config.yaml"` |
+| `user.calculate_params.px_per_mm.dist_mm` | Real-world distance between two arena corners | `400` (for 40cm arena)           |
 
 ---
 
@@ -41,6 +42,7 @@ These fields **must** be configured for the pipeline to work:
 The config has three sections:
 
 ### `user` - Your Settings
+
 Parameters you define to control processing:
 
 ```json
@@ -54,6 +56,7 @@ Parameters you define to control processing:
 ```
 
 ### `auto` - Auto-Calculated Values
+
 Populated automatically during processing:
 
 ```json
@@ -68,6 +71,7 @@ Populated automatically during processing:
 ```
 
 ### `ref` - Reusable References
+
 Define values once, reference them with `--name`:
 
 ```json
@@ -165,7 +169,11 @@ Define values once, reference them with `--name`:
     "bins_sec": [30, 60, 120],
     "speed": { "smoothing_sec": 1, "bodyparts": "--bpts_centre" },
     "social_distance": { "smoothing_sec": 1, "bodyparts": "--bpts_centre" },
-    "freezing": { "window_sec": 2, "thresh_mm": 5, "bodyparts": "--bpts_centre" },
+    "freezing": {
+      "window_sec": 2,
+      "thresh_mm": 5,
+      "bodyparts": "--bpts_centre"
+    },
     "in_roi": [
       {
         "roi_corners": "--bpts_corners",
@@ -179,7 +187,7 @@ Define values once, reference them with `--name`:
 
 ---
 
-## Example Configs
+## Example Config
 
 ### Open Field (Single Mouse)
 
@@ -234,7 +242,14 @@ Standard open field test with one mouse. Measures speed, freezing, and thigmotax
     }
   },
   "ref": {
-    "bpts_simba": ["Nose", "LeftEar", "RightEar", "BodyCentre", "TailBase1", "TailTip"]
+    "bpts_simba": [
+      "Nose",
+      "LeftEar",
+      "RightEar",
+      "BodyCentre",
+      "TailBase1",
+      "TailTip"
+    ]
   }
 }
 ```
@@ -305,8 +320,14 @@ Social interaction test with two mice (one marked, one unmarked). Includes socia
   "ref": {
     "indivs_simba": ["mouse1marked", "mouse2unmarked"],
     "bpts_simba": [
-      "Nose", "LeftEar", "RightEar", "BodyCentre",
-      "LeftFlankMid", "RightFlankMid", "TailBase1", "TailTip"
+      "Nose",
+      "LeftEar",
+      "RightEar",
+      "BodyCentre",
+      "LeftFlankMid",
+      "RightFlankMid",
+      "TailBase1",
+      "TailTip"
     ],
     "bpts_centre": ["BodyCentre", "TailBase1"]
   }
@@ -318,15 +339,19 @@ Social interaction test with two mice (one marked, one unmarked). Includes socia
 ## Troubleshooting
 
 ### "DLC model config not found"
+
 Check that `user.run_dlc.model_fp` points to an existing `.yaml` file:
+
 ```json
 { "run_dlc": { "model_fp": "/absolute/path/to/config.yaml" } }
 ```
 
 ### "Width and height must be provided"
+
 Run `proj.format_vid()` first - it populates `auto.formatted_vid` dimensions.
 
 ### "Bodyparts not found in keypoints data"
+
 Your DLC model's bodypart names don't match the config. Check `ref.bpts_simba` matches your model's output.
 
 ---

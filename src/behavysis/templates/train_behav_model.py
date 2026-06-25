@@ -14,14 +14,14 @@ if __name__ == "__main__":
     # Paths
     boris_dir = root_dir / "boris"
     behav_dir = root_dir / "7_scored_behavs"
-    config_dir = root_dir / "0_configs"
+    config_dir = root_dir / "0_config"
     for i in boris_dir.iterdir():
         name = i.stem
         print(name)
         outcome = Export.boris2behav(
             src_fp=boris_dir / f"{name}.tsv",
             dst_fp=behav_dir / f"{name}.parquet",
-            configs_fp=config_dir / f"{name}.json",
+            config_fp=config_dir / f"{name}.json",
             behavs_ls=behavs_ls,
             overwrite=overwrite,
         )

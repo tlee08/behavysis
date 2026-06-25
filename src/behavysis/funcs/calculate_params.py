@@ -1,17 +1,4 @@
-"""Functions have the following format.
-
-Parameters
-----------
-keypoints_fp : str
-    The experiment's keypoints file.
-configs_fp : str
-    The experiment's JSON configs file.
-
-Returns:
--------
-str
-    The outcome of the process.
-"""
+"""Functions have the following format."""
 
 from pathlib import Path
 from typing import Protocol
@@ -21,8 +8,8 @@ import pandas as pd
 from loguru import logger
 
 from behavysis.constants import LIKELIHOOD, SINGLE
-from behavysis.df_classes.keypoints_df import KeypointsDf
-from behavysis.models.experiment_configs import ExperimentConfigs
+from behavysis.df_classes import KeypointsDf
+from behavysis.models import ExperimentConfig
 
 
 class CalculateParamsFunc(Protocol):
@@ -31,7 +18,7 @@ class CalculateParamsFunc(Protocol):
     def __call__(
         self,
         keypoints_fp: Path,
-        configs_fp: Path,
+        config_fp: Path,
     ) -> None:
         """Protocol for calculate_params functions."""
         ...
@@ -39,7 +26,7 @@ class CalculateParamsFunc(Protocol):
 
 def start_frame_from_likelihood(
     keypoints_fp: Path,
-    configs_fp: Path,
+    config_fp: Path,
 ) -> None:
     """Determines start frame based on when subject "likely" entered the frame.
 
@@ -61,14 +48,14 @@ def start_frame_from_likelihood(
                 - pcutoff: float
     ```
     """
-    start_frame, _stop_frame = _calc_exists_from_likelihood(keypoints_fp, configs_fp)
-    # Writing to configs
-    configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
-    configs.auto.start_frame = start_frame
-    configs_fp.write_text(configs.model_dump_json(indent=2))
+    start_frame, _stop_frame = _calc_exists_from_likelihood(keypoints_fp, config_fp)
+    # Writing to config
+    config = ExperimentConfig.model_validate_json(config_fp.read_text())
+    config.auto.start_frame = start_frame
+    config_fp.write_text(config.model_dump_json(indent=2))
 
 
-def start_frame_from_csv(keypoints_fp: Path, configs_fp: Path) -> None:
+def start_frame_from_csv(keypoints_fp: Path, config_fp: Path) -> None:
     """Determines start frame from timestamps in csv.
 
     Expects value to be in seconds (so will convert to frames).
@@ -89,11 +76,11 @@ def start_frame_from_csv(keypoints_fp: Path, configs_fp: Path) -> None:
     ```
     """
     # Getting necessary config parameters
-    configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
-    configs_filt = configs.user.calculate_params.start_frame_from_csv
-    fps = configs.auto.formatted_vid.fps
-    csv_fp = configs.get_ref(configs_filt.csv_fp)
-    name = configs.get_ref(configs_filt.name)
+    config = ExperimentConfig.model_validate_json(config_fp.read_text())
+    config_filt = config.user.calculate_params.start_frame_from_csv
+    fps = config.auto.formatted_vid.fps
+    csv_fp = config.get_ref(config_filt.csv_fp)
+    name = config.get_ref(config_filt.name)
     assert fps != -1, (
         "fps not yet set. Please calculate fps first with `proj.get_vid_metadata`."
     )
@@ -105,19 +92,19 @@ def start_frame_from_csv(keypoints_fp: Path, configs_fp: Path) -> None:
     start_times_df.index = start_times_df.index.astype(str)
     assert name in start_times_df.index.to_numpy(), (
         f"{name} not in {csv_fp}.\n"
-        "Update `name` parameter in configs file or check the start_frames csv file."
+        "Update `name` parameter in config file or check the start_frames csv file."
     )
     # Getting start time in seconds
     start_sec = start_times_df.loc[name][0]
     # Converting to start frame
     start_frame = int(np.round(start_sec * fps, 0))
-    # Writing to configs
-    configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
-    configs.auto.start_frame = start_frame
-    configs_fp.write_text(configs.model_dump_json(indent=2))
+    # Writing to config
+    config = ExperimentConfig.model_validate_json(config_fp.read_text())
+    config.auto.start_frame = start_frame
+    config_fp.write_text(config.model_dump_json(indent=2))
 
 
-def stop_frame_from_likelihood(keypoints_fp: Path, configs_fp: Path) -> None:
+def stop_frame_from_likelihood(keypoints_fp: Path, config_fp: Path) -> None:
     """Determines stop frame based on when subject "likely" entered the frame.
 
     This is done by looking at a sliding window of time.
@@ -126,16 +113,16 @@ def stop_frame_from_likelihood(keypoints_fp: Path, configs_fp: Path) -> None:
     is greater than the defined pcutoff, then
     the determine this as the start time.
     """
-    _start_frame, stop_frame = _calc_exists_from_likelihood(keypoints_fp, configs_fp)
-    # Writing to configs
-    configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
-    configs.auto.stop_frame = stop_frame
-    configs_fp.write_text(configs.model_dump_json(indent=2))
+    _start_frame, stop_frame = _calc_exists_from_likelihood(keypoints_fp, config_fp)
+    # Writing to config
+    config = ExperimentConfig.model_validate_json(config_fp.read_text())
+    config.auto.stop_frame = stop_frame
+    config_fp.write_text(config.model_dump_json(indent=2))
 
 
 def stop_frame_from_dur(
     keypoints_fp: Path,  # noqa: ARG001
-    configs_fp: Path,
+    config_fp: Path,
 ) -> None:
     """Calculates the end time according to the following equation.
 
@@ -154,12 +141,12 @@ def stop_frame_from_dur(
     ```
     """
     # Getting necessary config parameters
-    configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
-    configs_filt = configs.user.calculate_params.stop_frame_from_dur
-    dur_sec = configs.get_ref(configs_filt.dur_sec)
-    start_frame = configs.auto.start_frame
-    fps = configs.auto.formatted_vid.fps
-    total_frames = configs.auto.formatted_vid.total_frames
+    config = ExperimentConfig.model_validate_json(config_fp.read_text())
+    config_filt = config.user.calculate_params.stop_frame_from_dur
+    dur_sec = config.get_ref(config_filt.dur_sec)
+    start_frame = config.auto.start_frame
+    fps = config.auto.formatted_vid.fps
+    total_frames = config.auto.formatted_vid.total_frames
     assert start_frame != -1, "start_frame is None. Please calculate start_frame first."
     assert fps != -1, (
         "fps not yet set. Please calculate fps first with `proj.get_vid_metadata`."
@@ -172,29 +159,29 @@ def stop_frame_from_dur(
         logger.warning("The length of the video itself has not been calculated yet.")
     elif stop_frame > total_frames:
         logger.warning(
-            "The user specified dur_sec in the configs file is greater "
+            "The user specified dur_sec in the config file is greater "
             "than the actual length of the video. Please check to see if this video is "
             "too short or if the dur_sec value is incorrect."
         )
     # Writing to config
-    configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
-    configs.auto.stop_frame = stop_frame
-    configs_fp.write_text(configs.model_dump_json(indent=2))
+    config = ExperimentConfig.model_validate_json(config_fp.read_text())
+    config.auto.stop_frame = stop_frame
+    config_fp.write_text(config.model_dump_json(indent=2))
 
 
-def dur_frames_from_likelihood(keypoints_fp: Path, configs_fp: Path) -> None:
+def dur_frames_from_likelihood(keypoints_fp: Path, config_fp: Path) -> None:
     """Determines duration in seconds, from subject first to last seen in vid.
 
     Appear/disappear is calculated from likelihood.
     """
-    start_frame, stop_frame = _calc_exists_from_likelihood(keypoints_fp, configs_fp)
-    # Writing to configs
-    configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
-    configs.auto.dur_frames = stop_frame - start_frame
-    configs_fp.write_text(configs.model_dump_json(indent=2))
+    start_frame, stop_frame = _calc_exists_from_likelihood(keypoints_fp, config_fp)
+    # Writing to config
+    config = ExperimentConfig.model_validate_json(config_fp.read_text())
+    config.auto.dur_frames = stop_frame - start_frame
+    config_fp.write_text(config.model_dump_json(indent=2))
 
 
-def px_per_mm(keypoints_fp: Path, configs_fp: Path) -> None:
+def px_per_mm(keypoints_fp: Path, config_fp: Path) -> None:
     """Calculates the pixels per mm conversion for the video.
 
     This is done by averaging the (x, y) coordinates of each corner,
@@ -219,12 +206,12 @@ def px_per_mm(keypoints_fp: Path, configs_fp: Path) -> None:
     ```
     """
     # Getting necessary config parameters
-    configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
-    configs_filt = configs.user.calculate_params.px_per_mm
-    pt_a = configs.get_ref(configs_filt.pt_a)
-    pt_b = configs.get_ref(configs_filt.pt_b)
-    pcutoff = configs.get_ref(configs_filt.pcutoff)
-    dist_mm = configs.get_ref(configs_filt.dist_mm)
+    config = ExperimentConfig.model_validate_json(config_fp.read_text())
+    config_filt = config.user.calculate_params.px_per_mm
+    pt_a = config.get_ref(config_filt.pt_a)
+    pt_b = config.get_ref(config_filt.pt_b)
+    pcutoff = config.get_ref(config_filt.pcutoff)
+    dist_mm = config.get_ref(config_filt.dist_mm)
     # Loading dataframe
     keypoints_df = KeypointsDf.clean_headings(KeypointsDf.read(keypoints_fp))
     # Imputing missing values with 0 (only really relevant for `likelihood` columns)
@@ -237,7 +224,7 @@ def px_per_mm(keypoints_fp: Path, configs_fp: Path) -> None:
     for pt_df, pt in ([pt_a_df, pt_a], [pt_b_df, pt_b]):
         assert np.any(pt_df[LIKELIHOOD] > pcutoff), (
             f'No points for "{pt}" are above the pcutoff of {pcutoff}.\n'
-            "Consider lowering the pcutoff in the configs file.\n"
+            "Consider lowering the pcutoff in the config file.\n"
             f'The highest likelihood value in "{pt}" is '
             f"{np.nanmax(pt_df[LIKELIHOOD])}."
         )
@@ -255,14 +242,14 @@ def px_per_mm(keypoints_fp: Path, configs_fp: Path) -> None:
     )
     # Finding pixels per mm conversion using given width and height as calibration
     px_per_mm = dist_px / dist_mm
-    # Saving to configs file
-    configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
-    configs.auto.px_per_mm = px_per_mm
-    configs_fp.write_text(configs.model_dump_json(indent=2))
+    # Saving to config file
+    config = ExperimentConfig.model_validate_json(config_fp.read_text())
+    config.auto.px_per_mm = px_per_mm
+    config_fp.write_text(config.model_dump_json(indent=2))
 
 
 def _calc_exists_from_likelihood(
-    keypoints_fp: Path, configs_fp: Path
+    keypoints_fp: Path, config_fp: Path
 ) -> tuple[int, int]:
     """Determines whether subject exists.
 
@@ -285,12 +272,12 @@ def _calc_exists_from_likelihood(
     ```
     """
     # Getting necessary config parameters
-    configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
-    configs_filt = configs.user.calculate_params.from_likelihood
-    bpts = configs.get_ref(configs_filt.bodyparts)
-    window_sec = configs.get_ref(configs_filt.window_sec)
-    pcutoff = configs.get_ref(configs_filt.pcutoff)
-    fps = configs.auto.formatted_vid.fps
+    config = ExperimentConfig.model_validate_json(config_fp.read_text())
+    config_filt = config.user.calculate_params.from_likelihood
+    bpts = config.get_ref(config_filt.bodyparts)
+    window_sec = config.get_ref(config_filt.window_sec)
+    pcutoff = config.get_ref(config_filt.pcutoff)
+    fps = config.auto.formatted_vid.fps
     assert fps != -1, (
         "fps not yet set. Please calculate fps first with `proj.get_vid_metadata`."
     )

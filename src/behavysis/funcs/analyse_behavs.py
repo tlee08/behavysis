@@ -3,25 +3,21 @@ from pathlib import Path
 import numpy as np
 
 from behavysis.constants import FALSE_POS, FBF, OUTCOMES, PRED, UNSURE
-from behavysis.df_classes.analysis_agg_df import AnalysisBinnedDf
-from behavysis.df_classes.analysis_df import AnalysisDf
-from behavysis.df_classes.behav_df import (
-    BehavScoredDf,
-)
-from behavysis.models.experiment_configs import ExperimentConfigs
+from behavysis.df_classes import AnalysisBinnedDf, AnalysisDf, BehavScoredDf
+from behavysis.models import ExperimentConfig
 
 
 def analyse_behavs(
     behavs_fp: Path,
     dst_dir: Path,
-    configs_fp: Path,
+    config_fp: Path,
 ) -> None:
     """Takes a behavs df and generates a summary and binned version of the data."""
     name = behavs_fp.stem
     dst_subdir = dst_dir / "analyse_behavs"
     # Calculating deltas (changes in bpts) between each frame for the subject
-    configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
-    analysis_configs = configs.get_analysis_configs()
+    config = ExperimentConfig.model_validate_json(config_fp.read_text())
+    analysis_config = config.get_analysis_config()
     # Loading in dataframe
     behavs_df = BehavScoredDf.read(behavs_fp)
     # Setting all na and undetermined behav to non-behav
@@ -43,7 +39,7 @@ def analyse_behavs(
         behavs_df,
         dst_subdir,
         name,
-        analysis_configs.fps,
-        analysis_configs.bins_sec,
-        analysis_configs.custom_bins_sec,
+        analysis_config.fps,
+        analysis_config.bins_sec,
+        analysis_config.custom_bins_sec,
     )

@@ -14,7 +14,7 @@ class TestFolders:
 
     def test_folders_values(self) -> None:
         """Folders should have expected string values."""
-        assert Folders.CONFIGS.value == "0_configs"
+        assert Folders.CONFIG.value == "0_config"
         assert Folders.RAW_VID.value == "1_raw_vid"
         assert Folders.FORMATTED_VID.value == "2_formatted_vid"
         assert Folders.KEYPOINTS.value == "3_keypoints"
@@ -36,21 +36,21 @@ class TestFileExts:
 
     def test_video_extensions(self) -> None:
         """Video-related folders should have mp4 extension."""
-        assert FileExts.RAW_VID.value == "mp4"
-        assert FileExts.FORMATTED_VID.value == "mp4"
-        assert FileExts.EVALUATE_VID.value == "mp4"
+        assert FileExts.RAW_VIDEO.value == "mp4"
+        assert FileExts.FORMATTED_VIDEO.value == "mp4"
+        assert FileExts.EVALUATE_VIDEO.value == "mp4"
 
     def test_config_extension(self) -> None:
         """Config folder should have json extension."""
-        assert FileExts.CONFIGS.value == "json"
+        assert FileExts.CONFIG.value == "json"
 
     def test_data_extensions(self) -> None:
         """Data folders should use DF_IO_FORMAT."""
         assert FileExts.KEYPOINTS.value == DF_IO_FORMAT
         assert FileExts.PREPROCESSED.value == DF_IO_FORMAT
         assert FileExts.FEATURES_EXTRACTED.value == DF_IO_FORMAT
-        assert FileExts.PREDICTED_BEHAVS.value == DF_IO_FORMAT
-        assert FileExts.SCORED_BEHAVS.value == DF_IO_FORMAT
+        assert FileExts.PREDICTED_BEHAVIOUR.value == DF_IO_FORMAT
+        assert FileExts.SCORED_BEHAVIOUR.value == DF_IO_FORMAT
         assert FileExts.ANALYSIS_COMBINED.value == DF_IO_FORMAT
 
 

@@ -6,12 +6,9 @@ import cv2
 import numpy as np
 import pandas as pd
 
-from behavysis.df_classes.keypoints_df import (
-    CoordsCols,
-    KeypointsAnnotationsDf,
-    KeypointsDf,
-)
-from behavysis.models.experiment_configs import ExperimentConfigs
+from behavysis.constants import LIKELIHOOD, X, Y
+from behavysis.df_classes import KeypointsAnnotationsDf, KeypointsDf
+from behavysis.models import ExperimentConfig
 
 
 class KeypointsModel:
@@ -30,17 +27,18 @@ class KeypointsModel:
         self.load_empty()
 
     def load_from_df(
-        self, keypoints_df: pd.DataFrame, configs: ExperimentConfigs
+        self, keypoints_df: pd.DataFrame, config: ExperimentConfig
     ) -> None:
-        """Load in the raw DLC dataframe and set the configurations, from
-        the given dlc_fp and configs.
+        """Load in the raw DLC dataframe.
+
+        Use the given dlc_fp and config.
         """
-        # Configs
-        configs_filt = configs.user.evaluate_vid
-        self.colour_level = configs.get_ref(configs_filt.colour_level)
-        self.pcutoff = configs.get_ref(configs_filt.pcutoff)
-        self.radius = configs.get_ref(configs_filt.radius)
-        self.cmap = configs.get_ref(configs_filt.cmap)
+        # Config
+        config_filt = config.user.evaluate_vid
+        self.colour_level = config.get_ref(config_filt.colour_level)
+        self.pcutoff = config.get_ref(config_filt.pcutoff)
+        self.radius = config.get_ref(config_filt.radius)
+        self.cmap = config.get_ref(config_filt.cmap)
         # Keypoints dataframe
         self.keypoints_df = KeypointsAnnotationsDf.keypoint2annotationsdf(keypoints_df)
         self.indivs_bpts_df = KeypointsAnnotationsDf.get_indivs_bpts(self.keypoints_df)
@@ -48,18 +46,18 @@ class KeypointsModel:
             self.indivs_bpts_df[self.colour_level], self.cmap
         )
 
-    def load(self, fp: str, configs: ExperimentConfigs) -> None:
+    def load(self, fp: str, config: ExperimentConfig) -> None:
         df = KeypointsDf.init_df(pd.Series())
         with contextlib.suppress(FileNotFoundError):
             df = KeypointsDf.read(fp)
-        self.load_from_df(df, configs)
+        self.load_from_df(df, config)
 
     def load_empty(self) -> None:
         """Load an empty dataset into the instance.
 
         An empty dataset is used as placeholder.
         """
-        self.load_from_df(KeypointsDf.init_df(pd.Series()), ExperimentConfigs())
+        self.load_from_df(KeypointsDf.init_df(pd.Series()), ExperimentConfig())
 
     def annot_keypoints(self, frame: np.ndarray, frame_num: int) -> np.ndarray:
         """Adding the keypoints (given in frame number) to the frame and returning the annotated frame.
@@ -83,12 +81,12 @@ class KeypointsModel:
             return frame
         # For each indiv-bpt, if likelihood is above pcutoff, draw the keypoint
         for i, indiv, bpt in self.indivs_bpts_df.itertuples(name=None):
-            if row[f"{indiv}_{bpt}_{CoordsCols.LIKELIHOOD.value}"] >= self.pcutoff:
+            if row[f"{indiv}_{bpt}_{LIKELIHOOD}"] >= self.pcutoff:
                 cv2.circle(
                     img=frame,
                     center=(
-                        int(row[f"{indiv}_{bpt}_{CoordsCols.X.value}"]),
-                        int(row[f"{indiv}_{bpt}_{CoordsCols.Y.value}"]),
+                        int(row[f"{indiv}_{bpt}_{X}"]),
+                        int(row[f"{indiv}_{bpt}_{Y}"]),
                     ),
                     radius=self.radius,
                     color=self.colours[i],

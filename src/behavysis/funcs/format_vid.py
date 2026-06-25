@@ -6,21 +6,20 @@ from pathlib import Path
 import cv2
 from loguru import logger
 
-from behavysis.models import ExperimentConfigs
-from behavysis.models.funcs import VidMetadata
+from behavysis.models import ExperimentConfig, VidMetadata
 from behavysis.utils.io_utils import file_exists_msg
 
 
 def format_vid(
     raw_vid_fp: Path,
     formatted_vid_fp: Path,
-    configs_fp: Path,
+    config_fp: Path,
     *,
     overwrite: bool,
 ) -> None:
-    """Format video with ffmpeg and save metadata to configs."""
-    configs = ExperimentConfigs.model_validate_json(configs_fp.read_text())
-    cfg = configs.user.format_vid
+    """Format video with ffmpeg and save metadata to config."""
+    config = ExperimentConfig.model_validate_json(config_fp.read_text())
+    cfg = config.user.format_vid
 
     # Running format vid with ffmpeg
     if not overwrite and formatted_vid_fp.exists():
@@ -29,20 +28,20 @@ def format_vid(
         # Build ffmpeg command
         cmd = ["ffmpeg"]
         if cfg.start_sec:
-            cmd += ["-ss", str(configs.get_ref(cfg.start_sec))]
+            cmd += ["-ss", str(config.get_ref(cfg.start_sec))]
         cmd += ["-i", str(raw_vid_fp)]
         filters = []
-        width = configs.get_ref(cfg.width_px)
-        height = configs.get_ref(cfg.height_px)
+        width = config.get_ref(cfg.width_px)
+        height = config.get_ref(cfg.height_px)
         if width or height:
             filters.append(f"scale={width or -1}:{height or -1}")
         if filters:
             cmd += ["-vf", ",".join(filters)]
         if cfg.fps:
-            cmd += ["-r", str(configs.get_ref(cfg.fps))]
+            cmd += ["-r", str(config.get_ref(cfg.fps))]
         if cfg.stop_sec:
-            duration = configs.get_ref(cfg.stop_sec) - (
-                configs.get_ref(cfg.start_sec) or 0
+            duration = config.get_ref(cfg.stop_sec) - (
+                config.get_ref(cfg.start_sec) or 0
             )
             cmd += ["-t", str(duration)]
         cmd += [
@@ -58,11 +57,11 @@ def format_vid(
         formatted_vid_fp.parent.mkdir(parents=True, exist_ok=True)
         subprocess.run(cmd, check=True)
 
-    # Save metadata to configs
+    # Save metadata to config
     # Always do this
-    configs.auto.raw_vid = _get_vid_metadata(raw_vid_fp)
-    configs.auto.formatted_vid = _get_vid_metadata(formatted_vid_fp)
-    configs_fp.write_text(configs.model_dump_json(indent=2))
+    config.auto.raw_vid = _get_vid_metadata(raw_vid_fp)
+    config.auto.formatted_vid = _get_vid_metadata(formatted_vid_fp)
+    config_fp.write_text(config.model_dump_json(indent=2))
 
 
 def _get_vid_metadata(vid_fp: Path) -> VidMetadata:

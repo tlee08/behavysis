@@ -24,7 +24,7 @@ from behavysis.funcs import (
     format_vid,
     ma_dlc_run_single,
     predictedbehavs2scoredbehavs,
-    update_configs,
+    update_config,
 )
 from behavysis.utils.logger_utils import trace
 
@@ -74,26 +74,26 @@ class Experiment:
         return self.root_dir / folder.value / f"{self.name}.{file_ext.value}"
 
     @trace
-    def update_configs(
+    def update_config(
         self,
-        default_configs_fp: str | Path,
+        default_config_fp: str | Path,
         *,
         overwrite: Literal["user", "all"],
     ) -> None:
         """Initialises the JSON config files with the given configurations."""
-        update_configs(
-            configs_fp=self.get_fp(Folders.CONFIGS),
-            default_configs_fp=Path(default_configs_fp),
+        update_config(
+            config_fp=self.get_fp(Folders.CONFIG),
+            default_config_fp=Path(default_config_fp),
             overwrite=overwrite,
         )
 
     @trace
-    def format_vid(self, *, overwrite: bool) -> None:
-        """Formats the video with ffmpeg to fit the formatted configs."""
+    def format_video(self, *, overwrite: bool) -> None:
+        """Formats the video with ffmpeg to fit the formatted config."""
         format_vid(
             raw_vid_fp=self.get_fp(Folders.RAW_VID),
             formatted_vid_fp=self.get_fp(Folders.FORMATTED_VID),
-            configs_fp=self.get_fp(Folders.CONFIGS),
+            config_fp=self.get_fp(Folders.CONFIG),
             overwrite=overwrite,
         )
 
@@ -103,7 +103,7 @@ class Experiment:
         ma_dlc_run_single(
             formatted_vid_fp=self.get_fp(Folders.FORMATTED_VID),
             keypoints_fp=self.get_fp(Folders.KEYPOINTS),
-            configs_fp=self.get_fp(Folders.CONFIGS),
+            config_fp=self.get_fp(Folders.CONFIG),
             gputouse=gputouse,
             overwrite=overwrite,
         )
@@ -114,7 +114,7 @@ class Experiment:
         for func in funcs:
             func(
                 keypoints_fp=self.get_fp(Folders.KEYPOINTS),
-                configs_fp=self.get_fp(Folders.CONFIGS),
+                config_fp=self.get_fp(Folders.CONFIG),
             )
 
     @trace
@@ -129,7 +129,7 @@ class Experiment:
             func(
                 src_fp=self.get_fp(Folders.PREPROCESSED),
                 dst_fp=self.get_fp(Folders.PREPROCESSED),
-                configs_fp=self.get_fp(Folders.CONFIGS),
+                config_fp=self.get_fp(Folders.CONFIG),
                 overwrite=True,
             )
 
@@ -139,7 +139,7 @@ class Experiment:
         extract_features(
             keypoints_fp=self.get_fp(Folders.PREPROCESSED),
             features_fp=self.get_fp(Folders.FEATURES_EXTRACTED),
-            configs_fp=self.get_fp(Folders.CONFIGS),
+            config_fp=self.get_fp(Folders.CONFIG),
             overwrite=overwrite,
         )
 
@@ -149,7 +149,7 @@ class Experiment:
         classify_behavs(
             features_fp=self.get_fp(Folders.FEATURES_EXTRACTED),
             behavs_fp=self.get_fp(Folders.PREDICTED_BEHAVS),
-            configs_fp=self.get_fp(Folders.CONFIGS),
+            config_fp=self.get_fp(Folders.CONFIG),
             overwrite=overwrite,
         )
 
@@ -159,7 +159,7 @@ class Experiment:
         predictedbehavs2scoredbehavs(
             src_fp=self.get_fp(Folders.PREDICTED_BEHAVS),
             dst_fp=self.get_fp(Folders.SCORED_BEHAVS),
-            configs_fp=self.get_fp(Folders.CONFIGS),
+            config_fp=self.get_fp(Folders.CONFIG),
             overwrite=overwrite,
         )
 
@@ -171,7 +171,7 @@ class Experiment:
                 keypoints_fp=self.get_fp(Folders.PREPROCESSED),
                 formatted_vid_fp=self.get_fp(Folders.FORMATTED_VID),
                 dst_dir=self.root_dir / ANALYSIS_DIR,
-                configs_fp=self.get_fp(Folders.CONFIGS),
+                config_fp=self.get_fp(Folders.CONFIG),
             )
 
     @trace
@@ -179,7 +179,7 @@ class Experiment:
         """Analyse scored behaviours."""
         analyse_behavs(
             behavs_fp=self.get_fp(Folders.SCORED_BEHAVS),
-            configs_fp=self.get_fp(Folders.CONFIGS),
+            config_fp=self.get_fp(Folders.CONFIG),
             dst_dir=self.root_dir / ANALYSIS_DIR,
         )
 
@@ -188,7 +188,7 @@ class Experiment:
         """Combine the experiment's analysis into a single df."""
         combine_analysis(
             analysis_combined_fp=self.get_fp(Folders.ANALYSIS_COMBINED),
-            configs_fp=self.get_fp(Folders.CONFIGS),
+            config_fp=self.get_fp(Folders.CONFIG),
             analysis_dir=self.root_dir / ANALYSIS_DIR,
             overwrite=True,
         )
@@ -201,7 +201,7 @@ class Experiment:
             keypoints_fp=self.get_fp(Folders.PREPROCESSED),
             analysis_combined_fp=self.get_fp(Folders.ANALYSIS_COMBINED),
             eval_vid_fp=self.get_fp(Folders.EVALUATE_VID),
-            configs_fp=self.get_fp(Folders.CONFIGS),
+            config_fp=self.get_fp(Folders.CONFIG),
             overwrite=overwrite,
         )
 
