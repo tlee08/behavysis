@@ -53,7 +53,7 @@ def main() -> None:
     # Make default config
     if overwrite or not Path(DEFAULT_CONFIG_FP).exists():
         Path(DEFAULT_CONFIG_FP).write_text(
-            get_default_config().model_dump_json(indent=2)
+            get_default_config().model_dump_json(indent=2),
         )
     # Make folders
     for folder in Folders:

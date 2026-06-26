@@ -161,7 +161,7 @@ def stop_frame_from_dur(
         logger.warning(
             "The user specified dur_sec in the config file is greater "
             "than the actual length of the video. Please check to see if this video is "
-            "too short or if the dur_sec value is incorrect."
+            "too short or if the dur_sec value is incorrect.",
         )
     # Writing to config
     config = ExperimentConfig.model_validate_json(config_fp.read_text())
@@ -237,8 +237,8 @@ def px_per_mm(keypoints_fp: Path, config_fp: Path) -> None:
     dist_px = np.nanmean(
         np.sqrt(
             np.square(pt_a_df["x"] - pt_b_df["x"])
-            + np.square(pt_a_df["y"] - pt_b_df["y"])
-        )
+            + np.square(pt_a_df["y"] - pt_b_df["y"]),
+        ),
     )
     # Finding pixels per mm conversion using given width and height as calibration
     px_per_mm = dist_px / dist_mm
@@ -249,7 +249,8 @@ def px_per_mm(keypoints_fp: Path, config_fp: Path) -> None:
 
 
 def _calc_exists_from_likelihood(
-    keypoints_fp: Path, config_fp: Path
+    keypoints_fp: Path,
+    config_fp: Path,
 ) -> tuple[int, int]:
     """Determines whether subject exists.
 
@@ -293,7 +294,8 @@ def _calc_exists_from_likelihood(
     for indiv in indivs:
         # Calculating likelihood of subject existing at each frame from median
         lhood_df[(indiv, "current")] = keypoints_df.loc[
-            :, idx[indiv, bpts, LIKELIHOOD]
+            :,
+            idx[indiv, bpts, LIKELIHOOD],
         ].apply(np.nanmedian, axis=1)
         # Calculating likelihood of subject existing over time window
         lhood_df[(indiv, "rolling")] = (

@@ -89,7 +89,7 @@ class FeatureExtractor:
                 "Resolution_height",
                 "Distance_in_mm",
                 "pixels/mm",
-            ]
+            ],
         )
         input_csv_dir = simba_dir / "project_folder" / "csv" / "input_csv"
         # Getting and saving the px/mm values to the df
@@ -111,7 +111,7 @@ class FeatureExtractor:
                             "px_per_mm"
                         ]["dist_mm"],
                         "pixels/mm": config["auto"]["px_per_mm"],
-                    }
+                    },
                 )
                 .to_frame()
                 .transpose()
@@ -161,7 +161,10 @@ class FeatureExtractor:
 
     @staticmethod
     def simba_label_scoring(
-        scored_fp, features_fp, targets_inserted_fp, behaviour_ls
+        scored_fp,
+        features_fp,
+        targets_inserted_fp,
+        behaviour_ls,
     ) -> None:
         """Adding behaviour labels to features_extracted csv.
 

@@ -152,12 +152,12 @@ def interpolate_stationary(
             keypoints_df[(scorer, "single", bodypart, LIKELIHOOD)] = pcutoff
             logger.info(
                 f"{bodypart} is detected in less than {pcutoff_all} of the video."
-                f" Setting x and y coordinates to ({x}, {y})."
+                f" Setting x and y coordinates to ({x}, {y}).",
             )
         else:
             logger.info(
                 f"{bodypart} is detected in more than {pcutoff_all} of the video."
-                " No need for stationary interpolation."
+                " No need for stationary interpolation.",
             )
     # Saving
     KeypointsDf.write(keypoints_df, dst_fp)
@@ -275,7 +275,10 @@ def refine_ids(src_fp: Path, dst_fp: Path, config_fp: Path, *, overwrite: bool) 
     switch_df = _get_id_switch_df(mark_dists_df, window_frames, marked, unmarked)
     # Updating df with the switched values
     switched_keypoints_df = _switch_identities(
-        keypoints_df, switch_df[metric], marked, unmarked
+        keypoints_df,
+        switch_df[metric],
+        marked,
+        unmarked,
     )
     KeypointsDf.write(switched_keypoints_df, dst_fp)
 
@@ -314,19 +317,21 @@ def _get_mark_dists_df(
         idx = pd.IndexSlice
         # Getting the coordinates of the colour marking in each frame
         mark_dists_df[("mark", coord)] = keypoints_df.loc[
-            :, idx[l0, SINGLE, mark_pts, coord]
+            :,
+            idx[l0, SINGLE, mark_pts, coord],
         ].mean(axis=1)
         for indiv in indivs:
             # Getting the coordinates of each individual (average of the bpts list)
             mark_dists_df[(indiv, coord)] = keypoints_df.loc[
-                :, idx[l0, indiv, bpts, coord]
+                :,
+                idx[l0, indiv, bpts, coord],
             ].mean(axis=1)
     # Getting the Euclidean distance between each mouse
     # and the colour marking in each frame
     for indiv in indivs:
         mark_dists_df[(indiv, "dist")] = np.sqrt(
             np.square(mark_dists_df[(indiv, X)] - mark_dists_df[("mark", X)])
-            + np.square(mark_dists_df[(indiv, Y)] - mark_dists_df[("mark", Y)])
+            + np.square(mark_dists_df[(indiv, Y)] - mark_dists_df[("mark", Y)]),
         )
     # Formatting columns as a MultiIndex
     mark_dists_df.columns = pd.MultiIndex.from_tuples(mark_dists_df.columns)
@@ -371,15 +376,17 @@ def _get_id_switch_df(
     )
     #   - Decision binned
     bins = np.arange(
-        switch_df.index.min(), switch_df.index.max() + window_frames, window_frames
+        switch_df.index.min(),
+        switch_df.index.max() + window_frames,
+        window_frames,
     )
     df_switch_x = pd.DataFrame()
     df_switch_x["bins"] = pd.Series(
-        pd.cut(switch_df.index, bins=bins, labels=bins[1:], include_lowest=True)
+        pd.cut(switch_df.index, bins=bins, labels=bins[1:], include_lowest=True),
     )
     df_switch_x["current"] = switch_df["current"]
     switch_df["binned"] = df_switch_x.groupby("bins")["current"].transform(
-        lambda x: x.mode()
+        lambda x: x.mode(),
     )
     return switch_df
 
@@ -420,7 +427,8 @@ def _switch_identities(
         return row
 
     keypoints_df = keypoints_df.apply(
-        lambda row: _f(row, marked_indiv, unmarked_indiv), axis=1
+        lambda row: _f(row, marked_indiv, unmarked_indiv),
+        axis=1,
     )
     keypoints_df = keypoints_df.drop(columns="isSwitch")
     return keypoints_df

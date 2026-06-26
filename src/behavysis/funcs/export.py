@@ -71,7 +71,8 @@ def predictedbehaviour2scoredbehaviour(
     # Getting scored behaviour df from predicted behaviour df and bouts_struct
     behaviour_predicted_df = BehaviourPredictedDf.read(src_fp)
     behaviour_scored_df = BehaviourScoredDf.predicted2scored(
-        behaviour_predicted_df, bouts_struct
+        behaviour_predicted_df,
+        bouts_struct,
     )
     BehaviourScoredDf.write(behaviour_scored_df, dst_fp)
     logger.info("predicted_behaviour to scored_behaviour.")
@@ -95,7 +96,10 @@ def boris2behaviour(
     stop_frame = config.get_ref(config.auto.stop_frame) + 1
     # Importing the boris file to the Behav df format
     df = BehaviourScoredDf.import_boris_tsv(
-        src_fp, behaviour_ls, start_frame, stop_frame
+        src_fp,
+        behaviour_ls,
+        start_frame,
+        stop_frame,
     )
     BehaviourScoredDf.write(df, dst_fp)
     logger.info("boris tsv to behav")

@@ -17,14 +17,14 @@ def confirm(prompt: str, *, default: bool = False) -> bool:
             return True
         if response in ("n", "no"):
             return False
-        print("Please enter 'y' or 'n'.")
+        print("Please enter 'y' or 'n'.")  # noqa: T201
 
 
 def render_template(template_name: str, **kwargs) -> str:
     """Render a template to a string."""
     env = Environment(
         loader=PackageLoader("behavysis", "templates"),
-        autoescape=False,
+        autoescape=False,  # noqa: S701
     )
     result = env.get_template(template_name).render(**kwargs)
     return re.sub(r"\n{3,}", "\n\n", result).strip() + "\n"

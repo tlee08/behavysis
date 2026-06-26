@@ -122,13 +122,16 @@ class AnalysisBinnedDf(DFMixin):
                 .unstack(AnalysisSummaryDf.index_names)
                 .reorder_levels(cls.column_names)
                 .sort_index(level=AnalysisSummaryDf.index_names)
-            )
+            ),
         )
         return cls.clean_and_validate(binned_df)
 
     @classmethod
     def make_binned_plot(
-        cls, binned_df: pd.DataFrame, dst_fp: Path, agg_column: str
+        cls,
+        binned_df: pd.DataFrame,
+        dst_fp: Path,
+        agg_column: str,
     ) -> None:
         """Plot binned data over time."""
         binned_stacked_df = (

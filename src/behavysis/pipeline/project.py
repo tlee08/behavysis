@@ -249,7 +249,7 @@ class Project:
             return
 
         config = ExperimentConfig.model_validate_json(
-            self.experiments[0].get_fp(Folders.CONFIG).read_text()
+            self.experiments[0].get_fp(Folders.CONFIG).read_text(),
         )
         bin_sizes = [*list(config.get_ref(config.user.analyse.bins_sec)), "custom"]
 
@@ -270,7 +270,10 @@ class Project:
                 if not df_ls:
                     continue
                 df = pd.concat(
-                    df_ls, keys=names_ls, names=["experiment"], axis=1
+                    df_ls,
+                    keys=names_ls,
+                    names=["experiment"],
+                    axis=1,
                 ).fillna(0)
                 AnalysisBinnedCollatedDf.write(
                     df,
@@ -278,7 +281,9 @@ class Project:
                     / f"__ALL_binned_{bin_size}.{AnalysisBinnedCollatedDf.io_format}",
                 )
                 AnalysisBinnedCollatedDf.write(
-                    df, subdir / f"__ALL_binned_{bin_size}.csv", fmt="csv"
+                    df,
+                    subdir / f"__ALL_binned_{bin_size}.csv",
+                    fmt="csv",
                 )
 
     def _collate_summary(self) -> None:
@@ -301,6 +306,7 @@ class Project:
                 continue
             df = pd.concat(df_ls, keys=names_ls, names=["experiment"], axis=0).fillna(0)
             AnalysisSummaryCollatedDf.write(
-                df, subdir / f"__ALL_summary.{AnalysisSummaryCollatedDf.io_format}"
+                df,
+                subdir / f"__ALL_summary.{AnalysisSummaryCollatedDf.io_format}",
             )
             AnalysisSummaryCollatedDf.write(df, subdir / "__ALL_summary.csv", fmt="csv")

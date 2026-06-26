@@ -55,11 +55,14 @@ class BaseTorchModel(nn.Module):
     ):
         # Making a 2D array of (df_index, index, y) for train test split
         index_flat = listofvects2array(
-            index_ls, [y[index] for y, index in zip(y_ls, index_ls, strict=False)]
+            index_ls,
+            [y[index] for y, index in zip(y_ls, index_ls, strict=False)],
         )
         # Split data into training and validation sets
         index_train_flat, index_val_flat = train_test_split(
-            index_flat, stratify=index_flat[:, 2], test_size=val_split
+            index_flat,
+            stratify=index_flat[:, 2],
+            test_size=val_split,
         )
         index_train_ls = array2listofvect(index_train_flat, 1)
         index_val_ls = array2listofvect(index_val_flat, 1)
@@ -187,7 +190,10 @@ class BaseTorchModel(nn.Module):
             index_ls if index_ls is not None else [np.arange(x.shape[0]) for x in x_ls]
         )
         ds = MemoizedTimeSeriesDataset(
-            x_ls=x_ls, y_ls=y_ls, index_ls=index_ls, window_frames=self.window_frames
+            x_ls=x_ls,
+            y_ls=y_ls,
+            index_ls=index_ls,
+            window_frames=self.window_frames,
         )
         return DataLoader(ds, batch_size=batch_size, shuffle=True)
 
@@ -221,19 +227,19 @@ class TimeSeriesDataset(Dataset):
     ) -> None:
         # Asserting x, and y sizes are equal
         assert np.all(
-            [x.shape[0] == y.shape[0] for x, y in zip(x_ls, y_ls, strict=False)]
+            [x.shape[0] == y.shape[0] for x, y in zip(x_ls, y_ls, strict=False)],
         )
         # Asserting indices are a valid range (between 0 and x.shape[0])
         assert np.all(
             [
                 np.all(index >= 0) and np.all(index < x.shape[0])
                 for x, index in zip(x_ls, index_ls, strict=False)
-            ]
+            ],
         )
         # Padding x dfs (for frames on either side)
         x_ls = [
             np.concatenate(
-                [x[np.repeat(0, window_frames)], x, x[np.repeat(-1, window_frames)]]
+                [x[np.repeat(0, window_frames)], x, x[np.repeat(-1, window_frames)]],
             )
             for x in x_ls
         ]

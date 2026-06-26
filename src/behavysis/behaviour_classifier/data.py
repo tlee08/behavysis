@@ -87,7 +87,7 @@ def preproc_x_fit(x: np.ndarray, preproc_fp: Path) -> None:
         steps=[
             ("select_columns", FunctionTransformer(_select_derived_features)),
             ("min_max_scaler", MinMaxScaler()),
-        ]
+        ],
     )
     preproc_pipe.fit(x)
     dump(preproc_pipe, preproc_fp)
@@ -226,7 +226,7 @@ def prepare_training_data(
     y_df_ls = [y.loc[index] for y, index in zip(y_df_ls, index_df_ls, strict=False)]
 
     assert np.all(
-        [x.shape[0] == y.shape[0] for x, y in zip(x_df_ls, y_df_ls, strict=False)]
+        [x.shape[0] == y.shape[0] for x, y in zip(x_df_ls, y_df_ls, strict=False)],
     )
 
     # Convert to numpy
@@ -248,10 +248,14 @@ def prepare_training_data(
 
     # Resample training data
     index_train_flat = oversample(
-        index_train_flat, index_train_flat[:, 2], oversample_ratio
+        index_train_flat,
+        index_train_flat[:, 2],
+        oversample_ratio,
     )
     index_train_flat = undersample(
-        index_train_flat, index_train_flat[:, 2], undersample_ratio
+        index_train_flat,
+        index_train_flat[:, 2],
+        undersample_ratio,
     )
 
     # Reshape back to per-dataframe lists

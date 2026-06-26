@@ -99,7 +99,7 @@ def eval_logc(y_true: np.ndarray, y_prob: np.ndarray) -> Figure:
             "y_prob": y_prob,
             "y_pred": y_prob > 0.4,
             "y_true_jitter": y_true + (0.2 * (np.random.rand(len(y_prob)) - 0.5)),
-        }
+        },
     )
     fig, ax = plt.subplots(figsize=(10, 7))
     sns.scatterplot(
@@ -201,7 +201,7 @@ def save_evaluation_results(
     """
     # Build evaluation dataframe
     eval_df = BehaviourClassifierEvalDf.init_df(
-        pd.Series(np.arange(np.concatenate(index_ls).shape[0]))
+        pd.Series(np.arange(np.concatenate(index_ls).shape[0])),
     )
     eval_df[(behav_name, PROB)] = y_prob
     eval_df[(behav_name, PRED)] = y_pred
@@ -215,7 +215,8 @@ def save_evaluation_results(
 
     # Save outputs
     BehaviourClassifierEvalDf.write(
-        eval_df, eval_dir / f"{name}_eval.{BehaviourClassifierEvalDf.io_format}"
+        eval_df,
+        eval_dir / f"{name}_eval.{BehaviourClassifierEvalDf.io_format}",
     )
     (eval_dir / f"{name}_report.json").write_text(json.dumps(report_dict, indent=2))
     conf_matr_fig.savefig(eval_dir / f"{name}_confm.png")

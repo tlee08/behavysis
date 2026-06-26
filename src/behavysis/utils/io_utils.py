@@ -32,7 +32,9 @@ def silent_remove(fp: Path) -> None:
 
 
 async def async_read(
-    fp: Path, executor: ThreadPoolExecutor, read_func: Callable
+    fp: Path,
+    executor: ThreadPoolExecutor,
+    read_func: Callable,
 ) -> list:
     """Asynchronously read a single file."""
     loop = asyncio.get_running_loop()

@@ -57,14 +57,14 @@ class EvaluateVid:
 
         # Getting keypoints df
         reserve_index = pd.Series(
-            np.arange(config.auto.start_frame, config.auto.stop_frame)
+            np.arange(config.auto.start_frame, config.auto.stop_frame),
         )
         try:
             keypoints_df = KeypointsDf.read(keypoints_fp)
         except FileNotFoundError:
             logger.warning(
                 "Keypoints file not found or could not be loaded. "
-                "Disregarding keypoints."
+                "Disregarding keypoints.",
             )
             keypoints_df = KeypointsDf.init_df(reserve_index)
         # Getting analysis combined df
@@ -73,7 +73,7 @@ class EvaluateVid:
         except FileNotFoundError:
             logger.warning(
                 "Analysis combined file not found or could not be loaded. "
-                "Disregarding analysis."
+                "Disregarding analysis.",
             )
             analysis_df = AnalysisCombinedDf.init_df(pd.Series(reserve_index))
 
@@ -185,7 +185,8 @@ class Keypoints(EvalVidFuncBase):
         self.keypoints_df = KeypointsAnnotationsDf.keypoint2annotationsdf(keypoints_df)
         self.indivs_bpts_df = KeypointsAnnotationsDf.get_indivs_bpts(self.keypoints_df)
         self.colours = KeypointsAnnotationsDf.make_colours(
-            self.indivs_bpts_df[colour_level], cmap
+            self.indivs_bpts_df[colour_level],
+            cmap,
         )
         self.pcutoff = pcutoff
         self.radius = radius
@@ -274,7 +275,7 @@ class Analysis(EvalVidFuncBase):
                 measures_vect = pd.Series(
                     self.analysis_df[(analysis_i, indivs_j)]
                     .columns.to_frame(index=False)[MEASURES]
-                    .unique()
+                    .unique(),
                 )
                 # Making plot
                 plot_arr_ij = self.plots_layout.addPlot(
@@ -292,7 +293,8 @@ class Analysis(EvalVidFuncBase):
                 plot_arr_ij.addItem(x_line_arr_ij)
                 # Making the corresponding colours list for each measures instance
                 colours_ls = KeypointsAnnotationsDf.make_colours(
-                    measures_vect, self.cmap
+                    measures_vect,
+                    self.cmap,
                 )
                 # Making overal plot's legend
                 legend = plot_arr_ij.addLegend()
@@ -418,7 +420,11 @@ class VidFuncsRunner:
     height_out: int
 
     def __init__(
-        self, func_names: list[str], width_input: int, height_input: int, **kwargs
+        self,
+        func_names: list[str],
+        width_input: int,
+        height_input: int,
+        **kwargs,
     ) -> None:
         """NOTE: kwargs are the constructor parameters for
         EvalVidFuncBase classes.

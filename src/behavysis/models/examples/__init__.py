@@ -32,18 +32,19 @@ def get_default_config() -> ExperimentConfig:
         user=UserConfig(
             format_vid=FormatVidConfig(width_px=960, height_px=540, fps=15),
             calculate_params=CalculateParamsConfig(
-                from_likelihood=FromLikelihoodConfig(bodyparts="--bpts_simba")
+                from_likelihood=FromLikelihoodConfig(bodyparts="--bpts_simba"),
             ),
             preprocess=PreprocessConfig(
-                refine_ids=RefineIdsConfig(bodyparts="--bpts_centre")
+                refine_ids=RefineIdsConfig(bodyparts="--bpts_centre"),
             ),
             extract_features=ExtractFeaturesConfig(
-                individuals="--indivs_simba", bodyparts="--bpts_simba"
+                individuals="--indivs_simba",
+                bodyparts="--bpts_simba",
             ),
             classify_behaviour=[ClassifyBehaviourConfig()],
             analyse=AnalyseConfig(
                 in_roi=[
-                    InRoiConfig(roi_corners="--bpts_corners", bodyparts="--bpts_front")
+                    InRoiConfig(roi_corners="--bpts_corners", bodyparts="--bpts_front"),
                 ],
                 speed=SpeedConfig(bodyparts="--bpts_centre"),
                 social_distance=SocialDistanceConfig(bodyparts="--bpts_centre"),
@@ -57,6 +58,6 @@ def get_default_config() -> ExperimentConfig:
                 "bpts_centre": BPTS_CENTRE,
                 "bpts_front": BPTS_FRONT,
                 "bpts_corners": BPTS_CORNERS,
-            }
+            },
         ),
     )

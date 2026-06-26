@@ -75,7 +75,7 @@ class BehaviourClassifier:
         # Load or create config
         try:
             config = BehaviourClassifierConfig.model_validate_json(
-                self.config_fp.read_text()
+                self.config_fp.read_text(),
             )
             logger.debug("Loaded existing config")
         except FileNotFoundError:

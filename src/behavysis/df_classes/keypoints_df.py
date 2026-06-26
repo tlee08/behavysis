@@ -49,7 +49,7 @@ class KeypointsDf(DFMixin):
     def get_indivs_bpts(cls, df: pd.DataFrame) -> tuple[list[str], list[str]]:
         """Get individuals and bodyparts (excluding 'single' and 'processed')."""
         filter_mask = ~df.columns.get_level_values(INDIVIDUALS).isin(
-            [PROCESSED, SINGLE]
+            [PROCESSED, SINGLE],
         )
         columns = df.columns[filter_mask]
         indivs = columns.unique("individuals").to_list()
@@ -73,7 +73,10 @@ class KeypointsDf(DFMixin):
 
     @classmethod
     def resolution_scale(
-        cls, df: pd.DataFrame, width_x_scale: float, height_y_scale: float
+        cls,
+        df: pd.DataFrame,
+        width_x_scale: float,
+        height_y_scale: float,
     ) -> pd.DataFrame:
         """Scale x and y coordinates."""
         df = cls.clean_and_validate(df)
@@ -107,7 +110,8 @@ class KeypointsAnnotationsDf(DFMixin):
         if df.columns.shape[0] == 0:
             return pd.DataFrame(columns=pd.Index([INDIVIDUALS, BODYPARTS]))
         parts = df.columns.to_frame(index=False)["attributes"].str.split(
-            "_", expand=True
+            "_",
+            expand=True,
         )
         parts = parts.iloc[:, :2]
         parts.columns = [INDIVIDUALS, BODYPARTS]

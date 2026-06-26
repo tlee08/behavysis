@@ -79,7 +79,7 @@ def in_roi(
         KeypointsDf.check_bpts_exist(keypoints_df, roi_corners)
         # Getting average corner coordinates. This assumes ROI corners do not move.
         corners_i_df = pd.DataFrame(
-            [keypoints_df[(SINGLE, pt)].mean() for pt in roi_corners]
+            [keypoints_df[(SINGLE, pt)].mean() for pt in roi_corners],
         ).drop(columns=["likelihood"])
         # Adjusting x-y to have `padding_px` dilation/erosion from the points themselves
         roi_center = corners_i_df.mean()
@@ -115,7 +115,8 @@ def in_roi(
         # Inverting in_roi status if is_in is False
         if not is_in:
             analysis_i_df.loc[:, idx[:, roi_name]] = ~analysis_i_df.loc[
-                :, idx[:, roi_name]
+                :,
+                idx[:, roi_name],
             ]
         analysis_df_ls.append(analysis_i_df.loc[:, idx[:, roi_name]].astype(np.int8))
         scatter_df_ls.append(analysis_i_df)
@@ -270,7 +271,9 @@ def _compute_movement(
     # Smooth to reduce jitter contribution to movement
     jitter_frames = 3
     smoothed_xy_df = keypoints_df.rolling(
-        window=jitter_frames, min_periods=1, center=True
+        window=jitter_frames,
+        min_periods=1,
+        center=True,
     ).agg(np.nanmean)
 
     for indiv in indivs:
@@ -316,7 +319,11 @@ def speed(
 
     # Compute movement and convert to speed (distance per second)
     analysis_df = _compute_movement(
-        keypoints_df, bpts, indivs, analysis_config.px_per_mm, smoothing_frames
+        keypoints_df,
+        bpts,
+        indivs,
+        analysis_config.px_per_mm,
+        smoothing_frames,
     )
     for indiv in indivs:
         analysis_df[(indiv, "SpeedMMperSec")] = (
@@ -327,7 +334,7 @@ def speed(
         )
         # Remove distance columns - we only want speed
         analysis_df = analysis_df.drop(
-            columns=[(indiv, "DistMM"), (indiv, "DistMMSmoothed")]
+            columns=[(indiv, "DistMM"), (indiv, "DistMMSmoothed")],
         )
 
     fbf_fp = dst_subdir / FBF / f"{name}.{AnalysisDf.io_format}"
@@ -368,7 +375,11 @@ def distance(
     indivs, _ = KeypointsDf.get_indivs_bpts(keypoints_df)
 
     analysis_df = _compute_movement(
-        keypoints_df, bpts, indivs, analysis_config.px_per_mm, smoothing_frames
+        keypoints_df,
+        bpts,
+        indivs,
+        analysis_config.px_per_mm,
+        smoothing_frames,
     )
 
     fbf_fp = dst_subdir / FBF / f"{name}.{AnalysisDf.io_format}"
@@ -506,12 +517,13 @@ def freezing(
             )
         # If ALL bodypoints do not leave `thresh_px`
         analysis_df[(indiv, "freezing")] = temp_df.apply(
-            lambda x: pd.Series(np.all(x < thresh_px)), axis=1
+            lambda x: pd.Series(np.all(x < thresh_px)),
+            axis=1,
         ).astype(np.int8)
 
         # Getting start, stop, and duration of each freezing behav bout
         freezingbouts_df = BehaviourScoredDf.vect2bouts_df(
-            analysis_df[(indiv, "freezing")] == 1
+            analysis_df[(indiv, "freezing")] == 1,
         )
         # For each freezing bout, if there is less than window_frames, tehn
         # it is not actually freezing

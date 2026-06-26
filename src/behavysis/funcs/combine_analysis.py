@@ -36,7 +36,7 @@ def combine_analysis(
     # Reading in each fbf analysis df
     comb_df_ls = [
         AnalysisDf.read(
-            analysis_dir / analysis_subdir / FBF / f"{name}.{AnalysisDf.io_format}"
+            analysis_dir / analysis_subdir / FBF / f"{name}.{AnalysisDf.io_format}",
         )
         for analysis_subdir in analysis_subdir_ls
     ]

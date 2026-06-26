@@ -104,7 +104,9 @@ class BehaviourScoredDf(DFMixin):
 
     @classmethod
     def predicted2scored(
-        cls, df: pd.DataFrame, bouts_struct: list[BoutStruct]
+        cls,
+        df: pd.DataFrame,
+        bouts_struct: list[BoutStruct],
     ) -> pd.DataFrame:
         """Convert predicted DataFrame to scored DataFrame."""
         scored_df = cls.init_df(df.index)
@@ -112,7 +114,8 @@ class BehaviourScoredDf(DFMixin):
             behav = bout.behav
             scored_df[(behav, PRED)] = df[(behav, PRED)].to_numpy()
             scored_df[(behav, ACTUAL)] = scored_df[(behav, PRED)].replace(
-                TRUE_POS, UNSURE
+                TRUE_POS,
+                UNSURE,
             )
             for user_col in bout.user_defined:
                 scored_df[(behav, user_col)] = TRUE_NEG
