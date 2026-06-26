@@ -23,6 +23,7 @@ with app.setup:
         stop_frame_from_dur,
     )
     from behavysis.models import ExperimentConfig, get_default_config
+    from behavysis.utils.template_utils import render_template
 
 
 @app.cell(hide_code=True)
@@ -30,16 +31,17 @@ def _():
     mo.md(r"""
     # Behavysis Pipeline Runner
     """)
+    return
 
 
 @app.function
 def create_funcs_checkbox_list(
     funcs_ls: list[tuple[Callable, bool]],
-) -> list[tuple[Callable, object]]:
+) -> list[tuple[Callable, mo.ui.checkbox]]:
     funcs_checkbox_dict = [
         (
             _func,
-            mo.ui.checkbox(label=_func.__name__, value=_is_run),
+            mo.ui.checkbox(label=str(_func.__name__), value=_is_run),
         )
         for _func, _is_run in funcs_ls
     ]
@@ -68,6 +70,7 @@ def _():
     mo.md(r"""
     ## Set up pipeline to run
     """)
+    return
 
 
 @app.cell
@@ -95,6 +98,7 @@ def _(config_fp, nprocs, overwrite, project_fp):
             nprocs,
         ]
     )
+    return
 
 
 @app.cell(hide_code=True)
@@ -102,6 +106,7 @@ def _():
     mo.md(r"""
     ## Inspect default config
     """)
+    return
 
 
 @app.cell
@@ -111,6 +116,7 @@ def _(config_fp):
     mo.stop(not config_fp_path.exists(), mo.md("Config file does not exist!"))
 
     ExperimentConfig.model_validate_json(config_fp_path.read_text())
+    return
 
 
 @app.cell
@@ -120,6 +126,7 @@ def _():
             "See default configs template": get_default_config().model_dump(),
         }
     )
+    return
 
 
 @app.cell(hide_code=True)
@@ -127,12 +134,15 @@ def _():
     mo.md(r"""
     ## Choose functions to run
     """)
+    return
 
 
 @app.cell
 def _():
     # Each Step
-    update_config_checkbox = mo.ui.checkbox(label="Step 0: Update config", value=True)
+    update_config_checkbox = mo.ui.checkbox(
+        label="Step 0: Update config", value=True
+    )
     format_vid_checkbox = mo.ui.checkbox(
         label="Step 1: Format videos",
         value=True,
@@ -202,10 +212,10 @@ def _():
         analyse_behaviour_checkbox,
         analyse_checkbox,
         analyse_funcs_ls,
-        combine_analysis_checkbox,
         calculate_parameters_checkbox,
         calculate_parameters_funcs_ls,
         classify_behaviour_checkbox,
+        combine_analysis_checkbox,
         extract_features_checkbox,
         format_vid_checkbox,
         manually_check_labels_msg,
@@ -222,10 +232,10 @@ def _(
     analyse_behaviour_checkbox,
     analyse_checkbox,
     analyse_funcs_ls,
-    combine_analysis_checkbox,
     calculate_parameters_checkbox,
     calculate_parameters_funcs_ls,
     classify_behaviour_checkbox,
+    combine_analysis_checkbox,
     extract_features_checkbox,
     format_vid_checkbox,
     manually_check_labels_msg,
@@ -241,7 +251,9 @@ def _(
             format_vid_checkbox,
             run_dlc_checkbox,
             calculate_parameters_checkbox,
-            mo.callout(get_checkbox_list(calculate_parameters_funcs_ls), kind="info"),
+            mo.callout(
+                get_checkbox_list(calculate_parameters_funcs_ls), kind="info"
+            ),
             preprocess_checkbox,
             mo.callout(get_checkbox_list(preprocess_funcs_ls), kind="info"),
             analyse_checkbox,
@@ -254,6 +266,7 @@ def _(
             run_btn,
         ]
     )
+    return
 
 
 @app.cell(hide_code=True)
@@ -261,6 +274,7 @@ def _():
     mo.md(r"""
     ## Running Project
     """)
+    return
 
 
 @app.cell
@@ -268,10 +282,10 @@ def _(
     analyse_behaviour_checkbox,
     analyse_checkbox,
     analyse_funcs_ls,
-    combine_analysis_checkbox,
     calculate_parameters_checkbox,
     calculate_parameters_funcs_ls,
     classify_behaviour_checkbox,
+    combine_analysis_checkbox,
     config_fp,
     extract_features_checkbox,
     format_vid_checkbox,
@@ -345,6 +359,7 @@ def _(
     if combine_analysis_checkbox.value:
         proj.combine_analysis()
         proj.collate_analysis()
+    return
 
 
 @app.cell(hide_code=True)
@@ -354,6 +369,7 @@ def _():
 
     Generates a standalone Python script that reproduces the configured pipeline.
     """)
+    return
 
 
 @app.cell
@@ -361,10 +377,10 @@ def _(
     analyse_behaviour_checkbox,
     analyse_checkbox,
     analyse_funcs_ls,
-    combine_analysis_checkbox,
     calculate_parameters_checkbox,
     calculate_parameters_funcs_ls,
     classify_behaviour_checkbox,
+    combine_analysis_checkbox,
     config_fp,
     extract_features_checkbox,
     format_vid_checkbox,
@@ -376,10 +392,6 @@ def _(
     run_dlc_checkbox,
     update_config_checkbox,
 ):
-    import marimo as mo
-
-    from behavysis.utils.template_utils import render_template
-
     def _build_script():
         calc_funcs = get_funcs_to_run_list(calculate_parameters_funcs_ls)
         prep_funcs = get_funcs_to_run_list(preprocess_funcs_ls)
@@ -410,6 +422,11 @@ def _(
             func_imports=all_func_names,
         )
 
+    return
+
+
+@app.cell
+def _():
     export_download = mo.download(
         data=lambda: _build_script().encode("utf-8"),
         filename="run_pipeline.py",
@@ -419,11 +436,18 @@ def _(
 
     mo.hstack(
         [
-            mo.md("Click to download the configured pipeline as a standalone script:"),
+            mo.md(
+                "Click to download the configured pipeline as a standalone script:"
+            ),
             export_download,
         ]
     )
-    return (export_download,)
+    return
+
+
+@app.cell
+def _():
+    return
 
 
 if __name__ == "__main__":
