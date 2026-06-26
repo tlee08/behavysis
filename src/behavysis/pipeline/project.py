@@ -66,7 +66,7 @@ class Project:
     def _run_parallel(
         self,
         method: Callable[..., None],
-        **kwargs,
+        **kwargs: object,
     ) -> None:
         """Run a method on all experiments in parallel."""
         with cluster_process(LocalCluster(n_workers=self.nprocs, threads_per_worker=1)):
@@ -78,7 +78,7 @@ class Project:
     def _run_sequential(
         self,
         method: Callable[..., None],
-        **kwargs,
+        **kwargs: object,
     ) -> None:
         """Run a method on all experiments sequentially."""
         for exp in self.experiments:
@@ -87,7 +87,7 @@ class Project:
     def _run(
         self,
         _func: Callable[..., None],
-        **kwargs,
+        **kwargs: object,
     ) -> None:
         """Run a method on all experiments."""
         runner = self._run_sequential if self.nprocs == 1 else self._run_parallel

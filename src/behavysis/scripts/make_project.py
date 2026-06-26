@@ -1,3 +1,5 @@
+"""Make behavysis project."""
+
 from pathlib import Path
 
 from behavysis.constants import DEFAULT_CONFIG_FP, Folders
@@ -6,6 +8,7 @@ from behavysis.utils.template_utils import confirm, save_template
 
 
 def main() -> None:
+    """Make behavysis project."""
     if not confirm("Create behavysis project in current directory?"):
         return
 

@@ -1,9 +1,12 @@
+"""Make DLC builder."""
+
 from pathlib import Path
 
 from behavysis.utils.template_utils import confirm, save_template
 
 
 def main() -> None:
+    """Make DLC builder."""
     if not confirm("Create DLC builder script in current directory?"):
         return
     if Path("dlc_builder.ipynb").exists() and not confirm("Overwrite existing file?"):

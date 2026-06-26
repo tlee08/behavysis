@@ -3,6 +3,7 @@
 import os
 import re
 import subprocess
+import tempfile
 from pathlib import Path
 
 import pandas as pd
@@ -33,26 +34,20 @@ def ma_dlc_run_single(
     config = ExperimentConfig.model_validate_json(config_fp.read_text())
     model_fp = config.get_ref(config.user.run_dlc.model_fp)
     # Derive more parameters
-    temp_dlc_dir = CACHE_DIR / f"dlc_{gputouse}"
     keypoints_dir = keypoints_fp.parent
-    # Making output directories
-    temp_dlc_dir.mkdir(parents=True, exist_ok=True)
 
-    # Assertion: the config.yaml file must exist.
-    if not model_fp.is_file():
-        msg = (
-            f'DLC model config not found: "{model_fp}"\n'
-            f"  Check user.run_dlc.model_fp in your config file.\n"
-            f"  It should point to a DeepLabCut config.yaml file."
+    with tempfile.TemporaryDirectory(dir=CACHE_DIR) as _out_dir:
+        out_dir = Path(_out_dir)
+        # Running the DLC subprocess (in a separate conda env)
+        _run_dlc_subproc(
+            model_fp,
+            [formatted_vid_fp],
+            out_dir,
+            CACHE_DIR,
+            gputouse,
         )
-        raise ValueError(msg)
-
-    # Running the DLC subprocess (in a separate conda env)
-    _run_dlc_subproc(model_fp, [formatted_vid_fp], temp_dlc_dir, CACHE_DIR, gputouse)
-
-    # Exporting the h5 to chosen file format
-    _export2df(formatted_vid_fp.stem, temp_dlc_dir, keypoints_dir)
-    silent_remove(temp_dlc_dir)
+        # Exporting the h5 to chosen file format
+        _export2df(formatted_vid_fp.stem, out_dir, keypoints_dir)
 
 
 def ma_dlc_run_batch(
@@ -64,11 +59,6 @@ def ma_dlc_run_batch(
     overwrite: bool,
 ) -> None:
     """Running DLC to generate a keypoints dataframe from a single video."""
-    # Specifying the GPU to use and making the output directory
-    # Making output directories
-    temp_dlc_dir = CACHE_DIR / f"dlc_{gputouse}"
-    temp_dlc_dir.mkdir(parents=True, exist_ok=True)
-
     # If overwrite is False, filtering for only experiments that need processing
     if not overwrite:
         # Getting only the vid_fp_ls elements that do not exist in keypoints_dir
@@ -97,20 +87,14 @@ def ma_dlc_run_batch(
     assert len(dlc_fp_set) == 1
     # Getting the model_fp
     model_fp = dlc_fp_set.pop()
-    # Assertion: the config.yaml file must exist.
-    assert model_fp.is_file(), (
-        f'DLC model config not found: "{model_fp}"\n'
-        f"  Check user.run_dlc.model_fp in your config files.\n"
-        f"  All experiments in this batch must use the same model."
-    )
 
-    # Running the DLC subprocess (in a separate conda env)
-    _run_dlc_subproc(model_fp, vid_fp_ls, temp_dlc_dir, CACHE_DIR, gputouse)
-
-    # Exporting the h5 to chosen file format
-    for vid_fp in vid_fp_ls:
-        _export2df(vid_fp.stem, temp_dlc_dir, keypoints_dir)
-    silent_remove(temp_dlc_dir)
+    with tempfile.TemporaryDirectory(dir=CACHE_DIR) as _out_dir:
+        out_dir = Path(_out_dir)
+        # Running the DLC subprocess (in a separate conda env)
+        _run_dlc_subproc(model_fp, vid_fp_ls, out_dir, CACHE_DIR, gputouse)
+        # Exporting the h5 to chosen file format
+        for vid_fp in vid_fp_ls:
+            _export2df(vid_fp.stem, out_dir, keypoints_dir)
 
 
 def _run_dlc_subproc(

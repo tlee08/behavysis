@@ -2,17 +2,11 @@
 
 import re
 import subprocess
-from multiprocessing import current_process
 
-# TODO: remove and simplify
-
-
-def get_cpid() -> int:
-    """Get child process ID for multiprocessing."""
-    return current_process()._identity[0] if current_process()._identity else 0  # noqa: SLF001
+from loguru import logger
 
 
-def get_gpu_ids() -> None:
+def get_gpu_ids() -> list[int]:
     """Gets list of GPU IDs from nvidia-smi."""
     try:
         smi_output = subprocess.check_output(
@@ -20,9 +14,7 @@ def get_gpu_ids() -> None:
             universal_newlines=True,
         )
         gpu_ids = re.findall(r"GPU (\d+):", smi_output)
-        gpu_ids = [int(i) for i in gpu_ids]
-        return gpu_ids
+        return [int(i) for i in gpu_ids]
     except subprocess.CalledProcessError as e:
-        # raise e
-        print(e)
+        logger.exception(e)
         return []

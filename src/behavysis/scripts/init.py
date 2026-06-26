@@ -1,3 +1,5 @@
+"""Functions for uv package scripts."""
+
 import subprocess
 from importlib.resources import files
 from pathlib import Path
@@ -5,6 +7,7 @@ from pathlib import Path
 
 def main() -> None:
     """Sets up the behavysis environment.
+
     - Installs DEEPLABCUT conda env
     - Installs SimBA conda env.
     """
