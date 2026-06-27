@@ -69,7 +69,7 @@ class BaseTorchModel(nn.Module):
         # Storing training history
         history = pd.DataFrame(
             index=pd.Index(np.arange(epochs), name="epoch"),
-            columns=["loss", "vloss"],
+            columns=pd.Index(["loss", "vloss"]),
         )
         # Training the model
         for epoch in range(epochs):

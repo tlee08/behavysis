@@ -13,6 +13,7 @@ from loguru import logger
 from behavysis.behav_classifier.clf_models.base_torch_model import BaseTorchModel
 from behavysis.behav_classifier.clf_models.clf_templates import CLF_TEMPLATES, CNN1
 from behavysis.behav_classifier.data import (
+    _select_derived_features,
     combine_dfs,
     prepare_training_data,
     preproc_x_transform,
@@ -45,6 +46,9 @@ class BehavClassifier:
     clf : BaseTorchModel
         The trained classifier model.
     """
+
+    # Legacy pickle compat: old preproc.sav references this name
+    _preproc_x_fit_select_cols = staticmethod(_select_derived_features)
 
     _proj_dir: Path
     _behav_name: str

@@ -138,8 +138,8 @@ def oversample(x: np.ndarray, y: np.ndarray, ratio: float) -> np.ndarray:
     """
     assert x.shape[0] == y.shape[0]
     index = np.arange(y.shape[0])
-    t = index[y == BehavValues.BEHAV.value]
-    f = index[y == BehavValues.NON_BEHAV.value]
+    t = index[y == BehavValues.TRUE_POS.value]
+    f = index[y == BehavValues.TRUE_NEG.value]
     new_t_size = int(np.round(f.shape[0] * ratio))
     t = np.random.choice(t, size=new_t_size, replace=True)
     new_index = np.concatenate([t, f])
@@ -165,8 +165,8 @@ def undersample(x: np.ndarray, y: np.ndarray, ratio: float) -> np.ndarray:
     """
     assert x.shape[0] == y.shape[0]
     index = np.arange(y.shape[0])
-    t = index[y == BehavValues.BEHAV.value]
-    f = index[y == BehavValues.NON_BEHAV.value]
+    t = index[y == BehavValues.TRUE_POS.value]
+    f = index[y == BehavValues.TRUE_NEG.value]
     new_f_size = int(np.round(t.shape[0] / ratio))
     f = np.random.choice(f, size=new_f_size, replace=False)
     new_index = np.concatenate([t, f])
@@ -215,7 +215,7 @@ def prepare_training_data(
     # Format y dfs: select behavior column, replace UNDETERMINED
     y_df_ls = [
         y[(behav_name, BehavScoredDf.OutcomesCols.ACTUAL.value)].replace(
-            BehavValues.UNDETERMINED.value, BehavValues.NON_BEHAV.value
+            BehavValues.UNSURE.value, BehavValues.TRUE_NEG.value
         )
         for y in y_df_ls
     ]
