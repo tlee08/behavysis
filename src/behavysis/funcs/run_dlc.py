@@ -19,7 +19,7 @@ DLC_HDF_KEY = "data"
 
 
 def ma_dlc_run_single(
-    formatted_vid_fp: Path,
+    vid_fp: Path,
     keypoints_fp: Path,
     config_fp: Path,
     gputouse: int | None,
@@ -41,13 +41,13 @@ def ma_dlc_run_single(
         # Running the DLC subprocess (in a separate conda env)
         _run_dlc_subproc(
             model_fp,
-            [formatted_vid_fp],
+            [vid_fp],
             out_dir,
             CACHE_DIR,
             gputouse,
         )
         # Exporting the h5 to chosen file format
-        _export2df(formatted_vid_fp.stem, out_dir, keypoints_dir)
+        _export2df(vid_fp.stem, out_dir, keypoints_dir)
 
 
 def ma_dlc_run_batch(

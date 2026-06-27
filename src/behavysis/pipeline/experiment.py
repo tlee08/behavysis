@@ -101,7 +101,7 @@ class Experiment:
     def run_dlc(self, gputouse: int | None, *, overwrite: bool) -> None:
         """Run the DLC model on the formatted video."""
         ma_dlc_run_single(
-            formatted_vid_fp=self.get_fp(Folders.FORMATTED_VID),
+            vid_fp=self.get_fp(Folders.FORMATTED_VID),
             keypoints_fp=self.get_fp(Folders.KEYPOINTS),
             config_fp=self.get_fp(Folders.CONFIG),
             gputouse=gputouse,
