@@ -102,6 +102,10 @@ class Project:
 
     def import_experiments(self) -> None:
         """Import all experiments from the project folder."""
+        # TODO: change fundamentally how we import:
+        # Give list of video names (use glob, or iterdir helper)
+        # Bascially make user explicitly decide which vids and what names to use
+        # Instead of inferring them.
         logger.info(f"Searching project folder: {self.root_dir}")
         dd_dict: dict[str, list[str]] = {}
         for f in Folders:
