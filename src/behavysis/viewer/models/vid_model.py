@@ -1,11 +1,13 @@
+from pathlib import Path
+
 import cv2
 import numpy as np
 
 
 class VidModel:
     vid: cv2.VideoCapture
-    fps = int
-    nframes = int
+    fps: int
+    nframes: int
     jump_size: int
 
     def __init__(self, *args, **kwargs) -> None:
@@ -14,7 +16,7 @@ class VidModel:
         self.nframes = None
         self.jump_size = None
 
-    def load(self, fp: str) -> None:
+    def load(self, fp: Path) -> None:
         # Read video
         self.vid = cv2.VideoCapture(fp)
         if not self.vid.isOpened():

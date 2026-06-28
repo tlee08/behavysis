@@ -1,6 +1,7 @@
 """_summary_."""
 
 import contextlib
+from pathlib import Path
 
 import cv2
 import numpy as np
@@ -48,7 +49,7 @@ class KeypointsModel:
             self.indivs_bpts_df[self.colour_level], self.cmap
         )
 
-    def load(self, fp: str, configs: ExperimentConfigs) -> None:
+    def load(self, fp: Path, configs: ExperimentConfigs) -> None:
         df = KeypointsDf.init_df(pd.Series())
         with contextlib.suppress(FileNotFoundError):
             df = KeypointsDf.read(fp)

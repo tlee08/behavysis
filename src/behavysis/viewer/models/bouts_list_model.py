@@ -1,4 +1,5 @@
 import contextlib
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -39,7 +40,7 @@ class BoutsListModel(QAbstractListModel):
         # self.dataChanged.emit(index, index)
         return True
 
-    def load(self, fp: str, configs: ExperimentConfigs) -> None:
+    def load(self, fp: Path, configs: ExperimentConfigs) -> None:
         # Loading behaviour data
         df = BehavScoredDf.init_df(pd.Series())
         with contextlib.suppress(FileNotFoundError):

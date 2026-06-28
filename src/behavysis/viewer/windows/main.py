@@ -315,12 +315,14 @@ class MainWindow(QMainWindow):
         else:
             event.ignore()
 
-    def open(self, fp: str | None = None) -> None:
+    def open(self, fp: Path | None = None) -> None:
         """__summary__."""
         if not fp:
-            fp = QFileDialog.getOpenFileName(
-                self, "", "", "config file (*.json *.yaml)"
-            )[0]
+            fp = Path(
+                QFileDialog.getOpenFileName(
+                    self, "", "", "config file (*.json *.yaml)"
+                )[0]
+            )
         # Getting corresponding experiment filenames
         if not fp:
             self.ui.statusbar.showMessage(
@@ -329,7 +331,7 @@ class MainWindow(QMainWindow):
             return
         try:
             # Loading filenames in vid file manager
-            self.file_manager.load(fp)
+            self.file_manager.load(Path(fp))
             # Reading in configs
             configs = ExperimentConfigs.model_validate_json(
                 self.file_manager.configs_fp.read_text()
@@ -449,12 +451,14 @@ class MainWindow(QMainWindow):
     def save_frames(self, fp=None) -> None:
         """__summary__."""
         if not fp:
-            fp = QFileDialog.getSaveFileName(
-                self,
-                "",
-                f"{self.file_manager.name}.{DF_IO_FORMAT}",
-                f"{DF_IO_FORMAT} dataframe (*.{DF_IO_FORMAT})",
-            )[0]
+            fp = Path(
+                QFileDialog.getSaveFileName(
+                    self,
+                    "",
+                    f"{self.file_manager.name}.{DF_IO_FORMAT}",
+                    f"{DF_IO_FORMAT} dataframe (*.{DF_IO_FORMAT})",
+                )[0]
+            )
         if fp:
             # bouts to behavs_df
             behavs_df = BehavScoredDf.bouts2frames(self.bouts_model.bouts)
@@ -467,12 +471,14 @@ class MainWindow(QMainWindow):
     def save_bouts(self, fp: Path | None = None) -> None:
         """__summary__."""
         if not fp:
-            fp = QFileDialog.getSaveFileName(
-                self,
-                "",
-                f"{self.file_manager.name}.json",
-                "json file (*.json *.yaml)",
-            )[0]
+            fp = Path(
+                QFileDialog.getSaveFileName(
+                    self,
+                    "",
+                    f"{self.file_manager.name}.json",
+                    "json file (*.json *.yaml)",
+                )[0]
+            )
         if fp:
             # Writing to json file
             fp.write_text(self.bouts_model.bouts.model_dump_json(indent=2))
