@@ -1,6 +1,5 @@
 """Project class for batch processing multiple experiments."""
 
-import re
 from collections.abc import Callable
 from pathlib import Path
 
@@ -100,28 +99,23 @@ class Project:
             return True
         return False
 
-    def import_experiments(self) -> None:
-        """Import all experiments from the project folder."""
+    def import_experiments(self, name_ls: list[str]) -> None:
+        """Import all experiments in a given list.
+
+        Expects list to be names without suffix. E.g:
+        ["exp1", "exp2", ...]
+        """
         # TODO: change fundamentally how we import:
         # Give list of video names (use glob, or iterdir helper)
         # Bascially make user explicitly decide which vids and what names to use
         # Instead of inferring them.
+        # TODO: verify
         logger.info(f"Searching project folder: {self.root_dir}")
-        dd_dict: dict[str, list[str]] = {}
-        for f in Folders:
-            folder = self.root_dir / f.value
-            dd_dict[f.value] = []
-            if not folder.is_dir():
-                continue
-            for fp_name in natsorted(folder.iterdir()):
-                if re.search(r"^\.", fp_name.name):
-                    continue
-                name = fp_name.stem
-                try:
-                    self.import_experiment(name)
-                    dd_dict[f.value].append(name)
-                except ValueError as e:
-                    logger.info(f"Failed: {f.value} - {fp_name.name}: {e}")
+        for name in natsorted(name_ls):
+            try:
+                self.import_experiment(name)
+            except ValueError as e:
+                logger.info(f"Failed: {name}: {e}")
         exp_ls_msg = "".join([f"\n    - {exp.name}" for exp in self.experiments])
         logger.info(f"Experiments imported:{exp_ls_msg}")
 
