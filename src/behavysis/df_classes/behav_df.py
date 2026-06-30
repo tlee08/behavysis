@@ -23,7 +23,6 @@ class OutcomesPredictedCols(Enum):
 class OutcomesScoredCols(Enum):
     """OutcomesScoredCols."""
 
-    PRED = "pred"
     ACTUAL = "actual"
 
 
@@ -90,6 +89,18 @@ class BehavScoredDf(BehavDf):
     """BehavScoredDf."""
 
     OutcomesCols = OutcomesScoredCols
+
+    @classmethod
+    def read(cls, fp: Path, fmt: str | None = None) -> pd.DataFrame:
+        """Read dataframe from file, validate schema, and sort."""
+        df = pd.read_parquet(fp)
+
+        # Set index
+        df = df.set_index([i.value for i in cls.IN])
+        # Set MultiIndex columns
+        df.columns = df.columns.str.split("__", expand=True)
+
+        return cls.clean_and_validate(df)
 
     @classmethod
     def _validate(cls, df: pd.DataFrame) -> None:
