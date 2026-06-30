@@ -11,6 +11,7 @@ import polars as pl
 from loguru import logger
 
 from behavysis.constants import (
+    BODYPART,
     CACHE_DIR,
     DF_IO_FORMAT,
     FRAME,
@@ -182,7 +183,7 @@ def _export2df(name: str, src_dir: Path, dst_dir: Path) -> None:
     df_pl = pl.from_pandas(long_df.reset_index()).select(
         pl.col(FRAME).cast(pl.Int64),
         pl.col("individuals").alias(INDIVIDUAL),
-        pl.col("bodyparts").alias(INDIVIDUAL),
+        pl.col("bodyparts").alias(BODYPART),
         pl.col(X).cast(pl.Float64),
         pl.col(Y).cast(pl.Float64),
         pl.col(LIKELIHOOD).cast(pl.Float64),
