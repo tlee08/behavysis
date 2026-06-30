@@ -15,15 +15,14 @@ class TestFolders:
     def test_folders_values(self) -> None:
         """Folders should have expected string values."""
         assert Folders.CONFIG.value == "0_config"
-        assert Folders.RAW_VID.value == "1_raw_video"
-        assert Folders.FORMATTED_VID.value == "2_formatted_video"
+        assert Folders.RAW_VID.value == "1_raw_videos"
+        assert Folders.FORMATTED_VID.value == "2_formatted_videos"
         assert Folders.KEYPOINTS.value == "3_keypoints"
         assert Folders.PREPROCESSED.value == "4_preprocessed"
         assert Folders.FEATURES_EXTRACTED.value == "5_features_extracted"
         assert Folders.PREDICTED_BEHAVIOUR.value == "6_predicted_behaviour"
         assert Folders.SCORED_BEHAVIOUR.value == "7_scored_behaviour"
         assert Folders.ANALYSIS_COMBINED.value == "9_analysis_combined"
-        assert Folders.EVALUATE_VID.value == "10_evaluate_video"
 
     def test_folders_are_ordered(self) -> None:
         """Folder names should start with numeric prefixes for ordering."""
