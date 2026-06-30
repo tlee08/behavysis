@@ -12,7 +12,6 @@ import cv2
 import numpy as np
 import polars as pl
 import seaborn as sns
-from loguru import logger
 from matplotlib import pyplot as plt
 
 from behavysis.constants import DF_IO_FORMAT, FBF
@@ -90,6 +89,27 @@ def _pt_in_roi(pt_x: float, pt_y: float, corners_df: pl.DataFrame) -> bool:
     return crossings % 2 == 1
 
 
+def _pts_in_roi(
+    px_arr: np.ndarray,
+    py_arr: np.ndarray,
+    corners_df: pl.DataFrame,
+) -> np.ndarray:
+    """Vectorized point-in-polygon using ray casting on numpy arrays."""
+    n = corners_df.height
+    cx = corners_df.select("x").to_numpy()
+    cy = corners_df.select("y").to_numpy()
+
+    crossings = np.zeros(len(px_arr), dtype=np.int32)
+    for i in range(n):
+        c1_x, c1_y = cx[i], cy[i]
+        c2_x, c2_y = cx[(i + 1) % n], cy[(i + 1) % n]
+        y_between = (c1_y > py_arr) != (c2_y > py_arr)
+        if y_between.any():
+            x_int = (c2_x - c1_x) * (py_arr[y_between] - c1_y) / (c2_y - c1_y) + c1_x
+            crossings[y_between] ^= (px_arr[y_between] < x_int).astype(np.int32)
+    return (crossings % 2) == 1
+
+
 def _compute_movement(
     keypoints_df: pl.DataFrame,
     bpts: list[str],
@@ -102,59 +122,60 @@ def _compute_movement(
     Returns DataFrame in ANALYSIS_SCHEMA format.
     """
     jitter_frames = 3
-    rows = []
+    results = []
 
     for indiv in indivs:
         avg = _bodypart_avg_xy(keypoints_df, indiv, bpts)
 
-        # Smooth to reduce jitter
-        x_smooth = (
-            avg.select("x")
-            .to_series()
-            .rolling_mean(window_size=jitter_frames, min_samples=1, center=True)
-        )
-        y_smooth = (
-            avg.select("y")
-            .to_series()
-            .rolling_mean(window_size=jitter_frames, min_samples=1, center=True)
-        )
-
-        # Frame-by-frame deltas
-        delta_x = x_smooth.diff(null_behavior="ignore").fill_null(0)
-        delta_y = y_smooth.diff(null_behavior="ignore").fill_null(0)
-        delta_px = (delta_x.pow(2) + delta_y.pow(2)).sqrt()
-
-        # Distance in mm
-        dist_mm = delta_px / px_per_mm
-
-        # Smoothed distance
-        dist_mm_smoothed = dist_mm.rolling_mean(
-            window_size=smoothing_frames,
-            min_samples=1,
-            center=True,
-        )
-
-        frames = avg.select("frame").to_series()
-
-        for i in range(len(frames)):
-            rows.append(
-                {
-                    "frame": int(frames[i]),
-                    "individual": indiv,
-                    "measure": "DistMM",
-                    "value": float(dist_mm[i]),
-                },
+        dist = (
+            avg.with_columns(
+                (
+                    avg.select("x")
+                    .to_series()
+                    .rolling_mean(window_size=jitter_frames, min_samples=1, center=True)
+                    .diff()
+                    .fill_null(0)
+                    .alias("x_delta")
+                ),
+                (
+                    avg.select("y")
+                    .to_series()
+                    .rolling_mean(window_size=jitter_frames, min_samples=1, center=True)
+                    .diff()
+                    .fill_null(0)
+                    .alias("y_delta")
+                ),
             )
-            rows.append(
-                {
-                    "frame": int(frames[i]),
-                    "individual": indiv,
-                    "measure": "DistMMSmoothed",
-                    "value": float(dist_mm_smoothed[i]),
-                },
+            .with_columns(
+                (
+                    (pl.col("x_delta").pow(2) + pl.col("y_delta").pow(2)).sqrt()
+                    / px_per_mm
+                ).alias("DistMM"),
             )
+            .with_columns(
+                pl.col("DistMM")
+                .rolling_mean(window_size=smoothing_frames, min_samples=1, center=True)
+                .alias("DistMMSmoothed"),
+            )
+        )
 
-    return pl.DataFrame(rows, schema=ANALYSIS_SCHEMA)
+        dist_long = dist.select(
+            pl.col("frame"),
+            pl.lit(indiv).alias("individual"),
+            pl.col("DistMM"),
+            pl.col("DistMMSmoothed"),
+        ).unpivot(
+            index=["frame", "individual"],
+            variable_name="measure",
+            value_name="value",
+        )
+
+        results.append(dist_long)
+
+    if not results:
+        return pl.DataFrame(schema=ANALYSIS_SCHEMA)
+
+    return pl.concat(results)
 
 
 def _make_location_scatterplot(
@@ -317,23 +338,24 @@ def in_roi(
             )
         corners_i = pl.DataFrame(adjusted)
 
-        # For each individual, determine in-roi status
+        # For each individual, determine in-roi status (vectorized)
         for indiv in indivs:
             avg = _bodypart_avg_xy(keypoints_df, indiv, bpts)
-            frames = avg.select("frame").to_series().to_list()
-            xs = avg.select("x").to_series().to_list()
-            ys = avg.select("y").to_series().to_list()
+            frames = avg.select("frame").to_series().to_numpy()
+            xs = avg.select("x").to_series().to_numpy()
+            ys = avg.select("y").to_series().to_numpy()
 
-            for f, px, py in zip(frames, xs, ys, strict=True):
-                in_roi_val = _pt_in_roi(px, py, corners_i)
-                if not is_in:
-                    in_roi_val = not in_roi_val
+            in_roi_mask = _pts_in_roi(xs, ys, corners_i)
+            if not is_in:
+                in_roi_mask = ~in_roi_mask
+
+            for f, val in zip(frames, in_roi_mask, strict=True):
                 all_analysis_rows.append(
                     {
-                        "frame": f,
+                        "frame": int(f),
                         "individual": indiv,
                         "measure": roi_name,
-                        "value": float(int(in_roi_val)),
+                        "value": float(val),
                     },
                 )
 
@@ -355,14 +377,14 @@ def in_roi(
     write_df(analysis_df, fbf_fp, ANALYSIS_SCHEMA)
 
     # Scatter plot
+    # Get video frame (150 frames in) or black frame if no video
     formatted_vid_cap = cv2.VideoCapture(str(formatted_vid_fp))
-    for _ in range(start_frame + 100):
-        ret, frame_img = formatted_vid_cap.read()
-        if not ret:
-            logger.warning("Video shorter than start_frame")
-            break
+    formatted_vid_cap.set(cv2.CAP_PROP_POS_FRAMES, 150)
+    ret, frame_img = formatted_vid_cap.read()
+    if not ret:
+        frame_img = np.zeros([analysis_config.height_px, analysis_config.width_px, 3])
     formatted_vid_cap.release()
-
+    # Make scatter plot
     plot_fp = dst_subdir / "scatter_plot" / f"{name}.png"
     _make_location_scatterplot(analysis_df, corners_df, frame_img, plot_fp)
 
@@ -406,23 +428,13 @@ def speed(
         smoothing_frames,
     )
 
-    # Convert distance to speed
-    speed_rows = []
-    for indiv in indivs:
-        indiv_data = movement_df.filter(pl.col("individual") == indiv)
-        for measure_name in ["DistMM", "DistMMSmoothed"]:
-            dist_rows = indiv_data.filter(pl.col("measure") == measure_name)
-            speed_rows.append(
-                {
-                    "frame": row["frame"],
-                    "individual": indiv,
-                    "measure": f"SpeedMMperSec{measure_name.replace('DistMM', '')}",
-                    "value": row["value"] * analysis_config.fps,
-                }
-                for row in dist_rows.iter_rows(named=True)
-            )
-
-    analysis_df = pl.DataFrame(speed_rows, schema=ANALYSIS_SCHEMA)
+    # Convert distance to speed via Polars vectorized operations
+    analysis_df = movement_df.select(
+        pl.col("frame"),
+        pl.col("individual"),
+        pl.col("measure").str.replace("DistMM", "SpeedMMperSec").alias("measure"),
+        (pl.col("value") * analysis_config.fps).alias("value"),
+    )
 
     fbf_fp = dst_subdir / FBF / f"{name}.{DF_IO_FORMAT}"
     write_df(analysis_df, fbf_fp, ANALYSIS_SCHEMA)
@@ -530,26 +542,20 @@ def social_distance(
         .alias("DistMMSmoothed"),
     )
 
-    rows = [
-        {
-            "frame": row["frame"],
-            "individual": pair_name,
-            "measure": "DistMM",
-            "value": row["DistMM"],
-        }
-        for row in dist.iter_rows(named=True)
-    ]
-    for _, row in enumerate(dist_smoothed.iter_rows(named=True)):
-        rows.append(
-            {
-                "frame": row["frame"],
-                "individual": pair_name,
-                "measure": "DistMMSmoothed",
-                "value": row["DistMMSmoothed"],
-            },
+    analysis_df = (
+        dist.join(dist_smoothed, on="frame")
+        .select(
+            pl.col("frame"),
+            pl.lit(pair_name).alias("individual"),
+            pl.col("DistMM"),
+            pl.col("DistMMSmoothed"),
         )
-
-    analysis_df = pl.DataFrame(rows, schema=ANALYSIS_SCHEMA)
+        .unpivot(
+            index=["frame", "individual"],
+            variable_name="measure",
+            value_name="value",
+        )
+    )
 
     fbf_fp = dst_subdir / FBF / f"{name}.{DF_IO_FORMAT}"
     write_df(analysis_df, fbf_fp, ANALYSIS_SCHEMA)
@@ -591,7 +597,7 @@ def freezing(
     check_bpts_exist(keypoints_df, bpts)
     indivs, _ = get_indivs_bpts(keypoints_df)
 
-    all_rows = []
+    all_dfs = []
 
     for indiv in indivs:
         indiv_df = keypoints_df.filter(pl.col("individual") == indiv)
@@ -601,12 +607,8 @@ def freezing(
         deltas_list = []
         for bpt in bpts:
             bpt_df = indiv_df.filter(pl.col("bodypart") == bpt).sort("frame")
-            delta_x = (
-                bpt_df.select("x").to_series().diff(null_behavior="drop").fill_null(0)
-            )
-            delta_y = (
-                bpt_df.select("y").to_series().diff(null_behavior="drop").fill_null(0)
-            )
+            delta_x = bpt_df.select("x").to_series().diff().fill_null(0)
+            delta_y = bpt_df.select("y").to_series().diff().fill_null(0)
             delta = (delta_x.pow(2) + delta_y.pow(2)).sqrt()
             smoothed = delta.rolling_mean(
                 window_size=smoothing_frames,
@@ -622,23 +624,25 @@ def freezing(
             is_freezing &= np.array(deltas[:n]) < thresh_px
 
         # Filter out short freezing bouts
-        freezing_series = pl.Series(is_freezing.astype(int))
-        bouts = vect2bouts(freezing_series == 1)
+        freezing_np = is_freezing.astype(np.int32)
+        bouts = vect2bouts(pl.Series(freezing_np) == 1)
         for row in bouts.iter_rows(named=True):
             if row["dur"] < window_frames:
-                freezing_series[row["start"] : row["stop"] + 1] = 0
+                freezing_np[row["start"] : row["stop"] + 1] = 0
 
-        for i, f in enumerate(frames.to_list()):
-            all_rows.append(
+        all_dfs.append(
+            pl.DataFrame(
                 {
-                    "frame": f,
+                    "frame": frames,
                     "individual": indiv,
                     "measure": "freezing",
-                    "value": float(freezing_series[i]),
+                    "value": freezing_np.astype(np.float64),
                 },
-            )
+                schema=ANALYSIS_SCHEMA,
+            ),
+        )
 
-    analysis_df = pl.DataFrame(all_rows, schema=ANALYSIS_SCHEMA)
+    analysis_df = pl.concat(all_dfs)
 
     fbf_fp = dst_subdir / FBF / f"{name}.{DF_IO_FORMAT}"
     write_df(analysis_df, fbf_fp, ANALYSIS_SCHEMA)

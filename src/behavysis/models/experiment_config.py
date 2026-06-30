@@ -19,8 +19,8 @@ class AnalysisConfig(BaseModel):
     """Validated analysis configuration parameters."""
 
     fps: float
-    width_px: float
-    height_px: float
+    width_px: int
+    height_px: int
     px_per_mm: float
     bins_sec: list
     custom_bins_sec: list

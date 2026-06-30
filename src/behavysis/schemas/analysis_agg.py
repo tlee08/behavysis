@@ -8,7 +8,6 @@ from collections.abc import Callable
 from pathlib import Path
 
 import numpy as np
-import pandas as pd
 import polars as pl
 import seaborn as sns
 
@@ -137,32 +136,30 @@ def make_binned(
     pl.DataFrame
         BINNED_SCHEMA DataFrame.
     """
-    # Compute timestamps and bin labels
-    timestamps = analysis_df.select(
-        (pl.col("frame") / fps).alias("timestamp"),
-    ).to_series()
-
-    bins = np.asarray(bins_, dtype=np.float64)
-    bins = np.append(0.0, bins) if np.min(bins) > 0 else bins
+    timestamps = (
+        analysis_df.select((pl.col("frame") / fps).alias("timestamp"))
+        .to_series()
+    )
     t_max = float(timestamps.max())
-    bins = np.append(bins, t_max) if np.max(bins) < t_max else bins
 
-    bin_labels = bins[1:]
-    frame_bins = pd.cut(
-        timestamps.to_list(),
-        bins=bins.tolist(),
-        labels=bin_labels.tolist(),
-        include_lowest=True,
-    )
+    bins_arr = np.asarray(bins_, dtype=np.float64)
+    if np.min(bins_arr) > 0:
+        bins_arr = np.append(0.0, bins_arr)
+    if np.max(bins_arr) < t_max:
+        bins_arr = np.append(bins_arr, t_max)
 
-    # Add bin column
-    df_binned = analysis_df.with_columns(
-        pl.Series(BIN_SEC, frame_bins.to_numpy(), dtype=pl.Float64),
-    )
+    labels = bins_arr[1:]
 
-    # Group by bin and apply summary
+    # Polars-native binning via searchsorted + take
+    ts_np = timestamps.to_numpy()
+    indices = np.searchsorted(bins_arr, ts_np, side="right") - 1
+    indices = np.clip(indices, 0, len(labels) - 1)
+    bin_col = pl.Series(BIN_SEC, labels[indices], dtype=pl.Float64)
+
+    df_binned = analysis_df.with_columns(bin_col)
+
     results = []
-    for bin_val, group in df_binned.group_by(BIN_SEC):
+    for (bin_val,), group in df_binned.group_by(BIN_SEC):
         summary = summary_func(group.drop(BIN_SEC), fps)
         summary = summary.with_columns(pl.lit(bin_val).alias(BIN_SEC))
         results.append(summary)
@@ -189,17 +186,15 @@ def make_binned_plot(
     agg_column : str
         Aggregation column to plot (e.g. "mean", "bout_dur_total").
     """
-    # Filter to the aggregation column of interest, pivot to wide for seaborn
     plot_df = (
         binned_df.filter(pl.col("agg") == agg_column)
-        .pivot(index=[BIN_SEC, INDIVIDUAL], on=MEASURE, values="value")
         .to_pandas()
     )
 
     g = sns.relplot(
         data=plot_df,
         x=BIN_SEC,
-        y=plot_df.columns[-1],  # first measure column after pivot
+        y="value",
         hue=MEASURE,
         col=INDIVIDUAL,
         kind="line",
@@ -260,12 +255,24 @@ def summary_binned_behaviour(
     )
 
     # Latency: time from start to first positive value per (individual, measure)
+    latency_rows = _compute_latency(analysis_df, fps)
+
+    if latency_rows:
+        latency_df = pl.DataFrame(latency_rows, schema=SUMMARY_SCHEMA)
+        summary_df = agg_behaviour(analysis_df, fps)
+        summary_df = pl.concat([summary_df, latency_df])
+        summary_fp = dst_dir / SUMMARY / f"{name}.{DF_IO_FORMAT}"
+        write_df(summary_df, summary_fp, SUMMARY_SCHEMA)
+
+
+def _compute_latency(analysis_df: pl.DataFrame, fps: float) -> list[dict]:
+    """Compute latency: time to first positive value per (individual, measure)."""
     latency_rows = []
     for (indiv, measure), group in analysis_df.group_by([INDIVIDUAL, MEASURE]):
         sorted_group = group.sort("frame")
         vect = sorted_group.select("value").to_series()
         frame = sorted_group.select("frame").to_series()
-        latency_val = -1
+        latency_val = -1.0
         if vect.sum() > 0:
             first_idx = (vect == 1).arg_true().item()
             latency_val = float(frame[first_idx]) / fps
@@ -277,13 +284,7 @@ def summary_binned_behaviour(
                 "value": latency_val,
             },
         )
-
-    if latency_rows:
-        latency_df = pl.DataFrame(latency_rows, schema=SUMMARY_SCHEMA)
-        summary_df = agg_behaviour(analysis_df, fps)
-        summary_df = pl.concat([summary_df, latency_df])
-        summary_fp = dst_dir / SUMMARY / f"{name}.{DF_IO_FORMAT}"
-        write_df(summary_df, summary_fp, SUMMARY_SCHEMA)
+    return latency_rows
 
 
 def summary_binned(
