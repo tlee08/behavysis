@@ -4,18 +4,13 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import polars as pl
 from joblib import dump, load
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import FunctionTransformer, MinMaxScaler
 
 from behavysis.constants import ACTUAL, FALSE_POS, OUTCOMES, PRED, TRUE_POS, UNSURE
-from behavysis.df_classes import (
-    BehaviourClassifierCombinedDf,
-    BehaviourScoredDf,
-    DFMixin,
-    FeaturesDf,
-)
 from behavysis.utils.io_utils import (
     async_read_files_run,
 )
@@ -35,9 +30,8 @@ def combine_dfs(src_dir: Path) -> pd.DataFrame:
     pd.DataFrame
         Combined dataframe with experiment names as index level.
     """
-    data_dict = {i.stem: DFMixin.read(src_dir / i) for i in src_dir.iterdir()}
+    data_dict = {i.stem: pl.read_parquet(src_dir / i).to_pandas() for i in src_dir.iterdir()}
     df = pd.concat(data_dict.values(), axis=0, keys=data_dict.keys())
-    df = BehaviourClassifierCombinedDf.clean_and_validate(df)
     return df
 
 
@@ -212,8 +206,26 @@ def prepare_training_data(
     # Load feature and behaviour files
     x_fp_ls = [x_dir / i for i in x_dir.iterdir()]
     y_fp_ls = [y_dir / i for i in y_dir.iterdir()]
-    x_df_ls = async_read_files_run(x_fp_ls, FeaturesDf.read)
-    y_df_ls = async_read_files_run(y_fp_ls, BehaviourScoredDf.read)
+
+    def _read_features(fp: Path) -> pd.DataFrame:
+        return pl.read_parquet(fp).to_pandas().set_index("frame")
+
+    def _read_scored(fp: Path) -> pd.DataFrame:
+        """Read Polars long-form scored behaviour and convert to pandas MultiIndex."""
+        df_pl = pl.read_parquet(fp)
+        # Pivot behaviour names → column level 0, outcomes → column level 1
+        # Columns: frame, behaviour, pred, actual, [user_defined...]
+        id_vars = ["frame", "behaviour"]
+        value_vars = [c for c in df_pl.columns if c not in id_vars]
+        df_pd = df_pl.to_pandas()
+        # Melt then pivot to get MultiIndex columns
+        melted = df_pd.melt(id_vars=id_vars, value_vars=value_vars, var_name="outcome", value_name="value")
+        pivoted = melted.pivot_table(index="frame", columns=["behaviour", "outcome"], values="value")
+        pivoted.columns = pd.MultiIndex.from_tuples(pivoted.columns, names=["behaviour", "outcomes"])
+        return pivoted
+
+    x_df_ls = async_read_files_run(x_fp_ls, _read_features)
+    y_df_ls = async_read_files_run(y_fp_ls, _read_scored)
 
     # Format y dfs: select behaviour column, replace UNDETERMINED
     y_df_ls = [y[(behav_name, ACTUAL)].replace(UNSURE, FALSE_POS) for y in y_df_ls]

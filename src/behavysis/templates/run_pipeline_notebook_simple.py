@@ -4,13 +4,11 @@ __generated_with = "0.23.10"
 app = marimo.App(width="full")
 
 with app.setup:
-    from collections.abc import Callable
     from pathlib import Path
 
     import marimo as mo
 
     from behavysis import Project
-    from behavysis.constants import DEFAULT_CONFIG_FP
     from behavysis.funcs import (
         distance,
         dur_frames_from_likelihood,
@@ -22,8 +20,6 @@ with app.setup:
         start_stop_trim,
         stop_frame_from_dur,
     )
-    from behavysis.models import ExperimentConfig, get_default_config
-    from behavysis.utils.template_utils import render_template
 
 
 @app.cell(hide_code=True)
@@ -31,7 +27,6 @@ def _():
     mo.md(r"""
     # Behavysis Pipeline Runner
     """)
-    return
 
 
 @app.cell
@@ -57,7 +52,6 @@ def _(config_fp, proj):
         default_config_fp=config_fp,
         overwrite="user",
     )
-    return
 
 
 @app.cell
@@ -65,7 +59,6 @@ def _(overwrite, proj):
     proj.format_video(
         overwrite=overwrite,
     )
-    return
 
 
 @app.cell
@@ -74,7 +67,6 @@ def _(overwrite, proj):
         gputouse=None,
         overwrite=overwrite,
     )
-    return
 
 
 @app.cell
@@ -87,7 +79,6 @@ def _(proj):
             px_per_mm,
         ),
     )
-    return
 
 
 @app.cell
@@ -99,7 +90,6 @@ def _(overwrite, proj):
         ),
         overwrite=overwrite,
     )
-    return
 
 
 @app.cell
@@ -114,7 +104,6 @@ def _(proj):
 
     proj.combine_analysis()
     proj.collate_analysis()
-    return
 
 
 @app.cell
@@ -122,14 +111,12 @@ def _(overwrite, proj):
     proj.extract_features(
         overwrite=overwrite,
     )
-    return
 
 
 @app.cell
 def _(overwrite, proj):
     proj.classify_behaviour(overwrite=overwrite.value)
     proj.export_behaviour(overwrite=overwrite.value)
-    return
 
 
 @app.cell(hide_code=True)
@@ -139,7 +126,6 @@ def _():
 
     Run behavysis-viewer-app
     """)
-    return
 
 
 @app.cell
@@ -148,7 +134,6 @@ def _(proj):
 
     proj.combine_analysis()
     proj.collate_analysis()
-    return
 
 
 @app.cell

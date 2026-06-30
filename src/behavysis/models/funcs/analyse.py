@@ -1,3 +1,5 @@
+"""Analyse."""
+
 from pydantic import BaseModel
 
 from behavysis.constants import BPTS_CORNERS, BPTS_SIMBA

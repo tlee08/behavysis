@@ -1,3 +1,5 @@
+"""Extract Features."""
+
 from pydantic import BaseModel
 
 from behavysis.constants import BPTS_SIMBA, INDIVS_SIMBA

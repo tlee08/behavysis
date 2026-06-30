@@ -18,7 +18,6 @@ class Folders(Enum):
     PREDICTED_BEHAVIOUR = "6_predicted_behaviour"
     SCORED_BEHAVIOUR = "7_scored_behaviour"
     ANALYSIS_COMBINED = "9_analysis_combined"
-    EVALUATE_VID = "10_evaluate_video"
 
 
 class FileExts(Enum):
@@ -33,7 +32,6 @@ class FileExts(Enum):
     PREDICTED_BEHAVIOUR = DF_IO_FORMAT
     SCORED_BEHAVIOUR = DF_IO_FORMAT
     ANALYSIS_COMBINED = DF_IO_FORMAT
-    EVALUATE_VIDEO = "mp4"
 
 
 DEFAULT_CONFIG_FP = "default_config.json"

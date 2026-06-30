@@ -23,11 +23,12 @@ from typing import Protocol
 
 import numpy as np
 import pandas as pd
+import polars as pl
 from loguru import logger
 
-from behavysis.constants import LIKELIHOOD, SCORER, SINGLE, X, Y
-from behavysis.df_classes import KeypointsDf
+from behavysis.constants import SINGLE
 from behavysis.models import ExperimentConfig
+from behavysis.schemas import KEYPOINTS_SCHEMA, check_bpts_exist, read_df, write_df
 from behavysis.utils.io_utils import file_exists_msg
 
 
@@ -88,15 +89,14 @@ def start_stop_trim(
     if not overwrite and dst_fp.exists():
         logger.warning(file_exists_msg(dst_fp))
         return
-    # Getting necessary config parameters
     config = ExperimentConfig.model_validate_json(config_fp.read_text())
     start_frame = config.auto.start_frame
     stop_frame = config.auto.stop_frame
-    # Reading file
-    keypoints_df = KeypointsDf.read(src_fp)
-    # Trimming dataframe between start and stop frames
-    keypoints_df = keypoints_df.loc[start_frame:stop_frame, :]
-    KeypointsDf.write(keypoints_df, dst_fp)
+    keypoints_df = read_df(src_fp, KEYPOINTS_SCHEMA)
+    keypoints_df = keypoints_df.filter(
+        pl.col("frame").is_between(start_frame, stop_frame),
+    )
+    write_df(keypoints_df, dst_fp, KEYPOINTS_SCHEMA)
 
 
 def interpolate_stationary(
@@ -115,7 +115,6 @@ def interpolate_stationary(
     if not overwrite and dst_fp.exists():
         logger.warning(file_exists_msg(dst_fp))
         return
-    # Getting necessary config parameters list
     config = ExperimentConfig.model_validate_json(config_fp.read_text())
     config_filt_ls = config.user.preprocess.interpolate_stationary
     width_px = config.auto.formatted_vid.width_px
@@ -127,40 +126,47 @@ def interpolate_stationary(
             f"  Run proj.format_video() first to set these values."
         )
         raise ValueError(msg)
-    # Reading file
-    keypoints_df = KeypointsDf.read(src_fp)
-    # Getting the scorer name
-    scorer = keypoints_df.columns.unique(SCORER)[0]
-    # For each bodypart, filling in the given point
+
+    keypoints_df = read_df(src_fp, KEYPOINTS_SCHEMA)
+
     for config_filt in config_filt_ls:
-        # Getting config parameters
         bodypart = config_filt.bodypart
         pcutoff = config_filt.pcutoff
         pcutoff_all = config_filt.pcutoff_all
-        x = config_filt.x
-        y = config_filt.y
-        # Converting x and y from video proportions to pixel coordinates
-        x = x * width_px
-        y = y * height_px
-        # Getting "is_detected" for each frame for the bodypart
-        is_detected = keypoints_df[(scorer, "single", bodypart, LIKELIHOOD)] >= pcutoff
-        # If the bodypart is detected in less than the given proportion of the video,
-        # then set the x and y coordinates to the given values
+        x_px = config_filt.x * width_px
+        y_px = config_filt.y * height_px
+
+        # Get likelihood for single individual + bodypart
+        mask = (pl.col("individual") == SINGLE) & (pl.col("bodypart") == bodypart)
+        is_detected = (
+            keypoints_df.filter(mask)
+            .select(
+                pl.col("likelihood") >= pcutoff,
+            )
+            .to_series()
+        )
+
         if is_detected.mean() < pcutoff_all:
-            keypoints_df[(scorer, "single", bodypart, X)] = x
-            keypoints_df[(scorer, "single", bodypart, Y)] = y
-            keypoints_df[(scorer, "single", bodypart, LIKELIHOOD)] = pcutoff
+            # Set x, y, likelihood for all frames matching this bodypart
+            keypoints_df = keypoints_df.with_columns(
+                pl.when(mask).then(pl.lit(x_px)).otherwise(pl.col("x")).alias("x"),
+                pl.when(mask).then(pl.lit(y_px)).otherwise(pl.col("y")).alias("y"),
+                pl.when(mask)
+                .then(pl.lit(pcutoff))
+                .otherwise(pl.col("likelihood"))
+                .alias("likelihood"),
+            )
             logger.info(
                 f"{bodypart} is detected in less than {pcutoff_all} of the video."
-                f" Setting x and y coordinates to ({x}, {y}).",
+                f" Setting x and y coordinates to ({x_px}, {y_px}).",
             )
         else:
             logger.info(
                 f"{bodypart} is detected in more than {pcutoff_all} of the video."
                 " No need for stationary interpolation.",
             )
-    # Saving
-    KeypointsDf.write(keypoints_df, dst_fp)
+
+    write_df(keypoints_df, dst_fp, KEYPOINTS_SCHEMA)
 
 
 def interpolate(
@@ -188,35 +194,46 @@ def interpolate(
                 - pcutoff: float
     ```
     """
-    # Have error checking for any columns that have NO points above the pcutoff
-    # (so they are all NaN)
     if not overwrite and dst_fp.exists():
         logger.warning(file_exists_msg(dst_fp))
         return
-    # Getting necessary config parameters
     config = ExperimentConfig.model_validate_json(config_fp.read_text())
     config_filt = config.user.preprocess.interpolate
-    # Reading file
-    keypoints_df = KeypointsDf.read(src_fp)
-    # Gettings the unique groups of (individual, bodypart) groups.
-    unique_cols = keypoints_df.columns.droplevel(["coords"]).unique()
-    # Setting low-likelihood points to Nan to later interpolate
-    for scorer, indiv, bp in unique_cols:
-        # Imputing Nan likelihood points with 0
-        keypoints_df[(scorer, indiv, bp, LIKELIHOOD)] = keypoints_df[
-            (scorer, indiv, bp, LIKELIHOOD)
-        ].fillna(value=0)
-        # Setting x and y coordinates of points that have low likelihood to Nan
-        to_remove = keypoints_df[(scorer, indiv, bp, LIKELIHOOD)] < config_filt.pcutoff
-        keypoints_df.loc[to_remove, (scorer, indiv, bp, X)] = np.nan
-        keypoints_df.loc[to_remove, (scorer, indiv, bp, Y)] = np.nan
-    # linearly interpolating Nan x and y points.
-    # Also backfilling points at the start.
-    # Also forward filling points at the end.
-    # Also imputing nan points with 0 (if the ENTIRE column is nan, then it's imputed)
-    keypoints_df = keypoints_df.interpolate(method="linear").bfill().ffill()
-    # if df.isna().to_numpy().any() then the entire column is nan (log warning)
-    KeypointsDf.write(keypoints_df, dst_fp)
+
+    keypoints_df = read_df(src_fp, KEYPOINTS_SCHEMA)
+
+    # Fill any null likelihoods with 0
+    keypoints_df = keypoints_df.with_columns(
+        pl.col("likelihood").fill_null(0),
+    )
+
+    # Set x and y to null where likelihood is below pcutoff
+    keypoints_df = keypoints_df.with_columns(
+        pl.when(pl.col("likelihood") >= config_filt.pcutoff)
+        .then(pl.col("x"))
+        .otherwise(None)
+        .alias("x"),
+        pl.when(pl.col("likelihood") >= config_filt.pcutoff)
+        .then(pl.col("y"))
+        .otherwise(None)
+        .alias("y"),
+    )
+
+    # Interpolate within each (individual, bodypart) group, forward/backward fill edges
+    keypoints_df = keypoints_df.with_columns(
+        pl.col("x")
+        .interpolate()
+        .forward_fill()
+        .backward_fill()
+        .over(["individual", "bodypart"]),
+        pl.col("y")
+        .interpolate()
+        .forward_fill()
+        .backward_fill()
+        .over(["individual", "bodypart"]),
+    )
+
+    write_df(keypoints_df, dst_fp, KEYPOINTS_SCHEMA)
 
 
 def refine_ids(src_fp: Path, dst_fp: Path, config_fp: Path, *, overwrite: bool) -> None:
@@ -241,9 +258,9 @@ def refine_ids(src_fp: Path, dst_fp: Path, config_fp: Path, *, overwrite: bool) 
     if not overwrite and dst_fp.exists():
         logger.warning(file_exists_msg(dst_fp))
         return
-    # Reading file
-    keypoints_df = KeypointsDf.read(src_fp)
-    # Getting necessary config parameters
+
+    keypoints_df = read_df(src_fp, KEYPOINTS_SCHEMA)
+
     config = ExperimentConfig.model_validate_json(config_fp.read_text())
     config_filt = config.user.preprocess.refine_ids
     marked = config.get_ref(config_filt.marked)
@@ -253,49 +270,55 @@ def refine_ids(src_fp: Path, dst_fp: Path, config_fp: Path, *, overwrite: bool) 
     bpts = config.get_ref(config_filt.bodyparts)
     metric = config.get_ref(config_filt.metric)
     fps = config.auto.formatted_vid.fps
-    # Calculating more parameters
     window_frames = int(np.round(fps * window_sec, 0))
-    # Error checking for invalid/non-existent column names marked, unmarked, and marking
-    for column, level in [
-        (marked, "individuals"),
-        (unmarked, "individuals"),
-        (marking, "bodyparts"),
+
+    # Validate individuals and marking exist
+    available_indivs = keypoints_df.select("individual").unique().to_series().to_list()
+    available_bpts = keypoints_df.select("bodypart").unique().to_series().to_list()
+    for column, level, available in [
+        (marked, "individuals", available_indivs),
+        (unmarked, "individuals", available_indivs),
+        (marking, "bodyparts", available_bpts),
     ]:
-        if column not in keypoints_df.columns.unique(level):
+        if column not in available:
             msg = (
-                f'The marking value in the config file, "{column}'
-                "is not a column name in the DLC file."
+                f'The value in the config file, "{column}"'
+                f" is not present in the {level} of the DLC file."
             )
             raise ValueError(msg)
-    # Checking that bodyparts are all valid
-    KeypointsDf.check_bpts_exist(keypoints_df, bpts)
-    # Calculating the distances between the averaged bodycentres and the marking
+
+    check_bpts_exist(keypoints_df, bpts)
+
+    # Calculate distances between each individual and the marking
     mark_dists_df = _get_mark_dists_df(keypoints_df, marked, unmarked, [marking], bpts)
-    # Getting "to_switch" decision series for each frame
+
+    # Get switch decisions
     switch_df = _get_id_switch_df(mark_dists_df, window_frames, marked, unmarked)
-    # Updating df with the switched values
-    switched_keypoints_df = _switch_identities(
+
+    # Apply identity switches
+    switched = _switch_identities(
         keypoints_df,
-        switch_df[metric],
+        switch_df.select(metric).to_series(),
         marked,
         unmarked,
     )
-    KeypointsDf.write(switched_keypoints_df, dst_fp)
+
+    write_df(switched, dst_fp, KEYPOINTS_SCHEMA)
 
 
 def _get_mark_dists_df(
-    keypoints_df: pd.DataFrame,
+    keypoints_df: pl.DataFrame,
     marked_indiv: str,
     unmarked_indiv: str,
     mark_pts: list[str],
     bpts: list[str],
-) -> pd.DataFrame:
+) -> pl.DataFrame:
     """Calculate distances between individuals and marking for identity refinement.
 
     Parameters
     ----------
-    keypoints_df : pd.DataFrame
-        Keypoints dataframe with coordinates.
+    keypoints_df : pl.DataFrame
+        Keypoints dataframe in long form (KEYPOINTS_SCHEMA).
     marked_indiv : str
         Name of marked individual.
     unmarked_indiv : str
@@ -307,128 +330,177 @@ def _get_mark_dists_df(
 
     Returns:
     -------
-    pd.DataFrame
-        DataFrame with distances to marking for each individual.
+    pl.DataFrame
+        DataFrame with frame, mark_x, mark_y, marked_x,marked_y,
+        unmarked_x, unmarked_y.
     """
-    l0 = keypoints_df.columns.unique(0)[0]
-    mark_dists_df = pd.DataFrame(index=keypoints_df.index)
-    indivs = [marked_indiv, unmarked_indiv]
-    for coord in [X, Y]:
-        idx = pd.IndexSlice
-        # Getting the coordinates of the colour marking in each frame
-        mark_dists_df[("mark", coord)] = keypoints_df.loc[
-            :,
-            idx[l0, SINGLE, mark_pts, coord],
-        ].mean(axis=1)
-        for indiv in indivs:
-            # Getting the coordinates of each individual (average of the bpts list)
-            mark_dists_df[(indiv, coord)] = keypoints_df.loc[
-                :,
-                idx[l0, indiv, bpts, coord],
-            ].mean(axis=1)
-    # Getting the Euclidean distance between each mouse
-    # and the colour marking in each frame
-    for indiv in indivs:
-        mark_dists_df[(indiv, "dist")] = np.sqrt(
-            np.square(mark_dists_df[(indiv, X)] - mark_dists_df[("mark", X)])
-            + np.square(mark_dists_df[(indiv, Y)] - mark_dists_df[("mark", Y)]),
+    # Average marking bodypart coordinates per frame
+    mark_xy = (
+        keypoints_df.filter(
+            pl.col("individual") == "single",
+            pl.col("bodypart").is_in(mark_pts),
         )
-    # Formatting columns as a MultiIndex
-    mark_dists_df.columns = pd.MultiIndex.from_tuples(mark_dists_df.columns)
-    return mark_dists_df
+        .group_by("frame")
+        .agg([pl.col("x").mean().alias("mark_x"), pl.col("y").mean().alias("mark_y")])
+        .sort("frame")
+    )
+
+    # Average marked individual bodypart coordinates per frame
+    marked_xy = (
+        keypoints_df.filter(
+            pl.col("individual") == marked_indiv,
+            pl.col("bodypart").is_in(bpts),
+        )
+        .group_by("frame")
+        .agg(
+            [
+                pl.col("x").mean().alias("marked_x"),
+                pl.col("y").mean().alias("marked_y"),
+            ],
+        )
+        .sort("frame")
+    )
+
+    # Average unmarked individual bodypart coordinates per frame
+    unmarked_xy = (
+        keypoints_df.filter(
+            pl.col("individual") == unmarked_indiv,
+            pl.col("bodypart").is_in(bpts),
+        )
+        .group_by("frame")
+        .agg(
+            [
+                pl.col("x").mean().alias("unmarked_x"),
+                pl.col("y").mean().alias("unmarked_y"),
+            ],
+        )
+        .sort("frame")
+    )
+
+    # Join all together on frame
+    dists = mark_xy.join(marked_xy, on="frame").join(unmarked_xy, on="frame")
+
+    # Calculate Euclidean distances
+    return dists.with_columns(
+        (
+            (pl.col("marked_x") - pl.col("mark_x")).pow(2)
+            + (pl.col("marked_y") - pl.col("mark_y")).pow(2)
+        )
+        .sqrt()
+        .alias("marked_dist"),
+        (
+            (pl.col("unmarked_x") - pl.col("mark_x")).pow(2)
+            + (pl.col("unmarked_y") - pl.col("mark_y")).pow(2)
+        )
+        .sqrt()
+        .alias("unmarked_dist"),
+    )
 
 
 def _get_id_switch_df(
-    mark_dists_df: pd.DataFrame,
+    mark_dists_df: pl.DataFrame,
     window_frames: int,
     marked: str,
     unmarked: str,
-) -> pd.DataFrame:
+) -> pl.DataFrame:
     """Calculate identity switch decisions using current, rolling, and binned metrics.
 
     Parameters
     ----------
-    mark_dists_df : pd.DataFrame
-        DataFrame with distances to marking for each individual.
+    mark_dists_df : pl.DataFrame
+        DataFrame with ``marked_dist`` and ``unmarked_dist`` columns.
     window_frames : int
         Window size in frames for rolling/binned calculations.
     marked : str
-        Name of marked individual.
+        Name of marked individual (unused, kept for API compatibility).
     unmarked : str
-        Name of unmarked individual.
+        Name of unmarked individual (unused, kept for API compatibility).
 
     Returns:
     -------
-    pd.DataFrame
-        DataFrame with 'current', 'rolling', and 'binned' switch decisions.
+    pl.DataFrame
+        DataFrame with ``frame``, ``current``, ``rolling``, ``binned`` columns.
     """
-    switch_df = pd.DataFrame(index=mark_dists_df.index)
-    #   - Current decision
-    switch_df["current"] = (
-        mark_dists_df[(marked, "dist")] > mark_dists_df[(unmarked, "dist")]
+    _ = marked, unmarked  # explicitly unused in new API
+
+    switch_df = mark_dists_df.select(
+        "frame",
+        (pl.col("marked_dist") > pl.col("unmarked_dist")).alias("current"),
+    ).sort("frame")
+
+    # Rolling mode over window
+    # Convert to pandas for rolling mode (Polars has no rolling mode)
+    current_pd = switch_df.select("current").to_series().to_pandas()
+
+    def _rolling_mode(x: "np.ndarray") -> bool:
+        vals, counts = np.unique(x, return_counts=True)
+        return vals[counts.argmax()]
+
+    rolling_pd = (
+        current_pd.rolling(window_frames, min_periods=1)
+        .apply(
+            _rolling_mode,
+            raw=True,
+        )
+        .astype(bool)
     )
-    #   - Decision rolling
-    switch_df["rolling"] = (
-        switch_df["current"]
-        .rolling(window_frames, min_periods=1)
-        .apply(lambda x: x.mode()[0])
-        .map({1: True, 0: False})
+
+    # Binned mode
+    frames = switch_df.select("frame").to_series().to_numpy()
+    bins = np.arange(frames.min(), frames.max() + window_frames, window_frames)
+    binned_labels = pd.cut(frames, bins=bins, labels=bins[1:], include_lowest=True)
+    current_pd.index = binned_labels
+    binned_pd = (
+        current_pd.groupby(level=0)
+        .transform(
+            lambda x: x.mode().iloc[0] if len(x) > 0 else False,
+        )
+        .astype(bool)
     )
-    #   - Decision binned
-    bins = np.arange(
-        switch_df.index.min(),
-        switch_df.index.max() + window_frames,
-        window_frames,
+
+    # Reconstruct as Polars DataFrame
+    return pl.DataFrame(
+        {
+            "frame": switch_df.select("frame").to_series(),
+            "current": switch_df.select("current").to_series(),
+            "rolling": pl.Series(rolling_pd.values),
+            "binned": pl.Series(binned_pd.values),
+        },
     )
-    df_switch_x = pd.DataFrame()
-    df_switch_x["bins"] = pd.Series(
-        pd.cut(switch_df.index, bins=bins, labels=bins[1:], include_lowest=True),
-    )
-    df_switch_x["current"] = switch_df["current"]
-    switch_df["binned"] = df_switch_x.groupby("bins")["current"].transform(
-        lambda x: x.mode(),
-    )
-    return switch_df
 
 
 def _switch_identities(
-    keypoints_df: pd.DataFrame,
-    is_switch: pd.Series,
+    keypoints_df: pl.DataFrame,
+    is_switch: pl.Series | np.ndarray,
     marked_indiv: str,
     unmarked_indiv: str,
-) -> pd.DataFrame:
-    """Swap individual identities in keypoints dataframe where is_switch is True.
+) -> pl.DataFrame:
+    """Swap individual identities where is_switch is True.
 
-    Parameters
-    ----------
-    keypoints_df : pd.DataFrame
-        Keypoints dataframe with individual columns.
-    is_switch : pd.Series
-        Boolean series indicating which frames need identity swap.
-    marked_indiv : str
-        Name of marked individual.
-    unmarked_indiv : str
-        Name of unmarked individual.
-
-    Returns:
-    -------
-    pd.DataFrame
-        Keypoints dataframe with swapped identities.
+    In Polars long form, this means flipping the ``individual`` column values
+    between ``marked_indiv`` and ``unmarked_indiv`` on frames where the switch
+    is active.
     """
-    keypoints_df = keypoints_df.copy()
-    header = keypoints_df.columns.unique(0)[0]
-    keypoints_df["isSwitch"] = is_switch
+    if isinstance(is_switch, np.ndarray):
+        is_switch = pl.Series("is_switch", is_switch)
 
-    def _f(row: pd.Series, marked: str, unmarked: str) -> pd.Series:
-        if row["isSwitch"][0]:
-            temp = list(row.loc[header, unmarked].copy())
-            row[header, unmarked] = list(row[header, marked].copy())
-            row[header, marked] = temp
-        return row
+    # Build a frame→switch lookup
+    frames = keypoints_df.select("frame").unique().sort("frame").to_series()
+    switch_lookup = pl.DataFrame({"frame": frames, "is_switch": is_switch})
 
-    keypoints_df = keypoints_df.apply(
-        lambda row: _f(row, marked_indiv, unmarked_indiv),
-        axis=1,
+    return (
+        keypoints_df.join(switch_lookup, on="frame")
+        .with_columns(
+            pl.when(
+                pl.col("is_switch") & (pl.col("individual") == marked_indiv),
+            )
+            .then(pl.lit(unmarked_indiv))
+            .when(
+                pl.col("is_switch") & (pl.col("individual") == unmarked_indiv),
+            )
+            .then(pl.lit(marked_indiv))
+            .otherwise(pl.col("individual"))
+            .alias("individual"),
+        )
+        .drop("is_switch")
     )
-    keypoints_df = keypoints_df.drop(columns="isSwitch")
-    return keypoints_df

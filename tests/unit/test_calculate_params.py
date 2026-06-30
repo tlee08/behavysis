@@ -35,7 +35,7 @@ class TestStopFrameFromDur:
         config_fp = tmp_path / "config.json"
         config_fp.write_text(config.model_dump_json(indent=2))
 
-        stop_frame_from_dur(config_fp)
+        stop_frame_from_dur(tmp_path / "dummy.parquet", config_fp)
 
         config = ExperimentConfig.model_validate_json(config_fp.read_text())
         logger.info(config.auto.model_dump_json(indent=2))
@@ -58,7 +58,7 @@ class TestStopFrameFromDur:
         config_fp = tmp_path / "config.json"
         config_fp.write_text(config.model_dump_json(indent=2))
 
-        stop_frame_from_dur(config_fp)
+        stop_frame_from_dur(tmp_path / "dummy.parquet", config_fp)
 
         config = ExperimentConfig.model_validate_json(config_fp.read_text())
         # Stop frame should be calculated (even if it exceeds total_frames)

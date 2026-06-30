@@ -45,7 +45,6 @@ dev = [
 [project.scripts]
 behavysis-init = "behavysis.scripts.init:main"
 behavysis-make-project = "behavysis.scripts.make_project:main"
-behavysis-viewer = "behavysis.viewer.__main__:main"
 behavysis-make-dlc-builder = "behavysis.scripts.make_dlc_builder:main"
 
 [build-system]
@@ -79,8 +78,8 @@ fixable = ["ALL"]
 unfixable = []
 exclude = [
     "tests/*",
-    "src/behavysis/viewer/*",
     "src/behavysis/templates/run_pipeline_notebook.py",
+    "src/behavysis/templates/run_pipeline_notebook_simple.py",
 ]
 
 [tool.ruff.lint.pydocstyle]

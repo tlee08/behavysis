@@ -140,9 +140,7 @@ def _():
 @app.cell
 def _():
     # Each Step
-    update_config_checkbox = mo.ui.checkbox(
-        label="Step 0: Update config", value=True
-    )
+    update_config_checkbox = mo.ui.checkbox(label="Step 0: Update config", value=True)
     format_vid_checkbox = mo.ui.checkbox(
         label="Step 1: Format videos",
         value=True,
@@ -251,9 +249,7 @@ def _(
             format_vid_checkbox,
             run_dlc_checkbox,
             calculate_parameters_checkbox,
-            mo.callout(
-                get_checkbox_list(calculate_parameters_funcs_ls), kind="info"
-            ),
+            mo.callout(get_checkbox_list(calculate_parameters_funcs_ls), kind="info"),
             preprocess_checkbox,
             mo.callout(get_checkbox_list(preprocess_funcs_ls), kind="info"),
             analyse_checkbox,
@@ -303,9 +299,7 @@ def _(
         mo.md("""Click the 'Run Pipeline' button once you're happy to run"""),
     )
 
-    names_ls = [
-        i.name for i in (Path(project_fp.value) / "1_raw_videos").iterdir()
-    ]
+    names_ls = [i.name for i in (Path(project_fp.value) / "1_raw_videos").iterdir()]
     proj = Project(Path(project_fp.value))
     proj.nprocs = nprocs.value
     proj.import_experiments(names_ls)
@@ -425,7 +419,6 @@ def _(
             func_imports=all_func_names,
         )
 
-
     export_download = mo.download(
         data=lambda: _build_script().encode("utf-8"),
         filename="run_pipeline.py",
@@ -435,9 +428,7 @@ def _(
 
     mo.hstack(
         [
-            mo.md(
-                "Click to download the configured pipeline as a standalone script:"
-            ),
+            mo.md("Click to download the configured pipeline as a standalone script:"),
             export_download,
         ]
     )

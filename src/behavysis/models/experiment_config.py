@@ -9,7 +9,6 @@ from .funcs.calculate_params import (
     CalculateParamsConfig,
 )
 from .funcs.classify_behaviour import ClassifyBehaviourConfig
-from .funcs.evaluate_vid import EvaluateVidConfig
 from .funcs.extract_features import ExtractFeaturesConfig
 from .funcs.format_vid import FormatVidConfig, VidMetadata
 from .funcs.preprocess import PreprocessConfig
@@ -37,7 +36,6 @@ class UserConfig(BaseModel):
     extract_features: ExtractFeaturesConfig = ExtractFeaturesConfig()
     classify_behaviour: list[ClassifyBehaviourConfig] = []
     analyse: AnalyseConfig = AnalyseConfig()
-    evaluate_vid: EvaluateVidConfig = EvaluateVidConfig()
 
 
 class AutoConfig(BaseModel):

@@ -1,24 +1,38 @@
-"""Functions have the following format."""
+"""Analysis functions operating on Polars long-form keypoints DataFrames.
 
-from pathlib import Path
-from typing import Protocol
+Functions have the following format:
+    func(keypoints_fp, formatted_vid_fp, dst_dir, config_fp) -> None
+"""
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Protocol
 
 import cv2
 import numpy as np
-import pandas as pd
+import polars as pl
 import seaborn as sns
 from loguru import logger
 from matplotlib import pyplot as plt
-from matplotlib.axes import Axes
 
-from behavysis.constants import FBF, INDIVIDUALS, MEASURES, SINGLE, X, Y
-from behavysis.df_classes import (
-    AnalysisBinnedDf,
-    AnalysisDf,
-    BehaviourScoredDf,
-    KeypointsDf,
-)
+from behavysis.constants import DF_IO_FORMAT, FBF
 from behavysis.models import ExperimentConfig
+from behavysis.schemas import (
+    ANALYSIS_SCHEMA,
+    KEYPOINTS_SCHEMA,
+    check_bpts_exist,
+    get_indivs_bpts,
+    read_df,
+    summary_binned_behaviour,
+    summary_binned_quantitative,
+    vect2bouts,
+    write_df,
+)
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+    from matplotlib.axes import Axes
 
 
 class AnalyseFunc(Protocol):
@@ -34,117 +48,325 @@ class AnalyseFunc(Protocol):
         """Protocol for analyse functions."""
 
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# Helpers
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+def _bodypart_avg_xy(
+    df: pl.DataFrame,
+    indiv: str,
+    bpts: list[str],
+) -> pl.DataFrame:
+    """Average x and y coordinates across bodyparts per frame for an individual.
+
+    Returns DataFrame with frame, x_mean, y_mean.
+    """
+    return (
+        df.filter(
+            pl.col("individual") == indiv,
+            pl.col("bodypart").is_in(bpts),
+        )
+        .group_by("frame")
+        .agg([pl.col("x").mean().alias("x"), pl.col("y").mean().alias("y")])
+        .sort("frame")
+    )
+
+
+def _pt_in_roi(pt_x: float, pt_y: float, corners_df: pl.DataFrame) -> bool:
+    """Check if point is inside polygon using ray casting algorithm."""
+    crossings = 0
+    n = corners_df.height
+    for i in range(n):
+        c1 = corners_df.row(i, named=True)
+        c2 = corners_df.row((i + 1) % n, named=True)
+        y_between = (c1["y"] > pt_y) != (c2["y"] > pt_y)
+        if y_between:
+            x_int = (c2["x"] - c1["x"]) * (pt_y - c1["y"]) / (c2["y"] - c1["y"]) + c1[
+                "x"
+            ]
+            if pt_x < x_int:
+                crossings += 1
+    return crossings % 2 == 1
+
+
+def _compute_movement(
+    keypoints_df: pl.DataFrame,
+    bpts: list[str],
+    indivs: list[str],
+    px_per_mm: float,
+    smoothing_frames: int,
+) -> pl.DataFrame:
+    """Compute frame-by-frame movement distance for each individual.
+
+    Returns DataFrame in ANALYSIS_SCHEMA format.
+    """
+    jitter_frames = 3
+    rows = []
+
+    for indiv in indivs:
+        avg = _bodypart_avg_xy(keypoints_df, indiv, bpts)
+
+        # Smooth to reduce jitter
+        x_smooth = (
+            avg.select("x")
+            .to_series()
+            .rolling_mean(window_size=jitter_frames, min_samples=1, center=True)
+        )
+        y_smooth = (
+            avg.select("y")
+            .to_series()
+            .rolling_mean(window_size=jitter_frames, min_samples=1, center=True)
+        )
+
+        # Frame-by-frame deltas
+        delta_x = x_smooth.diff(null_behavior="drop").fill_null(0)
+        delta_y = y_smooth.diff(null_behavior="drop").fill_null(0)
+        delta_px = (delta_x.pow(2) + delta_y.pow(2)).sqrt()
+
+        # Distance in mm
+        dist_mm = delta_px / px_per_mm
+
+        # Smoothed distance
+        dist_mm_smoothed = dist_mm.rolling_mean(
+            window_size=smoothing_frames,
+            min_samples=1,
+            center=True,
+        )
+
+        frames = avg.select("frame").to_series()
+
+        for i in range(len(frames)):
+            rows.append(
+                {
+                    "frame": int(frames[i]),
+                    "individual": indiv,
+                    "measure": "DistMM",
+                    "value": float(dist_mm[i]),
+                },
+            )
+            rows.append(
+                {
+                    "frame": int(frames[i]),
+                    "individual": indiv,
+                    "measure": "DistMMSmoothed",
+                    "value": float(dist_mm_smoothed[i]),
+                },
+            )
+
+    return pl.DataFrame(rows, schema=ANALYSIS_SCHEMA)
+
+
+def _make_location_scatterplot(
+    scatter_df: pl.DataFrame,
+    corners_df: pl.DataFrame,
+    frame: np.ndarray,
+    dst_fp: Path,
+) -> None:
+    """Make location scatterplot from Polars long-form scatter data."""
+    # scatter_df is in ANALYSIS_SCHEMA with x and y as measure values
+    indivs = (
+        scatter_df.select("individual")
+        .unique()
+        .sort("individual")
+        .to_series()
+        .to_list()
+    )
+    measures = scatter_df.select("measure").unique().to_series().to_list()
+    roi_ls = [m for m in measures if m not in ["x", "y"]]
+
+    ax_size = 5
+    nrows = max(len(roi_ls), 1)
+    ncols = max(len(indivs), 1)
+    fig, axes = plt.subplots(
+        nrows=nrows,
+        ncols=ncols,
+        figsize=(ax_size * ncols, ax_size * nrows),
+    )
+    axes = np.atleast_2d(np.asarray(axes)).reshape(nrows, ncols)
+
+    for i, roi in enumerate(roi_ls):
+        for j, indiv in enumerate(indivs):
+            ax: Axes = axes[i, j]
+            ax.imshow(frame, alpha=0.5)
+
+            # Plot x-y scatter for this individual, colored by ROI
+            indiv_data = scatter_df.filter(pl.col("individual") == indiv)
+            plot_data = indiv_data.pivot(
+                index="frame",
+                on="measure",
+                values="value",
+            ).to_pandas()
+
+            if (
+                roi in plot_data.columns
+                and "x" in plot_data.columns
+                and "y" in plot_data.columns
+            ):
+                sns.scatterplot(
+                    data=plot_data,
+                    x="x",
+                    y="y",
+                    hue=roi,
+                    palette={0: "orange", 1: "green"},
+                    alpha=0.3,
+                    linewidth=0,
+                    marker=".",
+                    s=5,
+                    legend=False,
+                    ax=ax,
+                )
+
+            # ROI polygon
+            if corners_df is not None and "roi" in corners_df.columns:
+                roi_corners = corners_df.filter(pl.col("roi") == roi)
+                if roi_corners.height > 0:
+                    corners_pd = roi_corners.to_pandas()
+                    sns.lineplot(
+                        data=corners_pd,
+                        x="x",
+                        y="y",
+                        linewidth=1,
+                        marker="+",
+                        markeredgecolor=(1, 0, 0),
+                        markeredgewidth=2,
+                        markersize=5,
+                        estimator=None,
+                        sort=False,
+                        legend=False,
+                        ax=ax,
+                    )
+
+            ax.set_title(f"{roi} - {indiv}")
+            ax.set_aspect("equal")
+
+    dst_fp.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(dst_fp)
+    fig.clf()
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Analysis functions
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
 def in_roi(
     keypoints_fp: Path,
     formatted_vid_fp: Path,
     dst_dir: Path,
     config_fp: Path,
 ) -> None:
-    """Determines frames where subject is inside ROI from average bpts.
-
-    Points are `padding_px` padded (away) from center.
-    """
+    """Determines frames where subject is inside ROI from average bpts."""
     name = keypoints_fp.stem
     dst_subdir = dst_dir / "in_roi"
-    # Calculating deltas (changes in body position) between each frame for the subject
+
     config = ExperimentConfig.model_validate_json(config_fp.read_text())
     analysis_config = config.get_analysis_config()
     start_frame = config.auto.start_frame
     config_filt_ls = config.user.analyse.in_roi
-    # Loading in dataframe
-    keypoints_df = KeypointsDf.clean_headings(KeypointsDf.read(keypoints_fp))
-    assert keypoints_df.shape[0] > 0, (
-        "No frames in keypoints_df. Please check keypoints file."
-    )
-    # Getting indivs list
-    indivs, _ = KeypointsDf.get_indivs_bpts(keypoints_df)
-    # Making analysis_df
-    analysis_df_ls = []
-    scatter_df_ls = []
-    corners_df_ls = []
-    roi_names_ls = []
-    # For each roi, calculate the in-roi status of the subject
-    idx = pd.IndexSlice
+
+    keypoints_df = read_df(keypoints_fp, KEYPOINTS_SCHEMA)
+    assert keypoints_df.height > 0, "No frames in keypoints_df."
+
+    indivs, _ = get_indivs_bpts(keypoints_df)
+
+    all_analysis_rows = []
+    all_corners_rows = []
+    roi_names = []
+
     for config_filt in config_filt_ls:
-        # Getting necessary config parameters
         roi_name = config.get_ref(config_filt.roi_name)
         is_in = config.get_ref(config_filt.is_in)
         bpts = config.get_ref(config_filt.bodyparts)
         padding_mm = config.get_ref(config_filt.padding_mm)
         roi_corners = config.get_ref(config_filt.roi_corners)
-        # Calculating more parameters
+
         padding_px = padding_mm / analysis_config.px_per_mm
-        # Checking bodyparts and roi_corners exist
-        KeypointsDf.check_bpts_exist(keypoints_df, bpts)
-        KeypointsDf.check_bpts_exist(keypoints_df, roi_corners)
-        # Getting average corner coordinates. This assumes ROI corners do not move.
-        corners_i_df = pd.DataFrame(
-            [keypoints_df[(SINGLE, pt)].mean() for pt in roi_corners],
-        ).drop(columns=["likelihood"])
-        # Adjusting x-y to have `padding_px` dilation/erosion from the points themselves
-        roi_center = corners_i_df.mean()
-        for i in corners_i_df.index:
-            # Calculating angle from centre to point (going out from centre)
-            theta = np.arctan2(
-                corners_i_df.loc[i, Y] - roi_center[Y],
-                corners_i_df.loc[i, X] - roi_center[X],
+
+        check_bpts_exist(keypoints_df, bpts)
+        check_bpts_exist(keypoints_df, roi_corners)
+
+        # Average corner coordinates (assumed stationary)
+        corners_rows = []
+        for pt in roi_corners:
+            avg = keypoints_df.filter(pl.col("bodypart") == pt).select(
+                pl.col("x").mean().alias("x"),
+                pl.col("y").mean().alias("y"),
             )
-            # Getting x, y distances so point is `padding_px` padded (away) from center
-            corners_i_df.loc[i, X] = corners_i_df.loc[i, X] + (
-                padding_px * np.cos(theta)
+            corners_rows.append(avg)
+
+        corners_i = pl.concat(corners_rows)
+        corners_i = (
+            corners_i.drop("likelihood")
+            if "likelihood" in corners_i.columns
+            else corners_i
+        )
+
+        # Adjust corners by padding
+        roi_center = corners_i.select(pl.col("x").mean(), pl.col("y").mean())
+        cx, cy = roi_center.row(0)
+
+        adjusted = []
+        for row in corners_i.iter_rows(named=True):
+            theta = np.arctan2(row["y"] - cy, row["x"] - cx)
+            adjusted.append(
+                {
+                    "x": row["x"] + padding_px * np.cos(theta),
+                    "y": row["y"] + padding_px * np.sin(theta),
+                },
             )
-            corners_i_df.loc[i, Y] = corners_i_df.loc[i, Y] + (
-                padding_px * np.sin(theta)
-            )
-        # Making the res_df
-        analysis_i_df = AnalysisDf.init_df(keypoints_df.index)
-        # For each individual, getting the in-roi status
+        corners_i = pl.DataFrame(adjusted)
+
+        # For each individual, determine in-roi status
         for indiv in indivs:
-            # Getting average body center (x, y) for each individual
-            analysis_i_df[(indiv, X)] = (
-                keypoints_df.loc[:, idx[indiv, bpts, X]].mean(axis=1).to_numpy()
-            )
-            analysis_i_df[(indiv, Y)] = (
-                keypoints_df.loc[:, idx[indiv, bpts, Y]].mean(axis=1).to_numpy()
-            )
-            # Determining if the indiv body center is in the ROI
-            analysis_i_df[(indiv, roi_name)] = analysis_i_df[indiv].apply(
-                lambda pt, corners_i_df=corners_i_df: _pt_in_roi(pt, corners_i_df),
-                axis=1,
-            )
-        # Inverting in_roi status if is_in is False
-        if not is_in:
-            analysis_i_df.loc[:, idx[:, roi_name]] = ~analysis_i_df.loc[
-                :,
-                idx[:, roi_name],
-            ]
-        analysis_df_ls.append(analysis_i_df.loc[:, idx[:, roi_name]].astype(np.int8))
-        scatter_df_ls.append(analysis_i_df)
-        corners_df_ls.append(corners_i_df)
-        roi_names_ls.append(roi_name)
-    # Concatenating all analysis_df_ls and roi_corners_df_ls
-    analysis_df = pd.concat(analysis_df_ls, axis=1).T.drop_duplicates().T
-    scatter_df = pd.concat(scatter_df_ls, axis=1).T.drop_duplicates().T
-    corners_df = (
-        pd.concat(corners_df_ls, keys=roi_names_ls, names=["roi"]).T.drop_duplicates().T
-    )
-    corners_df = corners_df.reset_index(level="roi")
-    # Saving analysis_df
-    fbf_fp = dst_subdir / FBF / f"{name}.{AnalysisDf.io_format}"
-    AnalysisDf.write(analysis_df, fbf_fp)
-    # Making scatter plot
-    formatted_vid_cap = cv2.VideoCapture(formatted_vid_fp)
-    # Getting 100th frame of video (arbitrary)
+            avg = _bodypart_avg_xy(keypoints_df, indiv, bpts)
+            frames = avg.select("frame").to_series().to_list()
+            xs = avg.select("x").to_series().to_list()
+            ys = avg.select("y").to_series().to_list()
+
+            for f, px, py in zip(frames, xs, ys, strict=True):
+                in_roi_val = _pt_in_roi(px, py, corners_i)
+                if not is_in:
+                    in_roi_val = not in_roi_val
+                all_analysis_rows.append(
+                    {
+                        "frame": f,
+                        "individual": indiv,
+                        "measure": roi_name,
+                        "value": float(int(in_roi_val)),
+                    },
+                )
+
+        # Store corner positions for scatter plot
+        all_corners_rows.extend(
+            {
+                "roi": roi_name,
+                "x": row["x"],
+                "y": row["y"],
+            }
+            for row in corners_i.iter_rows(named=True)
+        )
+        roi_names.append(roi_name)
+
+    analysis_df = pl.DataFrame(all_analysis_rows, schema=ANALYSIS_SCHEMA)
+    corners_df = pl.DataFrame(all_corners_rows)
+
+    fbf_fp = dst_subdir / FBF / f"{name}.{DF_IO_FORMAT}"
+    write_df(analysis_df, fbf_fp, ANALYSIS_SCHEMA)
+
+    # Scatter plot
+    formatted_vid_cap = cv2.VideoCapture(str(formatted_vid_fp))
     for _ in range(start_frame + 100):
-        ret, frame = formatted_vid_cap.read()
-        if ret is False:
+        ret, frame_img = formatted_vid_cap.read()
+        if not ret:
             logger.warning("Video shorter than start_frame")
             break
-    # Getting scatter plot
+    formatted_vid_cap.release()
+
     plot_fp = dst_subdir / "scatter_plot" / f"{name}.png"
-    _make_location_scatterplot(scatter_df, corners_df, frame, plot_fp)
-    # Summarising and binning analysis_df
-    AnalysisBinnedDf.summary_binned_behaviour(
+    _make_location_scatterplot(analysis_df, corners_df, frame_img, plot_fp)
+
+    summary_binned_behaviour(
         analysis_df,
         dst_subdir,
         name,
@@ -152,145 +374,6 @@ def in_roi(
         analysis_config.bins_sec,
         analysis_config.custom_bins_sec,
     )
-
-
-def _pt_in_roi(
-    pt: pd.Series,
-    corners_df: pd.DataFrame,
-) -> bool:
-    """Check if point is inside polygon using ray casting algorithm."""
-    # Counting crossings over edge in region when point is translated to the right
-    crossings = 0
-    # To loop back to the first point at the end
-    first_corner = pd.DataFrame(corners_df.iloc[0]).T
-    corners_df = pd.concat((corners_df, first_corner), axis=0, ignore_index=True)
-    # Making x and y aliases
-    # For each edge
-    for i in range(corners_df.shape[0] - 1):
-        # Getting corner points of edge
-        c1 = corners_df.iloc[i]
-        c2 = corners_df.iloc[i + 1]
-        # Getting whether point-y is between corners-y
-        y_between = (c1[Y] > pt[Y]) != (c2[Y] > pt[Y])
-        # Getting whether point-x is to the left (le) the intersection of corners-x
-        x_left_of = pt[X] < (c2[X] - c1[X]) * (pt[Y] - c1[Y]) / (c2[Y] - c1[Y]) + c1[X]
-        if y_between and x_left_of:
-            crossings += 1
-    # Odd number of crossings means point is in region
-    return crossings % 2 == 1
-
-
-def _make_location_scatterplot(
-    scatter_df: pd.DataFrame,
-    corners_df: pd.DataFrame,
-    frame: np.ndarray,
-    dst_fp: Path,
-) -> None:
-    """Make location scatterplot.
-
-    Expects df index_levels=(frame,), column_levels=(individual, measure).
-    """
-    # Getting list of individuals and measures
-    indivs_ls = scatter_df.columns.unique(INDIVIDUALS)
-    roi_ls = scatter_df.columns.unique(MEASURES)
-    roi_ls = roi_ls[np.isin(roi_ls, ["x", "y"], invert=True)]
-    # "Looping" ROI bounding corners (to make closed polygons)
-    corners_df = pd.concat(
-        [corners_df, corners_df.groupby("roi").first().reset_index()],
-        ignore_index=True,
-    )
-    # Rows are rois, columns are individuals
-    ax_size = 5
-    fig, axes = plt.subplots(
-        nrows=roi_ls.shape[0],
-        ncols=indivs_ls.shape[0],
-        figsize=(ax_size * indivs_ls.shape[0], ax_size * roi_ls.shape[0]),
-    )
-    axes = np.asarray(axes).reshape(roi_ls.shape[0], indivs_ls.shape[0])
-    # For each roi and indiv, plotting the bpts scatter and ROI polygon plots
-    for i, roi in enumerate(roi_ls):
-        for j, indiv in enumerate(indivs_ls):
-            ax: Axes = axes[i, j]
-            # Adding frame image to plot
-            ax.imshow(
-                X=frame,
-                alpha=0.5,
-            )
-            # bpts scatter plot
-            sns.scatterplot(
-                data=pd.DataFrame(scatter_df[indiv]),
-                x=X,
-                y=Y,
-                hue=roi,
-                palette={0: "orange", 1: "green"},
-                alpha=0.3,
-                linewidth=0,
-                marker=".",
-                s=5,
-                legend=False,
-                ax=ax,
-            )
-            # ROI polygon plot
-            sns.lineplot(
-                data=corners_df[corners_df["roi"] == roi],
-                x=X,
-                y=Y,
-                linewidth=1,
-                marker="+",
-                markeredgecolor=(1, 0, 0),
-                markeredgewidth=2,
-                markersize=5,
-                estimator=None,
-                sort=False,
-                legend=False,
-                ax=ax,
-            )
-            # Setting axes characteristics
-            ax.set_title(f"{roi} - {indiv}")
-            ax.set_aspect("equal")
-    # Saving fig
-    dst_fp.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(dst_fp)
-    fig.clf()
-
-
-def _compute_movement(
-    keypoints_df: pd.DataFrame,
-    bpts: list[str],
-    indivs: list[str],
-    px_per_mm: float,
-    smoothing_frames: int,
-) -> pd.DataFrame:
-    """Compute frame-by-frame movement distance for each individual.
-
-    Returns DataFrame with columns (indiv, 'DistMM') and (indiv, 'DistMMSmoothed').
-    """
-    analysis_df = AnalysisDf.init_df(keypoints_df.index)
-    idx = pd.IndexSlice
-
-    # Smooth to reduce jitter contribution to movement
-    jitter_frames = 3
-    smoothed_xy_df = keypoints_df.rolling(
-        window=jitter_frames,
-        min_periods=1,
-        center=True,
-    ).agg(np.nanmean)
-
-    for indiv in indivs:
-        # Getting changes in x-y values between frames
-        delta_x = smoothed_xy_df.loc[:, idx[indiv, bpts, "x"]].mean(axis=1).diff()
-        delta_y = smoothed_xy_df.loc[:, idx[indiv, bpts, "y"]].mean(axis=1).diff()
-        delta_px = np.sqrt(np.power(delta_x, 2) + np.power(delta_y, 2))
-
-        # Store distance in mm (raw and smoothed)
-        analysis_df[(indiv, "DistMM")] = delta_px / px_per_mm
-        analysis_df[(indiv, "DistMMSmoothed")] = (
-            analysis_df[(indiv, "DistMM")]
-            .rolling(window=smoothing_frames, min_periods=1, center=True)
-            .agg(np.nanmean)
-        )
-
-    return analysis_df.bfill()
 
 
 def speed(
@@ -310,37 +393,41 @@ def speed(
     smoothing_sec = config.get_ref(config_filt.smoothing_sec)
     smoothing_frames = int(smoothing_sec * analysis_config.fps)
 
-    keypoints_df = KeypointsDf.clean_headings(KeypointsDf.read(keypoints_fp))
-    assert keypoints_df.shape[0] > 0, (
-        "No frames in keypoints_df. Please check keypoints file."
-    )
-    KeypointsDf.check_bpts_exist(keypoints_df, bpts)
-    indivs, _ = KeypointsDf.get_indivs_bpts(keypoints_df)
+    keypoints_df = read_df(keypoints_fp, KEYPOINTS_SCHEMA)
+    assert keypoints_df.height > 0, "No frames in keypoints_df."
+    check_bpts_exist(keypoints_df, bpts)
+    indivs, _ = get_indivs_bpts(keypoints_df)
 
-    # Compute movement and convert to speed (distance per second)
-    analysis_df = _compute_movement(
+    movement_df = _compute_movement(
         keypoints_df,
         bpts,
         indivs,
         analysis_config.px_per_mm,
         smoothing_frames,
     )
+
+    # Convert distance to speed
+    speed_rows = []
     for indiv in indivs:
-        analysis_df[(indiv, "SpeedMMperSec")] = (
-            analysis_df[(indiv, "DistMM")] * analysis_config.fps
-        )
-        analysis_df[(indiv, "SpeedMMperSecSmoothed")] = (
-            analysis_df[(indiv, "DistMMSmoothed")] * analysis_config.fps
-        )
-        # Remove distance columns - we only want speed
-        analysis_df = analysis_df.drop(
-            columns=[(indiv, "DistMM"), (indiv, "DistMMSmoothed")],
-        )
+        indiv_data = movement_df.filter(pl.col("individual") == indiv)
+        for measure_name in ["DistMM", "DistMMSmoothed"]:
+            dist_rows = indiv_data.filter(pl.col("measure") == measure_name)
+            speed_rows.append(
+                {
+                    "frame": row["frame"],
+                    "individual": indiv,
+                    "measure": f"SpeedMMperSec{measure_name.replace('DistMM', '')}",
+                    "value": row["value"] * analysis_config.fps,
+                }
+                for row in dist_rows.iter_rows(named=True)
+            )
 
-    fbf_fp = dst_subdir / FBF / f"{name}.{AnalysisDf.io_format}"
-    AnalysisDf.write(analysis_df, fbf_fp)
+    analysis_df = pl.DataFrame(speed_rows, schema=ANALYSIS_SCHEMA)
 
-    AnalysisBinnedDf.summary_binned_quantitative(
+    fbf_fp = dst_subdir / FBF / f"{name}.{DF_IO_FORMAT}"
+    write_df(analysis_df, fbf_fp, ANALYSIS_SCHEMA)
+
+    summary_binned_quantitative(
         analysis_df,
         dst_subdir,
         name,
@@ -362,17 +449,15 @@ def distance(
 
     config = ExperimentConfig.model_validate_json(config_fp.read_text())
     analysis_config = config.get_analysis_config()
-    config_filt = config.user.analyse.speed  # uses same config as speed
+    config_filt = config.user.analyse.speed
     bpts = config.get_ref(config_filt.bodyparts)
     smoothing_sec = config.get_ref(config_filt.smoothing_sec)
     smoothing_frames = int(smoothing_sec * analysis_config.fps)
 
-    keypoints_df = KeypointsDf.clean_headings(KeypointsDf.read(keypoints_fp))
-    assert keypoints_df.shape[0] > 0, (
-        "No frames in keypoints_df. Please check keypoints file."
-    )
-    KeypointsDf.check_bpts_exist(keypoints_df, bpts)
-    indivs, _ = KeypointsDf.get_indivs_bpts(keypoints_df)
+    keypoints_df = read_df(keypoints_fp, KEYPOINTS_SCHEMA)
+    assert keypoints_df.height > 0, "No frames in keypoints_df."
+    check_bpts_exist(keypoints_df, bpts)
+    indivs, _ = get_indivs_bpts(keypoints_df)
 
     analysis_df = _compute_movement(
         keypoints_df,
@@ -382,10 +467,10 @@ def distance(
         smoothing_frames,
     )
 
-    fbf_fp = dst_subdir / FBF / f"{name}.{AnalysisDf.io_format}"
-    AnalysisDf.write(analysis_df, fbf_fp)
+    fbf_fp = dst_subdir / FBF / f"{name}.{DF_IO_FORMAT}"
+    write_df(analysis_df, fbf_fp, ANALYSIS_SCHEMA)
 
-    AnalysisBinnedDf.summary_binned_quantitative(
+    summary_binned_quantitative(
         analysis_df,
         dst_subdir,
         name,
@@ -401,53 +486,75 @@ def social_distance(
     dst_dir: Path,
     config_fp: Path,
 ) -> None:
-    """Determines the speed of the subject in each frame."""
+    """Determines the social distance between two individuals."""
     name = keypoints_fp.stem
     dst_subdir = dst_dir / "social_distance"
-    # Calculating deltas (changes in body position) between each frame for the subject
+
     config = ExperimentConfig.model_validate_json(config_fp.read_text())
     analysis_config = config.get_analysis_config()
     config_filt = config.user.analyse.social_distance
     bpts = config.get_ref(config_filt.bodyparts)
     smoothing_sec = config.get_ref(config_filt.smoothing_sec)
-    # Calculating more parameters
     smoothing_frames = int(smoothing_sec * analysis_config.fps)
 
-    # Loading in dataframe
-    keypoints_df = KeypointsDf.clean_headings(KeypointsDf.read(keypoints_fp))
-    assert keypoints_df.shape[0] > 0, (
-        "No frames in keypoints_df. Please check keypoints file."
-    )
-    # Checking body-centre bodypart exists
-    KeypointsDf.check_bpts_exist(keypoints_df, bpts)
-    # Getting indivs and bpts list
-    indivs, _ = KeypointsDf.get_indivs_bpts(keypoints_df)
+    keypoints_df = read_df(keypoints_fp, KEYPOINTS_SCHEMA)
+    assert keypoints_df.height > 0, "No frames in keypoints_df."
+    check_bpts_exist(keypoints_df, bpts)
+    indivs, _ = get_indivs_bpts(keypoints_df)
+    assert len(indivs) >= 2, "Social distance requires at least 2 individuals."
 
-    # Calculating speed of subject for each frame
-    analysis_df = AnalysisDf.init_df(keypoints_df.index)
-    idx = pd.IndexSlice
-    # Assumes there are only two individuals
-    indiv_a = indivs[0]
-    indiv_b = indivs[1]
-    # Getting distances between each individual
-    idx_a = idx[indiv_b, bpts, "x"]
-    dist_x = (keypoints_df.loc[:, idx_a] - keypoints_df.loc[:, idx_a]).mean(axis=1)
-    idx_b = idx[indiv_a, bpts, "y"]
-    dist_y = (keypoints_df.loc[:, idx_b] - keypoints_df.loc[:, idx_b]).mean(axis=1)
-    dist = np.array(np.sqrt(np.power(dist_x, 2) + np.power(dist_y, 2)))
-    # Adding mm distance to saved analysis_df table
-    analysis_df[(f"{indiv_a}_{indiv_b}", "DistMM")] = dist / analysis_config.px_per_mm
-    analysis_df[(f"{indiv_a}_{indiv_b}", "DistMMSmoothed")] = (
-        analysis_df[(f"{indiv_a}_{indiv_b}", "DistMM")]
-        .rolling(window=smoothing_frames, min_periods=1, center=True)
-        .agg(np.nanmean)
-    )
-    # Saving analysis_df
-    fbf_fp = dst_subdir / FBF / f"{name}.{AnalysisDf.io_format}"
-    AnalysisDf.write(analysis_df, fbf_fp)
+    indiv_a, indiv_b = indivs[0], indivs[1]
+    pair_name = f"{indiv_a}_{indiv_b}"
 
-    # Summarising and binning analysis_df
-    AnalysisBinnedDf.summary_binned_quantitative(
+    avg_a = _bodypart_avg_xy(keypoints_df, indiv_a, bpts)
+    avg_b = _bodypart_avg_xy(keypoints_df, indiv_b, bpts)
+
+    dist = avg_a.join(avg_b, on="frame", suffix="_b").with_columns(
+        (
+            (
+                (pl.col("x") - pl.col("x_b")).pow(2)
+                + (pl.col("y") - pl.col("y_b")).pow(2)
+            ).sqrt()
+            / analysis_config.px_per_mm
+        ).alias("DistMM"),
+    )
+
+    dist_smoothed = dist.select("frame").with_columns(
+        dist.select("DistMM")
+        .to_series()
+        .rolling_mean(
+            window_size=smoothing_frames,
+            min_samples=1,
+            center=True,
+        )
+        .alias("DistMMSmoothed"),
+    )
+
+    rows = [
+        {
+            "frame": row["frame"],
+            "individual": pair_name,
+            "measure": "DistMM",
+            "value": row["DistMM"],
+        }
+        for row in dist.iter_rows(named=True)
+    ]
+    for _, row in enumerate(dist_smoothed.iter_rows(named=True)):
+        rows.append(
+            {
+                "frame": row["frame"],
+                "individual": pair_name,
+                "measure": "DistMMSmoothed",
+                "value": row["DistMMSmoothed"],
+            },
+        )
+
+    analysis_df = pl.DataFrame(rows, schema=ANALYSIS_SCHEMA)
+
+    fbf_fp = dst_subdir / FBF / f"{name}.{DF_IO_FORMAT}"
+    write_df(analysis_df, fbf_fp, ANALYSIS_SCHEMA)
+
+    summary_binned_quantitative(
         analysis_df,
         dst_subdir,
         name,
@@ -463,16 +570,10 @@ def freezing(
     dst_dir: Path,
     config_fp: Path,
 ) -> None:
-    """Determines the frames in which the subject is frozen.
-
-    "Frozen" is defined as not moving outside of a radius of `threshold_mm`, and only
-    includes bouts that last longer than `window_sec` spent seconds.
-
-    NOTE: method is "greedy". Looks at a freezing bout from earliest possible frame.
-    """
+    """Determines frames where the subject is frozen (movement below threshold)."""
     name = keypoints_fp.stem
     dst_subdir = dst_dir / "freezing"
-    # Calculating deltas (changes in body position) between each frame for the subject
+
     config = ExperimentConfig.model_validate_json(config_fp.read_text())
     analysis_config = config.get_analysis_config()
     config_filt = config.user.analyse.freezing
@@ -480,62 +581,69 @@ def freezing(
     thresh_mm = config.get_ref(config_filt.thresh_mm)
     smoothing_sec = config.get_ref(config_filt.smoothing_sec)
     window_sec = config.get_ref(config_filt.window_sec)
-    # Calculating more parameters
+
     thresh_px = thresh_mm / analysis_config.px_per_mm
     smoothing_frames = int(smoothing_sec * analysis_config.fps)
-    window_frames = int(np.round(analysis_config.fps * window_sec, 0))
+    window_frames = int(np.round(analysis_config.fps * window_sec))
 
-    # Loading in dataframe
-    keypoints_df = KeypointsDf.clean_headings(KeypointsDf.read(keypoints_fp))
-    assert keypoints_df.shape[0] > 0, (
-        "No frames in keypoints_df. Please check keypoints file."
-    )
-    # Checking body-centre bodypart exists
-    KeypointsDf.check_bpts_exist(keypoints_df, bpts)
-    # Getting indivs and bpts list
-    indivs, _ = KeypointsDf.get_indivs_bpts(keypoints_df)
+    keypoints_df = read_df(keypoints_fp, KEYPOINTS_SCHEMA)
+    assert keypoints_df.height > 0, "No frames in keypoints_df."
+    check_bpts_exist(keypoints_df, bpts)
+    indivs, _ = get_indivs_bpts(keypoints_df)
 
-    # Calculating speed of subject for each frame
-    analysis_df = AnalysisDf.init_df(keypoints_df.index)
-    keypoints_df.index = analysis_df.index
+    all_rows = []
+
     for indiv in indivs:
-        temp_df = pd.DataFrame(index=analysis_df.index)
-        # Calculating frame-by-frame delta distances for current bpt
+        indiv_df = keypoints_df.filter(pl.col("individual") == indiv)
+        frames = indiv_df.select("frame").unique().sort("frame").to_series()
+
+        # For each bodypart, compute per-frame delta
+        deltas_list = []
         for bpt in bpts:
-            # Getting x and y changes
-            delta_x = keypoints_df[(indiv, bpt, "x")].diff()
-            delta_y = keypoints_df[(indiv, bpt, "y")].diff()
-            # Getting Euclidean distance between frames for bpt
-            delta = np.sqrt(np.power(delta_x, 2) + np.power(delta_y, 2))
-            # Converting from px to mm
-            temp_df[f"{bpt}_dist"] = delta
-            # Smoothing
-            temp_df[f"{bpt}_dist"] = (
-                temp_df[f"{bpt}_dist"]
-                .rolling(window=smoothing_frames, min_periods=1, center=True)
-                .agg(np.nanmean)
+            bpt_df = indiv_df.filter(pl.col("bodypart") == bpt).sort("frame")
+            delta_x = (
+                bpt_df.select("x").to_series().diff(null_behavior="drop").fill_null(0)
             )
-        # If ALL bodypoints do not leave `thresh_px`
-        analysis_df[(indiv, "freezing")] = temp_df.apply(
-            lambda x: pd.Series(np.all(x < thresh_px)),
-            axis=1,
-        ).astype(np.int8)
+            delta_y = (
+                bpt_df.select("y").to_series().diff(null_behavior="drop").fill_null(0)
+            )
+            delta = (delta_x.pow(2) + delta_y.pow(2)).sqrt()
+            smoothed = delta.rolling_mean(
+                window_size=smoothing_frames,
+                min_samples=1,
+                center=True,
+            )
+            deltas_list.append(smoothed.to_list())
 
-        # Getting start, stop, and duration of each freezing behav bout
-        freezingbouts_df = BehaviourScoredDf.vect2bouts_df(
-            analysis_df[(indiv, "freezing")] == 1,
-        )
-        # For each freezing bout, if there is less than window_frames, tehn
-        # it is not actually freezing
-        for _, row in freezingbouts_df.iterrows():
+        # Freezing if ALL bodyparts are below threshold
+        n = len(frames)
+        is_freezing = np.ones(n, dtype=bool)
+        for deltas in deltas_list:
+            is_freezing &= np.array(deltas[:n]) < thresh_px
+
+        # Filter out short freezing bouts
+        freezing_series = pl.Series(is_freezing.astype(int))
+        bouts = vect2bouts(freezing_series == 1)
+        for row in bouts.iter_rows(named=True):
             if row["dur"] < window_frames:
-                analysis_df.loc[row["start"] : row["stop"], (indiv, "freezing")] = 0
-    # Saving analysis_df
-    fbf_fp = dst_subdir / FBF / f"{name}.{AnalysisDf.io_format}"
-    AnalysisDf.write(analysis_df, fbf_fp)
+                freezing_series[row["start"] : row["stop"] + 1] = 0
 
-    # Summarising and binning analysis_df
-    AnalysisBinnedDf.summary_binned_behaviour(
+        for i, f in enumerate(frames.to_list()):
+            all_rows.append(
+                {
+                    "frame": f,
+                    "individual": indiv,
+                    "measure": "freezing",
+                    "value": float(freezing_series[i]),
+                },
+            )
+
+    analysis_df = pl.DataFrame(all_rows, schema=ANALYSIS_SCHEMA)
+
+    fbf_fp = dst_subdir / FBF / f"{name}.{DF_IO_FORMAT}"
+    write_df(analysis_df, fbf_fp, ANALYSIS_SCHEMA)
+
+    summary_binned_behaviour(
         analysis_df,
         dst_subdir,
         name,

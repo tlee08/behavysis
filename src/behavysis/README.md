@@ -1,17 +1,19 @@
 # Behavysis
 
-This is the main package containing all core modules for the Behavysis behavioural analysis pipeline. Submodules include behavioural classification, dataframes for analysis, pipeline orchestration, processing steps, configuration models, utilities, and the viewer GUI.
+This is the main package containing all core modules for the Behavysis behavioural analysis pipeline. Submodules include behavioural classification, Polars-based data schemas, pipeline orchestration, processing steps, configuration models, and utilities.
 
 ## Structure
 
-- `behav_classifier/`: Behavioural classification models and logic
-- `df_classes/`: DataFrame-based analysis classes
+- `behaviour_classifier/`: Behavioural classification models and training
 - `pipeline/`: Project and experiment orchestration
-- `processes/`: Individual processing steps
+- `funcs/`: Individual processing and analysis functions
 - `models/`: Configuration and data validation models
 - `scripts/`: Entry points and utility scripts
 - `utils/`: General-purpose utilities
-- `viewer/`: GUI and visualization components
+- `schemas/`: Polars schema definitions and I/O utilities
+  - `schemas/keypoints.py`: Keypoints free functions
+  - `schemas/behaviour.py`: Behaviour free functions (bout detection, scoring)
+  - `schemas/analysis_agg.py`: Aggregation functions (quantitative + behavioural)
 
 See each submodule's README for more details.
 

@@ -7,11 +7,12 @@ import tempfile
 from pathlib import Path
 
 import pandas as pd
+import polars as pl
 from loguru import logger
 
-from behavysis.constants import CACHE_DIR, LIKELIHOOD
-from behavysis.df_classes import KeypointsDf
+from behavysis.constants import CACHE_DIR, DF_IO_FORMAT, LIKELIHOOD
 from behavysis.models import ExperimentConfig
+from behavysis.schemas import KEYPOINTS_SCHEMA, write_df
 from behavysis.utils.io_utils import file_exists_msg, silent_remove
 from behavysis.utils.template_utils import save_template
 
@@ -65,7 +66,7 @@ def ma_dlc_run_batch(
         vid_fp_ls = [
             vid_fp
             for vid_fp in vid_fp_ls
-            if not (keypoints_dir / f"{vid_fp.stem}.{KeypointsDf.io_format}").exists()
+            if not (keypoints_dir / f"{vid_fp.stem}.{DF_IO_FORMAT}").exists()
         ]
 
     # If there are no videos to process, return
@@ -134,7 +135,11 @@ def _run_dlc_subproc(
 
 
 def _export2df(name: str, src_dir: Path, dst_dir: Path) -> None:
-    """Export DLC h5 output to project dataframe format."""
+    """Export DLC h5 output to Polars long-form parquet.
+
+    Reads pandas MultiIndex h5, unstacks to long form, drops the scorer level
+    (always nunique=1), converts to Polars, and writes parquet.
+    """
     # Get the corresponding .h5 filename
     name_fp_ls = [
         i for i in src_dir.iterdir() if re.search(rf"^{name}DLC.*\.h5$", i.name)
@@ -143,20 +148,38 @@ def _export2df(name: str, src_dir: Path, dst_dir: Path) -> None:
         msg = f"No .h5 file found for {name}."
         logger.warning(msg)
         return
-    if len(name_fp_ls) == 1:
-        name_fp = src_dir / name_fp_ls[0]
-        # Reading the .h5 file
-        # NOTE: may need DLC_HDF_KEY
-        df = pd.DataFrame(pd.read_hdf(name_fp))
-        # Imputing na values with 0
-        df = df.fillna(0)
-        # Clipping likelihood values between 0 and 1
-        lhoods_idx = pd.IndexSlice[:, :, :, LIKELIHOOD]
-        df.loc[:, lhoods_idx] = df.loc[:, lhoods_idx].clip(0, 1)
-        # Writing the file
-        KeypointsDf.write(df, dst_dir / f"{name}.{KeypointsDf.io_format}")
-        logger.info("Outputted DLC file.")
-
-    else:
+    if len(name_fp_ls) != 1:
         msg = f"Multiple .h5 files found for {name}. Expected only 1."
         logger.warning(msg)
+        return
+
+    name_fp = src_dir / name_fp_ls[0]
+    # Read h5 as pandas (DLC outputs pandas MultiIndex columns)
+    df_pd = pd.DataFrame(pd.read_hdf(name_fp))
+    df_pd = df_pd.fillna(0)
+
+    # Clip likelihood values between 0 and 1
+    lhoods_idx = pd.IndexSlice[:, :, :, LIKELIHOOD]
+    df_pd.loc[:, lhoods_idx] = df_pd.loc[:, lhoods_idx].clip(0, 1)
+
+    # Drop scorer level (always single value, useless)
+    df_pd.columns = df_pd.columns.droplevel("scorer")
+
+    # Stack bodyparts + individuals + coords into rows, then unstack coords
+    # to get x, y, likelihood as columns
+    stacked = df_pd.melt(["individuals", "bodyparts", "coords"])
+    unstacked = stacked.unstack("coords")
+    unstacked.columns = unstacked.columns.str.lower()
+
+    # Convert to Polars long form
+    df_pl = pl.from_pandas(unstacked.reset_index()).select(
+        pl.col("frame").cast(pl.Int64),
+        pl.col("individuals").alias("individual"),
+        pl.col("bodyparts").alias("bodypart"),
+        pl.col("x").cast(pl.Float64),
+        pl.col("y").cast(pl.Float64),
+        pl.col("likelihood").cast(pl.Float64),
+    )
+
+    write_df(df_pl, dst_dir / f"{name}.{DF_IO_FORMAT}", KEYPOINTS_SCHEMA)
+    logger.info("Outputted DLC file.")

@@ -11,7 +11,6 @@ from matplotlib.figure import Figure
 from sklearn.metrics import classification_report, confusion_matrix
 
 from behavysis.constants import ACTUAL, PRED, PROB
-from behavysis.df_classes import BehaviourClassifierEvalDf, DFMixin
 
 NIL = "nil"
 BEHAV = "behav"
@@ -156,7 +155,7 @@ def save_training_history(history: pd.DataFrame, eval_dir: Path) -> None:
     eval_dir : Path
         Directory for evaluation outputs.
     """
-    DFMixin.write(history, eval_dir / f"history.{DFMixin.io_format}")
+    history.to_parquet(eval_dir / f"history.parquet")
     fig, ax = plt.subplots(figsize=(10, 7))
     sns.lineplot(data=history, ax=ax)
     fig.savefig(eval_dir / "history.png")
@@ -200,12 +199,16 @@ def save_evaluation_results(
         (eval_df, report_dict, conf_matr_fig, pcutoffs_fig, logc_fig)
     """
     # Build evaluation dataframe
-    eval_df = BehaviourClassifierEvalDf.init_df(
-        pd.Series(np.arange(np.concatenate(index_ls).shape[0])),
+    index = pd.Index(np.arange(np.concatenate(index_ls).shape[0]), name="frame")
+    columns = pd.MultiIndex.from_tuples(
+        [(behav_name, PROB), (behav_name, PRED), (behav_name, ACTUAL)],
+        names=["behaviour", "outcomes"],
     )
-    eval_df[(behav_name, PROB)] = y_prob
-    eval_df[(behav_name, PRED)] = y_pred
-    eval_df[(behav_name, ACTUAL)] = y_true
+    eval_df = pd.DataFrame(
+        np.column_stack([y_prob, y_pred, y_true]),
+        index=index,
+        columns=columns,
+    )
 
     # Generate reports
     report_dict = eval_report(y_true, y_pred)
@@ -214,10 +217,8 @@ def save_evaluation_results(
     logc_fig = eval_logc(y_true, y_prob)
 
     # Save outputs
-    BehaviourClassifierEvalDf.write(
-        eval_df,
-        eval_dir / f"{name}_eval.{BehaviourClassifierEvalDf.io_format}",
-    )
+    eval_dir.mkdir(parents=True, exist_ok=True)
+    eval_df.to_parquet(eval_dir / f"{name}_eval.parquet")
     (eval_dir / f"{name}_report.json").write_text(json.dumps(report_dict, indent=2))
     conf_matr_fig.savefig(eval_dir / f"{name}_confm.png")
     pcutoffs_fig.savefig(eval_dir / f"{name}_pcutoffs.png")

@@ -1,10 +1,20 @@
+"""Export funcs."""
+
 from pathlib import Path
 
+import polars as pl
 from loguru import logger
 
 from behavysis.behaviour_classifier import BehaviourClassifier
-from behavysis.df_classes import BehaviourPredictedDf, BehaviourScoredDf, DFMixin
 from behavysis.models import BoutStruct, ExperimentConfig
+from behavysis.schemas import (
+    BEHAVIOUR_PREDICTED_SCHEMA,
+    BEHAVIOUR_SCORED_BASE,
+    import_boris_tsv,
+    predicted2scored,
+    read_df,
+    write_df,
+)
 from behavysis.utils.io_utils import file_exists_msg
 
 
@@ -14,12 +24,13 @@ def df2df(
     *,
     overwrite: bool,
 ) -> None:
-    """Convert dataframe between formats based on file extensions."""
+    """Copy dataframe between locations/formats."""
     if not overwrite and dst_fp.exists():
         logger.warning(file_exists_msg(dst_fp))
         return
-    df = DFMixin.read(src_fp)
-    DFMixin.write(df, dst_fp)
+    df = pl.read_parquet(src_fp)
+    dst_fp.parent.mkdir(parents=True, exist_ok=True)
+    df.write_parquet(dst_fp)
     logger.info("df to df")
 
 
@@ -33,8 +44,9 @@ def df2csv(
     if not overwrite and dst_fp.exists():
         logger.warning(file_exists_msg(dst_fp))
         return
-    df = DFMixin.read(src_fp)
-    DFMixin.write(df, dst_fp, fmt="csv")
+    df = pl.read_parquet(src_fp)
+    dst_fp.parent.mkdir(parents=True, exist_ok=True)
+    df.write_csv(dst_fp)
     logger.info("exported df to csv")
 
 
@@ -55,26 +67,28 @@ def predictedbehaviour2scoredbehaviour(
     if not overwrite and dst_fp.exists():
         logger.warning(file_exists_msg(dst_fp))
         return
-    # Reading the config file
+    # Load configs
     config = ExperimentConfig.model_validate_json(config_fp.read_text())
     models_ls = config.user.classify_behaviour
-    # Getting the behav_outcomes dict from the config file
+    # Construct bouts_struct
     bouts_struct = []
     for model_config in models_ls:
         proj_dir = config.get_ref(model_config.proj_dir)
         behav_name = config.get_ref(model_config.behav_name)
         user_defined = config.get_ref(model_config.user_defined)
-        # Ensuring model exists
         BehaviourClassifier.load(proj_dir, behav_name)
-        # Adding to bouts_struct
         bouts_struct.append(BoutStruct(behav=behav_name, user_defined=user_defined))
-    # Getting scored behaviour df from predicted behaviour df and bouts_struct
-    behaviour_predicted_df = BehaviourPredictedDf.read(src_fp)
-    behaviour_scored_df = BehaviourScoredDf.predicted2scored(
-        behaviour_predicted_df,
-        bouts_struct,
-    )
-    BehaviourScoredDf.write(behaviour_scored_df, dst_fp)
+    # Read predicted df
+    behaviour_predicted_df = read_df(src_fp, BEHAVIOUR_PREDICTED_SCHEMA)
+    # Convert predicted df to scored df format
+    behaviour_scored_df = predicted2scored(behaviour_predicted_df, bouts_struct)
+    # Build dynamic schema: base + user_defined columns
+    scored_schema = dict(BEHAVIOUR_SCORED_BASE)
+    for bs in bouts_struct:
+        for col in bs.user_defined:
+            scored_schema[col] = pl.Int64
+    # Write scored df to file
+    write_df(behaviour_scored_df, dst_fp, scored_schema)
     logger.info("predicted_behaviour to scored_behaviour.")
 
 
@@ -90,16 +104,11 @@ def boris2behaviour(
     if not overwrite and dst_fp.exists():
         logger.warning(file_exists_msg(dst_fp))
         return
-    # Reading the config file
+
     config = ExperimentConfig.model_validate_json(config_fp.read_text())
     start_frame = config.get_ref(config.auto.start_frame)
     stop_frame = config.get_ref(config.auto.stop_frame) + 1
-    # Importing the boris file to the Behav df format
-    df = BehaviourScoredDf.import_boris_tsv(
-        src_fp,
-        behaviour_ls,
-        start_frame,
-        stop_frame,
-    )
-    BehaviourScoredDf.write(df, dst_fp)
+
+    df = import_boris_tsv(src_fp, behaviour_ls, start_frame, stop_frame)
+    write_df(df, dst_fp, BEHAVIOUR_SCORED_BASE)
     logger.info("boris tsv to behav")

@@ -1,10 +1,11 @@
+"""Data names."""
+
 # General
 
 FRAME = "frame"
 
 # Keypoints
 
-SCORER = "scorer"
 INDIVIDUALS = "individuals"
 BODYPARTS = "bodyparts"
 COORDS = "coords"
@@ -45,8 +46,10 @@ DUR = "dur"
 ANALYSIS = "analysis"
 EXPERIMENT = "experiment"
 MEASURES = "measures"
+VALUE = "value"
 AGGS = "aggs"
 BIN_SEC = "bin_sec"
+
 
 FBF = "fbf"
 

@@ -7,11 +7,11 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
+import polars as pl
 from joblib import dump, load
 from loguru import logger
 
 from behavysis.constants import PRED, PROB, Folders
-from behavysis.df_classes import BehaviourPredictedDf
 from behavysis.models import BehaviourClassifierConfig
 
 from .clf_models.base_torch_model import BaseTorchModel
@@ -367,8 +367,15 @@ class BehaviourClassifier:
         )
         y_pred = (y_prob > self.config.pcutoff).astype(int)
 
-        pred_df = BehaviourPredictedDf.init_df(pd.Series(index))
-        pred_df[(self.config.behav_name, PROB)] = y_prob
-        pred_df[(self.config.behav_name, PRED)] = y_pred
+        # Return pandas DataFrame with prob/pred columns (consumer handles Polars conversion)
+        columns = pd.MultiIndex.from_tuples(
+            [(self.config.behav_name, PROB), (self.config.behav_name, PRED)],
+            names=["behaviour", "outcomes"],
+        )
+        pred_df = pd.DataFrame(
+            np.column_stack([y_prob, y_pred]),
+            index=pd.Index(index, name="frame"),
+            columns=columns,
+        )
 
         return pred_df

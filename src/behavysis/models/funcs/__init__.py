@@ -15,7 +15,6 @@ from .calculate_params import (
     StopFrameFromDurConfig,
 )
 from .classify_behaviour import ClassifyBehaviourConfig
-from .evaluate_vid import EvaluateVidConfig
 from .extract_features import ExtractFeaturesConfig
 from .format_vid import FormatVidConfig, VidMetadata
 from .preprocess import (
@@ -30,7 +29,6 @@ __all__ = [
     "AnalyseConfig",
     "CalculateParamsConfig",
     "ClassifyBehaviourConfig",
-    "EvaluateVidConfig",
     "ExtractFeaturesConfig",
     "FormatVidConfig",
     "FreezingConfig",

@@ -13,7 +13,6 @@ from .calculate_params import (
 )
 from .classify_behaviour import classify_behaviour
 from .combine_analysis import combine_analysis
-from .evaluate_vid import EvaluateVid
 from .export import boris2behaviour, df2csv, df2df, predictedbehaviour2scoredbehaviour
 from .extract_features import extract_features
 from .format_video import format_video

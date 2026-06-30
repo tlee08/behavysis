@@ -1,3 +1,5 @@
+"""Format Video."""
+
 from pydantic import BaseModel
 
 

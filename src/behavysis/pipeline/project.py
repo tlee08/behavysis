@@ -5,24 +5,16 @@ from pathlib import Path
 
 import dask
 import numpy as np
-import pandas as pd
+import polars as pl
 from dask.distributed import LocalCluster
 from loguru import logger
 from natsort import natsorted
 
-from behavysis.constants import (
-    ANALYSIS_DIR,
-    Folders,
-)
-from behavysis.df_classes import (
-    AnalysisBinnedCollatedDf,
-    AnalysisBinnedDf,
-    AnalysisSummaryCollatedDf,
-    AnalysisSummaryDf,
-)
+from behavysis.constants import ANALYSIS_DIR, DF_IO_FORMAT, Folders
 from behavysis.funcs.run_dlc import ma_dlc_run_batch
 from behavysis.models import ExperimentConfig
 from behavysis.pipeline import Experiment
+from behavysis.schemas import BINNED_SCHEMA, SUMMARY_SCHEMA, read_df, write_df
 from behavysis.utils.dask_utils import cluster_process
 from behavysis.utils.multiproc_utils import get_gpu_ids
 
@@ -105,11 +97,6 @@ class Project:
         Expects list to be names without suffix. E.g:
         ["exp1", "exp2", ...]
         """
-        # TODO: change fundamentally how we import:
-        # Give list of video names (use glob, or iterdir helper)
-        # Bascially make user explicitly decide which vids and what names to use
-        # Instead of inferring them.
-        # TODO: verify
         logger.info(f"Searching project folder: {self.root_dir}")
         for name in natsorted(name_ls):
             try:
@@ -218,13 +205,6 @@ class Project:
             Experiment.combine_analysis,
         )
 
-    def evaluate_vid(self, *, overwrite: bool) -> None:
-        """Evaluate videos for all experiments."""
-        self._run(
-            Experiment.evaluate_vid,
-            overwrite=overwrite,
-        )
-
     def export2csv(self, src_dir: str, dst_dir: str | Path, *, overwrite: bool) -> None:
         """Export dataframe to CSV for all experiments."""
         self._run(
@@ -257,32 +237,38 @@ class Project:
             for bin_size in bin_sizes:
                 df_ls, names_ls = [], []
                 for exp in self.experiments:
-                    in_fp = (
-                        subdir
-                        / f"binned_{bin_size}"
-                        / f"{exp.name}.{AnalysisBinnedDf.io_format}"
-                    )
+                    in_fp = subdir / f"binned_{bin_size}" / f"{exp.name}.{DF_IO_FORMAT}"
                     if in_fp.is_file():
-                        df_ls.append(AnalysisBinnedDf.read(in_fp))
+                        df_ls.append(read_df(in_fp, BINNED_SCHEMA))
                         names_ls.append(exp.name)
                 if not df_ls:
                     continue
-                df = pd.concat(
-                    df_ls,
-                    keys=names_ls,
-                    names=["experiment"],
-                    axis=1,
-                ).fillna(0)
-                AnalysisBinnedCollatedDf.write(
-                    df,
-                    subdir
-                    / f"__ALL_binned_{bin_size}.{AnalysisBinnedCollatedDf.io_format}",
+
+                # Add experiment column and concatenate
+                dfs_with_exp = [
+                    df.with_columns(pl.lit(name).alias("experiment"))
+                    for df, name in zip(df_ls, names_ls, strict=True)
+                ]
+                combined = pl.concat(dfs_with_exp)
+
+                out_fp = subdir / f"__ALL_binned_{bin_size}.{DF_IO_FORMAT}"
+                write_df(
+                    combined,
+                    out_fp,
+                    {
+                        "bin_sec": pl.Float64,
+                        "experiment": pl.Utf8,
+                        "individual": pl.Utf8,
+                        "measure": pl.Utf8,
+                        "agg": pl.Utf8,
+                        "value": pl.Float64,
+                    },
                 )
-                AnalysisBinnedCollatedDf.write(
-                    df,
-                    subdir / f"__ALL_binned_{bin_size}.csv",
-                    fmt="csv",
-                )
+
+                # Also write CSV
+                csv_fp = subdir / f"__ALL_binned_{bin_size}.csv"
+                csv_fp.parent.mkdir(parents=True, exist_ok=True)
+                combined.write_csv(csv_fp)
 
     def _collate_summary(self) -> None:
         """Combine summary analysis data across experiments."""
@@ -296,15 +282,32 @@ class Project:
                 continue
             df_ls, names_ls = [], []
             for exp in self.experiments:
-                in_fp = subdir / "summary" / f"{exp.name}.{AnalysisSummaryDf.io_format}"
+                in_fp = subdir / "summary" / f"{exp.name}.{DF_IO_FORMAT}"
                 if in_fp.is_file():
-                    df_ls.append(AnalysisSummaryDf.read(in_fp))
+                    df_ls.append(read_df(in_fp, SUMMARY_SCHEMA))
                     names_ls.append(exp.name)
             if not df_ls:
                 continue
-            df = pd.concat(df_ls, keys=names_ls, names=["experiment"], axis=0).fillna(0)
-            AnalysisSummaryCollatedDf.write(
-                df,
-                subdir / f"__ALL_summary.{AnalysisSummaryCollatedDf.io_format}",
+
+            dfs_with_exp = [
+                df.with_columns(pl.lit(name).alias("experiment"))
+                for df, name in zip(df_ls, names_ls, strict=True)
+            ]
+            combined = pl.concat(dfs_with_exp)
+
+            out_fp = subdir / f"__ALL_summary.{DF_IO_FORMAT}"
+            write_df(
+                combined,
+                out_fp,
+                {
+                    "experiment": pl.Utf8,
+                    "individual": pl.Utf8,
+                    "measure": pl.Utf8,
+                    "agg": pl.Utf8,
+                    "value": pl.Float64,
+                },
             )
-            AnalysisSummaryCollatedDf.write(df, subdir / "__ALL_summary.csv", fmt="csv")
+
+            csv_fp = subdir / "__ALL_summary.csv"
+            csv_fp.parent.mkdir(parents=True, exist_ok=True)
+            combined.write_csv(csv_fp)

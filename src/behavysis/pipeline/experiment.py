@@ -13,7 +13,6 @@ from behavysis.constants import (
 from behavysis.funcs import (
     AnalyseFunc,
     CalculateParamsFunc,
-    EvaluateVid,
     PreprocessFunc,
     analyse_behaviour,
     classify_behaviour,
@@ -191,18 +190,6 @@ class Experiment:
             config_fp=self.get_fp(Folders.CONFIG),
             analysis_dir=self.root_dir / ANALYSIS_DIR,
             overwrite=True,
-        )
-
-    @trace
-    def evaluate_vid(self, *, overwrite: bool) -> None:
-        """Generate annotated evaluation video."""
-        EvaluateVid.evaluate_vid(
-            formatted_vid_fp=self.get_fp(Folders.FORMATTED_VID),
-            keypoints_fp=self.get_fp(Folders.PREPROCESSED),
-            analysis_combined_fp=self.get_fp(Folders.ANALYSIS_COMBINED),
-            eval_vid_fp=self.get_fp(Folders.EVALUATE_VID),
-            config_fp=self.get_fp(Folders.CONFIG),
-            overwrite=overwrite,
         )
 
     @trace

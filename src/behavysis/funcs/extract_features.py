@@ -5,12 +5,12 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-import pandas as pd
+import polars as pl
 from loguru import logger
 
-from behavysis.constants import CACHE_DIR, LIKELIHOOD, X, Y
-from behavysis.df_classes import FeaturesDf, KeypointsDf
+from behavysis.constants import CACHE_DIR
 from behavysis.models import ExperimentConfig
+from behavysis.schemas import KEYPOINTS_SCHEMA, check_bpts_exist, read_df, write_df
 from behavysis.utils.io_utils import file_exists_msg
 from behavysis.utils.template_utils import save_template
 
@@ -54,7 +54,6 @@ def extract_features(
     if not overwrite and features_fp.exists():
         logger.warning(file_exists_msg(features_fp))
         return
-    # Getting directory and file paths
     name = keypoints_fp.stem
     config_dir = config_fp.parent
     with tempfile.TemporaryDirectory(dir=CACHE_DIR) as _out_dir:
@@ -63,56 +62,93 @@ def extract_features(
         simba_dir = out_dir / "simba_proj"
         simba_features_dir = simba_dir / "project_folder" / "csv" / "features_extracted"
         simba_features_fp = simba_features_dir / f"{name}.csv"
-        # Preparing keypoints dataframes for input to SimBA project
+
         simba_in_dir.mkdir(parents=True, exist_ok=True)
         simba_in_fp = simba_in_dir / f"{name}.csv"
-        # Selecting bodyparts for SimBA (8 bpts, 2 indivs)
-        keypoints_df = KeypointsDf.read(keypoints_fp)
-        keypoints_df = _select_cols(keypoints_df, config_fp)
-        # Saving keypoints index to use in the SimBA features extraction df
-        index = keypoints_df.index
-        # Need to remove index name for SimBA to import correctly
-        keypoints_df.index.name = None
-        # Saving as csv
-        keypoints_df.to_csv(simba_in_fp)
+
+        # Read Polars long-form keypoints
+        keypoints_df = read_df(keypoints_fp, KEYPOINTS_SCHEMA)
+
+        # Select bodyparts for SimBA, get frame index, save as CSV
+        keypoints_df, index = _select_cols(keypoints_df, config_fp)
+        # Reset index (SimBA expects no index column)
+        keypoints_df = keypoints_df.drop("frame")
+        keypoints_df.write_csv(simba_in_fp)
+
         # Running SimBA env and script to run SimBA feature extraction
         _run_simba_subproc(simba_dir, simba_in_dir, config_dir, out_dir)
-        # Exporting SimBA feature extraction csv to disk
-        _export2df(simba_features_fp, features_fp, index)
+
+        # Export SimBA feature extraction CSV to disk (re-attach frame index)
+        _export2df(simba_features_fp, features_fp, index.to_list())
 
 
-#####################################################################
-#               PREPARE FOR SIMBA
-#####################################################################
+def _select_cols(
+    keypoints_df: pl.DataFrame,
+    config_fp: Path,
+) -> tuple[pl.DataFrame, pl.Series]:
+    """Select given keypoints columns to input to SimBA, output as wide CSV format.
 
+    Pivots long-form to wide (one row per frame, columns = indiv_bpt_coord)
+    for SimBA CSV import compatibility.
 
-def _select_cols(keypoints_df: pd.DataFrame, config_fp: Path) -> pd.DataFrame:
-    """Selecting given keypoints columns to input to SimBA.
-
-    Parameters
-    ----------
-    keypoints_df : pd.DataFrame
-        Keypoints dataframe.
-    config_fp : Path
-        Config JSON filepath.
-
-    Returns:
-    -------
-    pd.DataFrame
-        Keypoints dataframe with selected columns.
+    Returns (wide DataFrame, frame_index_series).
     """
-    # Getting necessary config parameters
     config = ExperimentConfig.model_validate_json(config_fp.read_text())
     config_filt = config.user.extract_features
     indivs = config.get_ref(config_filt.individuals)
     bpts = config.get_ref(config_filt.bodyparts)
-    # Checking that the bodyparts are all valid
-    KeypointsDf.check_bpts_exist(keypoints_df, bpts)
-    # Selecting given columns
-    idx = pd.IndexSlice
-    coords = [X, Y, LIKELIHOOD]
-    keypoints_df = keypoints_df.loc[:, idx[:, indivs, bpts, coords]]
-    return keypoints_df
+
+    check_bpts_exist(keypoints_df, bpts)
+
+    # Filter to selected individuals and bodyparts
+    filtered = keypoints_df.filter(
+        pl.col("individual").is_in(indivs),
+        pl.col("bodypart").is_in(bpts),
+    )
+
+    # Pivot to wide: one row per frame, columns = "indiv_bpt_coord"
+    wide = filtered.select(
+        ["frame", "individual", "bodypart", "x", "y", "likelihood"],
+    ).sort(["frame", "individual", "bodypart"])
+
+    # Build flat column names: "individual_bodypart_coord"
+    wide = wide.with_columns(
+        (pl.col("individual") + "_" + pl.col("bodypart") + "_x").alias("col_x"),
+        (pl.col("individual") + "_" + pl.col("bodypart") + "_y").alias("col_y"),
+        (pl.col("individual") + "_" + pl.col("bodypart") + "_likelihood").alias(
+            "col_l",
+        ),
+    )
+
+    # Pivot x, y, likelihood to columns
+    x_cols = wide.select(["frame", "col_x", "x"]).pivot(
+        index="frame",
+        on="col_x",
+        values="x",
+    )
+    y_cols = wide.select(["frame", "col_y", "y"]).pivot(
+        index="frame",
+        on="col_y",
+        values="y",
+    )
+    l_cols = wide.select(["frame", "col_l", "likelihood"]).pivot(
+        index="frame",
+        on="col_l",
+        values="likelihood",
+    )
+
+    # Save frame index before joining
+    frame_index = x_cols.select("frame").to_series()
+
+    # Combine all pivoted columns
+    # TODO: confirm
+    # result = x_cols.join(y_cols.drop("frame"), how="horizontal").join(
+    #     l_cols.drop("frame"),
+    #     how="horizontal",
+    # )
+    result = pl.concat([x_cols, y_cols, l_cols], how="horizontal").drop("frame")
+
+    return result, frame_index
 
 
 def _run_simba_subproc(
@@ -150,34 +186,22 @@ def _run_simba_subproc(
     subprocess.run(cmd, check=True)
 
 
-# TODO: mode/integrate with base_torch_model
-# def remove_bpts_cols(keypoints_df: pd.DataFrame) -> pd.DataFrame:
-#     """
-#     Drops the bodyparts columns from the SimBA features extractions dataframes.
-#     Because bodypart coordinates should not be a factor in behaviour classification.
+def _export2df(in_fp: Path, dst_fp: Path, index: list[int]) -> None:
+    """Export SimBA features CSV to Polars parquet, re-attaching frame index."""
+    features_df = pl.read_csv(in_fp)
 
-#     Parameters
-#     ----------
-#     keypoints_df : pd.DataFrame
-#         Features extracted dataframe
+    # Re-attach frame index (lost during SimBA CSV roundtrip)
+    features_df = features_df.with_columns(
+        pl.Series("frame", index, dtype=pl.Int64),
+    )
 
-#     Returns
-#     -------
-#     pd.DataFrame
-#         Features extracted dataframe with the bodyparts columns dropped.
-#     """
-#     indivs_n = 2
-#     bpts_n = 8
-#     coords_n = 3
-#     n = indivs_n * bpts_n * coords_n
-#     return keypoints_df.iloc[:, n:]
+    # Move frame to first column
+    cols = ["frame"] + [c for c in features_df.columns if c != "frame"]
+    features_df = features_df.select(cols)
 
-
-def _export2df(in_fp: Path, dst_fp: Path, index: pd.Index) -> None:
-    """Export SimBA features CSV to project dataframe format."""
-    features_df = FeaturesDf.read(in_fp, fmt="csv")
-    # Setting index to the same as the preprocessed preprocessed df
-    features_df = features_df.set_index(index)
-    # Saving SimBA extracted features df on disk
-    FeaturesDf.write(features_df, dst_fp)
+    write_df(
+        features_df,
+        dst_fp,
+        {},
+    )  # dynamic schema — validated by read_df at consumer
     logger.info("Exported SimBA features to disk.")
