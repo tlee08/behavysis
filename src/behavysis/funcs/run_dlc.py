@@ -47,6 +47,11 @@ def ma_dlc_run_single(
             CACHE_DIR,
             gputouse,
         )
+        # Dirty export h5
+        for i in out_dir.iterdir():
+            if re.search(rf"^{vid_fp.stem}DLC.*\.h5$", i.name):
+                _df = pd.DataFrame(pd.read_hdf(i))
+                _df.to_parquet(CACHE_DIR / i.name)
         # Exporting the h5 to chosen file format
         _export2df(vid_fp.stem, out_dir, keypoints_dir)
 
