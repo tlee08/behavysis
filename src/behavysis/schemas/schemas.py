@@ -14,10 +14,10 @@ from behavysis.constants import (
     ANALYSIS,
     BEHAVIOUR,
     BIN_SEC,
-    BODYPARTS,
+    BODYPART,
     EXPERIMENT,
     FRAME,
-    INDIVIDUALS,
+    INDIVIDUAL,
     LIKELIHOOD,
     MEASURES,
     PRED,
@@ -36,8 +36,8 @@ type SchemaDict = dict[str, type[pl.DataType]]
 """One row per (frame, individual, bodypart) coordinate triplet."""
 KEYPOINTS_SCHEMA: SchemaDict = {
     FRAME: pl.Int64,
-    INDIVIDUALS: pl.Utf8,
-    BODYPARTS: pl.Utf8,
+    INDIVIDUAL: pl.Utf8,
+    BODYPART: pl.Utf8,
     X: pl.Float64,
     Y: pl.Float64,
     LIKELIHOOD: pl.Float64,
@@ -67,14 +67,14 @@ FEATURES_BASE: SchemaDict = {
 """One row per (frame, individual, measure) value. Frame-by-frame analysis."""
 ANALYSIS_SCHEMA: SchemaDict = {
     FRAME: pl.Int64,
-    INDIVIDUALS: pl.Utf8,
+    INDIVIDUAL: pl.Utf8,
     MEASURES: pl.Utf8,
     VALUE: pl.Float64,
 }
 
 """One row per (individual, measure, aggregation) statistic."""
 SUMMARY_SCHEMA: SchemaDict = {
-    INDIVIDUALS: pl.Utf8,
+    INDIVIDUAL: pl.Utf8,
     MEASURES: pl.Utf8,
     AGGS: pl.Utf8,
     VALUE: pl.Float64,
@@ -83,7 +83,7 @@ SUMMARY_SCHEMA: SchemaDict = {
 """One row per (bin_sec, individual, measure, aggregation) time slice."""
 BINNED_SCHEMA: SchemaDict = {
     BIN_SEC: pl.Float64,
-    INDIVIDUALS: pl.Utf8,
+    INDIVIDUAL: pl.Utf8,
     MEASURES: pl.Utf8,
     AGGS: pl.Utf8,
     VALUE: pl.Float64,
@@ -93,7 +93,7 @@ BINNED_SCHEMA: SchemaDict = {
 COMBINED_ANALYSIS_SCHEMA: SchemaDict = {
     FRAME: pl.Int64,
     ANALYSIS: pl.Utf8,
-    INDIVIDUALS: pl.Utf8,
+    INDIVIDUAL: pl.Utf8,
     MEASURES: pl.Utf8,
     VALUE: pl.Float64,
 }
@@ -101,7 +101,7 @@ COMBINED_ANALYSIS_SCHEMA: SchemaDict = {
 """SummaryDf collated across experiments with an ``experiment`` column."""
 COLLATED_SUMMARY_SCHEMA: SchemaDict = {
     EXPERIMENT: pl.Utf8,
-    INDIVIDUALS: pl.Utf8,
+    INDIVIDUAL: pl.Utf8,
     MEASURES: pl.Utf8,
     AGGS: pl.Utf8,
     VALUE: pl.Float64,
@@ -111,7 +111,7 @@ COLLATED_SUMMARY_SCHEMA: SchemaDict = {
 COLLATED_BINNED_SCHEMA: SchemaDict = {
     BIN_SEC: pl.Float64,
     EXPERIMENT: pl.Utf8,
-    INDIVIDUALS: pl.Utf8,
+    INDIVIDUAL: pl.Utf8,
     MEASURES: pl.Utf8,
     AGGS: pl.Utf8,
     VALUE: pl.Float64,

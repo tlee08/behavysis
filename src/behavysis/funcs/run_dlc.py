@@ -11,12 +11,10 @@ import polars as pl
 from loguru import logger
 
 from behavysis.constants import (
-    BODYPARTS,
     CACHE_DIR,
-    COORDS,
     DF_IO_FORMAT,
     FRAME,
-    INDIVIDUALS,
+    INDIVIDUAL,
     LIKELIHOOD,
     X,
     Y,
@@ -175,14 +173,16 @@ def _export2df(name: str, src_dir: Path, dst_dir: Path) -> None:
     # Stack bodyparts + individuals + coords into rows, then unstack coords
     # to get x, y, likelihood as columns
     long_df = (
-        df_pd.stack([INDIVIDUALS, BODYPARTS, COORDS]).unstack(COORDS).reset_index()  # noqa: PD010, PD013
+        df_pd.stack(["individuals", "bodyparts", "coords"])  # noqa: PD010, PD013
+        .unstack("coords")
+        .reset_index()
     )
 
     # Convert to Polars long form
     df_pl = pl.from_pandas(long_df.reset_index()).select(
         pl.col(FRAME).cast(pl.Int64),
-        pl.col(INDIVIDUALS),
-        pl.col(BODYPARTS),
+        pl.col("individuals").alias(INDIVIDUAL),
+        pl.col("bodyparts").alias(INDIVIDUAL),
         pl.col(X).cast(pl.Float64),
         pl.col(Y).cast(pl.Float64),
         pl.col(LIKELIHOOD).cast(pl.Float64),

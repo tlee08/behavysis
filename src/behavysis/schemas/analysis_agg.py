@@ -17,7 +17,7 @@ from behavysis.constants import (
     BINNED,
     CUSTOM,
     DF_IO_FORMAT,
-    INDIVIDUALS,
+    INDIVIDUAL,
     MEASURES,
     PLOT,
     SUMMARY,
@@ -45,7 +45,7 @@ def agg_quantitative(df: pl.DataFrame, fps: float) -> pl.DataFrame:
     """
     _ = fps  # unused in quantitative agg
     return (
-        df.group_by(INDIVIDUALS, MEASURES)
+        df.group_by(INDIVIDUAL, MEASURES)
         .agg(
             [
                 pl.col("value").mean().alias("mean"),
@@ -58,7 +58,7 @@ def agg_quantitative(df: pl.DataFrame, fps: float) -> pl.DataFrame:
                 pl.col("value").sum().alias("sum"),
             ],
         )
-        .unpivot(index=[INDIVIDUALS, MEASURES], variable_name="agg", value_name="value")
+        .unpivot(index=[INDIVIDUAL, MEASURES], variable_name="agg", value_name="value")
     )
 
 
@@ -79,7 +79,7 @@ def agg_behaviour(df: pl.DataFrame, fps: float) -> pl.DataFrame:
     """
     results = []
 
-    for (indiv, measure), group in df.group_by([INDIVIDUALS, MEASURES]):
+    for (indiv, measure), group in df.group_by([INDIVIDUAL, MEASURES]):
         vect = group.sort("frame").select("value").to_series()
         bouts = vect2bouts(vect == 1)
         dur_sec = bouts.select(pl.col("dur") / fps).to_series()
@@ -89,7 +89,7 @@ def agg_behaviour(df: pl.DataFrame, fps: float) -> pl.DataFrame:
             dur_sec = pl.Series([0.0])
 
         stats = {
-            INDIVIDUALS: indiv,
+            INDIVIDUAL: indiv,
             MEASURES: measure,
             "bout_freq": bout_freq,
             "bout_dur_total": float(dur_sec.sum()),
@@ -107,7 +107,7 @@ def agg_behaviour(df: pl.DataFrame, fps: float) -> pl.DataFrame:
         return pl.DataFrame(schema=SUMMARY_SCHEMA)
 
     return pl.DataFrame(results).melt(
-        id_vars=[INDIVIDUALS, MEASURES],
+        id_vars=[INDIVIDUAL, MEASURES],
         variable_name="agg",
         value_name="value",
     )
@@ -170,7 +170,7 @@ def make_binned(
     if not results:
         return pl.DataFrame(schema=BINNED_SCHEMA)
 
-    return pl.concat(results).select([BIN_SEC, INDIVIDUALS, MEASURES, "agg", "value"])
+    return pl.concat(results).select([BIN_SEC, INDIVIDUAL, MEASURES, "agg", "value"])
 
 
 def make_binned_plot(
@@ -192,7 +192,7 @@ def make_binned_plot(
     # Filter to the aggregation column of interest, pivot to wide for seaborn
     plot_df = (
         binned_df.filter(pl.col("agg") == agg_column)
-        .pivot(index=[BIN_SEC, INDIVIDUALS], on=MEASURES, values="value")
+        .pivot(index=[BIN_SEC, INDIVIDUAL], on=MEASURES, values="value")
         .to_pandas()
     )
 
@@ -201,7 +201,7 @@ def make_binned_plot(
         x=BIN_SEC,
         y=plot_df.columns[-1],  # first measure column after pivot
         hue=MEASURES,
-        col=INDIVIDUALS,
+        col=INDIVIDUAL,
         kind="line",
         height=4,
         aspect=1.5,
@@ -261,7 +261,7 @@ def summary_binned_behaviour(
 
     # Latency: time from start to first positive value per (individual, measure)
     latency_rows = []
-    for (indiv, measure), group in analysis_df.group_by([INDIVIDUALS, MEASURES]):
+    for (indiv, measure), group in analysis_df.group_by([INDIVIDUAL, MEASURES]):
         sorted_group = group.sort("frame")
         vect = sorted_group.select("value").to_series()
         frame = sorted_group.select("frame").to_series()
@@ -271,7 +271,7 @@ def summary_binned_behaviour(
             latency_val = float(frame[first_idx]) / fps
         latency_rows.append(
             {
-                INDIVIDUALS: indiv,
+                INDIVIDUAL: indiv,
                 MEASURES: measure,
                 "agg": "latency",
                 "value": latency_val,

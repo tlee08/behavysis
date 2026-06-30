@@ -6,14 +6,14 @@ FRAME = "frame"
 
 # Keypoints
 
-INDIVIDUALS = "individuals"
-BODYPARTS = "bodyparts"
-COORDS = "coords"
+INDIVIDUAL = "individual"
+BODYPART = "bodypart"
+COORD = "coord"
 
 X = "x"
 Y = "y"
 LIKELIHOOD = "likelihood"
-COORDS_COLS = [X, Y, LIKELIHOOD]
+COORD_COLS = [X, Y, LIKELIHOOD]
 
 
 SINGLE = "single"

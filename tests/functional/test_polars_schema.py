@@ -13,10 +13,10 @@ import polars as pl
 import pytest
 
 from behavysis.constants import (
-    BODYPARTS,
-    COORDS,
+    BODYPART,
+    COORD,
     FRAME,
-    INDIVIDUALS,
+    INDIVIDUAL,
     LIKELIHOOD,
     X,
     Y,
@@ -47,10 +47,10 @@ def pandas_keypoints_to_polars(df_pd: pd.DataFrame) -> pl.DataFrame:
     df_pd.columns = df_pd.columns.droplevel("scorer")
 
     # Stack to long form: frame × (individuals, bodyparts, coords)
-    stacked = df_pd.stack([INDIVIDUALS, BODYPARTS, COORDS], future_stack=True)
+    stacked = df_pd.stack([INDIVIDUAL, BODYPART, COORD], future_stack=True)
 
     # Unstack coords so x, y, likelihood become columns
-    unstacked = stacked.unstack(COORDS)
+    unstacked = stacked.unstack(COORD)
 
     # Reset index to get frame as a column
     result = unstacked.reset_index()
@@ -58,8 +58,8 @@ def pandas_keypoints_to_polars(df_pd: pd.DataFrame) -> pl.DataFrame:
     # Convert to Polars with correct column names
     return pl.from_pandas(result).select(
         pl.col(FRAME).cast(pl.Int64),
-        pl.col(INDIVIDUALS).alias("individual"),
-        pl.col(BODYPARTS).alias("bodypart"),
+        pl.col(INDIVIDUAL).alias("individual"),
+        pl.col(BODYPART).alias("bodypart"),
         pl.col(X).cast(pl.Float64),
         pl.col(Y).cast(pl.Float64),
         pl.col(LIKELIHOOD).cast(pl.Float64),
@@ -131,8 +131,14 @@ class TestSchemaIO:
 
     def test_wrong_type_raises(self, tmp_path: Path) -> None:
         df = pl.DataFrame(
-            {"frame": ["a", "b"], "individual": ["x", "y"], "bodypart": ["n", "n"],
-             "x": [1.0, 2.0], "y": [3.0, 4.0], "likelihood": [0.5, 0.6]},
+            {
+                "frame": ["a", "b"],
+                "individual": ["x", "y"],
+                "bodypart": ["n", "n"],
+                "x": [1.0, 2.0],
+                "y": [3.0, 4.0],
+                "likelihood": [0.5, 0.6],
+            },
         )
         fp = tmp_path / "bad_type.parquet"
         with pytest.raises(AssertionError, match="Type mismatches"):
@@ -158,7 +164,7 @@ class TestKeypointsConversion:
         """Synthetic keypoints in the current pandas MultiIndex format."""
         return pd.DataFrame(
             {
-                ("scorer", INDIVIDUALS, BODYPARTS, COORDS): [
+                ("scorer", INDIVIDUAL, BODYPART, COORD): [
                     ("DLC", "mouse1", "nose", X),
                     ("DLC", "mouse1", "nose", Y),
                     ("DLC", "mouse1", "nose", LIKELIHOOD),
@@ -174,16 +180,36 @@ class TestKeypointsConversion:
                 ],
                 "values": [
                     # Frame 0
-                    100.0, 200.0, 0.99, 150.0, 250.0, 0.98,
-                    300.0, 400.0, 0.97, 350.0, 450.0, 0.96,
+                    100.0,
+                    200.0,
+                    0.99,
+                    150.0,
+                    250.0,
+                    0.98,
+                    300.0,
+                    400.0,
+                    0.97,
+                    350.0,
+                    450.0,
+                    0.96,
                     # Frame 1
-                    101.0, 201.0, 0.99, 151.0, 251.0, 0.98,
-                    301.0, 401.0, 0.97, 351.0, 451.0, 0.96,
+                    101.0,
+                    201.0,
+                    0.99,
+                    151.0,
+                    251.0,
+                    0.98,
+                    301.0,
+                    401.0,
+                    0.97,
+                    351.0,
+                    451.0,
+                    0.96,
                 ],
             }
         ).pivot(
             index=None,
-            columns=["scorer", INDIVIDUALS, BODYPARTS, COORDS],
+            columns=["scorer", INDIVIDUAL, BODYPART, COORD],
             values="values",
         )
         # Add frame index
@@ -200,7 +226,7 @@ class TestKeypointsConversion:
         # Build pandas MultiIndex keypoints
         columns = pd.MultiIndex.from_product(
             [[scorer], individuals, bodyparts, coords],
-            names=["scorer", INDIVIDUALS, BODYPARTS, COORDS],
+            names=["scorer", INDIVIDUAL, BODYPART, COORD],
         )
         index = pd.Index(range(n_frames), name=FRAME)
         np.random.seed(42)
@@ -229,11 +255,15 @@ class TestKeypointsConversion:
 
         # Verify frame 0, mouse1, nose x value matches
         pandas_val = df_pd.loc[0, (scorer, "mouse1", "nose", X)]
-        polars_val = df_pl.filter(
-            pl.col("frame") == 0,
-            pl.col("individual") == "mouse1",
-            pl.col("bodypart") == "nose",
-        ).select("x").item()
+        polars_val = (
+            df_pl.filter(
+                pl.col("frame") == 0,
+                pl.col("individual") == "mouse1",
+                pl.col("bodypart") == "nose",
+            )
+            .select("x")
+            .item()
+        )
         assert pandas_val == polars_val
 
         # Verify no NaN values (original data has none by construction)
@@ -249,7 +279,7 @@ class TestKeypointsConversion:
 
         columns = pd.MultiIndex.from_product(
             [[scorer], individuals, bodyparts, coords],
-            names=["scorer", INDIVIDUALS, BODYPARTS, COORDS],
+            names=["scorer", INDIVIDUAL, BODYPART, COORD],
         )
         index = pd.Index(range(n_frames), name=FRAME)
         data = np.array([[10.0, 20.0, 0.5], [11.0, 21.0, 0.6], [12.0, 22.0, 0.7]])
@@ -261,7 +291,10 @@ class TestKeypointsConversion:
             row = df_pl.filter(pl.col("frame") == frame)
             assert row.select("x").item() == df_pd.loc[frame, (scorer, "m1", "nose", X)]
             assert row.select("y").item() == df_pd.loc[frame, (scorer, "m1", "nose", Y)]
-            assert row.select("likelihood").item() == df_pd.loc[frame, (scorer, "m1", "nose", LIKELIHOOD)]
+            assert (
+                row.select("likelihood").item()
+                == df_pd.loc[frame, (scorer, "m1", "nose", LIKELIHOOD)]
+            )
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -294,7 +327,13 @@ class TestAnalysisSchema:
 
         # Group by individual and measure
         agg = df.group_by("individual", "measure").agg(pl.col("value").mean())
-        assert agg.filter(pl.col("measure") == "speed").filter(pl.col("individual") == "m1").select("value").item() == 10.5
+        assert (
+            agg.filter(pl.col("measure") == "speed")
+            .filter(pl.col("individual") == "m1")
+            .select("value")
+            .item()
+            == 10.5
+        )
 
     def test_summary_schema(self) -> None:
         """SummaryDf long form should represent aggregations naturally."""
