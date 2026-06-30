@@ -11,7 +11,7 @@ from behavysis.funcs import (
 )
 {% endif %}
 
-names_ls = [i.name for i in (Path({{ project_fp_repr }}) / "1_raw_videos").iterdir()]
+names_ls = [i.stem for i in (Path({{ project_fp_repr }}) / "1_raw_videos").iterdir()]
 proj = Project(Path({{ project_fp_repr }}))
 proj.nprocs = {{ nprocs }}
 proj.import_experiments()

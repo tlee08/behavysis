@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from behavysis.constants import DEFAULT_CONFIG_FP, Folders
+from behavysis.constants import DEFAULT_CONFIG_FP, STAGES
 from behavysis.models import get_default_config
 from behavysis.utils.template_utils import confirm, save_template
 
@@ -71,8 +71,8 @@ def main() -> None:
             get_default_config().model_dump_json(indent=2),
         )
     # Make folders
-    for folder in Folders:
-        Path(folder.value).mkdir(parents=True, exist_ok=True)
+    for folder in STAGES:
+        Path(folder).mkdir(parents=True, exist_ok=True)
 
 
 if __name__ == "__main__":

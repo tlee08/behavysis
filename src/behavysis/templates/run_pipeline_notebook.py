@@ -299,7 +299,7 @@ def _(
         mo.md("""Click the 'Run Pipeline' button once you're happy to run"""),
     )
 
-    names_ls = [i.name for i in (Path(project_fp.value) / "1_raw_videos").iterdir()]
+    names_ls = [i.stem for i in (Path(project_fp.value) / "1_raw_videos").iterdir()]
     proj = Project(Path(project_fp.value))
     proj.nprocs = nprocs.value
     proj.import_experiments(names_ls)

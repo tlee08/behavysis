@@ -6,9 +6,19 @@ from typing import Literal
 import numpy as np
 
 from behavysis.constants import (
+    ANALYSIS_COMBINED_DIR,
     ANALYSIS_DIR,
-    FileExts,
-    Folders,
+    CONFIG_DIR,
+    FORMATTED_VIDEO_DIR,
+    KEYPOINTS_DIR,
+    RAW_VIDEO_DIR,
+    STAGES,
+)
+from behavysis.constants.pipeline import (
+    FEATURES_EXTRACTED_DIR,
+    PREDICTED_BEHAVIOUR_DIR,
+    PREPROCESSED_DIR,
+    SCORED_BEHAVIOUR_DIR,
 )
 from behavysis.funcs import (
     AnalyseFunc,
@@ -36,18 +46,18 @@ class Experiment:
 
     def __init__(self, name: str, root_dir: str | Path) -> None:
         """Initialises the experiment with the given name and root directory."""
-        root_dir = Path(root_dir)
-        if not root_dir.is_dir():
+        self.name = name
+        self.root_dir = Path(root_dir)
+        # Check root_dir exists
+        if not self.root_dir.is_dir():
             msg = (
                 f'Project folder not found: "{root_dir}"\n'
                 f"  Create a new project with: behavysis-make-project"
             )
             raise ValueError(msg)
-        self.name = name
-        self.root_dir = root_dir.resolve()
-        file_exists_ls = [self.get_fp(f).is_file() for f in Folders]
-        if not np.any(file_exists_ls):
-            folders_ls_msg = "".join([f"\n    - {f.value}" for f in Folders])
+        # Check experiment name exists in root_dir
+        if not np.any([self.get_fp(f).is_file() for f in STAGES]):
+            folders_ls_msg = "".join([f"\n    - {f}" for f in STAGES])
             msg = (
                 f'No files named "{name}" found in "{root_dir}".\n'
                 f"  Expected files in one of these folders:{folders_ls_msg}\n"
@@ -60,17 +70,9 @@ class Experiment:
         """Log context for loguru context."""
         return {"experiment": str(self.name)}
 
-    def get_fp(self, folder: Folders | str) -> Path:
+    def get_fp(self, folder: str) -> Path:
         """Returns the experiment's file path from the given folder."""
-        if isinstance(folder, str):
-            try:
-                folder = Folders(folder)
-            except ValueError as e:
-                valid = "".join([f"\n    - {f.value}" for f in Folders])
-                msg = f'Invalid folder: "{folder}"\n  Valid folders:{valid}'
-                raise ValueError(msg) from e
-        file_ext: FileExts = getattr(FileExts, folder.name)
-        return self.root_dir / folder.value / f"{self.name}.{file_ext.value}"
+        return self.root_dir / folder / f"{self.name}.{STAGES[folder]}"
 
     @trace
     def update_config(
@@ -81,7 +83,7 @@ class Experiment:
     ) -> None:
         """Initialises the JSON config files with the given configurations."""
         update_config(
-            config_fp=self.get_fp(Folders.CONFIG),
+            config_fp=self.get_fp(CONFIG_DIR),
             default_config_fp=Path(default_config_fp),
             overwrite=overwrite,
         )
@@ -90,9 +92,9 @@ class Experiment:
     def format_video(self, *, overwrite: bool) -> None:
         """Formats the video with ffmpeg to fit the formatted config."""
         format_video(
-            raw_vid_fp=self.get_fp(Folders.RAW_VID),
-            formatted_vid_fp=self.get_fp(Folders.FORMATTED_VID),
-            config_fp=self.get_fp(Folders.CONFIG),
+            raw_vid_fp=self.get_fp(RAW_VIDEO_DIR),
+            formatted_vid_fp=self.get_fp(FORMATTED_VIDEO_DIR),
+            config_fp=self.get_fp(CONFIG_DIR),
             overwrite=overwrite,
         )
 
@@ -100,9 +102,9 @@ class Experiment:
     def run_dlc(self, gputouse: int | None, *, overwrite: bool) -> None:
         """Run the DLC model on the formatted video."""
         ma_dlc_run_single(
-            vid_fp=self.get_fp(Folders.FORMATTED_VID),
-            keypoints_fp=self.get_fp(Folders.KEYPOINTS),
-            config_fp=self.get_fp(Folders.CONFIG),
+            vid_fp=self.get_fp(FORMATTED_VIDEO_DIR),
+            keypoints_fp=self.get_fp(KEYPOINTS_DIR),
+            config_fp=self.get_fp(CONFIG_DIR),
             gputouse=gputouse,
             overwrite=overwrite,
         )
@@ -112,23 +114,23 @@ class Experiment:
         """Calculate parameters of the keypoints file."""
         for func in funcs:
             func(
-                keypoints_fp=self.get_fp(Folders.KEYPOINTS),
-                config_fp=self.get_fp(Folders.CONFIG),
+                keypoints_fp=self.get_fp(KEYPOINTS_DIR),
+                config_fp=self.get_fp(CONFIG_DIR),
             )
 
     @trace
     def preprocess(self, funcs: tuple[PreprocessFunc, ...], *, overwrite: bool) -> None:
         """Preprocessing pipeline for keypoints data."""
         df2df(
-            src_fp=self.get_fp(Folders.KEYPOINTS),
-            dst_fp=self.get_fp(Folders.PREPROCESSED),
+            src_fp=self.get_fp(KEYPOINTS_DIR),
+            dst_fp=self.get_fp(PREPROCESSED_DIR),
             overwrite=overwrite,
         )
         for func in funcs:
             func(
-                src_fp=self.get_fp(Folders.PREPROCESSED),
-                dst_fp=self.get_fp(Folders.PREPROCESSED),
-                config_fp=self.get_fp(Folders.CONFIG),
+                src_fp=self.get_fp(PREPROCESSED_DIR),
+                dst_fp=self.get_fp(PREPROCESSED_DIR),
+                config_fp=self.get_fp(CONFIG_DIR),
                 overwrite=True,
             )
 
@@ -136,9 +138,9 @@ class Experiment:
     def extract_features(self, *, overwrite: bool) -> None:
         """Extracts features from the preprocessed dlc file."""
         extract_features(
-            keypoints_fp=self.get_fp(Folders.PREPROCESSED),
-            features_fp=self.get_fp(Folders.FEATURES_EXTRACTED),
-            config_fp=self.get_fp(Folders.CONFIG),
+            keypoints_fp=self.get_fp(PREPROCESSED_DIR),
+            features_fp=self.get_fp(FEATURES_EXTRACTED_DIR),
+            config_fp=self.get_fp(CONFIG_DIR),
             overwrite=overwrite,
         )
 
@@ -146,9 +148,9 @@ class Experiment:
     def classify_behaviour(self, *, overwrite: bool) -> None:
         """Classify behaviours using trained models."""
         classify_behaviour(
-            features_fp=self.get_fp(Folders.FEATURES_EXTRACTED),
-            behaviour_fp=self.get_fp(Folders.PREDICTED_BEHAVIOUR),
-            config_fp=self.get_fp(Folders.CONFIG),
+            features_fp=self.get_fp(FEATURES_EXTRACTED_DIR),
+            behaviour_fp=self.get_fp(PREDICTED_BEHAVIOUR_DIR),
+            config_fp=self.get_fp(CONFIG_DIR),
             overwrite=overwrite,
         )
 
@@ -156,9 +158,9 @@ class Experiment:
     def export_behaviour(self, *, overwrite: bool) -> None:
         """Export predicted behaviours to scored behaviours."""
         predictedbehaviour2scoredbehaviour(
-            src_fp=self.get_fp(Folders.PREDICTED_BEHAVIOUR),
-            dst_fp=self.get_fp(Folders.SCORED_BEHAVIOUR),
-            config_fp=self.get_fp(Folders.CONFIG),
+            src_fp=self.get_fp(PREDICTED_BEHAVIOUR_DIR),
+            dst_fp=self.get_fp(SCORED_BEHAVIOUR_DIR),
+            config_fp=self.get_fp(CONFIG_DIR),
             overwrite=overwrite,
         )
 
@@ -167,18 +169,18 @@ class Experiment:
         """Analyse preprocessed keypoints data."""
         for func in funcs:
             func(
-                keypoints_fp=self.get_fp(Folders.PREPROCESSED),
-                formatted_vid_fp=self.get_fp(Folders.FORMATTED_VID),
+                keypoints_fp=self.get_fp(PREPROCESSED_DIR),
+                formatted_vid_fp=self.get_fp(FORMATTED_VIDEO_DIR),
                 dst_dir=self.root_dir / ANALYSIS_DIR,
-                config_fp=self.get_fp(Folders.CONFIG),
+                config_fp=self.get_fp(CONFIG_DIR),
             )
 
     @trace
     def analyse_behaviour(self) -> None:
         """Analyse scored behaviours."""
         analyse_behaviour(
-            behaviour_fp=self.get_fp(Folders.SCORED_BEHAVIOUR),
-            config_fp=self.get_fp(Folders.CONFIG),
+            behaviour_fp=self.get_fp(SCORED_BEHAVIOUR_DIR),
+            config_fp=self.get_fp(CONFIG_DIR),
             dst_dir=self.root_dir / ANALYSIS_DIR,
         )
 
@@ -186,8 +188,8 @@ class Experiment:
     def combine_analysis(self) -> None:
         """Combine the experiment's analysis into a single df."""
         combine_analysis(
-            analysis_combined_fp=self.get_fp(Folders.ANALYSIS_COMBINED),
-            config_fp=self.get_fp(Folders.CONFIG),
+            analysis_combined_fp=self.get_fp(ANALYSIS_COMBINED_DIR),
+            config_fp=self.get_fp(CONFIG_DIR),
             analysis_dir=self.root_dir / ANALYSIS_DIR,
             overwrite=True,
         )

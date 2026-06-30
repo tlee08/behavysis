@@ -2,16 +2,14 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
-import polars as pl
 from joblib import dump, load
 from loguru import logger
 
-from behavysis.constants import PRED, PROB, Folders
+from behavysis.constants import FEATURES_EXTRACTED_DIR, PRED, PROB, SCORED_BEHAVIOUR_DIR
 from behavysis.models import BehaviourClassifierConfig
 
 from .clf_models.base_torch_model import BaseTorchModel
@@ -25,6 +23,8 @@ from .data import (
 from .evaluation import save_evaluation_results, save_training_history
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from behavysis.pipeline.project import Project
 
 
@@ -183,12 +183,12 @@ class BehaviourClassifier:
     @property
     def x_dir(self) -> Path:
         """Directory containing feature files."""
-        return self.proj_dir / Folders.FEATURES_EXTRACTED.value
+        return self.proj_dir / FEATURES_EXTRACTED_DIR
 
     @property
     def y_dir(self) -> Path:
         """Directory containing scored behaviour files."""
-        return self.proj_dir / Folders.SCORED_BEHAVIOUR.value
+        return self.proj_dir / SCORED_BEHAVIOUR_DIR
 
     #################################################
     # Factory Methods
@@ -209,7 +209,7 @@ class BehaviourClassifier:
             List of BehavClassifier instances, one per behaviour.
         """
         proj_dir = proj_dir.resolve()
-        y_df = wrangle_columns_y(combine_dfs(proj_dir / Folders.SCORED_BEHAVIOUR.value))
+        y_df = wrangle_columns_y(combine_dfs(proj_dir / SCORED_BEHAVIOUR_DIR))
         behaviour_ls = y_df.columns.to_list()
         return [cls(proj_dir, behav) for behav in behaviour_ls]
 
@@ -372,10 +372,8 @@ class BehaviourClassifier:
             [(self.config.behav_name, PROB), (self.config.behav_name, PRED)],
             names=["behaviour", "outcomes"],
         )
-        pred_df = pd.DataFrame(
+        return pd.DataFrame(
             np.column_stack([y_prob, y_pred]),
             index=pd.Index(index, name="frame"),
             columns=columns,
         )
-
-        return pred_df

@@ -80,8 +80,6 @@ Functions check `overwrite` first, read config with `ExperimentConfig.model_vali
 5_features_extracted → 6_predicted_behavs → 7_scored_behavs → 8_analysis → 9_analysis_combined
 ```
 
-File extensions are defined in `FileExts` enum—most data files use Parquet format.
-
 ## Behavioural Classifier (`behav_classifier/`)
 
 `BehavClassifier` handles training and inference. Models stored in `proj_dir/behav_models/<behav_name>/`. Key methods:

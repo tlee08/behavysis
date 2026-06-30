@@ -10,7 +10,13 @@ from dask.distributed import LocalCluster
 from loguru import logger
 from natsort import natsorted
 
-from behavysis.constants import ANALYSIS_DIR, DF_IO_FORMAT, Folders
+from behavysis.constants import (
+    ANALYSIS_DIR,
+    CONFIG_DIR,
+    DF_IO_FORMAT,
+    FORMATTED_VIDEO_DIR,
+    KEYPOINTS_DIR,
+)
 from behavysis.funcs.run_dlc import ma_dlc_run_batch
 from behavysis.models import ExperimentConfig
 from behavysis.pipeline import Experiment
@@ -127,18 +133,16 @@ class Project:
         nprocs = len(gputouse_ls)
         exp_ls = self.experiments
         if not overwrite:
-            exp_ls = [
-                exp for exp in exp_ls if not exp.get_fp(Folders.KEYPOINTS).is_file()
-            ]
+            exp_ls = [exp for exp in exp_ls if not exp.get_fp(KEYPOINTS_DIR).is_file()]
         if not exp_ls:
             return
         exp_batches = np.array_split(np.array(exp_ls), nprocs)
         with cluster_process(LocalCluster(n_workers=nprocs, threads_per_worker=1)):
             delayed_tasks = [
                 dask.delayed(ma_dlc_run_batch)(
-                    vid_fp_ls=[exp.get_fp(Folders.FORMATTED_VID) for exp in batch],
-                    keypoints_dir=self.root_dir / Folders.KEYPOINTS.value,
-                    config_dir=self.root_dir / Folders.CONFIG.value,
+                    vid_fp_ls=[exp.get_fp(FORMATTED_VIDEO_DIR) for exp in batch],
+                    keypoints_dir=self.root_dir / KEYPOINTS_DIR,
+                    config_dir=self.root_dir / CONFIG_DIR,
                     gputouse=gpu,
                     overwrite=overwrite,
                 )
@@ -227,7 +231,7 @@ class Project:
             return
 
         config = ExperimentConfig.model_validate_json(
-            self.experiments[0].get_fp(Folders.CONFIG).read_text(),
+            self.experiments[0].get_fp(CONFIG_DIR).read_text(),
         )
         bin_sizes = [*list(config.get_ref(config.user.analyse.bins_sec)), "custom"]
 

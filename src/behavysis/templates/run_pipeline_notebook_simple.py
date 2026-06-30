@@ -33,7 +33,7 @@ def _():
 def _():
     overwrite = False
     proj_dir = Path.cwd()
-    names_ls = [i.name for i in (proj_dir / "1_raw_videos").iterdir()]
+    names_ls = [i.stem for i in (proj_dir / "1_raw_videos").iterdir()]
     config_fp = proj_dir / "default_config.json"
     return config_fp, names_ls, overwrite, proj_dir
 
