@@ -10,7 +10,17 @@ import pandas as pd
 import polars as pl
 from loguru import logger
 
-from behavysis.constants import CACHE_DIR, DF_IO_FORMAT, LIKELIHOOD
+from behavysis.constants import (
+    BODYPARTS,
+    CACHE_DIR,
+    COORDS,
+    DF_IO_FORMAT,
+    FRAME,
+    INDIVIDUALS,
+    LIKELIHOOD,
+    X,
+    Y,
+)
 from behavysis.models import ExperimentConfig
 from behavysis.schemas import KEYPOINTS_SCHEMA, write_df
 from behavysis.utils.io_utils import file_exists_msg, silent_remove
@@ -158,27 +168,21 @@ def _export2df(name: str, src_dir: Path, dst_dir: Path) -> None:
     df_pd = pd.DataFrame(pd.read_hdf(name_fp))
     df_pd = df_pd.fillna(0)
 
-    # Clip likelihood values between 0 and 1
-    lhoods_idx = pd.IndexSlice[:, :, :, LIKELIHOOD]
-    df_pd.loc[:, lhoods_idx] = df_pd.loc[:, lhoods_idx].clip(0, 1)
-
     # Drop scorer level (always single value, useless)
     df_pd.columns = df_pd.columns.droplevel("scorer")
 
     # Stack bodyparts + individuals + coords into rows, then unstack coords
     # to get x, y, likelihood as columns
-    stacked = df_pd.melt(["individuals", "bodyparts", "coords"])
-    unstacked = stacked.unstack("coords")
-    unstacked.columns = unstacked.columns.str.lower()
+    long_df = df_pd.stack([INDIVIDUALS, BODYPARTS, COORDS]).unstack(COORDS)  # noqa: PD010, PD013
 
     # Convert to Polars long form
-    df_pl = pl.from_pandas(unstacked.reset_index()).select(
-        pl.col("frame").cast(pl.Int64),
-        pl.col("individuals").alias("individual"),
-        pl.col("bodyparts").alias("bodypart"),
-        pl.col("x").cast(pl.Float64),
-        pl.col("y").cast(pl.Float64),
-        pl.col("likelihood").cast(pl.Float64),
+    df_pl = pl.from_pandas(long_df.reset_index()).select(
+        pl.col(FRAME).cast(pl.Int64),
+        pl.col(INDIVIDUALS),
+        pl.col(BODYPARTS),
+        pl.col(X).cast(pl.Float64),
+        pl.col(Y).cast(pl.Float64),
+        pl.col(LIKELIHOOD).cast(pl.Float64),
     )
 
     write_df(df_pl, dst_dir / f"{name}.{DF_IO_FORMAT}", KEYPOINTS_SCHEMA)
