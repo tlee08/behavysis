@@ -9,8 +9,7 @@ from loguru import logger
 from behavysis.behaviour_classifier import BehaviourClassifier
 from behavysis.constants import BEHAVIOUR, FRAME, PRED, PROB
 from behavysis.models import ExperimentConfig
-from behavysis.schemas import BEHAVIOUR_PREDICTED_SCHEMA, write_df
-from behavysis.schemas.behaviour import merge_bouts
+from behavysis.schemas import BEHAVIOUR_PREDICTED_SCHEMA, merge_bouts, write_df
 from behavysis.utils.io_utils import file_exists_msg
 
 

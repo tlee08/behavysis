@@ -22,13 +22,9 @@ from behavysis.constants import (
     PLOT,
     SUMMARY,
 )
-from behavysis.schemas import (
-    BINNED_SCHEMA,
-    SUMMARY_SCHEMA,
-    write_df,
-)
 
 from .behaviour import vect2bouts
+from .schemas import BINNED_SCHEMA, SUMMARY_SCHEMA, write_df
 
 
 def agg_quantitative(df: pl.DataFrame, fps: float) -> pl.DataFrame:
