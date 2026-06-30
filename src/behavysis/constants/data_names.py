@@ -21,11 +21,11 @@ PROCESSED = "processed"
 
 # Features
 
-FEATURES = "features"
+FEATURE = "feature"
 
 # Behaviour
 
-OUTCOMES = "outcomes"
+OUTCOME = "outcome"
 BEHAVIOUR = "behaviour"
 
 PROB = "prob"
@@ -45,9 +45,9 @@ DUR = "dur"
 
 ANALYSIS = "analysis"
 EXPERIMENT = "experiment"
-MEASURES = "measures"
+MEASURE = "measure"
 VALUE = "value"
-AGGS = "aggs"
+AGG = "agg"
 BIN_SEC = "bin_sec"
 
 

@@ -120,8 +120,8 @@ def _compute_movement(
         )
 
         # Frame-by-frame deltas
-        delta_x = x_smooth.diff(null_behavior="drop").fill_null(0)
-        delta_y = y_smooth.diff(null_behavior="drop").fill_null(0)
+        delta_x = x_smooth.diff(null_behavior="ignore").fill_null(0)
+        delta_y = y_smooth.diff(null_behavior="ignore").fill_null(0)
         delta_px = (delta_x.pow(2) + delta_y.pow(2)).sqrt()
 
         # Distance in mm

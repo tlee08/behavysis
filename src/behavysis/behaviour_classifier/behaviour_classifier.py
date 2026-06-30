@@ -9,10 +9,16 @@ import pandas as pd
 from joblib import dump, load
 from loguru import logger
 
-from behavysis.constants import FEATURES_EXTRACTED_DIR, PRED, PROB, SCORED_BEHAVIOUR_DIR
+from behavysis.constants import (
+    BEHAVIOUR,
+    FEATURES_EXTRACTED_DIR,
+    OUTCOME,
+    PRED,
+    PROB,
+    SCORED_BEHAVIOUR_DIR,
+)
 from behavysis.models import BehaviourClassifierConfig
 
-from .clf_models.base_torch_model import BaseTorchModel
 from .clf_models.clf_templates import CLF_TEMPLATES, CNN1
 from .data import (
     combine_dfs,
@@ -26,6 +32,8 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from behavysis.pipeline.project import Project
+
+    from .clf_models.base_torch_model import BaseTorchModel
 
 
 class BehaviourClassifier:
@@ -370,7 +378,7 @@ class BehaviourClassifier:
         # Return pandas DataFrame with prob/pred columns (consumer handles Polars conversion)
         columns = pd.MultiIndex.from_tuples(
             [(self.config.behav_name, PROB), (self.config.behav_name, PRED)],
-            names=["behaviour", "outcomes"],
+            names=[BEHAVIOUR, OUTCOME],
         )
         return pd.DataFrame(
             np.column_stack([y_prob, y_pred]),

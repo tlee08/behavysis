@@ -10,7 +10,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import FunctionTransformer, MinMaxScaler
 
-from behavysis.constants import ACTUAL, FALSE_POS, OUTCOMES, PRED, TRUE_POS, UNSURE
+from behavysis.constants import ACTUAL, FALSE_POS, OUTCOME, PRED, TRUE_POS, UNSURE
 from behavysis.utils.io_utils import (
     async_read_files_run,
 )
@@ -30,7 +30,9 @@ def combine_dfs(src_dir: Path) -> pd.DataFrame:
     pd.DataFrame
         Combined dataframe with experiment names as index level.
     """
-    data_dict = {i.stem: pl.read_parquet(src_dir / i).to_pandas() for i in src_dir.iterdir()}
+    data_dict = {
+        i.stem: pl.read_parquet(src_dir / i).to_pandas() for i in src_dir.iterdir()
+    }
     df = pd.concat(data_dict.values(), axis=0, keys=data_dict.keys())
     return df
 
@@ -50,7 +52,7 @@ def wrangle_columns_y(y: pd.DataFrame) -> pd.DataFrame:
     """
     # Filtering out the pred columns (in the `outcomes` level)
     columns_filter = np.isin(
-        y.columns.get_level_values(OUTCOMES),
+        y.columns.get_level_values(OUTCOME),
         [PRED],
         invert=True,
     )
@@ -219,9 +221,18 @@ def prepare_training_data(
         value_vars = [c for c in df_pl.columns if c not in id_vars]
         df_pd = df_pl.to_pandas()
         # Melt then pivot to get MultiIndex columns
-        melted = df_pd.melt(id_vars=id_vars, value_vars=value_vars, var_name="outcome", value_name="value")
-        pivoted = melted.pivot_table(index="frame", columns=["behaviour", "outcome"], values="value")
-        pivoted.columns = pd.MultiIndex.from_tuples(pivoted.columns, names=["behaviour", "outcomes"])
+        melted = df_pd.melt(
+            id_vars=id_vars,
+            value_vars=value_vars,
+            var_name="outcome",
+            value_name="value",
+        )
+        pivoted = melted.pivot_table(
+            index="frame", columns=["behaviour", "outcome"], values="value"
+        )
+        pivoted.columns = pd.MultiIndex.from_tuples(
+            pivoted.columns, names=["behaviour", "outcomes"]
+        )
         return pivoted
 
     x_df_ls = async_read_files_run(x_fp_ls, _read_features)

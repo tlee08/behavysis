@@ -10,7 +10,7 @@ import polars as pl
 
 from behavysis.constants import (
     ACTUAL,
-    AGGS,
+    AGG,
     ANALYSIS,
     BEHAVIOUR,
     BIN_SEC,
@@ -19,7 +19,7 @@ from behavysis.constants import (
     FRAME,
     INDIVIDUAL,
     LIKELIHOOD,
-    MEASURES,
+    MEASURE,
     PRED,
     PROB,
     VALUE,
@@ -68,15 +68,15 @@ FEATURES_BASE: SchemaDict = {
 ANALYSIS_SCHEMA: SchemaDict = {
     FRAME: pl.Int64,
     INDIVIDUAL: pl.Utf8,
-    MEASURES: pl.Utf8,
+    MEASURE: pl.Utf8,
     VALUE: pl.Float64,
 }
 
 """One row per (individual, measure, aggregation) statistic."""
 SUMMARY_SCHEMA: SchemaDict = {
     INDIVIDUAL: pl.Utf8,
-    MEASURES: pl.Utf8,
-    AGGS: pl.Utf8,
+    MEASURE: pl.Utf8,
+    AGG: pl.Utf8,
     VALUE: pl.Float64,
 }
 
@@ -84,8 +84,8 @@ SUMMARY_SCHEMA: SchemaDict = {
 BINNED_SCHEMA: SchemaDict = {
     BIN_SEC: pl.Float64,
     INDIVIDUAL: pl.Utf8,
-    MEASURES: pl.Utf8,
-    AGGS: pl.Utf8,
+    MEASURE: pl.Utf8,
+    AGG: pl.Utf8,
     VALUE: pl.Float64,
 }
 
@@ -94,7 +94,7 @@ COMBINED_ANALYSIS_SCHEMA: SchemaDict = {
     FRAME: pl.Int64,
     ANALYSIS: pl.Utf8,
     INDIVIDUAL: pl.Utf8,
-    MEASURES: pl.Utf8,
+    MEASURE: pl.Utf8,
     VALUE: pl.Float64,
 }
 
@@ -102,8 +102,8 @@ COMBINED_ANALYSIS_SCHEMA: SchemaDict = {
 COLLATED_SUMMARY_SCHEMA: SchemaDict = {
     EXPERIMENT: pl.Utf8,
     INDIVIDUAL: pl.Utf8,
-    MEASURES: pl.Utf8,
-    AGGS: pl.Utf8,
+    MEASURE: pl.Utf8,
+    AGG: pl.Utf8,
     VALUE: pl.Float64,
 }
 
@@ -112,8 +112,8 @@ COLLATED_BINNED_SCHEMA: SchemaDict = {
     BIN_SEC: pl.Float64,
     EXPERIMENT: pl.Utf8,
     INDIVIDUAL: pl.Utf8,
-    MEASURES: pl.Utf8,
-    AGGS: pl.Utf8,
+    MEASURE: pl.Utf8,
+    AGG: pl.Utf8,
     VALUE: pl.Float64,
 }
 
