@@ -162,11 +162,12 @@ def _export2df(name: str, src_dir: Path, dst_dir: Path) -> None:
         logger.warning(msg)
         return
 
+    # Get the only value in the 1-element list
     name_fp = src_dir / name_fp_ls[0]
     # Read h5 as pandas (DLC outputs pandas MultiIndex columns)
     df_pd = pd.DataFrame(pd.read_hdf(name_fp))
+    # Impute na values with 0
     df_pd = df_pd.fillna(0)
-
     # Drop scorer level (always single value, useless)
     df_pd.columns = df_pd.columns.droplevel("scorer")
     # Name index as "frame"
@@ -178,7 +179,6 @@ def _export2df(name: str, src_dir: Path, dst_dir: Path) -> None:
         .unstack("coords")
         .reset_index()
     )
-
     # Convert to Polars long form
     df_pl = pl.from_pandas(long_df.reset_index()).select(
         pl.col(FRAME).cast(pl.Int64),
@@ -188,6 +188,6 @@ def _export2df(name: str, src_dir: Path, dst_dir: Path) -> None:
         pl.col(Y).cast(pl.Float64),
         pl.col(LIKELIHOOD).cast(pl.Float64),
     )
-
+    # Write to file
     write_df(df_pl, dst_dir / f"{name}.{DF_IO_FORMAT}", KEYPOINTS_SCHEMA)
     logger.info("Outputted DLC file.")

@@ -12,15 +12,7 @@ import pandas as pd
 import polars as pl
 import pytest
 
-from behavysis.constants import (
-    BODYPART,
-    COORD,
-    FRAME,
-    INDIVIDUAL,
-    LIKELIHOOD,
-    X,
-    Y,
-)
+from behavysis.constants import BODYPART, COORD, FRAME, INDIVIDUAL, LIKELIHOOD, X, Y
 from behavysis.schemas import (
     ANALYSIS_SCHEMA,
     BINNED_SCHEMA,
