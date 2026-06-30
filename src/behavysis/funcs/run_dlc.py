@@ -170,10 +170,13 @@ def _export2df(name: str, src_dir: Path, dst_dir: Path) -> None:
 
     # Drop scorer level (always single value, useless)
     df_pd.columns = df_pd.columns.droplevel("scorer")
-
+    # Name index as "frame"
+    df_pd.index.name = FRAME
     # Stack bodyparts + individuals + coords into rows, then unstack coords
     # to get x, y, likelihood as columns
-    long_df = df_pd.stack([INDIVIDUALS, BODYPARTS, COORDS]).unstack(COORDS)  # noqa: PD010, PD013
+    long_df = (
+        df_pd.stack([INDIVIDUALS, BODYPARTS, COORDS]).unstack(COORDS).reset_index()  # noqa: PD010, PD013
+    )
 
     # Convert to Polars long form
     df_pl = pl.from_pandas(long_df.reset_index()).select(
