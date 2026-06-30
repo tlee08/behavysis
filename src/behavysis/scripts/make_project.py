@@ -14,13 +14,25 @@ def main() -> None:
 
     overwrite = confirm("Overwrite existing files?")
 
+    # Make pipeline notebook
+    if overwrite or not Path("run_pipeline_notebook.py").exists():
+        save_template(
+            template_name="run_pipeline_notebook.py",
+            dst=Path.cwd() / "run_pipeline_notebook.py",
+        )
+    # Make pipeline notebook simple
+    if overwrite or not Path("run_pipeline_notebook_simple.py").exists():
+        save_template(
+            template_name="run_pipeline_notebook_simple.py",
+            dst=Path.cwd() / "run_pipeline_notebook_simple.py",
+        )
     # Make pipeline script
     if overwrite or not Path("run_pipeline_script.py").exists():
         save_template(
             template_name="run_pipeline_script.py",
             dst=Path.cwd() / "run_pipeline_script.py",
-            project_fp_repr=repr(str(Path.cwd() / "project")),
-            config_fp_repr=repr(str(Path.cwd() / "default_config.json")),
+            project_fp_repr=repr(str(Path("project"))),
+            config_fp_repr=repr(str(Path("default_config.json"))),
             nprocs=5,
             overwrite=False,
             update_config=True,
