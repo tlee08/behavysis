@@ -41,7 +41,6 @@ def _():
 @app.cell
 def _(names_ls, nprocs, proj_dir):
     proj = Project(proj_dir)
-    proj.nprocs = nprocs.value
     proj.import_experiments(names_ls)
     return (proj,)
 

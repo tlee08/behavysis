@@ -10,8 +10,8 @@ class Folders(Enum):
     """Enum for the pipeline folders."""
 
     CONFIG = "0_config"
-    RAW_VID = "1_raw_videos"
-    FORMATTED_VID = "2_formatted_videos"
+    RAW_VIDEO = "1_raw_videos"
+    FORMATTED_VIDEO = "2_formatted_videos"
     KEYPOINTS = "3_keypoints"
     PREPROCESSED = "4_preprocessed"
     FEATURES_EXTRACTED = "5_features_extracted"
