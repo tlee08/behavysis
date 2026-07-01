@@ -1,19 +1,20 @@
 """Functions have the following format."""
 
-from pathlib import Path
 from typing import Protocol
+
+import polars as pl
 
 from behavysis.models import ExperimentConfig, ExperimentMetadata
 
 
-class CalculateParamsFunc(Protocol):
-    """Protocol for calculate_params functions."""
+class CalculateParametersFunc(Protocol):
+    """Protocol for calculate_parameters functions."""
 
     def __call__(
         self,
-        keypoints_fp: Path,
+        keypoints_df: pl.DataFrame,
         config: ExperimentConfig,
         metadata: ExperimentMetadata,
     ) -> ExperimentMetadata:
-        """Protocol for calculate_params functions."""
+        """Protocol for calculate_parameters functions."""
         ...

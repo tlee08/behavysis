@@ -18,9 +18,6 @@ def classify_behaviour(
     """Given model config files and features df, classifies behaviour with ML model."""
     model_config_ls = config.require_classify_behaviour()
 
-    # Read features (wide, pandas — BehaviourClassifier API expects pandas)
-    features_df = pl.read_parquet(features_fp).to_pandas()
-
     behaviour_df_ls = []
     for model_config in model_config_ls:
         proj_dir = model_config.proj_dir
@@ -31,7 +28,7 @@ def classify_behaviour(
         min_window_frames = int(np.round(min_window_secs * metadata.require_fps()))
 
         # Run classifier pipeline (returns pandas DataFrame)
-        behav_df_i = behav_model.pipeline_inference(features_df)
+        behav_df_i = behav_model.pipeline_inference(features_df.to_pandas())
 
         # Convert to Polars long form
         df_pl = pl.DataFrame(

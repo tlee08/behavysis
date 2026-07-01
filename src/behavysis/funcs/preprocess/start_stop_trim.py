@@ -33,8 +33,8 @@ def start_stop_trim(
     metadata: ExperimentMetadata,
 ) -> pl.DataFrame:
     """Filters the rows of a DLC formatted dataframe."""
-    start_frame = metadata.start_frame
-    stop_frame = metadata.stop_frame
+    start_frame = metadata.require_start_frame()
+    stop_frame = metadata.require_stop_frame()
     return keypoints_df.filter(
         pl.col("frame").is_between(start_frame, stop_frame),
     )

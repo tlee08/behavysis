@@ -10,7 +10,7 @@
     "run_dlc": {
       "dlc_config_path": "Z:\\PRJ-BowenLab\\PRJ-BowenLab\\DeepLabCut-Projects\\aggrModel_960px\\config.yaml"
     },
-    "calculate_params": {
+    "calculate_parameters": {
       "start_frame": {
         "window_sec": 1,
         "pcutoff": 0.9,

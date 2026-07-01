@@ -70,6 +70,6 @@ def analyse_behaviour(
         dst_dir,
         name,
         metadata.require_fps(),
-        config.require_bins_sec_ls(),
-        config.require_custom_bins_sec_ls(),
+        config.require_analyse().bins_sec_ls,
+        config.require_analyse().custom_bins_sec_ls(),
     )

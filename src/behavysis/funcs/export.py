@@ -76,7 +76,7 @@ def predictedbehaviour2scoredbehaviour(
 def boris2behaviour(
     src_fp: Path,
     dst_fp: Path,
-    metadata_fp: Path,
+    metadata: ExperimentMetadata,
     behaviour_ls: list[str],
     *,
     overwrite: bool,
@@ -85,8 +85,6 @@ def boris2behaviour(
     if not overwrite and dst_fp.exists():
         logger.warning(file_exists_msg(dst_fp))
         return
-
-    metadata = ExperimentMetadata.model_validate_json(metadata_fp.read_text())
 
     df = import_boris_tsv(
         src_fp,

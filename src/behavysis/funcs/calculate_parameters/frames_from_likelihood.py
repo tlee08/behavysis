@@ -1,7 +1,5 @@
 """Functions have the following format."""
 
-from pathlib import Path
-
 import numpy as np
 import pandas as pd
 import polars as pl
@@ -10,10 +8,8 @@ from pydantic import BaseModel, PositiveFloat
 from behavysis.constants import BPTS_SIMBA
 from behavysis.models import ExperimentConfig, ExperimentMetadata
 from behavysis.schemas import (
-    KEYPOINTS_SCHEMA,
     check_bpts_exist,
     get_indivs_bpts,
-    read_df,
 )
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -35,13 +31,11 @@ class FromLikelihoodConfig(BaseModel):
 
 
 def start_frame_from_likelihood(
-    keypoints_fp: Path,
+    keypoints_df: pl.DataFrame,
     config: ExperimentConfig,
     metadata: ExperimentMetadata,
 ) -> ExperimentMetadata:
     """Determines start frame based on when subject likely entered the frame."""
-    # Read files
-    keypoints_df = read_df(keypoints_fp, KEYPOINTS_SCHEMA)
     # Calculate start-stop frames from likelihood
     _start_frame, _stop_frame = _calc_exists_from_likelihood(
         keypoints_df,
@@ -54,13 +48,11 @@ def start_frame_from_likelihood(
 
 
 def stop_frame_from_likelihood(
-    keypoints_fp: Path,
+    keypoints_df: pl.DataFrame,
     config: ExperimentConfig,
     metadata: ExperimentMetadata,
 ) -> ExperimentMetadata:
     """Determines stop frame based on when subject likely exited the frame."""
-    # Read files
-    keypoints_df = read_df(keypoints_fp, KEYPOINTS_SCHEMA)
     # Calculate start-stop frames from likelihood
     _start_frame, _stop_frame = _calc_exists_from_likelihood(
         keypoints_df,
@@ -73,13 +65,11 @@ def stop_frame_from_likelihood(
 
 
 def dur_frames_from_likelihood(
-    keypoints_fp: Path,
+    keypoints_df: pl.DataFrame,
     config: ExperimentConfig,
     metadata: ExperimentMetadata,
 ) -> ExperimentMetadata:
     """Determines duration in frames from subject first to last seen."""
-    # Read files
-    keypoints_df = read_df(keypoints_fp, KEYPOINTS_SCHEMA)
     # Calculate start-stop frames from likelihood
     _start_frame, _stop_frame = _calc_exists_from_likelihood(
         keypoints_df,

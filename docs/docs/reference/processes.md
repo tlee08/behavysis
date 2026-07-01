@@ -6,7 +6,7 @@
 
 ::: behavysis.funcs.run_dlc
 
-::: behavysis.funcs.calculate_params
+::: behavysis.funcs.calculate_parameters
 
 ::: behavysis.funcs.preprocess
 

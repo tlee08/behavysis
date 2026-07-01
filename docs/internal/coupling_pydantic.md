@@ -11,7 +11,7 @@
 You are a principle data scientist and data engineer.
 Be critical, verify what you do, be elegant in your solutions, be honest and harsh but fair.
 
-Context: I see that there's a lot of coupling between individual functions in @src/behavysis/funcs/ and the config Pydantic models in @src/behavysis/models/funcs/ (e.g. for calculate_params, preprocess, and analyse).
+Context: I see that there's a lot of coupling between individual functions in @src/behavysis/funcs/ and the config Pydantic models in @src/behavysis/models/funcs/ (e.g. for calculate_parameters, preprocess, and analyse).
 
 Your task: Critically assess the viability of this current paradigm. Research other paradigms that are a better fit. Be effective, be elegant, be creative. Present your assessment.
 
@@ -38,7 +38,7 @@ The pipeline follows a **file-based config-as-state** pattern:
                │
     ┌──────────┴──────────┬──────────────────┐
     ▼                     ▼                   ▼
- format_video()     calculate_params()    analyse.in_roi()
+ format_video()     calculate_parameters()    analyse.in_roi()
  (reads user.*)     (reads user.*,        (reads user.*,
  (writes auto.*)     writes auto.*)        reads auto.*)
 ```
@@ -49,7 +49,7 @@ Every function reads the **entire** `ExperimentConfig` from disk, extracts the f
 
 **A. Config-file-as-database: fragile, non-atomic, untestable**
 
-The worst anti-pattern is in `calculate_params.py`. Functions there:
+The worst anti-pattern is in `calculate_parameters.py`. Functions there:
 
 1. Parse config from disk
 2. Compute a value
@@ -258,7 +258,7 @@ models/
   metadata.py           # MetadataConfig (was AutoConfig)
   format_vid.py         # FormatVidConfig, VidMetadata
   run_dlc.py            # RunDlcConfig
-  calculate_params.py   # CalculateParamsConfig, FromLikelihoodConfig, etc.
+  calculate_parameters.py   # CalculateParamsConfig, FromLikelihoodConfig, etc.
   preprocess.py         # PreprocessConfig, InterpolateConfig, etc.
   extract_features.py   # ExtractFeaturesConfig
   classify_behaviour.py # ClassifyBehaviourConfig

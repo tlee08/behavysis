@@ -33,7 +33,7 @@ These fields **must** be configured for the pipeline to work:
 | Field                                     | Description                                   | Example                          |
 | ----------------------------------------- | --------------------------------------------- | -------------------------------- |
 | `user.run_dlc.model_fp`                   | Path to DeepLabCut model config.yaml          | `"/models/my_model/config.yaml"` |
-| `user.calculate_params.px_per_mm.dist_mm` | Real-world distance between two arena corners | `400` (for 40cm arena)           |
+| `user.calculate_parameters.px_per_mm.dist_mm` | Real-world distance between two arena corners | `400` (for 40cm arena)           |
 
 ---
 
@@ -204,7 +204,7 @@ Standard open field test with one mouse. Measures speed, freezing, and thigmotax
     "run_dlc": {
       "model_fp": "/path/to/open_field_dlc/config.yaml"
     },
-    "calculate_params": {
+    "calculate_parameters": {
       "from_likelihood": {
         "bodyparts": "--bpts_simba",
         "window_sec": 1.0,
@@ -269,7 +269,7 @@ Social interaction test with two mice (one marked, one unmarked). Includes socia
     "run_dlc": {
       "model_fp": "/path/to/social_interaction_dlc/config.yaml"
     },
-    "calculate_params": {
+    "calculate_parameters": {
       "from_likelihood": {
         "bodyparts": "--bpts_simba",
         "window_sec": 1.0,
@@ -371,7 +371,7 @@ Your DLC model's bodypart names don't match the config. Check `ref.bpts_simba` m
     "run_dlc": {
       "model_fp": "path/to/DEEPLABCUT_model/config.yaml"
     },
-    "calculate_params": {
+    "calculate_parameters": {
       "from_likelihood": {
         "bodyparts": "--bpts_simba",
         "window_sec": 1.0,

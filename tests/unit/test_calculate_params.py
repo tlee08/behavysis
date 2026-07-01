@@ -1,4 +1,4 @@
-"""Unit tests for calculate_params module.
+"""Unit tests for calculate_parameters module.
 
 NOTE: These tests require proper keypoints data with the correct column structure.
 They are marked as integration tests because they need realistic data.

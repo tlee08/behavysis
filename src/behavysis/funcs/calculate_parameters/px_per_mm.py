@@ -1,14 +1,12 @@
 """Functions have the following format."""
 
-from pathlib import Path
-
 import numpy as np
 import polars as pl
 from pydantic import BaseModel, PositiveFloat
 
 from behavysis.constants import LIKELIHOOD, SINGLE
 from behavysis.models import ExperimentConfig, ExperimentMetadata
-from behavysis.schemas import KEYPOINTS_SCHEMA, check_bpts_exist, read_df
+from behavysis.schemas import check_bpts_exist
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Config Models
@@ -30,7 +28,7 @@ class PxPerMmConfig(BaseModel):
 
 
 def px_per_mm(
-    keypoints_fp: Path,
+    keypoints_df: pl.DataFrame,
     config: ExperimentConfig,
     metadata: ExperimentMetadata,
 ) -> ExperimentMetadata:
@@ -44,7 +42,6 @@ def px_per_mm(
     pcutoff = cfg.pcutoff
     dist_mm = cfg.dist_mm
 
-    keypoints_df = read_df(keypoints_fp, KEYPOINTS_SCHEMA).fill_null(0)
     check_bpts_exist(keypoints_df, [pt_a, pt_b])
 
     # Get calibration point coordinates for "single" individual

@@ -2,8 +2,8 @@
 
 from .analyse import AnalyseFunc, distance, freezing, in_roi, speed
 from .analyse_behaviour import analyse_behaviour
-from .calculate_params import (
-    CalculateParamsFunc,
+from .calculate_parameters import (
+    CalculateParametersFunc,
     dur_frames_from_likelihood,
     px_per_mm,
     start_frame_from_csv,
@@ -28,7 +28,7 @@ from .update_config import update_config
 
 __all__ = [
     "AnalyseFunc",
-    "CalculateParamsFunc",
+    "CalculateParametersFunc",
     "EvaluateVid",
     "PreprocessFunc",
     "analyse_behaviour",

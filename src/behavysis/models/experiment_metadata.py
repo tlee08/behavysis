@@ -1,6 +1,6 @@
 """Experiment configuration models for the behavysis pipeline."""
 
-from pydantic import BaseModel, PositiveFloat, PositiveInt
+from pydantic import BaseModel, ConfigDict, PositiveFloat, PositiveInt
 
 from ._validators import MetadataNotReadyError
 
@@ -17,12 +17,25 @@ class VideoMetadata(BaseModel):
 class ExperimentMetadata(BaseModel):
     """Experiment Metadata."""
 
-    raw_video: VideoMetadata = VideoMetadata()
-    formatted_video: VideoMetadata = VideoMetadata()
+    model_config = ConfigDict(extra="forbid")
+
+    name: str | None = None
     px_per_mm: PositiveFloat | None = None
     start_frame: PositiveInt | None = None
     stop_frame: PositiveInt | None = None
     dur_frames: PositiveInt | None = None
+    raw_video: VideoMetadata = VideoMetadata()
+    formatted_video: VideoMetadata = VideoMetadata()
+
+    def require_name(self) -> str:
+        """Name."""
+        if self.name is None:
+            msg = "name"
+            raise MetadataNotReadyError(
+                msg,
+                "calculate_parameters.name()",
+            )
+        return self.name
 
     def require_px_per_mm(self) -> PositiveFloat:
         """Pixels per MM."""
@@ -30,7 +43,7 @@ class ExperimentMetadata(BaseModel):
             msg = "px_per_mm"
             raise MetadataNotReadyError(
                 msg,
-                "calculate_params.px_per_mm()",
+                "calculate_parameters.px_per_mm()",
             )
         return self.px_per_mm
 
@@ -40,7 +53,7 @@ class ExperimentMetadata(BaseModel):
             msg = "start_frame"
             raise MetadataNotReadyError(
                 msg,
-                "calculate_params.start_frame_from_*()",
+                "calculate_parameters.start_frame_from_*()",
             )
         return self.start_frame
 
@@ -50,7 +63,7 @@ class ExperimentMetadata(BaseModel):
             msg = "stop_frame"
             raise MetadataNotReadyError(
                 msg,
-                "calculate_params.stop_frame_from_*()",
+                "calculate_parameters.stop_frame_from_*()",
             )
         return self.stop_frame
 

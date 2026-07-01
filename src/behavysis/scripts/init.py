@@ -20,7 +20,6 @@ def main() -> None:
             # "pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu126 \n "
             # 'pip install "git+https://github.com/DeepLabCut/DeepLabCut.git@pytorch_dlc#egg=deeplabcut[gui,modelzoo,wandb]"'
         ),
-        f"conda env create -f {templates_dir / 'simba.yaml'}",
     ]:
         subprocess.run(cmd_str, shell=True)
 

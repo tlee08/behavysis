@@ -115,6 +115,7 @@ ROLL_WINDOW_DIVISORS = [2.0, 5.0, 7.5, 15, 30, 60, 90, 120]
 # Taken from here:
 # - https://github.com/sgoldenlab/simba/blob/master/simba/pose_configurations/configuration_names/pose_config_names.csv
 # - https://github.com/sgoldenlab/simba/blob/master/simba/pose_configurations/bp_names/bp_names.csv
+# - https://github.com/sgoldenlab/simba/blob/master/simba/feature_extractors/feature_extractor_16bp.py
 # 2 animals; 16 body-parts.
 
 BP_XY_IDX = {
@@ -200,7 +201,7 @@ def _hull_perimeter(points: Array2D, px_per_mm: float) -> tuple[float, float]:
     Replaces SimBA's numba jitted_hull. Uses scipy.spatial.ConvexHull.
     Returns (perimeter_mm, area_mm2).
     """
-    if points.shape[0] < 3:
+    if points.shape[0] < 3:  # noqa: PLR2004
         return 0.0, 0.0
     try:
         hull = ConvexHull(points)
@@ -242,7 +243,7 @@ def _tortuosity(
     Replicates SimBA's strided approach.
     """
     n = len(centroid_x)
-    if n < 3 or window_frames < 2:
+    if n < 3 or window_frames < 2:  # noqa: PLR2004
         return np.zeros(n, dtype=np.float64)
 
     window_samples = int(window_frames)
@@ -370,17 +371,20 @@ def compute_simba_features(
     # ── Compute all features ──
     features = {}
 
-    features.update(_compute_distances(arr_m1, arr_m2, px_per_mm))
-    features.update(_compute_movements(arr_m1, arr_m2, px_per_mm))
-    features.update(_compute_hull(arr_m1, arr_m2, px_per_mm))
-    features.update(_compute_cdist_features(arr_m1, arr_m2, px_per_mm))
-    features.update(_compute_aggregates(features))
-    features.update(_compute_angles(arr_m1, arr_m2, features))
-    features.update(_compute_probability(arr_prob, features))
-    features.update(_compute_rolling(features, roll_windows, fps))
-    features.update(_compute_deviations(features))
-    features.update(_compute_percentile_ranks(features))
-    features.update(_compute_tortuosities(arr_m1, arr_m2, roll_windows, fps, features))
+    # Pure computations
+    features |= _compute_distances(arr_m1, arr_m2, px_per_mm)
+    features |= _compute_movements(arr_m1, arr_m2, px_per_mm)
+    features |= _compute_hull(arr_m1, arr_m2, px_per_mm)
+    features |= _compute_cdist(arr_m1, arr_m2, px_per_mm)
+    features |= _compute_angles(arr_m1, arr_m2)
+    features |= _compute_probability(arr_prob)
+    features |= _compute_tortuosities(arr_m1, arr_m2, roll_windows, fps)
+
+    # Derived features
+    features |= _compute_aggregates(features)
+    features |= _compute_rolling(features, roll_windows, fps)
+    features |= _compute_deviations(features)
+    features |= _compute_percentile_ranks(features)
 
     return _build_output_df(keypoints_df, features)
 
@@ -701,7 +705,7 @@ def _add_hull(arr: Array2D, px_per_mm: float, label: str) -> dict[str, Array1D]:
     for i in range(n):
         points = arr[i].reshape(-1, 2)
         valid = ~np.isnan(points).any(axis=1)
-        if valid.sum() >= 3:
+        if valid.sum() >= 3:  # noqa: PLR2004
             perimeters[i], areas[i] = _hull_perimeter(points[valid], px_per_mm)
 
     features = {}
@@ -714,20 +718,18 @@ def _add_hull(arr: Array2D, px_per_mm: float, label: str) -> dict[str, Array1D]:
     return features
 
 
-def _compute_cdist_features(
+def _compute_cdist(
     arr_m1: Array2D,
     arr_m2: Array2D,
     px_per_mm: float,
 ) -> dict[str, Array1D]:
-    """Pairwise distance statistics within each animal's hull."""
-    _add_cdist(arr_m1, px_per_mm, "M1")
-    _add_cdist(arr_m2, px_per_mm, "M2")
-
-    # Sum of both hull sums
-    if "M1_hull_sum_euclidean" in features and "M2_hull_sum_euclidean" in features:
-        features["Sum_euclidean_distance_hull_M1_M2"] = (
-            features["M1_hull_sum_euclidean"] + features["M2_hull_sum_euclidean"]
-        )
+    features = {}
+    features |= _add_cdist(arr_m1, px_per_mm, "M1")
+    features |= _add_cdist(arr_m2, px_per_mm, "M2")
+    features["Sum_euclidean_distance_hull_M1_M2"] = (
+        features["M1_hull_sum_euclidean"] + features["M2_hull_sum_euclidean"]
+    )
+    return features
 
 
 def _add_cdist(arr: Array2D, px_per_mm: float, label: str) -> dict[str, Array1D]:
@@ -741,7 +743,7 @@ def _add_cdist(arr: Array2D, px_per_mm: float, label: str) -> dict[str, Array1D]
         points = arr[i].reshape(-1, 2)
         valid = ~np.isnan(points).any(axis=1)
         pts = points[valid]
-        if len(pts) >= 2:
+        if len(pts) >= 2:  # noqa: PLR2004
             dists = _cdist(pts)
             triu = dists[np.triu_indices_from(dists, k=1)]
             if len(triu) > 0:
@@ -749,7 +751,7 @@ def _add_cdist(arr: Array2D, px_per_mm: float, label: str) -> dict[str, Array1D]
                 small[i] = np.min(triu) / px_per_mm
                 mean_[i] = np.mean(triu) / px_per_mm
                 sum_[i] = np.sum(triu) / px_per_mm
-
+    # Return
     return {
         f"{label}_hull_large_euclidean": large,
         f"{label}_hull_small_euclidean": small,
@@ -758,29 +760,76 @@ def _add_cdist(arr: Array2D, px_per_mm: float, label: str) -> dict[str, Array1D]
     }
 
 
-def _compute_aggregates(features: dict[str, Array1D]):
+def _compute_angles(arr_m1: Array2D, arr_m2: Array2D) -> dict[str, Array1D]:
+    """3-point angle (nose→center→tail_base) per animal."""
+    features = {}
+    # Indiv 1
+    n1x, n1y = _get_xy(arr_m1, "Nose")
+    c1x, c1y = _get_xy(arr_m1, "Center")
+    t1x, t1y = _get_xy(arr_m1, "Tail_base")
+    features["Mouse_1_angle"] = _angle3pt_vectorized(n1x, n1y, c1x, c1y, t1x, t1y)
+    # Indiv 2
+    n2x, n2y = _get_xy(arr_m2, "Nose")
+    c2x, c2y = _get_xy(arr_m2, "Center")
+    t2x, t2y = _get_xy(arr_m2, "Tail_base")
+    features["Mouse_2_angle"] = _angle3pt_vectorized(n2x, n2y, c2x, c2y, t2x, t2y)
+    # Both
+    features["Total_angle_both_mice"] = (
+        features["Mouse_1_angle"] + features["Mouse_2_angle"]
+    )
+    # Return
+    return features
+
+
+def _compute_probability(arr_prob: Array2D) -> dict[str, Array1D]:
+    """Probability-based features: sum of likelihoods, low-prob detection counts."""
+    features = {}
+    # Calculate
+    features["Sum_probabilities"] = np.sum(arr_prob, axis=1)
+    ranges = [(0.0, 0.1), (0.0, 0.5), (0.0, 0.75)]
+    counts = _count_in_ranges(arr_prob, ranges)
+    features["Low_prob_detections_0.1"] = counts[:, 0]
+    features["Low_prob_detections_0.5"] = counts[:, 1]
+    features["Low_prob_detections_0.75"] = counts[:, 2]
+    # Return
+    return features
+
+
+def _compute_tortuosities(
+    arr_m1: Array2D,
+    arr_m2: Array2D,
+    roll_windows: list[float],
+    fps: float,
+) -> dict[str, Array1D]:
+    """Path tortuosity for each animal's centroid movement."""
+    agg = {}
+    # Calculate
+    c1x, c1y = _get_xy(arr_m1, "Center")
+    c2x, c2y = _get_xy(arr_m2, "Center")
+    for w in roll_windows:
+        window_frames = max(2, int(fps / w))
+        label = str(w).replace(".0", "")
+        agg[f"Tortuosity_Mouse1_{label}"] = _tortuosity(c1x, c1y, window_frames)
+        agg[f"Tortuosity_Mouse2_{label}"] = _tortuosity(c2x, c2y, window_frames)
+    # Return
+    return agg
+
+
+def _compute_aggregates(features: dict[str, Array1D]) -> dict[str, Array1D]:
     """Sum aggregate movement features."""
+    aggs = {}
     # Total movement centroids
-    if "Movement_mouse_1_center" in features and "Movement_mouse_2_center" in features:
-        features["Total_movement_centroids"] = (
-            features["Movement_mouse_1_center"] + features["Movement_mouse_2_center"]
-        )
-
+    aggs["Total_movement_centroids"] = (
+        features["Movement_mouse_1_center"] + features["Movement_mouse_2_center"]
+    )
     # Total movement tail ends
-    if (
-        "Movement_mouse_1_tail_end" in features
-        and "Movement_mouse_2_tail_end" in features
-    ):
-        features["Total_movement_tail_ends"] = (
-            features["Movement_mouse_1_tail_end"]
-            + features["Movement_mouse_2_tail_end"]
-        )
-
+    aggs["Total_movement_tail_ends"] = (
+        features["Movement_mouse_1_tail_end"] + features["Movement_mouse_2_tail_end"]
+    )
     # Total movement all bodyparts per animal
     bp_names = [b.lower() for b in SIMBA_BODY_PARTS]
     m1_keys = [f"Movement_mouse_1_{bp}" for bp in bp_names]
     m2_keys = [f"Movement_mouse_2_{bp}" for bp in bp_names]
-
     m1_total = np.zeros_like(features.get(m1_keys[0], np.zeros(1)))
     m2_total = np.zeros_like(m1_total)
     for k in m1_keys:
@@ -789,42 +838,21 @@ def _compute_aggregates(features: dict[str, Array1D]):
     for k in m2_keys:
         if k in features:
             m2_total += features[k]
-
-    features["Total_movement_all_bodyparts_M1"] = m1_total
-    features["Total_movement_all_bodyparts_M2"] = m2_total
-    features["Total_movement_all_bodyparts_both_mice"] = m1_total + m2_total
-
-
-def _compute_angles(arr_m1, arr_m2, features):
-    """3-point angle (nose→center→tail_base) per animal."""
-    n1x, n1y = _get_xy(arr_m1, "Nose")
-    c1x, c1y = _get_xy(arr_m1, "Center")
-    t1x, t1y = _get_xy(arr_m1, "Tail_base")
-    features["Mouse_1_angle"] = _angle3pt_vectorized(n1x, n1y, c1x, c1y, t1x, t1y)
-
-    n2x, n2y = _get_xy(arr_m2, "Nose")
-    c2x, c2y = _get_xy(arr_m2, "Center")
-    t2x, t2y = _get_xy(arr_m2, "Tail_base")
-    features["Mouse_2_angle"] = _angle3pt_vectorized(n2x, n2y, c2x, c2y, t2x, t2y)
-
-    features["Total_angle_both_mice"] = (
-        features["Mouse_1_angle"] + features["Mouse_2_angle"]
-    )
+    aggs["Total_movement_all_bodyparts_M1"] = m1_total
+    aggs["Total_movement_all_bodyparts_M2"] = m2_total
+    aggs["Total_movement_all_bodyparts_both_mice"] = m1_total + m2_total
+    # Return
+    return aggs
 
 
-def _compute_probability(arr_prob, features):
-    """Probability-based features: sum of likelihoods, low-prob detection counts."""
-    features["Sum_probabilities"] = np.sum(arr_prob, axis=1)
-
-    ranges = [(0.0, 0.1), (0.0, 0.5), (0.0, 0.75)]
-    counts = _count_in_ranges(arr_prob, ranges)
-    features["Low_prob_detections_0.1"] = counts[:, 0]
-    features["Low_prob_detections_0.5"] = counts[:, 1]
-    features["Low_prob_detections_0.75"] = counts[:, 2]
-
-
-def _compute_rolling(features, roll_windows, fps):
+def _compute_rolling(
+    features: dict[str, Array1D],
+    roll_windows: list[float],
+    fps: float,
+) -> dict[str, Array1D]:
     """Compute rolling window median/mean/sum for key features."""
+    aggs = {}
+
     rolling_targets = [
         ("Sum_euclidean_distance_hull_M1_M2", "hull"),
         ("Total_movement_centroids", "Movement"),
@@ -847,50 +875,56 @@ def _compute_rolling(features, roll_windows, fps):
         ("Movement_mouse_1_nose", "Nose_movement_M1"),
         ("Movement_mouse_2_nose", "Nose_movement_M2"),
     ]
-
     for src_key, prefix in rolling_targets:
         if src_key not in features:
             continue
         stats = _rolling_stats(features[src_key], roll_windows, fps)
         for suffix, arr in stats.items():
-            features[f"{prefix}{suffix}"] = arr
+            aggs[f"{prefix}{suffix}"] = arr
 
     # Total angle rolling
     if "Total_angle_both_mice" in features:
         stats = _rolling_stats(features["Total_angle_both_mice"], roll_windows, fps)
         for suffix, arr in stats.items():
-            features[f"Total_angle_both_mice{suffix}"] = arr
-
+            aggs[f"Total_angle_both_mice{suffix}"] = arr
     # Relative tail end features
     for mouse in ["M1", "M2"]:
         _compute_tail_end_relative(mouse, features, roll_windows, fps)
+    # Return
+    return aggs
 
 
-def _compute_tail_end_relative(mouse, features, roll_windows, fps):
+def _compute_tail_end_relative(
+    mouse: str,
+    features: dict[str, Array1D],
+    roll_windows: list[float],
+    fps: float,
+) -> dict[str, Array1D]:
     """Tail_end movement relative to (tail_base + centroid + nose) movement."""
+    aggs = {}
+    # Calculate
     ml = mouse.lower()
     tail_end_key = f"Movement_mouse_{ml}_tail_end"
     tail_base_key = f"Movement_mouse_{ml}_tail_base"
     centroid_key = f"Movement_mouse_{ml}_center"
     nose_key = f"Movement_mouse_{ml}_nose"
 
-    if not all(
-        k in features for k in [tail_end_key, tail_base_key, centroid_key, nose_key]
-    ):
-        return
-
     rel = features[tail_end_key] - (
         features[tail_base_key] + features[centroid_key] + features[nose_key]
     )
-    features[f"Tail_end_relative_to_tail_base_centroid_nose_{mouse}"] = rel
+    aggs[f"Tail_end_relative_to_tail_base_centroid_nose_{mouse}"] = rel
 
     stats = _rolling_stats(rel, roll_windows, fps)
     for suffix, arr in stats.items():
-        features[f"Tail_end_relative_to_tail_base_centroid_nose_{mouse}{suffix}"] = arr
+        aggs[f"Tail_end_relative_to_tail_base_centroid_nose_{mouse}{suffix}"] = arr
+    # Return
+    return aggs
 
 
-def _compute_deviations(features):
+def _compute_deviations(features: dict[str, Array1D]) -> dict[str, Array1D]:
     """Deviation features: mean(feature) - current(feature) value."""
+    aggs = {}
+    # Calculate
     deviation_sources = [
         "Total_movement_all_bodyparts_both_mice",
         "Sum_euclidean_distance_hull_M1_M2",
@@ -912,23 +946,26 @@ def _compute_deviations(features):
         if key not in features:
             continue
         vals = features[key]
-        features[f"{key}_deviation"] = np.mean(vals) - vals
+        aggs[f"{key}_deviation"] = np.mean(vals) - vals
 
     # Sum_probabilities deviation
     if "Sum_probabilities" in features:
         vals = features["Sum_probabilities"]
-        features["Sum_probabilities_deviation"] = np.mean(vals) - vals
+        aggs["Sum_probabilities_deviation"] = np.mean(vals) - vals
+    # Return
+    return aggs
 
 
-def _compute_percentile_ranks(features):
+def _compute_percentile_ranks(features: dict[str, Array1D]) -> dict[str, Array1D]:
     """Percentile rank features (replicating pandas .rank(pct=True))."""
+    aggs = {}
+    # Calculate
     rank_sources = [
         "Movement_mouse_1_center",
         "Movement_mouse_2_center",
         "Centroid_distance",
         "Total_movement_all_bodyparts_both_mice",
     ]
-
     for key in rank_sources:
         if key not in features:
             continue
@@ -941,8 +978,7 @@ def _compute_percentile_ranks(features):
             ranks[order] = np.arange(1, n + 1, dtype=np.float64) / n
         else:
             ranks = np.ones(n, dtype=np.float64)
-        features[f"{key}_percentile_rank"] = ranks
-
+        aggs[f"{key}_percentile_rank"] = ranks
     # Deviation percentile ranks
     for key in rank_sources:
         dev_key = f"{key}_deviation"
@@ -956,8 +992,7 @@ def _compute_percentile_ranks(features):
             ranks[order] = np.arange(1, n + 1, dtype=np.float64) / n
         else:
             ranks = np.ones(n, dtype=np.float64)
-        features[f"{key}_deviation_percentile_rank"] = ranks
-
+        aggs[f"{key}_deviation_percentile_rank"] = ranks
     # Sum_probabilities deviation percentile rank
     if "Sum_probabilities_deviation" in features:
         vals = features["Sum_probabilities_deviation"]
@@ -968,27 +1003,17 @@ def _compute_percentile_ranks(features):
             ranks[order] = np.arange(1, n + 1, dtype=np.float64) / n
         else:
             ranks = np.ones(n, dtype=np.float64)
-        features["Sum_probabilities_deviation_percentile_rank"] = ranks
+        aggs["Sum_probabilities_deviation_percentile_rank"] = ranks
+    # Return
+    return aggs
 
 
-def _compute_tortuosities(arr_m1, arr_m2, roll_windows, fps, features):
-    """Path tortuosity for each animal's centroid movement."""
-    c1x, c1y = _get_xy(arr_m1, "Center")
-    c2x, c2y = _get_xy(arr_m2, "Center")
-
-    for w in roll_windows:
-        window_frames = max(2, int(fps / w))
-        label = str(w).replace(".0", "")
-        features[f"Tortuosity_Mouse1_{label}"] = _tortuosity(c1x, c1y, window_frames)
-        features[f"Tortuosity_Mouse2_{label}"] = _tortuosity(c2x, c2y, window_frames)
-
-
-def _build_output_df(keypoints_df, features):
+def _build_output_df(
+    keypoints_df: pl.DataFrame,
+    features: dict[str, Array1D],
+) -> pl.DataFrame:
     """Build final Polars DataFrame with frame index + all feature columns."""
-    frames = keypoints_df.select("frame").unique().sort("frame").to_series().to_list()
-
+    frames = keypoints_df.select("frame").unique().sort("frame").to_numpy()
     col_data = {"frame": frames}
-    for name, arr in features.items():
-        col_data[name] = arr
-
+    col_data |= features
     return pl.DataFrame(col_data)

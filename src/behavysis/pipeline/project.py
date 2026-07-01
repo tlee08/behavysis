@@ -12,13 +12,11 @@ from natsort import natsorted
 
 from behavysis.constants import (
     ANALYSIS_DIR,
-    CONFIG_DIR,
     DF_IO_FORMAT,
     FORMATTED_VIDEO_DIR,
     KEYPOINTS_DIR,
 )
 from behavysis.funcs.run_dlc import ma_dlc_run_batch
-from behavysis.models import ExperimentConfig
 from behavysis.pipeline import Experiment
 from behavysis.schemas import BINNED_SCHEMA, SUMMARY_SCHEMA, read_df, write_df
 from behavysis.utils.dask_utils import cluster_process
@@ -231,9 +229,7 @@ class Project:
         if not proj_analyse_dir.is_dir():
             return
 
-        config = ExperimentConfig.model_validate_json(
-            self.experiments[0].get_fp(CONFIG_DIR).read_text(),
-        )
+        config = self.experiments[0].read_config()
         bin_sizes = [*list(config.require_analyse().bins_sec_ls), "custom"]
 
         for subdir in proj_analyse_dir.iterdir():

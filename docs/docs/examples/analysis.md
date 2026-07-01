@@ -85,7 +85,7 @@ proj.run_dlc(
 Calculating relevant parameters to store in the `auto` section of the config file. The calculations performed are:
 
 ```python
-proj.calculate_params(
+proj.calculate_parameters(
     (
         CalculateParams.start_frame,
         CalculateParams.stop_frame,

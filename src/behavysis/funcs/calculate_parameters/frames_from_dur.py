@@ -1,7 +1,6 @@
 """Functions have the following format."""
 
-from pathlib import Path
-
+import polars as pl
 from loguru import logger
 from pydantic import BaseModel, PositiveFloat
 
@@ -24,7 +23,7 @@ class StopFrameFromDurConfig(BaseModel):
 
 
 def stop_frame_from_dur(
-    keypoints_fp: Path,  # noqa: ARG001
+    keypoints_df: pl.DataFrame,  # noqa: ARG001
     config: ExperimentConfig,
     metadata: ExperimentMetadata,
 ) -> ExperimentMetadata:

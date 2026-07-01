@@ -3,7 +3,7 @@
 from pathlib import Path
 
 import yaml
-from pydantic import BaseModel, PositiveFloat, PositiveInt
+from pydantic import BaseModel, ConfigDict, PositiveFloat, PositiveInt
 
 from behavysis.constants import BPTS_SIMBA, INDIVS_SIMBA
 
@@ -17,10 +17,12 @@ from ._validators import ConfigNotConfiguredError
 class SubfuncModel(BaseModel):
     """SubfuncModel."""
 
+    model_config = ConfigDict(extra="allow")
+
     def require[T: BaseModel](self, name: str, model_cls: type[T]) -> T:
         """Require and validate a single sub-config by function name."""
         # Check that subconfig exists
-        if hasattr(self, name):
+        if not hasattr(self, name):
             msg = f"analyse.{name}"
             raise ConfigNotConfiguredError(msg)
         # Check that subconfig is of the correct type
@@ -31,7 +33,7 @@ class SubfuncModel(BaseModel):
     def require_list[T: BaseModel](self, name: str, model_cls: type[T]) -> list[T]:
         """Require and validate a list sub-config (e.g. in_roi)."""
         # Check that subconfig exists
-        if hasattr(self, name):
+        if not hasattr(self, name):
             msg = f"analyse.{name}"
             raise ConfigNotConfiguredError(msg)
         value_key_ls = getattr(self, name)
@@ -157,13 +159,3 @@ class ExperimentConfig(BaseModel):
             msg = "analyse"
             raise ConfigNotConfiguredError(msg)
         return self.analyse
-
-    def require_bins_sec_ls(self) -> list[PositiveInt]:
-        """Get the bins_sec from the analyse config."""
-        config_analyse = self.require_analyse()
-        return config_analyse.bins_sec_ls
-
-    def require_custom_bins_sec_ls(self) -> list[PositiveInt]:
-        """Get the custom_bins_sec from the analyse config."""
-        config_analyse = self.require_analyse()
-        return config_analyse.custom_bins_sec_ls

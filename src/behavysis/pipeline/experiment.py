@@ -24,7 +24,7 @@ from behavysis.constants.pipeline import (
 )
 from behavysis.funcs import (
     AnalyseFunc,
-    CalculateParamsFunc,
+    CalculateParametersFunc,
     PreprocessFunc,
     analyse_behaviour,
     classify_behaviour,
@@ -75,6 +75,10 @@ class Experiment:
                 "(without extension)."
             )
             raise ValueError(msg)
+        # Set initial metadata
+        metadata = self.read_metadata()
+        metadata.name = self.name
+        self.write_metadata(metadata)
 
     def get_log_context(self) -> dict:
         """Log context for loguru context."""
@@ -90,6 +94,8 @@ class Experiment:
 
     def read_metadata(self) -> ExperimentMetadata:
         """Returns the experiment's metadata."""
+        if not self.get_fp(METADATA_DIR).exists():
+            return ExperimentMetadata()
         return ExperimentMetadata.model_validate_json(
             self.get_fp(METADATA_DIR).read_text(),
         )
@@ -117,13 +123,13 @@ class Experiment:
             logger.warning(file_exists_msg(self.get_fp(FORMATTED_VIDEO_DIR)))
             return
         # Process
-        metadata = format_video(
+        format_video(
             raw_vid_fp=self.get_fp(RAW_VIDEO_DIR),
             formatted_vid_fp=self.get_fp(FORMATTED_VIDEO_DIR),
             config=self.read_config(),
-            metadata=self.read_metadata(),
         )
-        self.write_metadata(metadata)
+        # Update metadata
+        self.get_vid_metadata()
 
     @trace
     def get_vid_metadata(self) -> None:
@@ -152,12 +158,13 @@ class Experiment:
         )
 
     @trace
-    def calculate_parameters(self, funcs: tuple[CalculateParamsFunc, ...]) -> None:
+    def calculate_parameters(self, funcs: tuple[CalculateParametersFunc, ...]) -> None:
         """Calculate parameters of the keypoints file."""
+        keypoints_df = read_df(self.get_fp(KEYPOINTS_DIR), KEYPOINTS_SCHEMA)
         metadata = self.read_metadata()
         for func in funcs:
             metadata = func(
-                keypoints_fp=self.get_fp(KEYPOINTS_DIR),
+                keypoints_df=keypoints_df,
                 config=self.read_config(),
                 metadata=metadata,
             )
@@ -220,8 +227,8 @@ class Experiment:
     def export_behaviour(self, *, overwrite: bool) -> None:
         """Export predicted behaviours to scored behaviours."""
         # Overwrite check
-        if not overwrite and self.get_fp(BEHAVIOUR_PREDICTED_DIR).exists():
-            logger.warning(file_exists_msg(self.get_fp(BEHAVIOUR_PREDICTED_DIR)))
+        if not overwrite and self.get_fp(BEHAVIOUR_SCORED_DIR).exists():
+            logger.warning(file_exists_msg(self.get_fp(BEHAVIOUR_SCORED_DIR)))
             return
         # Process
         behaviour_predicted_df = read_df(
