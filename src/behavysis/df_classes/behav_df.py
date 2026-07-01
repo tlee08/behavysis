@@ -175,9 +175,6 @@ class BehavScoredDf(BehavDf):
         scored_df = cls.init_df(df.index)
         for bout in bouts_struct:
             behav = bout.behav
-            scored_df[(behav, OutcomesPredictedCols.PRED.value)] = df[
-                (behav, OutcomesPredictedCols.PRED.value)
-            ].to_numpy()
             scored_df[(behav, cls.OutcomesCols.ACTUAL.value)] = scored_df[
                 (behav, OutcomesPredictedCols.PRED.value)
             ].replace(BehavValues.TRUE_POS.value, BehavValues.UNSURE.value)
