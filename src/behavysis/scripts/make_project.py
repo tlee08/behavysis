@@ -14,12 +14,6 @@ def main() -> None:
 
     overwrite = confirm("Overwrite existing files?")
 
-    # Make pipeline notebook
-    if overwrite or not Path("run_pipeline_notebook.py").exists():
-        save_template(
-            template_name="run_pipeline_notebook.py",
-            dst=Path.cwd() / "run_pipeline_notebook.py",
-        )
     # Make pipeline notebook simple
     if overwrite or not Path("run_pipeline_notebook_simple.py").exists():
         save_template(

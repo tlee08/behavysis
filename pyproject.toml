@@ -78,11 +78,7 @@ ignore = [
 ]
 fixable = ["ALL"]
 unfixable = []
-exclude = [
-    "tests/*",
-    "src/behavysis/templates/run_pipeline_notebook.py",
-    "src/behavysis/templates/run_pipeline_notebook_simple.py",
-]
+exclude = ["tests/*", "src/behavysis/templates/run_pipeline_notebook_simple.py"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
