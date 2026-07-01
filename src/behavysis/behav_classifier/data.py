@@ -10,7 +10,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import FunctionTransformer, MinMaxScaler
 
 from behavysis.df_classes.behav_classifier_df import BehavClassifierCombinedDf
-from behavysis.df_classes.behav_df import BehavScoredDf, BehavValues
+from behavysis.df_classes.behav_df import BehavPredictedDf, BehavScoredDf, BehavValues
 from behavysis.df_classes.features_df import FeaturesDf
 from behavysis.utils.df_mixin import DFMixin
 from behavysis.utils.io_utils import (
@@ -53,8 +53,8 @@ def wrangle_columns_y(y: pd.DataFrame) -> pd.DataFrame:
     """
     # Filtering out the pred columns (in the `outcomes` level)
     columns_filter = np.isin(
-        y.columns.get_level_values(BehavScoredDf.CN.OUTCOMES.value),
-        [BehavScoredDf.OutcomesCols.PRED.value],
+        y.columns.get_level_values(BehavPredictedDf.CN.OUTCOMES.value),
+        [BehavPredictedDf.OutcomesCols.PRED.value],
         invert=True,
     )
     y = y.loc[:, columns_filter]
