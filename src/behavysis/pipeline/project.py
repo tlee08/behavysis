@@ -90,13 +90,6 @@ class Project:
         runner = self._run_sequential if self.nprocs == 1 else self._run_parallel
         runner(_func, **kwargs)
 
-    def import_experiment(self, name: str) -> bool:
-        """Add an experiment to the project. Returns True if newly added."""
-        if name not in self._experiments:
-            self._experiments[name] = Experiment(name, self.root_dir)
-            return True
-        return False
-
     def import_experiments(self, name_ls: list[str]) -> None:
         """Import all experiments in a given list.
 
@@ -106,7 +99,7 @@ class Project:
         logger.info(f"Searching project folder: {self.root_dir}")
         for name in natsorted(name_ls):
             try:
-                self.import_experiment(name)
+                self._experiments[name] = Experiment(name, self.root_dir)
             except ValueError as e:
                 logger.info(f"Failed: {name}: {e}")
         exp_ls_msg = "".join([f"\n    - {exp.name}" for exp in self.experiments])
