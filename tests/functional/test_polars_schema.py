@@ -38,7 +38,7 @@ def pandas_keypoints_to_polars(df_pd: pd.DataFrame) -> pl.DataFrame:
     df_pd = df_pd.copy()
     df_pd.columns = df_pd.columns.droplevel("scorer")
 
-    # Stack to long form: frame × (individuals, bodyparts, coords)
+    # Stack to long form: frame x (individuals, bodyparts, coords)
     stacked = df_pd.stack([INDIVIDUAL, BODYPART, COORD], future_stack=True)
 
     # Unstack coords so x, y, likelihood become columns
@@ -239,7 +239,7 @@ class TestKeypointsConversion:
         # Verify schema
         assert df_pl.schema == KEYPOINTS_SCHEMA
 
-        # Verify row count: n_frames × n_individuals × n_bodyparts
+        # Verify row count: n_frames x n_individuals x n_bodyparts
         assert df_pl.height == n_frames * len(individuals) * len(bodyparts)
 
         # Verify scorer is gone

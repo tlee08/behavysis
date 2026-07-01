@@ -47,7 +47,7 @@ This is a manual, error-prone reimplementation of what `StratifiedGroupKFold` or
 `MemoizedTimeSeriesDataset` (`base_torch_model.py:279-299`) caches every `__getitem__` call in a dict. Problems:
 
 - **Training**: With `shuffle=True`, every epoch generates a new random permutation of indices. The cache never hits across epochs. It just fills memory.
-- **Memory unbounded**: If you train on 100K samples × 21-frame windows, the dict grows to 100K entries of `(tensor, tensor)`. Each entry is ~40KB (498 features × 21 frames × 4 bytes). That's ~4GB of RAM for caching something that's just a numpy slice + transpose.
+- **Memory unbounded**: If you train on 100K samples x 21-frame windows, the dict grows to 100K entries of `(tensor, tensor)`. Each entry is ~40KB (498 features x 21 frames x 4 bytes). That's ~4GB of RAM for caching something that's just a numpy slice + transpose.
 - **Produces wrong data on the second call if data mutates** (which it doesn't, but the pattern is fragile).
 - The `__getitem__` slice-n-transpose is O(window_size) with no GPU transfer needed (that happens in the training loop). It's already fast.
 
@@ -59,7 +59,7 @@ This is a manual, error-prone reimplementation of what `StratifiedGroupKFold` or
 
 | Location              | Magic Number    | What It Represents                                  |
 | --------------------- | --------------- | --------------------------------------------------- |
-| `data.py:118`         | `48`            | Columns to skip (2 indivs × 8 bodyparts × 3 coords) |
+| `data.py:118`         | `48`            | Columns to skip (2 indivs x 8 bodyparts x 3 coords) |
 | `clf_templates.py:61` | `498`           | Features after column selection                     |
 | `clf_templates.py:61` | Comment `# 546` | Original feature count?                             |
 | `clf_templates.py:61` | `0`             | `window_frames=0` (meaning "no window")             |
@@ -93,7 +93,7 @@ These numbers must remain consistent across data loading, preprocessing, and mod
 - Flattens to index-table, splits, resamples, un-flattens
 - Returns lists of full numpy arrays
 
-For a pipeline that should scale, this loads everything into RAM. For 100 videos × 50K frames each × 500 features × 8 bytes = ~20GB. This should use memory-mapped files or a proper lazy dataset.
+For a pipeline that should scale, this loads everything into RAM. For 100 videos x 50K frames each x 500 features x 8 bytes = ~20GB. This should use memory-mapped files or a proper lazy dataset.
 
 ---
 

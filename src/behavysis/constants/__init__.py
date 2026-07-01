@@ -5,6 +5,7 @@ from .bodypoints import (
     BPTS_CORNERS,
     BPTS_FRONT,
     BPTS_SIMBA,
+    BPMAP_SIMBA,
     INDIVS_SIMBA,
     INDIVS_SINGLE,
 )
@@ -77,6 +78,7 @@ __all__ = [
     "BPTS_CORNERS",
     "BPTS_FRONT",
     "BPTS_SIMBA",
+    "BPMAP_SIMBA",
     "CACHE_DIR",
     "CONFIG",
     "CONFIG_DIR",

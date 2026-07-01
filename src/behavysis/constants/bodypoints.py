@@ -16,6 +16,18 @@ BPTS_SIMBA = [
     "TailTip4",
 ]
 
+# TODO: make agnostic from SimBA
+BPMAP_SIMBA = {
+    "LeftEar": "Ear_left",
+    "RightEar": "Ear_right",
+    "Nose": "Nose",
+    "BodyCentre": "Center",
+    "LeftFlankMid": "Lat_left",
+    "RightFlankMid": "Lat_right",
+    "TailBase1": "Tail_base",
+    "TailTip4": "Tail_end",
+}
+
 BPTS_CENTRE = [
     "LeftFlankMid",
     "BodyCentre",

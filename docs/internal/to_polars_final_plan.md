@@ -176,7 +176,7 @@ The docs recommend `behaviour_df → keypoints → analysis`. That's wrong becau
 
 ## Pivot Cost: Reality Check
 
-Your doc estimates 1.3M rows per video in long keypoints form (30fps × 60s × 30frames × 2 indivs × 12 bpts = 1.3M). Parquet columnar compression with run-length encoding handles repeated `frame`, `individual`, `bodypart` values trivially. A single `df.pivot(index="frame", on=["individual", "bodypart"], values=["x", "y"])` at the ML boundary costs milliseconds on 1.3M rows. The model training that follows costs seconds to minutes. **Pivot cost is noise.**
+Your doc estimates 1.3M rows per video in long keypoints form (30fps x 60s x 30frames x 2 indivs x 12 bpts = 1.3M). Parquet columnar compression with run-length encoding handles repeated `frame`, `individual`, `bodypart` values trivially. A single `df.pivot(index="frame", on=["individual", "bodypart"], values=["x", "y"])` at the ML boundary costs milliseconds on 1.3M rows. The model training that follows costs seconds to minutes. **Pivot cost is noise.**
 
 ---
 
