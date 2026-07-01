@@ -129,7 +129,7 @@ class BehavScoredDf(BehavDf):
         )
         for behav in behavs_ls:
             df[(behav, cls.OutcomesCols.ACTUAL.value)] = BehavValues.TRUE_NEG.value
-            df[(behav, cls.OutcomesCols.PRED.value)] = BehavValues.TRUE_NEG.value
+            df[(behav, OutcomesPredictedCols.PRED.value)] = BehavValues.TRUE_NEG.value
         for _, row in df_boris.iterrows():
             behav = row["Behavior"]
             frame = row["Image index"]
@@ -142,7 +142,7 @@ class BehavScoredDf(BehavDf):
                 else BehavValues.TRUE_NEG.value
             )
             df.loc[frame:, (behav, cls.OutcomesCols.ACTUAL.value)] = val
-            df.loc[frame:, (behav, cls.OutcomesCols.PRED.value)] = val
+            df.loc[frame:, (behav, OutcomesPredictedCols.PRED.value)] = val
         return cls.clean_and_validate(df)
 
     @classmethod
@@ -175,11 +175,11 @@ class BehavScoredDf(BehavDf):
         scored_df = cls.init_df(df.index)
         for bout in bouts_struct:
             behav = bout.behav
-            scored_df[(behav, cls.OutcomesCols.PRED.value)] = df[
+            scored_df[(behav, OutcomesPredictedCols.PRED.value)] = df[
                 (behav, OutcomesPredictedCols.PRED.value)
             ].to_numpy()
             scored_df[(behav, cls.OutcomesCols.ACTUAL.value)] = scored_df[
-                (behav, cls.OutcomesCols.PRED.value)
+                (behav, OutcomesPredictedCols.PRED.value)
             ].replace(BehavValues.TRUE_POS.value, BehavValues.UNSURE.value)
             for user_col in bout.user_defined:
                 scored_df[(behav, user_col)] = BehavValues.TRUE_NEG.value
@@ -210,7 +210,7 @@ class BehavScoredDf(BehavDf):
         for behav in df.columns.unique(cls.CN.BEHAVS.value):
             behav_df = df[behav]
             bouts_df = cls.vect2bouts_df(
-                behav_df[cls.OutcomesCols.PRED.value] == BehavValues.TRUE_POS.value
+                behav_df[OutcomesPredictedCols.PRED.value] == BehavValues.TRUE_POS.value
             )
             for _, row in bouts_df.iterrows():
                 bout_frames = behav_df.loc[
@@ -241,13 +241,14 @@ class BehavScoredDf(BehavDf):
         df = cls.init_df(pd.Series(np.arange(bouts.start, bouts.stop)))
         for bout_struct in bouts.bouts_struct:
             behav = bout_struct.behav
-            df[(behav, cls.OutcomesCols.PRED.value)] = BehavValues.TRUE_NEG.value
+            df[(behav, OutcomesPredictedCols.PRED.value)] = BehavValues.TRUE_NEG.value
             df[(behav, cls.OutcomesCols.ACTUAL.value)] = BehavValues.TRUE_NEG.value
             for user_col in bout_struct.user_defined:
                 df[(behav, user_col)] = BehavValues.TRUE_NEG.value
         for bout in bouts.bouts:
             df.loc[
-                bout.start : bout.stop, (bout.behav, cls.OutcomesCols.PRED.value)
+                bout.start : bout.stop,
+                (bout.behav, OutcomesPredictedCols.PRED.value),
             ] = BehavValues.TRUE_POS.value
             df.loc[
                 bout.start : bout.stop, (bout.behav, cls.OutcomesCols.ACTUAL.value)
@@ -274,7 +275,7 @@ class BehavScoredDf(BehavDf):
 if __name__ == "__main__":
     v = np.array([0, 0, 1, 1, 1, 0, 1, 1, 0, 0, 1, 0, 1])
     df0 = BehavScoredDf.init_df(pd.Series(np.arange(len(v))))
-    df0[("behav", OutcomesScoredCols.PRED.value)] = v
+    df0[("behav", OutcomesPredictedCols.PRED.value)] = v
     df0[("behav", OutcomesScoredCols.ACTUAL.value)] = v
     df0 = BehavScoredDf.clean_and_validate(df0)
     b1 = BehavScoredDf.frames2bouts(df0)
