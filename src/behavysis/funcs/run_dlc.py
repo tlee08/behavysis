@@ -22,7 +22,7 @@ from behavysis.constants import (
 )
 from behavysis.models import ExperimentConfig
 from behavysis.schemas import KEYPOINTS_SCHEMA, write_df
-from behavysis.utils.io_utils import file_exists_msg, silent_remove
+from behavysis.utils.io_utils import silent_remove
 from behavysis.utils.template_utils import save_template
 
 DLC_HDF_KEY = "data"
@@ -30,27 +30,17 @@ DLC_HDF_KEY = "data"
 
 def ma_dlc_run_single(
     vid_fp: Path,
-    keypoints_fp: Path,
-    config_fp: Path,
+    keypoints_dir: Path,
+    config: ExperimentConfig,
     gputouse: int | None,
-    *,
-    overwrite: bool,
 ) -> None:
     """Running DLC script to generate a keypoints dataframe from a single video."""
-    if not overwrite and keypoints_fp.exists():
-        logger.warning(file_exists_msg(keypoints_fp))
-        return
-    # Getting model_fp
-    config = ExperimentConfig.model_validate_json(config_fp.read_text())
-    model_fp = config.get_ref(config.user.run_dlc.model_fp)
     # Derive more parameters
-    keypoints_dir = keypoints_fp.parent
-
     with tempfile.TemporaryDirectory(dir=CACHE_DIR) as _out_dir:
         out_dir = Path(_out_dir)
         # Running the DLC subprocess (in a separate conda env)
         _run_dlc_subproc(
-            model_fp,
+            config.require_run_dlc().model_fp,
             [vid_fp],
             out_dir,
             CACHE_DIR,
@@ -63,52 +53,24 @@ def ma_dlc_run_single(
 def ma_dlc_run_batch(
     vid_fp_ls: list[Path],
     keypoints_dir: Path,
-    config_dir: Path,
+    dlc_config_fp: Path,
     gputouse: int | None,
-    *,
-    overwrite: bool,
 ) -> None:
     """Running DLC to generate a keypoints dataframe from a single video."""
-    # If overwrite is False, filtering for only experiments that need processing
-    if not overwrite:
-        # Getting only the vid_fp_ls elements that do not exist in keypoints_dir
-        vid_fp_ls = [
-            vid_fp
-            for vid_fp in vid_fp_ls
-            if not (keypoints_dir / f"{vid_fp.stem}.{DF_IO_FORMAT}").exists()
-        ]
-
     # If there are no videos to process, return
     if len(vid_fp_ls) == 0:
         return
-
-    # Getting the DLC model config path
-    # Getting the names of the files that need processing
-    dlc_fp_ls = [i.stem for i in vid_fp_ls]
-    # Getting their corresponding config_fp
-    dlc_fp_ls = [config_dir / f"{i}.json" for i in dlc_fp_ls]
-    # Reading their config
-    dlc_fp_ls = [ExperimentConfig.model_validate_json(i.read_text()) for i in dlc_fp_ls]
-    # Getting their model_fp
-    dlc_fp_ls = [i.user.run_dlc.model_fp for i in dlc_fp_ls]
-    # Converting to a set
-    dlc_fp_set = set(dlc_fp_ls)
-    # Assertion: all model_fp must be the same
-    assert len(dlc_fp_set) == 1
-    # Getting the model_fp
-    model_fp = dlc_fp_set.pop()
-
     with tempfile.TemporaryDirectory(dir=CACHE_DIR) as _out_dir:
         out_dir = Path(_out_dir)
         # Running the DLC subprocess (in a separate conda env)
-        _run_dlc_subproc(model_fp, vid_fp_ls, out_dir, CACHE_DIR, gputouse)
+        _run_dlc_subproc(dlc_config_fp, vid_fp_ls, out_dir, CACHE_DIR, gputouse)
         # Exporting the h5 to chosen file format
         for vid_fp in vid_fp_ls:
             _export2df(vid_fp.stem, out_dir, keypoints_dir)
 
 
 def _run_dlc_subproc(
-    model_fp: Path,
+    dlc_config_fp: Path,
     vid_fp_ls: list[Path],
     temp_dlc_dir: Path,
     temp_dir: Path,
@@ -125,7 +87,7 @@ def _run_dlc_subproc(
         "dlc_subproc.py",
         script_fp,
         vid_fp_ls=[str(_i) for _i in vid_fp_ls],
-        model_fp=model_fp,
+        model_fp=dlc_config_fp,
         temp_dlc_dir=temp_dlc_dir,
         gputouse=gputouse,
     )

@@ -18,225 +18,43 @@ str
 
 """
 
-from pathlib import Path
-from typing import Protocol
+from typing import Literal
 
 import numpy as np
 import pandas as pd
 import polars as pl
-from loguru import logger
+from pydantic import BaseModel
 
-from behavysis.constants import SINGLE
-from behavysis.models import ExperimentConfig
-from behavysis.schemas import KEYPOINTS_SCHEMA, check_bpts_exist, read_df, write_df
-from behavysis.utils.io_utils import file_exists_msg
+from behavysis.constants import BPTS_SIMBA
+from behavysis.models import ExperimentConfig, ExperimentMetadata
+from behavysis.schemas import check_bpts_exist
 
-
-class PreprocessFunc(Protocol):
-    """Protocol for preprocess functions."""
-
-    def __call__(
-        self,
-        src_fp: Path,
-        dst_fp: Path,
-        config_fp: Path,
-        *,
-        overwrite: bool,
-    ) -> None:
-        """Protocol for preprocess functions."""
+# ═══════════════════════════════════════════════════════════════════════════════
+# Config Models
+# ═══════════════════════════════════════════════════════════════════════════════
 
 
-def start_stop_trim(
-    src_fp: Path,
-    dst_fp: Path,
-    config_fp: Path,
-    *,
-    overwrite: bool,
-) -> None:
-    """Filters the rows of a DLC formatted dataframe.
+class RefineIdsConfig(BaseModel):
+    """RefineIdsConfig."""
 
-    Includes only rows within the start
-    and end time of the experiment, given a corresponding config dict.
-
-    Parameters
-    ----------
-    dlc_fp : str
-        The file path of the input DLC formatted dataframe.
-    dst_fp : Path
-        The file path of the output trimmed dataframe.
-    config_fp : Path
-        The file path of the config dict.
-    overwrite : bool
-        If True, overwrite the output file if it already exists. If False, skip
-        if the output file already exists.
-
-    Returns:
-    -------
-    str
-        An outcome message indicating the result of the trimming process.
-
-    Notes:
-    -----
-    The config file must contain the following parameters:
-    ```
-    - user
-        - preprocess
-            - start_stop_trim
-                - start_frame: int
-                - stop_frame: int
-    ```
-    """
-    if not overwrite and dst_fp.exists():
-        logger.warning(file_exists_msg(dst_fp))
-        return
-    config = ExperimentConfig.model_validate_json(config_fp.read_text())
-    start_frame = config.auto.start_frame
-    stop_frame = config.auto.stop_frame
-    keypoints_df = read_df(src_fp, KEYPOINTS_SCHEMA)
-    keypoints_df = keypoints_df.filter(
-        pl.col("frame").is_between(start_frame, stop_frame),
-    )
-    write_df(keypoints_df, dst_fp, KEYPOINTS_SCHEMA)
+    marked: str = "marked"
+    unmarked: str = "unmarked"
+    marking: str = "marking"
+    bodyparts: list[str] = BPTS_SIMBA
+    window_sec: float = 0.5
+    metric: Literal["current", "rolling", "binned"] = "current"
 
 
-def interpolate_stationary(
-    src_fp: Path,
-    dst_fp: Path,
-    config_fp: Path,
-    *,
-    overwrite: bool,
-) -> None:
-    """If the point detection (above a certain threshold) is below a certain proportion.
-
-    Then the x and y coordinates are set to the given values (usually corners).
-    Otherwise, does nothing (encouraged to run Preprocess.interpolate afterwards).
-
-    """
-    if not overwrite and dst_fp.exists():
-        logger.warning(file_exists_msg(dst_fp))
-        return
-    config = ExperimentConfig.model_validate_json(config_fp.read_text())
-    config_filt_ls = config.user.preprocess.interpolate_stationary
-    width_px = config.auto.formatted_vid.width_px
-    height_px = config.auto.formatted_vid.height_px
-    if width_px <= 0 or height_px <= 0:
-        msg = (
-            f"Video dimensions not set for experiment.\n"
-            f"  width_px={width_px}, height_px={height_px}\n"
-            f"  Run proj.format_video() first to set these values."
-        )
-        raise ValueError(msg)
-
-    keypoints_df = read_df(src_fp, KEYPOINTS_SCHEMA)
-
-    for config_filt in config_filt_ls:
-        bodypart = config_filt.bodypart
-        pcutoff = config_filt.pcutoff
-        pcutoff_all = config_filt.pcutoff_all
-        x_px = config_filt.x * width_px
-        y_px = config_filt.y * height_px
-
-        # Get likelihood for single individual + bodypart
-        mask = (pl.col("individual") == SINGLE) & (pl.col("bodypart") == bodypart)
-        is_detected = (
-            keypoints_df.filter(mask)
-            .select(
-                pl.col("likelihood") >= pcutoff,
-            )
-            .to_series()
-        )
-
-        if is_detected.mean() < pcutoff_all:
-            # Set x, y, likelihood for all frames matching this bodypart
-            keypoints_df = keypoints_df.with_columns(
-                pl.when(mask).then(pl.lit(x_px)).otherwise(pl.col("x")).alias("x"),
-                pl.when(mask).then(pl.lit(y_px)).otherwise(pl.col("y")).alias("y"),
-                pl.when(mask)
-                .then(pl.lit(pcutoff))
-                .otherwise(pl.col("likelihood"))
-                .alias("likelihood"),
-            )
-            logger.info(
-                f"{bodypart} is detected in less than {pcutoff_all} of the video."
-                f" Setting x and y coordinates to ({x_px}, {y_px}).",
-            )
-        else:
-            logger.info(
-                f"{bodypart} is detected in more than {pcutoff_all} of the video."
-                " No need for stationary interpolation.",
-            )
-
-    write_df(keypoints_df, dst_fp, KEYPOINTS_SCHEMA)
+# ═══════════════════════════════════════════════════════════════════════════════
+# Functions
+# ═══════════════════════════════════════════════════════════════════════════════
 
 
-def interpolate(
-    src_fp: Path,
-    dst_fp: Path,
-    config_fp: Path,
-    *,
-    overwrite: bool,
-) -> None:
-    """Smooths noticeable jitter of points.
-
-    Where the likelihood (and accuracy) of
-    a point's coordinates are low
-    (e.g., when the subject's head goes out of view).
-    It does this by linearly interpolating the frames
-    of a body part that are below a given likelihood pcutoff.
-
-    Notes:
-    -----
-    The config file must contain the following parameters:
-    ```
-    - user
-        - preprocess
-            - interpolate
-                - pcutoff: float
-    ```
-    """
-    if not overwrite and dst_fp.exists():
-        logger.warning(file_exists_msg(dst_fp))
-        return
-    config = ExperimentConfig.model_validate_json(config_fp.read_text())
-    config_filt = config.user.preprocess.interpolate
-
-    keypoints_df = read_df(src_fp, KEYPOINTS_SCHEMA)
-
-    # Fill any null likelihoods with 0
-    keypoints_df = keypoints_df.with_columns(
-        pl.col("likelihood").fill_null(0),
-    )
-
-    # Set x and y to null where likelihood is below pcutoff
-    keypoints_df = keypoints_df.with_columns(
-        pl.when(pl.col("likelihood") >= config_filt.pcutoff)
-        .then(pl.col("x"))
-        .otherwise(None)
-        .alias("x"),
-        pl.when(pl.col("likelihood") >= config_filt.pcutoff)
-        .then(pl.col("y"))
-        .otherwise(None)
-        .alias("y"),
-    )
-
-    # Interpolate within each (individual, bodypart) group, forward/backward fill edges
-    keypoints_df = keypoints_df.with_columns(
-        pl.col("x")
-        .interpolate()
-        .forward_fill()
-        .backward_fill()
-        .over(["individual", "bodypart"]),
-        pl.col("y")
-        .interpolate()
-        .forward_fill()
-        .backward_fill()
-        .over(["individual", "bodypart"]),
-    )
-
-    write_df(keypoints_df, dst_fp, KEYPOINTS_SCHEMA)
-
-
-def refine_ids(src_fp: Path, dst_fp: Path, config_fp: Path, *, overwrite: bool) -> None:
+def refine_ids(
+    keypoints_df: pl.DataFrame,
+    config: ExperimentConfig,
+    metadata: ExperimentMetadata,
+) -> pl.DataFrame:
     """Ensures that the identity is correctly tracked for maDLC.
 
     Assumes interpolate_points has already been run.
@@ -255,21 +73,14 @@ def refine_ids(src_fp: Path, dst_fp: Path, config_fp: Path, *, overwrite: bool) 
                 - metric: ["current", "rolling", "binned"]
     ```
     """
-    if not overwrite and dst_fp.exists():
-        logger.warning(file_exists_msg(dst_fp))
-        return
-
-    keypoints_df = read_df(src_fp, KEYPOINTS_SCHEMA)
-
-    config = ExperimentConfig.model_validate_json(config_fp.read_text())
-    config_filt = config.user.preprocess.refine_ids
-    marked = config.get_ref(config_filt.marked)
-    unmarked = config.get_ref(config_filt.unmarked)
-    marking = config.get_ref(config_filt.marking)
-    window_sec = config.get_ref(config_filt.window_sec)
-    bpts = config.get_ref(config_filt.bodyparts)
-    metric = config.get_ref(config_filt.metric)
-    fps = config.auto.formatted_vid.fps
+    cfg = config.require_preprocess().require("refine_ids", RefineIdsConfig)
+    marked = cfg.marked
+    unmarked = cfg.unmarked
+    marking = cfg.marking
+    window_sec = cfg.window_sec
+    bpts = cfg.bodyparts
+    metric = cfg.metric
+    fps = metadata.require_fps()
     window_frames = int(np.round(fps * window_sec, 0))
 
     # Validate individuals and marking exist
@@ -296,14 +107,17 @@ def refine_ids(src_fp: Path, dst_fp: Path, config_fp: Path, *, overwrite: bool) 
     switch_df = _get_id_switch_df(mark_dists_df, window_frames, marked, unmarked)
 
     # Apply identity switches
-    switched = _switch_identities(
+    return _switch_identities(
         keypoints_df,
         switch_df.select(metric).to_series(),
         marked,
         unmarked,
     )
 
-    write_df(switched, dst_fp, KEYPOINTS_SCHEMA)
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Helper Funcs
+# ═══════════════════════════════════════════════════════════════════════════════
 
 
 def _get_mark_dists_df(

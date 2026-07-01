@@ -15,7 +15,7 @@ from .classify_behaviour import classify_behaviour
 from .combine_analysis import combine_analysis
 from .export import boris2behaviour, df2csv, df2df, predictedbehaviour2scoredbehaviour
 from .extract_features import extract_features
-from .format_video import format_video
+from .format_video import format_video, get_vid_metadata
 from .preprocess import (
     PreprocessFunc,
     interpolate,
@@ -42,6 +42,7 @@ __all__ = [
     "extract_features",
     "format_video",
     "freezing",
+    "get_vid_metadata",
     "in_roi",
     "interpolate",
     "interpolate_stationary",

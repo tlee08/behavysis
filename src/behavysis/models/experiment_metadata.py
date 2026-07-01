@@ -1,0 +1,95 @@
+"""Experiment configuration models for the behavysis pipeline."""
+
+from pydantic import BaseModel, PositiveFloat, PositiveInt
+
+from ._validators import MetadataNotReadyError
+
+
+class VideoMetadata(BaseModel):
+    """VidMetadata."""
+
+    width_px: PositiveInt | None = None
+    height_px: PositiveInt | None = None
+    fps: PositiveFloat | None = None
+    total_frames: PositiveInt | None = None
+
+
+class ExperimentMetadata(BaseModel):
+    """Experiment Metadata."""
+
+    raw_video: VideoMetadata = VideoMetadata()
+    formatted_video: VideoMetadata = VideoMetadata()
+    px_per_mm: PositiveFloat | None = None
+    start_frame: PositiveInt | None = None
+    stop_frame: PositiveInt | None = None
+    dur_frames: PositiveInt | None = None
+
+    def require_px_per_mm(self) -> PositiveFloat:
+        """Pixels per MM."""
+        if self.px_per_mm is None:
+            msg = "px_per_mm"
+            raise MetadataNotReadyError(
+                msg,
+                "calculate_params.px_per_mm()",
+            )
+        return self.px_per_mm
+
+    def require_start_frame(self) -> PositiveInt:
+        """Start frame."""
+        if self.start_frame is None:
+            msg = "start_frame"
+            raise MetadataNotReadyError(
+                msg,
+                "calculate_params.start_frame_from_*()",
+            )
+        return self.start_frame
+
+    def require_stop_frame(self) -> PositiveInt:
+        """Stop frame."""
+        if self.stop_frame is None:
+            msg = "stop_frame"
+            raise MetadataNotReadyError(
+                msg,
+                "calculate_params.stop_frame_from_*()",
+            )
+        return self.stop_frame
+
+    def require_fps(self) -> PositiveFloat:
+        """Formatted vid fps."""
+        if self.formatted_video.fps is None:
+            msg = "formatted_video.fps"
+            raise MetadataNotReadyError(
+                msg,
+                "format_video()",
+            )
+        return self.formatted_video.fps
+
+    def require_width_px(self) -> PositiveInt:
+        """Formatted vid width_px."""
+        if self.formatted_video.width_px is None:
+            msg = "formatted_video.width_px"
+            raise MetadataNotReadyError(
+                msg,
+                "format_video()",
+            )
+        return self.formatted_video.width_px
+
+    def require_height_px(self) -> PositiveInt:
+        """Formatted vid height_px."""
+        if self.formatted_video.height_px is None:
+            msg = "formatted_video.height_px"
+            raise MetadataNotReadyError(
+                msg,
+                "format_video()",
+            )
+        return self.formatted_video.height_px
+
+    def require_total_frames(self) -> PositiveInt:
+        """Formatted vid total_frames."""
+        if self.formatted_video.total_frames is None:
+            msg = "formatted_video.total_frames"
+            raise MetadataNotReadyError(
+                msg,
+                "format_video()",
+            )
+        return self.formatted_video.total_frames

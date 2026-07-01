@@ -5,7 +5,7 @@ from pathlib import Path
 import polars as pl
 
 from behavysis.constants import DF_IO_FORMAT, FALSE_POS, FBF, UNSURE
-from behavysis.models import ExperimentConfig
+from behavysis.models import ExperimentConfig, ExperimentMetadata
 from behavysis.schemas import (
     ANALYSIS_SCHEMA,
     BEHAVIOUR_SCORED_BASE,
@@ -17,15 +17,12 @@ from behavysis.schemas import (
 
 def analyse_behaviour(
     behaviour_fp: Path,
+    config: ExperimentConfig,
+    metadata: ExperimentMetadata,
     dst_dir: Path,
-    config_fp: Path,
 ) -> None:
     """Takes a behaviour df and generates a summary and binned version of the data."""
     name = behaviour_fp.stem
-    dst_subdir = dst_dir / "analyse_behaviour"
-
-    config = ExperimentConfig.model_validate_json(config_fp.read_text())
-    analysis_config = config.get_analysis_config()
 
     # Read Polars long-form scored behaviour DataFrame
     behaviour_df = read_df(behaviour_fp, BEHAVIOUR_SCORED_BASE)
@@ -64,15 +61,15 @@ def analyse_behaviour(
     )
 
     # Write frame-by-frame analysis
-    fbf_fp = dst_subdir / FBF / f"{name}.{DF_IO_FORMAT}"
+    fbf_fp = dst_dir / FBF / f"{name}.{DF_IO_FORMAT}"
     write_df(analysis_df, fbf_fp, ANALYSIS_SCHEMA)
 
     # Generate summary and binned dataframes
     summary_binned_behaviour(
         analysis_df,
-        dst_subdir,
+        dst_dir,
         name,
-        analysis_config.fps,
-        analysis_config.bins_sec,
-        analysis_config.custom_bins_sec,
+        metadata.require_fps(),
+        config.require_bins_sec_ls(),
+        config.require_custom_bins_sec_ls(),
     )

@@ -43,6 +43,11 @@ KEYPOINTS_SCHEMA: SchemaDict = {
     LIKELIHOOD: pl.Float64,
 }
 
+"""Features stay wide for ML. ``frame`` + dynamic Float64 feature columns."""
+FEATURES_BASE: SchemaDict = {
+    FRAME: pl.Int64,
+}
+
 """One row per (frame, behaviour) classifier prediction."""
 BEHAVIOUR_PREDICTED_SCHEMA: SchemaDict = {
     FRAME: pl.Int64,
@@ -57,11 +62,6 @@ BEHAVIOUR_SCORED_BASE: SchemaDict = {
     FRAME: pl.Int64,
     BEHAVIOUR: pl.Utf8,
     ACTUAL: pl.Int64,
-}
-
-"""Features stay wide for ML. ``frame`` + dynamic Float64 feature columns."""
-FEATURES_BASE: SchemaDict = {
-    FRAME: pl.Int64,
 }
 
 """One row per (frame, individual, measure) value. Frame-by-frame analysis."""

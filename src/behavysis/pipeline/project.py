@@ -105,12 +105,11 @@ class Project:
         exp_ls_msg = "".join([f"\n    - {exp.name}" for exp in self.experiments])
         logger.info(f"Experiments imported:{exp_ls_msg}")
 
-    def update_config(self, default_config_fp: Path, *, overwrite: str) -> None:
+    def update_config(self, default_config_fp: Path) -> None:
         """Update the config for all experiments."""
         self._run(
             Experiment.update_config,
             default_config_fp=default_config_fp,
-            overwrite=overwrite,
         )
 
     def format_video(self, *, overwrite: bool) -> None:
@@ -120,24 +119,33 @@ class Project:
             overwrite=overwrite,
         )
 
-    def run_dlc(self, gputouse: int | None = None, *, overwrite: bool = False) -> None:
+    def run_dlc(self, gputouse: int | None = None, *, overwrite: bool) -> None:
         """Run DLC on all experiments with GPU batching."""
         gputouse_ls = get_gpu_ids() if gputouse is None else [gputouse]
         nprocs = len(gputouse_ls)
+        # Get list of experiment to run
+        # Consider overwrite flag and if keypoints dfs exist
         exp_ls = self.experiments
         if not overwrite:
             exp_ls = [exp for exp in exp_ls if not exp.get_fp(KEYPOINTS_DIR).is_file()]
         if not exp_ls:
             return
+        # Validating that all dlc config_yaml_fp are the same
+        dlc_config_fp_set = {
+            exp.read_config().require_run_dlc().model_fp for exp in exp_ls
+        }
+        assert len(dlc_config_fp_set) == 1
+        dlc_config_fp = dlc_config_fp_set.pop()
+        # Splitting into nprocs batches
         exp_batches = np.array_split(np.array(exp_ls), nprocs)
+        # Running DLC
         with cluster_process(LocalCluster(n_workers=nprocs, threads_per_worker=1)):
             delayed_tasks = [
                 dask.delayed(ma_dlc_run_batch)(
                     vid_fp_ls=[exp.get_fp(FORMATTED_VIDEO_DIR) for exp in batch],
                     keypoints_dir=self.root_dir / KEYPOINTS_DIR,
-                    config_dir=self.root_dir / CONFIG_DIR,
+                    dlc_config_fp=dlc_config_fp,
                     gputouse=gpu,
-                    overwrite=overwrite,
                 )
                 for gpu, batch in zip(gputouse_ls, exp_batches, strict=False)
             ]
@@ -226,7 +234,7 @@ class Project:
         config = ExperimentConfig.model_validate_json(
             self.experiments[0].get_fp(CONFIG_DIR).read_text(),
         )
-        bin_sizes = [*list(config.get_ref(config.user.analyse.bins_sec)), "custom"]
+        bin_sizes = [*list(config.require_analyse().bins_sec_ls), "custom"]
 
         for subdir in proj_analyse_dir.iterdir():
             if not subdir.is_dir():

@@ -11,11 +11,11 @@ from loguru import logger
 
 from behavysis.constants import (
     BEHAVIOUR,
+    BEHAVIOUR_SCORED_DIR,
     FEATURES_EXTRACTED_DIR,
     OUTCOME,
     PRED,
     PROB,
-    SCORED_BEHAVIOUR_DIR,
 )
 from behavysis.models import BehaviourClassifierConfig
 
@@ -196,7 +196,7 @@ class BehaviourClassifier:
     @property
     def y_dir(self) -> Path:
         """Directory containing scored behaviour files."""
-        return self.proj_dir / SCORED_BEHAVIOUR_DIR
+        return self.proj_dir / BEHAVIOUR_SCORED_DIR
 
     #################################################
     # Factory Methods
@@ -217,7 +217,7 @@ class BehaviourClassifier:
             List of BehavClassifier instances, one per behaviour.
         """
         proj_dir = proj_dir.resolve()
-        y_df = wrangle_columns_y(combine_dfs(proj_dir / SCORED_BEHAVIOUR_DIR))
+        y_df = wrangle_columns_y(combine_dfs(proj_dir / BEHAVIOUR_SCORED_DIR))
         behaviour_ls = y_df.columns.to_list()
         return [cls(proj_dir, behav) for behav in behaviour_ls]
 

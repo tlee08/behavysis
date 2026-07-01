@@ -12,26 +12,18 @@ from behavysis.schemas import (
     read_df,
     write_df,
 )
-from behavysis.utils.io_utils import file_exists_msg
 
 
 def combine_analysis(
+    name: str,
     analysis_dir: Path,
     analysis_combined_fp: Path,
-    config_fp: Path,
-    *,
-    overwrite: bool,
 ) -> None:
     """Combine analysis DataFrames across analysis types.
 
     Concatenates frame-by-frame analysis files from all analysis subdirectories,
     adding an ``analysis`` column to distinguish them.
     """
-    if not overwrite and analysis_combined_fp.exists():
-        logger.warning(file_exists_msg(analysis_combined_fp))
-        return
-    name = config_fp.stem
-
     analysis_subdir_ls = [
         i for i in analysis_dir.iterdir() if (analysis_dir / i).is_dir()
     ]

@@ -63,8 +63,6 @@ All DataFrame handlers inherit from `DFMixin` in `utils/df_mixin.py`. Key patter
 - `auto`: Auto-calculated values (fps, start_frame, px_per_mm)
 - `ref`: Reference values referenced via `"--ref_name"` strings
 
-Use `config.get_ref(val)` to resolve reference strings. Use `config.get_analysis_config()` to get validated analysis parameters.
-
 ### Processing Functions (`processes/`)
 
 Each function is stateless—config and file paths are passed explicitly. Standard signature:
@@ -78,8 +76,6 @@ def some_process(
     overwrite: bool,
 ) -> None:
 ```
-
-Functions check `overwrite` first, read config with `ExperimentConfig.model_validate_json()`, process data, and write output.
 
 ## Pipeline Stages (from `constants/pipeline.py`)
 

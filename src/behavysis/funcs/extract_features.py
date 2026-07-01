@@ -1,12 +1,11 @@
 """Feature extraction from preprocessed keypoints using SimBA feature math.
 
-Replicates the SimBA ExtractFeaturesFrom16bps pipeline natively in Polars + NumPy + SciPy.
+Replicates the SimBA ExtractFeaturesFrom16bps pipeline natively in
+Polars + NumPy + SciPy.
 No separate conda environment or subprocess required.
 """
 
 from __future__ import annotations
-
-from typing import TYPE_CHECKING
 
 import numpy as np
 import polars as pl
@@ -14,21 +13,15 @@ from loguru import logger
 from scipy.spatial import ConvexHull
 
 from behavysis.constants.bodypoints import BPMAP_SIMBA, INDIVS_SIMBA
-from behavysis.models import ExperimentConfig
-from behavysis.schemas import KEYPOINTS_SCHEMA, check_bpts_exist, read_df, write_df
-from behavysis.utils.io_utils import file_exists_msg
-
-if TYPE_CHECKING:
-    from pathlib import Path
+from behavysis.models import ExperimentConfig, ExperimentMetadata
+from behavysis.schemas import check_bpts_exist
 
 
 def extract_features(
-    keypoints_fp: Path,
-    features_fp: Path,
-    config_fp: Path,
-    *,
-    overwrite: bool,
-) -> None:
+    keypoints_df: pl.DataFrame,
+    config: ExperimentConfig,
+    metadata: ExperimentMetadata,
+) -> pl.DataFrame:
     """Extract SimBA-compatible features from preprocessed keypoints.
 
     Parameters
@@ -42,29 +35,20 @@ def extract_features(
     overwrite : bool
         Whether to overwrite the features_fp file if it exists.
     """
-    if not overwrite and features_fp.exists():
-        logger.warning(file_exists_msg(features_fp))
-        return
+    cfg = config.require_extract_features()
 
-    config = ExperimentConfig.model_validate_json(config_fp.read_text())
-    analysis_config = config.get_analysis_config()
-    config_filt = config.user.extract_features
-    bpts = config.get_ref(config_filt.bodyparts)
-
-    keypoints_df = read_df(keypoints_fp, KEYPOINTS_SCHEMA)
-    check_bpts_exist(keypoints_df, bpts)
+    check_bpts_exist(keypoints_df, cfg.bodyparts)
 
     features_df = compute_simba_features(
         keypoints_df.filter(
-            pl.col("individual").is_in(config.get_ref(config_filt.individuals)),
-            pl.col("bodypart").is_in(bpts),
+            pl.col("individual").is_in(cfg.individuals),
+            pl.col("bodypart").is_in(cfg.bodyparts),
         ),
-        fps=analysis_config.fps,
-        px_per_mm=analysis_config.px_per_mm,
+        fps=metadata.require_fps(),
+        px_per_mm=metadata.require_px_per_mm(),
     )
-
-    write_df(features_df, features_fp, {})
     logger.info("Exported SimBA features to disk.")
+    return features_df
 
 
 #################################################
@@ -697,7 +681,11 @@ def _compute_movements(
     return features
 
 
-def _compute_hull(arr_m1, arr_m2, px_per_mm) -> dict[str, Array1D]:
+def _compute_hull(
+    arr_m1: Array2D,
+    arr_m2: Array2D,
+    px_per_mm: float,
+) -> dict[str, Array1D]:
     """Convex hull perimeter and area features."""
     return {
         **_add_hull(arr_m1, px_per_mm, "M1"),
@@ -742,7 +730,7 @@ def _compute_cdist_features(
         )
 
 
-def _add_cdist(arr, px_per_mm, label):
+def _add_cdist(arr: Array2D, px_per_mm: float, label: str) -> dict[str, Array1D]:
     n = arr.shape[0]
     large = np.zeros(n, dtype=np.float64)
     small = np.zeros(n, dtype=np.float64)
@@ -762,13 +750,15 @@ def _add_cdist(arr, px_per_mm, label):
                 mean_[i] = np.mean(triu) / px_per_mm
                 sum_[i] = np.sum(triu) / px_per_mm
 
-    features[f"{label}_hull_large_euclidean"] = large
-    features[f"{label}_hull_small_euclidean"] = small
-    features[f"{label}_hull_mean_euclidean"] = mean_
-    features[f"{label}_hull_sum_euclidean"] = sum_
+    return {
+        f"{label}_hull_large_euclidean": large,
+        f"{label}_hull_small_euclidean": small,
+        f"{label}_hull_mean_euclidean": mean_,
+        f"{label}_hull_sum_euclidean": sum_,
+    }
 
 
-def _compute_aggregates(features):
+def _compute_aggregates(features: dict[str, Array1D]):
     """Sum aggregate movement features."""
     # Total movement centroids
     if "Movement_mouse_1_center" in features and "Movement_mouse_2_center" in features:

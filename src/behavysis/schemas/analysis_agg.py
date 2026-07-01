@@ -136,10 +136,9 @@ def make_binned(
     pl.DataFrame
         BINNED_SCHEMA DataFrame.
     """
-    timestamps = (
-        analysis_df.select((pl.col("frame") / fps).alias("timestamp"))
-        .to_series()
-    )
+    timestamps = analysis_df.select(
+        (pl.col("frame") / fps).alias("timestamp"),
+    ).to_series()
     t_max = float(timestamps.max())
 
     bins_arr = np.asarray(bins_, dtype=np.float64)
@@ -186,10 +185,7 @@ def make_binned_plot(
     agg_column : str
         Aggregation column to plot (e.g. "mean", "bout_dur_total").
     """
-    plot_df = (
-        binned_df.filter(pl.col("agg") == agg_column)
-        .to_pandas()
-    )
+    plot_df = binned_df.filter(pl.col("agg") == agg_column).to_pandas()
 
     g = sns.relplot(
         data=plot_df,
@@ -239,8 +235,8 @@ def summary_binned_behaviour(
     dst_dir: Path,
     name: str,
     fps: float,
-    bins_ls: list[int],
-    cbins_ls: list[int],
+    bins_sec_ls: list[int],
+    custom_bins_sec_ls: list[int],
 ) -> None:
     """Generate binned summary for behavioural data including latency."""
     summary_binned(
@@ -250,8 +246,8 @@ def summary_binned_behaviour(
         fps=fps,
         summary_func=agg_behaviour,
         agg_column="bout_dur_total",
-        bins_ls=bins_ls,
-        cbins_ls=cbins_ls,
+        bins_ls=bins_sec_ls,
+        cbins_ls=custom_bins_sec_ls,
     )
 
     # Latency: time from start to first positive value per (individual, measure)

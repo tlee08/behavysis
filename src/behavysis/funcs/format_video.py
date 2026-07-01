@@ -6,67 +6,57 @@ from pathlib import Path
 import cv2
 from loguru import logger
 
-from behavysis.models import ExperimentConfig, VidMetadata
-from behavysis.utils.io_utils import file_exists_msg
+from behavysis.models import ExperimentConfig, ExperimentMetadata, VideoMetadata
 
 
 def format_video(
     raw_vid_fp: Path,
     formatted_vid_fp: Path,
-    config_fp: Path,
-    *,
-    overwrite: bool,
-) -> None:
+    config: ExperimentConfig,
+    metadata: ExperimentMetadata,
+) -> ExperimentMetadata:
     """Format video with ffmpeg and save metadata to config."""
-    config = ExperimentConfig.model_validate_json(config_fp.read_text())
-    cfg = config.user.format_vid
-
+    cfg = config.require_format_video()
+    # Build ffmpeg command
+    cmd = ["ffmpeg"]
+    if cfg.start_sec:
+        cmd += ["-ss", str(cfg.start_sec)]
+    cmd += ["-i", str(raw_vid_fp)]
+    filters = []
+    width = cfg.width_px
+    height = cfg.height_px
+    if width or height:
+        filters.append(f"scale={width or -1}:{height or -1}")
+    if filters:
+        cmd += ["-vf", ",".join(filters)]
+    if cfg.fps:
+        cmd += ["-r", str(cfg.fps)]
+    if cfg.stop_sec:
+        duration = cfg.stop_sec - (cfg.start_sec or 0)
+        cmd += ["-t", str(duration)]
+    cmd += [
+        "-c:v",
+        "h264",
+        "-preset",
+        "fast",
+        "-crf",
+        "20",
+        "-y",
+        str(formatted_vid_fp),
+    ]
+    formatted_vid_fp.parent.mkdir(parents=True, exist_ok=True)
     # Running format vid with ffmpeg
-    if not overwrite and formatted_vid_fp.exists():
-        logger.warning(file_exists_msg(formatted_vid_fp))
-    else:
-        # Build ffmpeg command
-        cmd = ["ffmpeg"]
-        if cfg.start_sec:
-            cmd += ["-ss", str(config.get_ref(cfg.start_sec))]
-        cmd += ["-i", str(raw_vid_fp)]
-        filters = []
-        width = config.get_ref(cfg.width_px)
-        height = config.get_ref(cfg.height_px)
-        if width or height:
-            filters.append(f"scale={width or -1}:{height or -1}")
-        if filters:
-            cmd += ["-vf", ",".join(filters)]
-        if cfg.fps:
-            cmd += ["-r", str(config.get_ref(cfg.fps))]
-        if cfg.stop_sec:
-            duration = config.get_ref(cfg.stop_sec) - (
-                config.get_ref(cfg.start_sec) or 0
-            )
-            cmd += ["-t", str(duration)]
-        cmd += [
-            "-c:v",
-            "h264",
-            "-preset",
-            "fast",
-            "-crf",
-            "20",
-            "-y",
-            str(formatted_vid_fp),
-        ]
-        formatted_vid_fp.parent.mkdir(parents=True, exist_ok=True)
-        subprocess.run(cmd, check=True)
-
+    subprocess.run(cmd, check=True)
     # Save metadata to config
     # Always do this
-    config.auto.raw_vid = _get_vid_metadata(raw_vid_fp)
-    config.auto.formatted_vid = _get_vid_metadata(formatted_vid_fp)
-    config_fp.write_text(config.model_dump_json(indent=2))
+    metadata.raw_video = get_vid_metadata(raw_vid_fp)
+    metadata.formatted_video = get_vid_metadata(formatted_vid_fp)
+    return metadata
 
 
-def _get_vid_metadata(vid_fp: Path) -> VidMetadata:
+def get_vid_metadata(vid_fp: Path) -> VideoMetadata:
     """Extract metadata from video file."""
-    meta = VidMetadata()
+    meta = VideoMetadata()
     cap = cv2.VideoCapture(vid_fp)
     if cap.isOpened():
         meta.height_px = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))

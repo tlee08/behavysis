@@ -1,9 +1,10 @@
 """Experiment class for processing a single experiment in the behavysis pipeline."""
 
 from pathlib import Path
-from typing import Literal
 
 import numpy as np
+import polars as pl
+from loguru import logger
 
 from behavysis.constants import (
     ANALYSIS_COMBINED_DIR,
@@ -11,14 +12,15 @@ from behavysis.constants import (
     CONFIG_DIR,
     FORMATTED_VIDEO_DIR,
     KEYPOINTS_DIR,
+    METADATA_DIR,
     RAW_VIDEO_DIR,
     STAGES,
 )
 from behavysis.constants.pipeline import (
+    BEHAVIOUR_PREDICTED_DIR,
+    BEHAVIOUR_SCORED_DIR,
     FEATURES_EXTRACTED_DIR,
-    PREDICTED_BEHAVIOUR_DIR,
     PREPROCESSED_DIR,
-    SCORED_BEHAVIOUR_DIR,
 )
 from behavysis.funcs import (
     AnalyseFunc,
@@ -28,13 +30,21 @@ from behavysis.funcs import (
     classify_behaviour,
     combine_analysis,
     df2csv,
-    df2df,
     extract_features,
     format_video,
+    get_vid_metadata,
     ma_dlc_run_single,
     predictedbehaviour2scoredbehaviour,
     update_config,
 )
+from behavysis.models import ExperimentConfig, ExperimentMetadata
+from behavysis.schemas import (
+    BEHAVIOUR_PREDICTED_SCHEMA,
+    KEYPOINTS_SCHEMA,
+    read_df,
+    write_df,
+)
+from behavysis.utils.io_utils import file_exists_msg
 from behavysis.utils.logger_utils import trace
 
 
@@ -74,124 +84,185 @@ class Experiment:
         """Returns the experiment's file path from the given folder."""
         return self.root_dir / folder / f"{self.name}.{STAGES[folder]}"
 
+    def read_config(self) -> ExperimentConfig:
+        """Returns the experiment's config."""
+        return ExperimentConfig.read_yaml(self.get_fp(CONFIG_DIR))
+
+    def read_metadata(self) -> ExperimentMetadata:
+        """Returns the experiment's metadata."""
+        return ExperimentMetadata.model_validate_json(
+            self.get_fp(METADATA_DIR).read_text(),
+        )
+
+    def write_metadata(self, metadata: ExperimentMetadata) -> None:
+        """Save the experiment's metadata to disk."""
+        self.get_fp(METADATA_DIR).write_text(metadata.model_dump_json(indent=2))
+
     @trace
     def update_config(
         self,
         default_config_fp: str | Path,
-        *,
-        overwrite: Literal["user", "all"],
     ) -> None:
         """Initialises the JSON config files with the given configurations."""
         update_config(
             config_fp=self.get_fp(CONFIG_DIR),
             default_config_fp=Path(default_config_fp),
-            overwrite=overwrite,
         )
 
     @trace
     def format_video(self, *, overwrite: bool) -> None:
         """Formats the video with ffmpeg to fit the formatted config."""
-        format_video(
+        # Overwrite check
+        if not overwrite and self.get_fp(FORMATTED_VIDEO_DIR).exists():
+            logger.warning(file_exists_msg(self.get_fp(FORMATTED_VIDEO_DIR)))
+            return
+        # Process
+        metadata = format_video(
             raw_vid_fp=self.get_fp(RAW_VIDEO_DIR),
             formatted_vid_fp=self.get_fp(FORMATTED_VIDEO_DIR),
-            config_fp=self.get_fp(CONFIG_DIR),
-            overwrite=overwrite,
+            config=self.read_config(),
+            metadata=self.read_metadata(),
         )
+        self.write_metadata(metadata)
+
+    @trace
+    def get_vid_metadata(self) -> None:
+        """Get vid metadata and save."""
+        # Read
+        metadata = self.read_metadata()
+        # Update
+        metadata.raw_video = get_vid_metadata(self.get_fp(RAW_VIDEO_DIR))
+        metadata.formatted_video = get_vid_metadata(self.get_fp(FORMATTED_VIDEO_DIR))
+        # Save
+        self.write_metadata(metadata)
 
     @trace
     def run_dlc(self, gputouse: int | None, *, overwrite: bool) -> None:
         """Run the DLC model on the formatted video."""
+        # Overwrite check
+        if not overwrite and self.get_fp(KEYPOINTS_DIR).exists():
+            logger.warning(file_exists_msg(self.get_fp(KEYPOINTS_DIR)))
+            return
+        # Process
         ma_dlc_run_single(
             vid_fp=self.get_fp(FORMATTED_VIDEO_DIR),
-            keypoints_fp=self.get_fp(KEYPOINTS_DIR),
-            config_fp=self.get_fp(CONFIG_DIR),
+            keypoints_dir=self.root_dir / KEYPOINTS_DIR,
+            config=self.read_config(),
             gputouse=gputouse,
-            overwrite=overwrite,
         )
 
     @trace
     def calculate_parameters(self, funcs: tuple[CalculateParamsFunc, ...]) -> None:
         """Calculate parameters of the keypoints file."""
+        metadata = self.read_metadata()
         for func in funcs:
-            func(
+            metadata = func(
                 keypoints_fp=self.get_fp(KEYPOINTS_DIR),
-                config_fp=self.get_fp(CONFIG_DIR),
+                config=self.read_config(),
+                metadata=metadata,
             )
+        self.write_metadata(metadata)
 
     @trace
     def preprocess(self, funcs: tuple[PreprocessFunc, ...], *, overwrite: bool) -> None:
         """Preprocessing pipeline for keypoints data."""
-        df2df(
-            src_fp=self.get_fp(KEYPOINTS_DIR),
-            dst_fp=self.get_fp(PREPROCESSED_DIR),
-            overwrite=overwrite,
-        )
+        # Overwrite check
+        if not overwrite and self.get_fp(PREPROCESSED_DIR).exists():
+            logger.warning(file_exists_msg(self.get_fp(PREPROCESSED_DIR)))
+            return
+        # Process
+        keypoints_df = read_df(self.get_fp(KEYPOINTS_DIR), KEYPOINTS_SCHEMA)
         for func in funcs:
-            func(
-                src_fp=self.get_fp(PREPROCESSED_DIR),
-                dst_fp=self.get_fp(PREPROCESSED_DIR),
-                config_fp=self.get_fp(CONFIG_DIR),
-                overwrite=True,
+            keypoints_df = func(
+                keypoints_df=keypoints_df,
+                config=self.read_config(),
+                metadata=self.read_metadata(),
             )
+        write_df(keypoints_df, self.get_fp(PREPROCESSED_DIR), KEYPOINTS_SCHEMA)
 
     @trace
     def extract_features(self, *, overwrite: bool) -> None:
         """Extracts features from the preprocessed dlc file."""
-        extract_features(
-            keypoints_fp=self.get_fp(PREPROCESSED_DIR),
-            features_fp=self.get_fp(FEATURES_EXTRACTED_DIR),
-            config_fp=self.get_fp(CONFIG_DIR),
-            overwrite=overwrite,
+        # Overwrite check
+        if not overwrite and self.get_fp(FEATURES_EXTRACTED_DIR).exists():
+            logger.warning(file_exists_msg(self.get_fp(FEATURES_EXTRACTED_DIR)))
+            return
+        # Process
+        keypoints_df = read_df(self.get_fp(KEYPOINTS_DIR), KEYPOINTS_SCHEMA)
+        features_df = extract_features(
+            keypoints_df=keypoints_df,
+            config=self.read_config(),
+            metadata=self.read_metadata(),
         )
+        features_df.write_parquet(self.get_fp(FEATURES_EXTRACTED_DIR))
 
     @trace
     def classify_behaviour(self, *, overwrite: bool) -> None:
         """Classify behaviours using trained models."""
-        classify_behaviour(
-            features_fp=self.get_fp(FEATURES_EXTRACTED_DIR),
-            behaviour_fp=self.get_fp(PREDICTED_BEHAVIOUR_DIR),
-            config_fp=self.get_fp(CONFIG_DIR),
-            overwrite=overwrite,
+        # Overwrite check
+        if not overwrite and self.get_fp(BEHAVIOUR_PREDICTED_DIR).exists():
+            logger.warning(file_exists_msg(self.get_fp(BEHAVIOUR_PREDICTED_DIR)))
+            return
+        # Process
+        features_df = pl.read_parquet(self.get_fp(FEATURES_EXTRACTED_DIR))
+        behaviour_df = classify_behaviour(
+            features_df=features_df,
+            config=self.read_config(),
+            metadata=self.read_metadata(),
+        )
+        write_df(
+            behaviour_df,
+            self.get_fp(BEHAVIOUR_PREDICTED_DIR),
+            BEHAVIOUR_PREDICTED_SCHEMA,
         )
 
     @trace
     def export_behaviour(self, *, overwrite: bool) -> None:
         """Export predicted behaviours to scored behaviours."""
-        predictedbehaviour2scoredbehaviour(
-            src_fp=self.get_fp(PREDICTED_BEHAVIOUR_DIR),
-            dst_fp=self.get_fp(SCORED_BEHAVIOUR_DIR),
-            config_fp=self.get_fp(CONFIG_DIR),
-            overwrite=overwrite,
+        # Overwrite check
+        if not overwrite and self.get_fp(BEHAVIOUR_PREDICTED_DIR).exists():
+            logger.warning(file_exists_msg(self.get_fp(BEHAVIOUR_PREDICTED_DIR)))
+            return
+        # Process
+        behaviour_predicted_df = read_df(
+            self.get_fp(BEHAVIOUR_PREDICTED_DIR),
+            BEHAVIOUR_PREDICTED_SCHEMA,
         )
+        behaviour_scored_df = predictedbehaviour2scoredbehaviour(
+            behaviour_predicted_df=behaviour_predicted_df,
+            config=self.read_config(),
+        )
+        behaviour_scored_df.write_parquet(self.get_fp(BEHAVIOUR_SCORED_DIR))
 
     @trace
     def analyse(self, funcs: tuple[AnalyseFunc, ...]) -> None:
         """Analyse preprocessed keypoints data."""
         for func in funcs:
             func(
-                keypoints_fp=self.get_fp(PREPROCESSED_DIR),
+                keypoints_fp=self.get_fp(KEYPOINTS_DIR),
                 formatted_vid_fp=self.get_fp(FORMATTED_VIDEO_DIR),
-                dst_dir=self.root_dir / ANALYSIS_DIR,
-                config_fp=self.get_fp(CONFIG_DIR),
+                config=self.read_config(),
+                metadata=self.read_metadata(),
+                dst_dir=self.root_dir / ANALYSIS_DIR / func.__name__,
             )
 
     @trace
     def analyse_behaviour(self) -> None:
         """Analyse scored behaviours."""
         analyse_behaviour(
-            behaviour_fp=self.get_fp(SCORED_BEHAVIOUR_DIR),
-            config_fp=self.get_fp(CONFIG_DIR),
-            dst_dir=self.root_dir / ANALYSIS_DIR,
+            behaviour_fp=self.get_fp(BEHAVIOUR_SCORED_DIR),
+            config=self.read_config(),
+            metadata=self.read_metadata(),
+            dst_dir=self.root_dir / ANALYSIS_DIR / "analyse_behaviour",
         )
 
     @trace
     def combine_analysis(self) -> None:
         """Combine the experiment's analysis into a single df."""
         combine_analysis(
+            name=self.name,
             analysis_combined_fp=self.get_fp(ANALYSIS_COMBINED_DIR),
-            config_fp=self.get_fp(CONFIG_DIR),
             analysis_dir=self.root_dir / ANALYSIS_DIR,
-            overwrite=True,
         )
 
     @trace

@@ -1,119 +1,169 @@
 """Experiment configuration models for the behavysis pipeline."""
 
-from pydantic import BaseModel, ConfigDict
+from pathlib import Path
 
-from .funcs.analyse import (
-    AnalyseConfig,
-)
-from .funcs.calculate_params import (
-    CalculateParamsConfig,
-)
-from .funcs.classify_behaviour import ClassifyBehaviourConfig
-from .funcs.extract_features import ExtractFeaturesConfig
-from .funcs.format_vid import FormatVidConfig, VidMetadata
-from .funcs.preprocess import PreprocessConfig
-from .funcs.run_dlc import RunDlcConfig
+import yaml
+from pydantic import BaseModel, PositiveFloat, PositiveInt
 
+from behavysis.constants import BPTS_SIMBA, INDIVS_SIMBA
 
-class AnalysisConfig(BaseModel):
-    """Validated analysis configuration parameters."""
+from ._validators import ConfigNotConfiguredError
 
-    fps: float
-    width_px: int
-    height_px: int
-    px_per_mm: float
-    bins_sec: list
-    custom_bins_sec: list
+# ═══════════════════════════════════════════════════════════════════════════════
+# Config Sub Models
+# ═══════════════════════════════════════════════════════════════════════════════
 
 
-class UserConfig(BaseModel):
-    """User Config."""
+class SubfuncModel(BaseModel):
+    """SubfuncModel."""
 
-    format_vid: FormatVidConfig = FormatVidConfig()
-    run_dlc: RunDlcConfig = RunDlcConfig()
-    calculate_params: CalculateParamsConfig = CalculateParamsConfig()
-    preprocess: PreprocessConfig = PreprocessConfig()
-    extract_features: ExtractFeaturesConfig = ExtractFeaturesConfig()
-    classify_behaviour: list[ClassifyBehaviourConfig] = []
-    analyse: AnalyseConfig = AnalyseConfig()
+    def require[T: BaseModel](self, name: str, model_cls: type[T]) -> T:
+        """Require and validate a single sub-config by function name."""
+        # Check that subconfig exists
+        if hasattr(self, name):
+            msg = f"analyse.{name}"
+            raise ConfigNotConfiguredError(msg)
+        # Check that subconfig is of the correct type
+        value_key = getattr(self, name)
+        # Return subconfig
+        return model_cls.model_validate(value_key)
+
+    def require_list[T: BaseModel](self, name: str, model_cls: type[T]) -> list[T]:
+        """Require and validate a list sub-config (e.g. in_roi)."""
+        # Check that subconfig exists
+        if hasattr(self, name):
+            msg = f"analyse.{name}"
+            raise ConfigNotConfiguredError(msg)
+        value_key_ls = getattr(self, name)
+        return [model_cls.model_validate(value_key) for value_key in value_key_ls]
 
 
-class AutoConfig(BaseModel):
-    """Auto Config."""
+class FormatVideoConfig(BaseModel):
+    """FormatVidConfig."""
 
-    raw_vid: VidMetadata = VidMetadata()
-    formatted_vid: VidMetadata = VidMetadata()
-
-    px_per_mm: float = -1
-    start_frame: int = -1
-    stop_frame: int = -1
-    dur_frames: int = -1
+    width_px: PositiveInt | None = None
+    height_px: PositiveInt | None = None
+    fps: PositiveFloat | None = None
+    start_sec: PositiveFloat | None = None
+    stop_sec: PositiveFloat | None = None
 
 
-class RefConfig(BaseModel):
-    """Ref Config."""
+class RunDlcConfig(BaseModel):
+    """RunDlcConfig."""
 
-    model_config = ConfigDict(extra="allow")
+    model_fp: Path = Path("path") / "to" / "DEEPLABCUT_model" / "config.yaml"
+
+
+class CalculateParametersConfig(SubfuncModel):
+    """CalculateParametersConfig."""
+
+
+class PreprocessConfig(SubfuncModel):
+    """PreprocessConfig."""
+
+
+class ExtractFeaturesConfig(BaseModel):
+    """ExtractFeaturesConfig."""
+
+    individuals: list[str] = INDIVS_SIMBA
+    bodyparts: list[str] = BPTS_SIMBA
+
+
+class ClassifyBehaviourConfig(BaseModel):
+    """ClassifyBehavConfig."""
+
+    proj_dir: Path = Path("path") / "to" / "project_dir"
+    behav_name: str = "behav_name"
+    pcutoff: PositiveFloat | None = None
+    min_empty_window_secs: PositiveFloat = 0.2
+    user_defined: list[str] = []
+
+
+class AnalyseConfig(SubfuncModel):
+    """AnalyseConfig."""
+
+    bins_sec_ls: list[PositiveInt] = [30, 60, 120]
+    custom_bins_sec_ls: list[PositiveInt] = [60, 120, 300, 600]
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Main Config Model
+# ═══════════════════════════════════════════════════════════════════════════════
 
 
 class ExperimentConfig(BaseModel):
     """Experiment Config."""
 
-    user: UserConfig = UserConfig()
-    auto: AutoConfig = AutoConfig()
-    ref: RefConfig = RefConfig()
+    format_video: FormatVideoConfig | None
+    run_dlc: RunDlcConfig | None
+    calculate_parameters: CalculateParametersConfig | None
+    preprocess: PreprocessConfig | None
+    extract_features: ExtractFeaturesConfig | None
+    classify_behaviour: list[ClassifyBehaviourConfig] | None
+    analyse: AnalyseConfig | None
 
-    def get_ref[T](self, val: T | str) -> T:
-        """Resolve reference values from the ref section.
-
-        If val is in reference format (`"--<ref_name>"`), returns the
-        referenced value from the ref section. Otherwise returns val unchanged.
-
-        Parameters
-        ----------
-        val : Any
-            Value to resolve, potentially a reference string.
-
-        Returns:
-        -------
-        Any
-            Resolved value or original val if not a reference.
-        """
-        # Check if the value is in the reference format
-        if isinstance(val, str) and val.startswith("--"):
-            val_str = str(val)
-            # Remove the '--' from the val
-            val_str_ref = val_str[2:]
-            # Check if the value exists in the reference store
-            assert hasattr(self.ref, val_str_ref), (
-                f"Value '{val_str_ref}' can't be found in the config reference section."
-            )
-            return getattr(self.ref, val_str_ref)
-        # Otherwise, return value itself
-        return val  # ty:ignore[invalid-return-type]
-
-    def get_analysis_config(self) -> "AnalysisConfig":
-        """Get validated analysis configuration parameters.
-
-        Returns:
-        -------
-        AnalysisConfig
-            Pydantic model containing fps, dimensions, scale, and bin sizes.
-
-        Raises:
-        ------
-        AssertionError
-            If required video metadata or px_per_mm not set.
-        """
-        assert self.auto.formatted_vid.fps > 0
-        assert self.auto.formatted_vid.width_px > 0
-        assert self.auto.formatted_vid.height_px > 0
-        assert self.auto.px_per_mm > 0
-        return AnalysisConfig(
-            fps=float(self.auto.formatted_vid.fps),
-            width_px=float(self.auto.formatted_vid.width_px),
-            height_px=float(self.auto.formatted_vid.height_px),
-            px_per_mm=float(self.auto.px_per_mm),
-            bins_sec=list(self.get_ref(self.user.analyse.bins_sec)),
-            custom_bins_sec=list(self.get_ref(self.user.analyse.custom_bins_sec)),
+    @classmethod
+    def read_yaml(cls, fp: Path) -> "ExperimentConfig":
+        """Read the config from a yaml file."""
+        return ExperimentConfig.model_validate(
+            yaml.safe_load(fp.open("r")),
         )
+
+    def require_format_video(self) -> FormatVideoConfig:
+        """Require the format_video config."""
+        if self.format_video is None:
+            msg = "format_video"
+            raise ConfigNotConfiguredError(msg)
+        return self.format_video
+
+    def require_run_dlc(self) -> RunDlcConfig:
+        """Require the run_dlc config."""
+        if self.run_dlc is None:
+            msg = "run_dlc"
+            raise ConfigNotConfiguredError(msg)
+        return self.run_dlc
+
+    def require_calculate_parameters(self) -> CalculateParametersConfig:
+        """Require the calculate_parameters config."""
+        if self.calculate_parameters is None:
+            msg = "calculate_parameters"
+            raise ConfigNotConfiguredError(msg)
+        return self.calculate_parameters
+
+    def require_preprocess(self) -> PreprocessConfig:
+        """Require the preprocess config."""
+        if self.preprocess is None:
+            msg = "preprocess"
+            raise ConfigNotConfiguredError(msg)
+        return self.preprocess
+
+    def require_extract_features(self) -> ExtractFeaturesConfig:
+        """Require the extract_features config."""
+        if self.extract_features is None:
+            msg = "extract_features"
+            raise ConfigNotConfiguredError(msg)
+        return self.extract_features
+
+    def require_classify_behaviour(self) -> list[ClassifyBehaviourConfig]:
+        """Require the classify_behaviour config."""
+        if self.classify_behaviour is None:
+            msg = "classify_behaviour"
+            raise ConfigNotConfiguredError(msg)
+        return self.classify_behaviour
+
+    def require_analyse(self) -> AnalyseConfig:
+        """Require the analyse config."""
+        if self.analyse is None:
+            msg = "analyse"
+            raise ConfigNotConfiguredError(msg)
+        return self.analyse
+
+    def require_bins_sec_ls(self) -> list[PositiveInt]:
+        """Get the bins_sec from the analyse config."""
+        config_analyse = self.require_analyse()
+        return config_analyse.bins_sec_ls
+
+    def require_custom_bins_sec_ls(self) -> list[PositiveInt]:
+        """Get the custom_bins_sec from the analyse config."""
+        config_analyse = self.require_analyse()
+        return config_analyse.custom_bins_sec_ls
