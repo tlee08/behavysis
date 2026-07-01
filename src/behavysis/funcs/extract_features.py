@@ -3,9 +3,14 @@
 Replicates the SimBA ExtractFeaturesFrom16bps pipeline natively in
 Polars + NumPy + SciPy.
 No separate conda environment or subprocess required.
+
+Source of truth:
+https://github.com/sgoldenlab/simba/blob/master/simba/feature_extractors/feature_extractor_16bp.py
 """
 
 from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 import numpy as np
 import polars as pl
@@ -13,8 +18,10 @@ from loguru import logger
 from scipy.spatial import ConvexHull
 
 from behavysis.constants.bodypoints import BPMAP_SIMBA, INDIVS_SIMBA
-from behavysis.models import ExperimentConfig, ExperimentMetadata
 from behavysis.schemas import check_bpts_exist
+
+if TYPE_CHECKING:
+    from behavysis.models import ExperimentConfig, ExperimentMetadata
 
 
 def extract_features(
@@ -26,14 +33,17 @@ def extract_features(
 
     Parameters
     ----------
-    keypoints_fp : Path
-        Preprocessed keypoints filepath.
-    features_fp : Path
-        Filepath to save extracted_features dataframe.
-    config_fp : Path
-        Config JSON filepath.
-    overwrite : bool
-        Whether to overwrite the features_fp file if it exists.
+    keypoints_df : pl.DataFrame
+        Long-form KEYPOINTS_SCHEMA DataFrame.
+    config : ExperimentConfig
+        Experiment configuration.
+    metadata : ExperimentMetadata
+        Experiment metadata (fps, px_per_mm, etc.).
+
+    Returns:
+    -------
+    pl.DataFrame
+        Wide features DataFrame with frame index and SimBA-compatible columns.
     """
     cfg = config.require_extract_features()
 
@@ -51,74 +61,15 @@ def extract_features(
     return features_df
 
 
-#################################################
-# Calculating SimBA features
-# https://github.com/sgoldenlab/simba
-#################################################
-
-
 # ═══════════════════════════════════════════════════════════════════════════════
 # Body-part naming conventions
+# SimBA source:
+#   bp_names.csv — Ear_left_1, Ear_right_1, Nose_1, Center_1, Lat_left_1, …
+#   feature_extractor_16bp.py — hard-codes movement suffixes that differ from
+#   the bp_names.csv names (e.g. "centroid" not "center", "left_ear" not "ear_left")
 # ═══════════════════════════════════════════════════════════════════════════════
 
-SIMBA_BODY_PARTS = [
-    "Ear_left",
-    "Ear_right",
-    "Nose",
-    "Center",
-    "Lat_left",
-    "Lat_right",
-    "Tail_base",
-    "Tail_end",
-]
-
-SIMBA_FEATURE_NAMES = [
-    "Mouse_1_nose_to_tail",
-    "Mouse_2_nose_to_tail",
-    "Mouse_1_width",
-    "Mouse_2_width",
-    "Mouse_1_Ear_distance",
-    "Mouse_2_Ear_distance",
-    "Mouse_1_Nose_to_centroid",
-    "Mouse_2_Nose_to_centroid",
-    "Mouse_1_Nose_to_lateral_left",
-    "Mouse_2_Nose_to_lateral_left",
-    "Mouse_1_Nose_to_lateral_right",
-    "Mouse_2_Nose_to_lateral_right",
-    "Mouse_1_Centroid_to_lateral_left",
-    "Mouse_2_Centroid_to_lateral_left",
-    "Mouse_1_Centroid_to_lateral_right",
-    "Mouse_2_Centroid_to_lateral_right",
-    "Centroid_distance",
-    "Nose_to_nose_distance",
-    "M1_Nose_to_M2_lat_left",
-    "M1_Nose_to_M2_lat_right",
-    "M2_Nose_to_M1_lat_left",
-    "M2_Nose_to_M1_lat_right",
-    "M1_Nose_to_M2_tail_base",
-    "M2_Nose_to_M1_tail_base",
-]
-
-ROLL_WINDOW_DIVISORS = [2.0, 5.0, 7.5, 15, 30, 60, 90, 120]
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# Index mapping for wide arrays
-# ═══════════════════════════════════════════════════════════════════════════════
-
-# Each body-part has x and y → 2 values per body-part, 8 body-parts = 16 columns
-# Column layout for one animal's (n_frames, 16) array:
-#   [Ear_left_x, Ear_left_y, Ear_right_x, Ear_right_y,
-#    Nose_x, Nose_y, Center_x, Center_y,
-#    Lat_left_x, Lat_left_y, Lat_right_x, Lat_right_y,
-#    Tail_base_x, Tail_base_y, Tail_end_x, Tail_end_y]
-
-# Taken from here:
-# - https://github.com/sgoldenlab/simba/blob/master/simba/pose_configurations/configuration_names/pose_config_names.csv
-# - https://github.com/sgoldenlab/simba/blob/master/simba/pose_configurations/bp_names/bp_names.csv
-# - https://github.com/sgoldenlab/simba/blob/master/simba/feature_extractors/feature_extractor_16bp.py
-# 2 animals; 16 body-parts.
-
-BP_XY_IDX = {
+BP_XY_IDX: dict[str, tuple[int, int]] = {
     "Ear_left": (0, 1),
     "Ear_right": (2, 3),
     "Nose": (4, 5),
@@ -129,16 +80,60 @@ BP_XY_IDX = {
     "Tail_end": (14, 15),
 }
 
+MOVEMENT_BP_NAMES: dict[str, str] = {
+    "Ear_left": "left_ear",
+    "Ear_right": "right_ear",
+    "Nose": "nose",
+    "Center": "centroid",
+    "Lat_left": "lateral_left",
+    "Lat_right": "lateral_right",
+    "Tail_base": "tail_base",
+    "Tail_end": "tail_end",
+}
+
+SIMBA_BODY_PARTS: list[str] = list(BP_XY_IDX.keys())
+
+# SimBA Options.ROLLING_WINDOW_DIVISORS subset used for feature extraction
+ROLL_WINDOW_DIVISORS: list[float] = [
+    2.0,
+    2.5,
+    3.0,
+    3.5,
+    4.0,
+    4.5,
+    5.0,
+    5.5,
+    6.0,
+    6.5,
+    7.0,
+    7.5,
+    8.0,
+    8.5,
+    9.0,
+    9.5,
+    10.0,
+    10.5,
+    11.0,
+    11.5,
+    12.0,
+    12.5,
+    13.0,
+    13.5,
+    14.0,
+    14.5,
+    15.0,
+]
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # Typing aliases
 # ═══════════════════════════════════════════════════════════════════════════════
 
 type Array1D = np.ndarray[tuple[int], np.dtype[np.float64]]
 type Array2D = np.ndarray[tuple[int, int], np.dtype[np.float64]]
-type Array3D = np.ndarray[tuple[int, int, int], np.dtype[np.float64]]
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# Vectorized math helpers (replicating SimBA's numba-jitted functions)
+# Vectorized math helpers
+# Replicating SimBA's numba-jitted functions in pure NumPy.
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
@@ -170,8 +165,10 @@ def _angle3pt_vectorized(
     """Replicates SimBA angle3pt_vectorized: 3-point angle at center.
 
     SimBA computes:
-        degrees(atan2(|tail_x-cx|, |tail_y-cy|)
-        - atan2(|nose_x-cx|, |nose_y-cy|))
+        degrees(
+            atan2(|tail_x-cx|, |tail_y-cy|)
+            - atan2(|nose_x-cx|, |nose_y-cy|)
+        )
     """
     return np.degrees(
         np.abs(
@@ -205,9 +202,7 @@ def _hull_perimeter(points: Array2D, px_per_mm: float) -> tuple[float, float]:
         return 0.0, 0.0
     try:
         hull = ConvexHull(points)
-        perimeter_px = hull.area  # In 2D, ConvexHull.area = perimeter
-        area_px2 = hull.volume  # In 2D, ConvexHull.volume = area
-        return perimeter_px / px_per_mm, area_px2 / (px_per_mm**2)
+        return hull.area / px_per_mm, hull.volume / (px_per_mm**2)
     except Exception:
         return 0.0, 0.0
 
@@ -215,10 +210,13 @@ def _hull_perimeter(points: Array2D, px_per_mm: float) -> tuple[float, float]:
 def _cdist(points: Array2D) -> Array2D:
     """Pairwise Euclidean distances between all points (like scipy cdist)."""
     diff = points[:, None, :] - points[None, :, :]
-    return np.sqrt(np.sum(diff**2, axis=-1))
+    return np.sqrt((diff**2).sum(axis=-1))
 
 
-def _count_in_ranges(values: Array2D, ranges: list[tuple[float, float]]) -> Array2D:
+def _count_in_ranges(
+    values: Array2D,
+    ranges: list[tuple[float, float]],
+) -> Array2D:
     """Count how many values fall in each range bracket (per frame).
 
     values: shape (n_frames, n_bodyparts) array of probabilities.
@@ -246,9 +244,7 @@ def _tortuosity(
     if n < 3 or window_frames < 2:  # noqa: PLR2004
         return np.zeros(n, dtype=np.float64)
 
-    window_samples = int(window_frames)
-    window_samples = max(window_samples, 3)
-    window_samples = min(window_samples, n)
+    window_samples = min(max(int(window_frames), 3), n)
 
     result = np.zeros(n, dtype=np.float64)
     for i in range(n):
@@ -275,58 +271,31 @@ def _tortuosity(
     return result
 
 
-def _rolling_stats(
+def _roll_median_mean_sum(
     series: Array1D,
-    windows: list[float],
-    fps: float,
-    *,
-    center: bool = True,
+    window_frames: int,
 ) -> dict[str, Array1D]:
-    """Compute rolling median, mean, sum for each window size.
-
-    Returns dict of {f"{name}_{window_label}": array, ...}.
-    """
-    results = {}
-    for w in windows:
-        window_frames = max(2, int(fps / w))
-        label = str(w).replace(".0", "")
-        if window_frames > len(series):
-            continue
-
-        roll = (
-            pl.Series(series)
-            .rolling_median(
-                window_size=window_frames,
-                min_samples=1,
-                center=center,
-            )
-            .to_numpy()
+    """Compute rolling median, mean, sum for a single window size."""
+    return {
+        "_median": pl.Series(series)
+        .rolling_median(
+            window_size=window_frames,
+            min_samples=1,
         )
-        results[f"_median_{label}"] = roll
-
-        roll = (
-            pl.Series(series)
-            .rolling_mean(
-                window_size=window_frames,
-                min_samples=1,
-                center=center,
-            )
-            .to_numpy()
+        .to_numpy(),
+        "_mean": pl.Series(series)
+        .rolling_mean(
+            window_size=window_frames,
+            min_samples=1,
         )
-        results[f"_mean_{label}"] = roll
-
-        roll = (
-            pl.Series(series)
-            .rolling_sum(
-                window_size=window_frames,
-                min_samples=1,
-                center=center,
-            )
-            .to_numpy()
+        .to_numpy(),
+        "_sum": pl.Series(series)
+        .rolling_sum(
+            window_size=window_frames,
+            min_samples=1,
         )
-        results[f"_sum_{label}"] = roll
-
-    return results
+        .to_numpy(),
+    }
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -341,10 +310,12 @@ def compute_simba_features(
 ) -> pl.DataFrame:
     """Compute SimBA features from Polars long-form keypoints.
 
+    Column names match SimBA ExtractFeaturesFrom16bps output exactly.
+
     Parameters
     ----------
     keypoints_df : pl.DataFrame
-        Long-form KEYPOINTS_SCHEMA DataFrame.
+        Long-form KEYPOINTS_SCHEMA DataFrame, pre-filtered to 2 animals x 8 bps.
     fps : float
         Frames per second.
     px_per_mm : float
@@ -353,37 +324,31 @@ def compute_simba_features(
     Returns:
     -------
     pl.DataFrame
-        Wide features DataFrame with frame index and ~400+ feature columns.
-        Column names match SimBA output exactly for downstream ML compatibility.
+        Wide features DataFrame with frame index and SimBA-compatible columns.
     """
     n_frames = keypoints_df.select("frame").n_unique()
 
-    # Determine valid rolling windows (must be ≤ n_frames / 2)
-    roll_windows = []
+    roll_windows: list[float] = []
     for d in ROLL_WINDOW_DIVISORS:
         w = max(2, int(fps / d))
         if w <= n_frames / 2:
             roll_windows.append(d)
 
-    # ── Build wide arrays per animal ──
     arr_m1, arr_m2, arr_prob = _pivot_to_wide(keypoints_df)
 
-    # ── Compute all features ──
-    features = {}
+    features: dict[str, Array1D] = {}
 
-    # Pure computations
     features |= _compute_distances(arr_m1, arr_m2, px_per_mm)
     features |= _compute_movements(arr_m1, arr_m2, px_per_mm)
     features |= _compute_hull(arr_m1, arr_m2, px_per_mm)
     features |= _compute_cdist(arr_m1, arr_m2, px_per_mm)
     features |= _compute_angles(arr_m1, arr_m2)
-    features |= _compute_probability(arr_prob)
-    features |= _compute_tortuosities(arr_m1, arr_m2, roll_windows, fps)
-
-    # Derived features
     features |= _compute_aggregates(features)
+    features |= _compute_tail_end_relative_raw(features)
+    features |= _compute_probability(arr_prob)
     features |= _compute_rolling(features, roll_windows, fps)
-    features |= _compute_deviations(features)
+    features |= _compute_deviations(features, roll_windows, fps)
+    features |= _compute_tortuosities(arr_m1, arr_m2, roll_windows, fps)
     features |= _compute_percentile_ranks(features)
 
     return _build_output_df(keypoints_df, features)
@@ -400,8 +365,8 @@ def _pivot_to_wide(
     """Convert long-form keypoints to wide numpy arrays per animal.
 
     Returns (arr_m1, arr_m2, arr_prob):
-        arr_m1: (n_frames, 16) — x,y for 8 body-parts of animal 1
-        arr_m2: (n_frames, 16) — x,y for 8 body-parts of animal 2
+        arr_m1  : (n_frames, 16) — x,y for 8 body-parts of animal 1
+        arr_m2  : (n_frames, 16) — x,y for 8 body-parts of animal 2
         arr_prob: (n_frames, 16) — likelihoods for both animals (8 bp x 2)
     """
     n_frames = keypoints_df.select("frame").n_unique()
@@ -435,7 +400,6 @@ def _pivot_to_wide(
             prob_idx = prob_offset + SIMBA_BODY_PARTS.index(simba_bp)
             arr_prob[frames, prob_idx] = p_vals
 
-    # Forward-fill then backward-fill any NaN positions
     arr_m1 = _ffill_bfill(arr_m1)
     arr_m2 = _ffill_bfill(arr_m2)
     arr_prob = _ffill_bfill(arr_prob)
@@ -451,7 +415,6 @@ def _ffill_bfill(arr: Array2D) -> Array2D:
     idx = np.where(~mask, np.arange(mask.shape[0])[:, None], 0)
     np.maximum.accumulate(idx, axis=0, out=idx)
     arr = np.take_along_axis(arr, idx, axis=0)
-    # Backward fill
     mask = np.isnan(arr)
     if mask.any():
         idx = np.where(~mask, np.arange(mask.shape[0])[:, None], mask.shape[0] - 1)
@@ -470,196 +433,49 @@ def _compute_distances(
     arr_m2: Array2D,
     px_per_mm: float,
 ) -> dict[str, Array1D]:
-    """Compute all inter-body-part Euclidean distance features."""
-    features = {}
+    """Compute all inter-body-part Euclidean distance features.
+
+    Matches the order and names from SimBA's run() method exactly.
+    """
+
+    def _d(a: Array2D, b: Array2D, bp_a: str, bp_b: str) -> Array1D:
+        ax, ay = _get_xy(a, bp_a)
+        bx, by = _get_xy(b, bp_b)
+        return _euclidean(ax, ay, bx, by, px_per_mm)
+
+    f: dict[str, Array1D] = {}
+
     # Animal 1
-    features["Mouse_1_nose_to_tail"] = _add_dist(
-        arr_m1,
-        arr_m1,
-        "Nose",
-        "Tail_base",
-        px_per_mm,
-    )
-    features["Mouse_1_width"] = _add_dist(
-        arr_m1,
-        arr_m1,
-        "Lat_left",
-        "Lat_right",
-        px_per_mm,
-    )
-    features["Mouse_1_Ear_distance"] = _add_dist(
-        arr_m1,
-        arr_m1,
-        "Ear_left",
-        "Ear_right",
-        px_per_mm,
-    )
-    features["Mouse_1_Nose_to_centroid"] = _add_dist(
-        arr_m1,
-        arr_m1,
-        "Nose",
-        "Center",
-        px_per_mm,
-    )
-    features["Mouse_1_Nose_to_lateral_left"] = _add_dist(
-        arr_m1,
-        arr_m1,
-        "Nose",
-        "Lat_left",
-        px_per_mm,
-    )
-    features["Mouse_1_Nose_to_lateral_right"] = _add_dist(
-        arr_m1,
-        arr_m1,
-        "Nose",
-        "Lat_right",
-        px_per_mm,
-    )
-    features["Mouse_1_Centroid_to_lateral_left"] = _add_dist(
-        arr_m1,
-        arr_m1,
-        "Center",
-        "Lat_left",
-        px_per_mm,
-    )
-    features["Mouse_1_Centroid_to_lateral_right"] = _add_dist(
-        arr_m1,
-        arr_m1,
-        "Center",
-        "Lat_right",
-        px_per_mm,
-    )
+    f["Mouse_1_nose_to_tail"] = _d(arr_m1, arr_m1, "Nose", "Tail_base")
+    f["Mouse_1_width"] = _d(arr_m1, arr_m1, "Lat_left", "Lat_right")
+    f["Mouse_1_Ear_distance"] = _d(arr_m1, arr_m1, "Ear_left", "Ear_right")
+    f["Mouse_1_Nose_to_centroid"] = _d(arr_m1, arr_m1, "Nose", "Center")
+    f["Mouse_1_Nose_to_lateral_left"] = _d(arr_m1, arr_m1, "Nose", "Lat_left")
+    f["Mouse_1_Nose_to_lateral_right"] = _d(arr_m1, arr_m1, "Nose", "Lat_right")
+    f["Mouse_1_Centroid_to_lateral_left"] = _d(arr_m1, arr_m1, "Center", "Lat_left")
+    f["Mouse_1_Centroid_to_lateral_right"] = _d(arr_m1, arr_m1, "Center", "Lat_right")
 
     # Animal 2
-    features["Mouse_2_nose_to_tail"] = _add_dist(
-        arr_m2,
-        arr_m2,
-        "Nose",
-        "Tail_base",
-        px_per_mm,
-    )
-    features["Mouse_2_width"] = _add_dist(
-        arr_m2,
-        arr_m2,
-        "Lat_left",
-        "Lat_right",
-        px_per_mm,
-    )
-    features["Mouse_2_Ear_distance"] = _add_dist(
-        arr_m2,
-        arr_m2,
-        "Ear_left",
-        "Ear_right",
-        px_per_mm,
-    )
-    features["Mouse_2_Nose_to_centroid"] = _add_dist(
-        arr_m2,
-        arr_m2,
-        "Nose",
-        "Center",
-        px_per_mm,
-    )
-    features["Mouse_2_Nose_to_lateral_left"] = _add_dist(
-        arr_m2,
-        arr_m2,
-        "Nose",
-        "Lat_left",
-        px_per_mm,
-    )
-    features["Mouse_2_Nose_to_lateral_right"] = _add_dist(
-        arr_m2,
-        arr_m2,
-        "Nose",
-        "Lat_right",
-        px_per_mm,
-    )
-    features["Mouse_2_Centroid_to_lateral_left"] = _add_dist(
-        arr_m2,
-        arr_m2,
-        "Center",
-        "Lat_left",
-        px_per_mm,
-    )
-    features["Mouse_2_Centroid_to_lateral_right"] = _add_dist(
-        arr_m2,
-        arr_m2,
-        "Center",
-        "Lat_right",
-        px_per_mm,
-    )
+    f["Mouse_2_nose_to_tail"] = _d(arr_m2, arr_m2, "Nose", "Tail_base")
+    f["Mouse_2_width"] = _d(arr_m2, arr_m2, "Lat_left", "Lat_right")
+    f["Mouse_2_Ear_distance"] = _d(arr_m2, arr_m2, "Ear_left", "Ear_right")
+    f["Mouse_2_Nose_to_centroid"] = _d(arr_m2, arr_m2, "Nose", "Center")
+    f["Mouse_2_Nose_to_lateral_left"] = _d(arr_m2, arr_m2, "Nose", "Lat_left")
+    f["Mouse_2_Nose_to_lateral_right"] = _d(arr_m2, arr_m2, "Nose", "Lat_right")
+    f["Mouse_2_Centroid_to_lateral_left"] = _d(arr_m2, arr_m2, "Center", "Lat_left")
+    f["Mouse_2_Centroid_to_lateral_right"] = _d(arr_m2, arr_m2, "Center", "Lat_right")
 
     # Cross-animal
-    features["Centroid_distance"] = _add_dist(
-        arr_m1,
-        arr_m2,
-        "Center",
-        "Center",
-        px_per_mm,
-    )
-    features["Nose_to_nose_distance"] = _add_dist(
-        arr_m1,
-        arr_m2,
-        "Nose",
-        "Nose",
-        px_per_mm,
-    )
-    features["M1_Nose_to_M2_lat_left"] = _add_dist(
-        arr_m1,
-        arr_m2,
-        "Nose",
-        "Lat_left",
-        px_per_mm,
-    )
-    features["M1_Nose_to_M2_lat_right"] = _add_dist(
-        arr_m1,
-        arr_m2,
-        "Nose",
-        "Lat_right",
-        px_per_mm,
-    )
-    features["M2_Nose_to_M1_lat_left"] = _add_dist(
-        arr_m2,
-        arr_m1,
-        "Nose",
-        "Lat_left",
-        px_per_mm,
-    )
-    features["M2_Nose_to_M1_lat_right"] = _add_dist(
-        arr_m2,
-        arr_m1,
-        "Nose",
-        "Lat_right",
-        px_per_mm,
-    )
-    features["M1_Nose_to_M2_tail_base"] = _add_dist(
-        arr_m1,
-        arr_m2,
-        "Nose",
-        "Tail_base",
-        px_per_mm,
-    )
-    features["M2_Nose_to_M1_tail_base"] = _add_dist(
-        arr_m2,
-        arr_m1,
-        "Nose",
-        "Tail_base",
-        px_per_mm,
-    )
+    f["Centroid_distance"] = _d(arr_m2, arr_m1, "Center", "Center")
+    f["Nose_to_nose_distance"] = _d(arr_m2, arr_m1, "Nose", "Nose")
+    f["M1_Nose_to_M2_lat_left"] = _d(arr_m1, arr_m2, "Nose", "Lat_left")
+    f["M1_Nose_to_M2_lat_right"] = _d(arr_m1, arr_m2, "Nose", "Lat_right")
+    f["M2_Nose_to_M1_lat_left"] = _d(arr_m2, arr_m1, "Nose", "Lat_left")
+    f["M2_Nose_to_M1_lat_right"] = _d(arr_m2, arr_m1, "Nose", "Lat_right")
+    f["M1_Nose_to_M2_tail_base"] = _d(arr_m1, arr_m2, "Nose", "Tail_base")
+    f["M2_Nose_to_M1_tail_base"] = _d(arr_m2, arr_m1, "Nose", "Tail_base")
 
-    # Return
-    return features
-
-
-def _add_dist(
-    arr_a: Array2D,
-    arr_b: Array2D,
-    bp_a: str,
-    bp_b: str,
-    px_per_mm: float,
-) -> Array1D:
-    ax, ay = _get_xy(arr_a, bp_a)
-    bx, by = _get_xy(arr_b, bp_b)
-    return _euclidean(ax, ay, bx, by, px_per_mm)
+    return f
 
 
 def _compute_movements(
@@ -667,22 +483,25 @@ def _compute_movements(
     arr_m2: Array2D,
     px_per_mm: float,
 ) -> dict[str, Array1D]:
-    """Frame-to-frame movement for each body-part."""
-    features = {}
-    for simba_bp in SIMBA_BODY_PARTS:
-        ix, iy = BP_XY_IDX[simba_bp]
-        features[f"Movement_mouse_1_{simba_bp.lower()}"] = _movement_bp(
+    """Frame-to-frame movement for each body-part.
+
+    SimBA hard-codes movement suffixes that don't match bp_names.csv lowercase.
+    e.g. Center → "centroid", Ear_left → "left_ear", Lat_left → "lateral_left".
+    """
+    f: dict[str, Array1D] = {}
+    for bp_simba, bp_movement in MOVEMENT_BP_NAMES.items():
+        ix, iy = BP_XY_IDX[bp_simba]
+        f[f"Movement_mouse_1_{bp_movement}"] = _movement_bp(
             arr_m1[:, ix],
             arr_m1[:, iy],
             px_per_mm,
         )
-        features[f"Movement_mouse_2_{simba_bp.lower()}"] = _movement_bp(
+        f[f"Movement_mouse_2_{bp_movement}"] = _movement_bp(
             arr_m2[:, ix],
             arr_m2[:, iy],
             px_per_mm,
         )
-    # Return
-    return features
+    return f
 
 
 def _compute_hull(
@@ -690,14 +509,15 @@ def _compute_hull(
     arr_m2: Array2D,
     px_per_mm: float,
 ) -> dict[str, Array1D]:
-    """Convex hull perimeter and area features."""
-    return {
-        **_add_hull(arr_m1, px_per_mm, "M1"),
-        **_add_hull(arr_m2, px_per_mm, "M2"),
-    }
+    """Convex hull perimeter and polygon size change features.
+
+    SimBA uses Mouse_1, Mouse_2 (not Mouse_M1/Mouse_M2).
+    """
+    return {**_hull_one(arr_m1, px_per_mm, "1"), **_hull_one(arr_m2, px_per_mm, "2")}
 
 
-def _add_hull(arr: Array2D, px_per_mm: float, label: str) -> dict[str, Array1D]:
+def _hull_one(arr: Array2D, px_per_mm: float, label: str) -> dict[str, Array1D]:
+    """SimBA: jitted_hull perimeter + shifted-current polygon size change."""
     n = arr.shape[0]
     perimeters = np.zeros(n, dtype=np.float64)
     areas = np.zeros(n, dtype=np.float64)
@@ -708,14 +528,17 @@ def _add_hull(arr: Array2D, px_per_mm: float, label: str) -> dict[str, Array1D]:
         if valid.sum() >= 3:  # noqa: PLR2004
             perimeters[i], areas[i] = _hull_perimeter(points[valid], px_per_mm)
 
-    features = {}
-    features[f"Mouse_{label.lower()}_poly_area"] = perimeters
-    # Polygon size change: frame-to-frame delta of area
-    change = np.zeros(n, dtype=np.float64)
-    change[1:] = np.abs(areas[1:] - areas[:-1])
-    features[f"Mouse_{label.lower()}_polygon_size_change"] = change
-    # Return
-    return features
+    # SimBA Mouse_1_poly_area_shifted - Mouse_1_poly_area  (signed)
+    areas_shifted = np.empty_like(areas)
+    areas_shifted[0] = areas[0]
+    areas_shifted[1:] = areas[:-1]
+    size_change = areas_shifted - areas
+
+    ml = label.lower()
+    return {
+        f"Mouse_{ml}_poly_area": perimeters,
+        f"Mouse_{ml}_polygon_size_change": size_change,
+    }
 
 
 def _compute_cdist(
@@ -723,16 +546,18 @@ def _compute_cdist(
     arr_m2: Array2D,
     px_per_mm: float,
 ) -> dict[str, Array1D]:
-    features = {}
-    features |= _add_cdist(arr_m1, px_per_mm, "M1")
-    features |= _add_cdist(arr_m2, px_per_mm, "M2")
-    features["Sum_euclidean_distance_hull_M1_M2"] = (
-        features["M1_hull_sum_euclidean"] + features["M2_hull_sum_euclidean"]
+    """Pairwise distance stats (cdist) within each animal's hull."""
+    f: dict[str, Array1D] = {}
+    f |= _cdist_one(arr_m1, px_per_mm, "M1")
+    f |= _cdist_one(arr_m2, px_per_mm, "M2")
+    f["Sum_euclidean_distance_hull_M1_M2"] = (
+        f["M1_hull_sum_euclidean"] + f["M2_hull_sum_euclidean"]
     )
-    return features
+    return f
 
 
-def _add_cdist(arr: Array2D, px_per_mm: float, label: str) -> dict[str, Array1D]:
+def _cdist_one(arr: Array2D, px_per_mm: float, label: str) -> dict[str, Array1D]:
+    """SimBA: hull_large/small/mean/sum_euclidean via cdist per frame."""
     n = arr.shape[0]
     large = np.zeros(n, dtype=np.float64)
     small = np.zeros(n, dtype=np.float64)
@@ -747,11 +572,12 @@ def _add_cdist(arr: Array2D, px_per_mm: float, label: str) -> dict[str, Array1D]
             dists = _cdist(pts)
             triu = dists[np.triu_indices_from(dists, k=1)]
             if len(triu) > 0:
-                large[i] = np.max(triu) / px_per_mm
-                small[i] = np.min(triu) / px_per_mm
-                mean_[i] = np.mean(triu) / px_per_mm
-                sum_[i] = np.sum(triu) / px_per_mm
-    # Return
+                triu_mm = triu / px_per_mm
+                large[i] = np.max(triu_mm)
+                small[i] = np.min(triu_mm)
+                mean_[i] = np.mean(triu_mm)
+                sum_[i] = np.sum(triu_mm)
+
     return {
         f"{label}_hull_large_euclidean": large,
         f"{label}_hull_small_euclidean": small,
@@ -762,37 +588,345 @@ def _add_cdist(arr: Array2D, px_per_mm: float, label: str) -> dict[str, Array1D]
 
 def _compute_angles(arr_m1: Array2D, arr_m2: Array2D) -> dict[str, Array1D]:
     """3-point angle (nose→center→tail_base) per animal."""
-    features = {}
-    # Indiv 1
     n1x, n1y = _get_xy(arr_m1, "Nose")
     c1x, c1y = _get_xy(arr_m1, "Center")
     t1x, t1y = _get_xy(arr_m1, "Tail_base")
-    features["Mouse_1_angle"] = _angle3pt_vectorized(n1x, n1y, c1x, c1y, t1x, t1y)
-    # Indiv 2
+    m1_angle = _angle3pt_vectorized(n1x, n1y, c1x, c1y, t1x, t1y)
+
     n2x, n2y = _get_xy(arr_m2, "Nose")
     c2x, c2y = _get_xy(arr_m2, "Center")
     t2x, t2y = _get_xy(arr_m2, "Tail_base")
-    features["Mouse_2_angle"] = _angle3pt_vectorized(n2x, n2y, c2x, c2y, t2x, t2y)
-    # Both
-    features["Total_angle_both_mice"] = (
-        features["Mouse_1_angle"] + features["Mouse_2_angle"]
+    m2_angle = _angle3pt_vectorized(n2x, n2y, c2x, c2y, t2x, t2y)
+
+    return {
+        "Mouse_1_angle": m1_angle,
+        "Mouse_2_angle": m2_angle,
+        "Total_angle_both_mice": m1_angle + m2_angle,
+    }
+
+
+def _compute_aggregates(
+    features: dict[str, Array1D],
+) -> dict[str, Array1D]:
+    """Sum aggregate movement features.
+
+    SimBA: Total_movement_all_bodyparts_M1 sums 7 body-parts, EXCLUDES centroid.
+    """
+    aggs: dict[str, Array1D] = {}
+    aggs["Total_movement_centroids"] = (
+        features["Movement_mouse_1_centroid"] + features["Movement_mouse_2_centroid"]
     )
-    # Return
-    return features
+    aggs["Total_movement_tail_ends"] = (
+        features["Movement_mouse_1_tail_end"] + features["Movement_mouse_2_tail_end"]
+    )
+
+    # 7 body-parts (EXCLUDES centroid)
+    total_bps = [
+        "nose",
+        "tail_end",
+        "tail_base",
+        "left_ear",
+        "right_ear",
+        "lateral_left",
+        "lateral_right",
+    ]
+    m1_total = np.ndarray(sum(features[f"Movement_mouse_1_{bp}"] for bp in total_bps))
+    m2_total = np.ndarray(sum(features[f"Movement_mouse_2_{bp}"] for bp in total_bps))
+    aggs["Total_movement_all_bodyparts_M1"] = m1_total
+    aggs["Total_movement_all_bodyparts_M2"] = m2_total
+    aggs["Total_movement_all_bodyparts_both_mice"] = m1_total + m2_total
+
+    return aggs
+
+
+def _compute_tail_end_relative_raw(
+    features: dict[str, Array1D],
+) -> dict[str, Array1D]:
+    """SimBA: M1 tail_end - (tail_base + centroid + nose).
+
+    Only computed for M1 (per SimBA source), not M2.
+    """
+    return {
+        "Tail_end_relative_to_tail_base_centroid_nose": (
+            features["Movement_mouse_1_tail_end"]
+            - features["Movement_mouse_1_tail_base"]
+            - features["Movement_mouse_1_centroid"]
+            - features["Movement_mouse_1_nose"]
+        ),
+    }
 
 
 def _compute_probability(arr_prob: Array2D) -> dict[str, Array1D]:
     """Probability-based features: sum of likelihoods, low-prob detection counts."""
-    features = {}
-    # Calculate
-    features["Sum_probabilities"] = np.sum(arr_prob, axis=1)
-    ranges = [(0.0, 0.1), (0.0, 0.5), (0.0, 0.75)]
-    counts = _count_in_ranges(arr_prob, ranges)
-    features["Low_prob_detections_0.1"] = counts[:, 0]
-    features["Low_prob_detections_0.5"] = counts[:, 1]
-    features["Low_prob_detections_0.75"] = counts[:, 2]
-    # Return
-    return features
+    counts = _count_in_ranges(
+        arr_prob,
+        [(0.0, 0.1), (0.0, 0.5), (0.0, 0.75)],
+    )
+    return {
+        "Sum_probabilities": np.sum(arr_prob, axis=1),
+        "Low_prob_detections_0.1": counts[:, 0],
+        "Low_prob_detections_0.5": counts[:, 1],
+        "Low_prob_detections_0.75": counts[:, 2],
+    }
+
+
+def _compute_rolling(
+    features: dict[str, Array1D],
+    roll_windows: list[float],
+    fps: float,
+) -> dict[str, Array1D]:
+    """Compute rolling window median/mean/sum with exact SimBA column names.
+
+    SimBA uses raw float strings as window labels: "2.0", "5.0", "7.5", etc.
+    NOT integer labels like "2", "5".
+    """
+    aggs: dict[str, Array1D] = {}
+
+    for w in roll_windows:
+        wf = max(2, int(fps / w))
+        wl = str(w)  # SimBA: raw float string
+
+        aggs |= _rolling_for(
+            features,
+            "Sum_euclidean_distance_hull_M1_M2",
+            "Sum_euclid_distances_hull",
+            wf,
+            wl,
+        )
+        aggs |= _rolling_for(features, "Total_movement_centroids", "Movement", wf, wl)
+        aggs |= _rolling_for(features, "Centroid_distance", "Distance", wf, wl)
+        aggs |= _rolling_for(features, "Mouse_1_width", "Mouse1_width", wf, wl)
+        aggs |= _rolling_for(features, "Mouse_2_width", "Mouse2_width", wf, wl)
+        aggs |= _rolling_for(
+            features,
+            "M1_hull_mean_euclidean",
+            "Mouse1_mean_euclid_distances",
+            wf,
+            wl,
+        )
+        aggs |= _rolling_for(
+            features,
+            "M2_hull_mean_euclidean",
+            "Mouse2_mean_euclid_distances",
+            wf,
+            wl,
+        )
+        aggs |= _rolling_for(
+            features,
+            "M1_hull_small_euclidean",
+            "Mouse1_smallest_euclid_distances",
+            wf,
+            wl,
+        )
+        aggs |= _rolling_for(
+            features,
+            "M2_hull_small_euclidean",
+            "Mouse2_smallest_euclid_distances",
+            wf,
+            wl,
+        )
+        aggs |= _rolling_for(
+            features,
+            "M1_hull_large_euclidean",
+            "Mouse1_largest_euclid_distances",
+            wf,
+            wl,
+        )
+        aggs |= _rolling_for(
+            features,
+            "M2_hull_large_euclidean",
+            "Mouse2_largest_euclid_distances",
+            wf,
+            wl,
+        )
+        aggs |= _rolling_for(
+            features,
+            "Total_movement_all_bodyparts_both_mice",
+            "Total_movement_all_bodyparts_both_mice",
+            wf,
+            wl,
+        )
+        aggs |= _rolling_for(
+            features,
+            "Total_movement_centroids",
+            "Total_movement_centroids",
+            wf,
+            wl,
+        )
+        aggs |= _rolling_for(
+            features,
+            "Movement_mouse_1_tail_base",
+            "Tail_base_movement_M1",
+            wf,
+            wl,
+        )
+        aggs |= _rolling_for(
+            features,
+            "Movement_mouse_2_tail_base",
+            "Tail_base_movement_M2",
+            wf,
+            wl,
+        )
+        aggs |= _rolling_for(
+            features,
+            "Movement_mouse_1_centroid",
+            "Centroid_movement_M1",
+            wf,
+            wl,
+        )
+        aggs |= _rolling_for(
+            features,
+            "Movement_mouse_2_centroid",
+            "Centroid_movement_M2",
+            wf,
+            wl,
+        )
+        aggs |= _rolling_for(
+            features,
+            "Movement_mouse_1_tail_end",
+            "Tail_end_movement_M1",
+            wf,
+            wl,
+        )
+        aggs |= _rolling_for(
+            features,
+            "Movement_mouse_2_tail_end",
+            "Tail_end_movement_M2",
+            wf,
+            wl,
+        )
+        aggs |= _rolling_for(
+            features,
+            "Movement_mouse_1_nose",
+            "Nose_movement_M1",
+            wf,
+            wl,
+        )
+        aggs |= _rolling_for(
+            features,
+            "Movement_mouse_2_nose",
+            "Nose_movement_M2",
+            wf,
+            wl,
+        )
+        aggs |= _rolling_for(
+            features,
+            "Total_angle_both_mice",
+            "Total_angle_both_mice",
+            wf,
+            wl,
+        )
+
+        # Tail_end_relative: computed from already-rolled mean features
+        aggs |= _tail_end_relative_rolled(aggs, wl)
+
+    return aggs
+
+
+def _rolling_for(
+    features: dict[str, Array1D],
+    src_key: str,
+    prefix: str,
+    window_frames: int,
+    window_label: str,
+) -> dict[str, Array1D]:
+    """SimBA: {prefix}_median_{label}, _mean_{label}, _sum_{label}."""
+    if src_key not in features:
+        return {}
+    stats = _roll_median_mean_sum(features[src_key], window_frames)
+    return {
+        f"{prefix}_median_{window_label}": stats["_median"],
+        f"{prefix}_mean_{window_label}": stats["_mean"],
+        f"{prefix}_sum_{window_label}": stats["_sum"],
+    }
+
+
+def _tail_end_relative_rolled(
+    features: dict[str, Array1D],
+    window_label: str,
+) -> dict[str, Array1D]:
+    """SimBA: (rolled_tail_end - rolled_tail_base - rolled_centroid - rolled_nose)."""
+    aggs: dict[str, Array1D] = {}
+    for m in ["M1", "M2"]:
+        te = f"Tail_end_movement_{m}_mean_{window_label}"
+        tb = f"Tail_base_movement_{m}_mean_{window_label}"
+        cm = f"Centroid_movement_{m}_mean_{window_label}"
+        ns = f"Nose_movement_{m}_mean_{window_label}"
+        if te in features and tb in features and cm in features and ns in features:
+            aggs[f"Tail_end_relative_to_tail_base_centroid_nose_{m}_{window_label}"] = (
+                features[te] - features[tb] - features[cm] - features[ns]
+            )
+    return aggs
+
+
+def _compute_deviations(
+    features: dict[str, Array1D],
+    roll_windows: list[float],
+    fps: float,
+) -> dict[str, Array1D]:
+    """Deviation features: mean(feature) - current(feature) value.
+
+    SimBA uses explicit hard-coded deviation names that differ from the source
+    key name (e.g. "Sum_euclid_distances_hull_deviation" not "_M1_M2_deviation").
+    Also computes per-window rolling mean deviations.
+    """
+    aggs: dict[str, Array1D] = {}
+
+    # Hard-coded SimBA deviation names
+    deviation_map: dict[str, str] = {
+        "Total_movement_all_bodyparts_both_mice": "Total_movement_all_bodyparts_both_mice_deviation",
+        "Sum_euclidean_distance_hull_M1_M2": "Sum_euclid_distances_hull_deviation",
+        "M1_hull_small_euclidean": "M1_smallest_euclid_distances_hull_deviation",
+        "M1_hull_large_euclidean": "M1_largest_euclid_distances_hull_deviation",
+        "M1_hull_mean_euclidean": "M1_mean_euclid_distances_hull_deviation",
+        "M2_hull_small_euclidean": "M2_smallest_euclid_distances_hull_deviation",
+        "M2_hull_large_euclidean": "M2_largest_euclid_distances_hull_deviation",
+        "M2_hull_mean_euclidean": "M2_mean_euclid_distances_hull_deviation",
+        "Centroid_distance": "Centroid_distance_deviation",
+        "Total_angle_both_mice": "Total_angle_both_mice_deviation",
+        "Movement_mouse_1_centroid": "Movement_mouse_1_deviation_centroid",
+        "Movement_mouse_2_centroid": "Movement_mouse_2_deviation_centroid",
+        "Mouse_1_poly_area": "Mouse_1_polygon_deviation",
+        "Mouse_2_poly_area": "Mouse_2_polygon_deviation",
+    }
+    for src, dst in deviation_map.items():
+        if src in features:
+            aggs[dst] = features[src].mean() - features[src]
+
+    if "Sum_probabilities" in features:
+        aggs["Sum_probabilities_deviation"] = (
+            features["Sum_probabilities"].mean() - features["Sum_probabilities"]
+        )
+
+    # Rolling mean deviations (SimBA loops over windows for each source)
+    rolling_dev_prefixes = {
+        "Total_movement_all_bodyparts_both_mice": "Total_movement_all_bodyparts_both_mice",
+        "Sum_euclidean_distance_hull_M1_M2": "Sum_euclid_distances_hull",
+        "M1_hull_small_euclidean": "Mouse1_smallest_euclid_distances",
+        "M1_hull_large_euclidean": "Mouse1_largest_euclid_distances",
+        "M1_hull_mean_euclidean": "Mouse1_mean_euclid_distances",
+        "M2_hull_small_euclidean": "Mouse2_smallest_euclid_distances",
+        "M2_hull_large_euclidean": "Mouse2_largest_euclid_distances",
+        "M2_hull_mean_euclidean": "Mouse2_mean_euclid_distances",
+    }
+
+    # Additional rolling sources for Movement_mean_{w}_deviation
+    rolling_movement_prefixes = {
+        "Total_movement_centroids": "Movement",
+    }
+
+    for w in roll_windows:
+        wl = str(w)
+        for prefix in rolling_dev_prefixes.values():
+            col = f"{prefix}_mean_{wl}"
+            if col in features:
+                aggs[f"{col}_deviation"] = features[col].mean() - features[col]
+        for prefix in rolling_movement_prefixes.values():
+            col = f"{prefix}_mean_{wl}"
+            if col in features:
+                aggs[f"{col}_deviation"] = features[col].mean() - features[col]
+
+    return aggs
 
 
 def _compute_tortuosities(
@@ -802,209 +936,59 @@ def _compute_tortuosities(
     fps: float,
 ) -> dict[str, Array1D]:
     """Path tortuosity for each animal's centroid movement."""
-    agg = {}
-    # Calculate
+    aggs: dict[str, Array1D] = {}
     c1x, c1y = _get_xy(arr_m1, "Center")
     c2x, c2y = _get_xy(arr_m2, "Center")
     for w in roll_windows:
-        window_frames = max(2, int(fps / w))
-        label = str(w).replace(".0", "")
-        agg[f"Tortuosity_Mouse1_{label}"] = _tortuosity(c1x, c1y, window_frames)
-        agg[f"Tortuosity_Mouse2_{label}"] = _tortuosity(c2x, c2y, window_frames)
-    # Return
-    return agg
-
-
-def _compute_aggregates(features: dict[str, Array1D]) -> dict[str, Array1D]:
-    """Sum aggregate movement features."""
-    aggs = {}
-    # Total movement centroids
-    aggs["Total_movement_centroids"] = (
-        features["Movement_mouse_1_center"] + features["Movement_mouse_2_center"]
-    )
-    # Total movement tail ends
-    aggs["Total_movement_tail_ends"] = (
-        features["Movement_mouse_1_tail_end"] + features["Movement_mouse_2_tail_end"]
-    )
-    # Total movement all bodyparts per animal
-    bp_names = [b.lower() for b in SIMBA_BODY_PARTS]
-    m1_keys = [f"Movement_mouse_1_{bp}" for bp in bp_names]
-    m2_keys = [f"Movement_mouse_2_{bp}" for bp in bp_names]
-    m1_total = np.zeros_like(features.get(m1_keys[0], np.zeros(1)))
-    m2_total = np.zeros_like(m1_total)
-    for k in m1_keys:
-        if k in features:
-            m1_total += features[k]
-    for k in m2_keys:
-        if k in features:
-            m2_total += features[k]
-    aggs["Total_movement_all_bodyparts_M1"] = m1_total
-    aggs["Total_movement_all_bodyparts_M2"] = m2_total
-    aggs["Total_movement_all_bodyparts_both_mice"] = m1_total + m2_total
-    # Return
+        wf = max(2, int(fps / w))
+        wl = str(w)  # SimBA: raw float string
+        aggs[f"Tortuosity_Mouse1_{wl}"] = _tortuosity(c1x, c1y, wf)
+        aggs[f"Tortuosity_Mouse2_{wl}"] = _tortuosity(c2x, c2y, wf)
     return aggs
 
 
-def _compute_rolling(
+def _compute_percentile_ranks(
     features: dict[str, Array1D],
-    roll_windows: list[float],
-    fps: float,
 ) -> dict[str, Array1D]:
-    """Compute rolling window median/mean/sum for key features."""
-    aggs = {}
-
-    rolling_targets = [
-        ("Sum_euclidean_distance_hull_M1_M2", "hull"),
-        ("Total_movement_centroids", "Movement"),
-        ("Centroid_distance", "Distance"),
-        ("Mouse_1_width", "Mouse1_width"),
-        ("Mouse_2_width", "Mouse2_width"),
-        ("M1_hull_mean_euclidean", "mean_euclid_distances_M1"),
-        ("M2_hull_mean_euclidean", "mean_euclid_distances_M2"),
-        ("M1_hull_small_euclidean", "smallest_euclid_distances_M1"),
-        ("M2_hull_small_euclidean", "smallest_euclid_distances_M2"),
-        ("M1_hull_large_euclidean", "largest_euclid_distances_M1"),
-        ("M2_hull_large_euclidean", "largest_euclid_distances_M2"),
-        ("Total_movement_all_bodyparts_both_mice", "total_movement"),
-        ("Movement_mouse_1_tail_base", "Tail_base_movement_M1"),
-        ("Movement_mouse_2_tail_base", "Tail_base_movement_M2"),
-        ("Movement_mouse_1_center", "Centroid_movement_M1"),
-        ("Movement_mouse_2_center", "Centroid_movement_M2"),
-        ("Movement_mouse_1_tail_end", "Tail_end_movement_M1"),
-        ("Movement_mouse_2_tail_end", "Tail_end_movement_M2"),
-        ("Movement_mouse_1_nose", "Nose_movement_M1"),
-        ("Movement_mouse_2_nose", "Nose_movement_M2"),
-    ]
-    for src_key, prefix in rolling_targets:
-        if src_key not in features:
-            continue
-        stats = _rolling_stats(features[src_key], roll_windows, fps)
-        for suffix, arr in stats.items():
-            aggs[f"{prefix}{suffix}"] = arr
-
-    # Total angle rolling
-    if "Total_angle_both_mice" in features:
-        stats = _rolling_stats(features["Total_angle_both_mice"], roll_windows, fps)
-        for suffix, arr in stats.items():
-            aggs[f"Total_angle_both_mice{suffix}"] = arr
-    # Relative tail end features
-    for mouse in ["M1", "M2"]:
-        _compute_tail_end_relative(mouse, features, roll_windows, fps)
-    # Return
-    return aggs
-
-
-def _compute_tail_end_relative(
-    mouse: str,
-    features: dict[str, Array1D],
-    roll_windows: list[float],
-    fps: float,
-) -> dict[str, Array1D]:
-    """Tail_end movement relative to (tail_base + centroid + nose) movement."""
-    aggs = {}
-    # Calculate
-    ml = mouse.lower()
-    tail_end_key = f"Movement_mouse_{ml}_tail_end"
-    tail_base_key = f"Movement_mouse_{ml}_tail_base"
-    centroid_key = f"Movement_mouse_{ml}_center"
-    nose_key = f"Movement_mouse_{ml}_nose"
-
-    rel = features[tail_end_key] - (
-        features[tail_base_key] + features[centroid_key] + features[nose_key]
-    )
-    aggs[f"Tail_end_relative_to_tail_base_centroid_nose_{mouse}"] = rel
-
-    stats = _rolling_stats(rel, roll_windows, fps)
-    for suffix, arr in stats.items():
-        aggs[f"Tail_end_relative_to_tail_base_centroid_nose_{mouse}{suffix}"] = arr
-    # Return
-    return aggs
-
-
-def _compute_deviations(features: dict[str, Array1D]) -> dict[str, Array1D]:
-    """Deviation features: mean(feature) - current(feature) value."""
-    aggs = {}
-    # Calculate
-    deviation_sources = [
-        "Total_movement_all_bodyparts_both_mice",
-        "Sum_euclidean_distance_hull_M1_M2",
-        "M1_hull_small_euclidean",
-        "M2_hull_small_euclidean",
-        "M1_hull_large_euclidean",
-        "M2_hull_large_euclidean",
-        "M1_hull_mean_euclidean",
-        "M2_hull_mean_euclidean",
-        "Centroid_distance",
-        "Total_angle_both_mice",
-        "Movement_mouse_1_center",
-        "Movement_mouse_2_center",
-        "Mouse_1_poly_area",
-        "Mouse_2_poly_area",
-    ]
-
-    for key in deviation_sources:
-        if key not in features:
-            continue
-        vals = features[key]
-        aggs[f"{key}_deviation"] = np.mean(vals) - vals
-
-    # Sum_probabilities deviation
-    if "Sum_probabilities" in features:
-        vals = features["Sum_probabilities"]
-        aggs["Sum_probabilities_deviation"] = np.mean(vals) - vals
-    # Return
-    return aggs
-
-
-def _compute_percentile_ranks(features: dict[str, Array1D]) -> dict[str, Array1D]:
     """Percentile rank features (replicating pandas .rank(pct=True))."""
-    aggs = {}
-    # Calculate
+    aggs: dict[str, Array1D] = {}
+
+    def _pct_rank(vals: Array1D) -> Array1D:
+        n = len(vals)
+        if n <= 1:
+            return np.ones(n, dtype=np.float64)
+        order = np.argsort(vals)
+        ranks = np.empty(n, dtype=np.float64)
+        ranks[order] = np.arange(1, n + 1, dtype=np.float64) / n
+        return ranks
+
+    # Rank sources use SimBA's exact movement names
     rank_sources = [
-        "Movement_mouse_1_center",
-        "Movement_mouse_2_center",
+        "Movement_mouse_1_centroid",
+        "Movement_mouse_2_centroid",
         "Centroid_distance",
         "Total_movement_all_bodyparts_both_mice",
     ]
     for key in rank_sources:
-        if key not in features:
-            continue
-        vals = features[key]
-        # Percentile rank: (rank - 1) / (n - 1) for 0-1 range
-        n = len(vals)
-        if n > 1:
-            order = np.argsort(vals)
-            ranks = np.empty(n, dtype=np.float64)
-            ranks[order] = np.arange(1, n + 1, dtype=np.float64) / n
-        else:
-            ranks = np.ones(n, dtype=np.float64)
-        aggs[f"{key}_percentile_rank"] = ranks
-    # Deviation percentile ranks
-    for key in rank_sources:
-        dev_key = f"{key}_deviation"
-        if dev_key not in features:
-            continue
-        vals = features[dev_key]
-        n = len(vals)
-        if n > 1:
-            order = np.argsort(vals)
-            ranks = np.empty(n, dtype=np.float64)
-            ranks[order] = np.arange(1, n + 1, dtype=np.float64) / n
-        else:
-            ranks = np.ones(n, dtype=np.float64)
-        aggs[f"{key}_deviation_percentile_rank"] = ranks
-    # Sum_probabilities deviation percentile rank
+        if key in features:
+            aggs[f"{key}_percentile_rank"] = _pct_rank(features[key])
+
+    # Deviation percentile ranks (use SimBA's deviation names)
+    dev_src_map = {
+        "Movement_mouse_1_centroid": "Movement_mouse_1_deviation_centroid",
+        "Movement_mouse_2_centroid": "Movement_mouse_2_deviation_centroid",
+        "Centroid_distance": "Centroid_distance_deviation",
+        "Total_movement_all_bodyparts_both_mice": "Total_movement_all_bodyparts_both_mice_deviation",
+    }
+    for dev_key in dev_src_map.values():
+        if dev_key in features:
+            aggs[f"{dev_key}_percentile_rank"] = _pct_rank(features[dev_key])
+
     if "Sum_probabilities_deviation" in features:
-        vals = features["Sum_probabilities_deviation"]
-        n = len(vals)
-        if n > 1:
-            order = np.argsort(vals)
-            ranks = np.empty(n, dtype=np.float64)
-            ranks[order] = np.arange(1, n + 1, dtype=np.float64) / n
-        else:
-            ranks = np.ones(n, dtype=np.float64)
-        aggs["Sum_probabilities_deviation_percentile_rank"] = ranks
-    # Return
+        aggs["Sum_probabilities_deviation_percentile_rank"] = _pct_rank(
+            features["Sum_probabilities_deviation"],
+        )
+
     return aggs
 
 
@@ -1013,7 +997,7 @@ def _build_output_df(
     features: dict[str, Array1D],
 ) -> pl.DataFrame:
     """Build final Polars DataFrame with frame index + all feature columns."""
-    frames = keypoints_df.select("frame").unique().sort("frame").to_numpy()
-    col_data = {"frame": frames}
+    frames = keypoints_df.select("frame").unique().sort("frame").to_series().to_numpy()
+    col_data: dict[str, np.ndarray] = {"frame": frames.flatten()}
     col_data |= features
-    return pl.DataFrame(col_data)
+    return pl.DataFrame(col_data).with_columns(pl.col("frame").cast(pl.Int64))

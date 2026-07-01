@@ -23,15 +23,21 @@ TEST_PARQUET = RESOURCES_DIR / "VIDEO_001_short.parquet"
 @pytest.fixture(scope="module")
 def keypoints_df():
     """Load the real test parquet for feature extraction tests."""
-    return read_df(TEST_PARQUET, KEYPOINTS_SCHEMA)
+    df = read_df(TEST_PARQUET, KEYPOINTS_SCHEMA)
+    from behavysis.constants.bodypoints import BPTS_SIMBA, INDIVS_SIMBA
+
+    return df.filter(
+        pl.col("individual").is_in(INDIVS_SIMBA),
+        pl.col("bodypart").is_in(BPTS_SIMBA),
+    )
 
 
 @pytest.fixture(scope="module")
 def features_df(keypoints_df):
     """Compute features once per module for all tests."""
-    from behavysis.funcs.simba_features import compute
+    from behavysis.funcs.extract_features import compute_simba_features
 
-    return compute(keypoints_df, fps=30.0, px_per_mm=4.0)
+    return compute_simba_features(keypoints_df, fps=30.0, px_per_mm=4.0)
 
 
 class TestSimbaFeaturesCompute:
