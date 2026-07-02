@@ -20,6 +20,7 @@ from behavysis.funcs.run_dlc import ma_dlc_run_batch
 from behavysis.pipeline import Experiment
 from behavysis.schemas import BINNED_SCHEMA, SUMMARY_SCHEMA, read_df, write_df
 from behavysis.utils.dask_utils import cluster_process
+from behavysis.utils.misc_utils import pass_exception
 from behavysis.utils.multiproc_utils import get_gpu_ids
 
 
@@ -66,7 +67,8 @@ class Project:
         """Run a method on all experiments in parallel."""
         with cluster_process(LocalCluster(n_workers=self.nprocs, threads_per_worker=1)):
             delayed_tasks = [
-                dask.delayed(method)(exp, **kwargs) for exp in self.experiments
+                dask.delayed(pass_exception(method))(exp, **kwargs)
+                for exp in self.experiments
             ]
             dask.compute(*delayed_tasks)
 
@@ -77,7 +79,7 @@ class Project:
     ) -> None:
         """Run a method on all experiments sequentially."""
         for exp in self.experiments:
-            method(exp, **kwargs)
+            pass_exception(method)(exp, **kwargs)
 
     def _run(
         self,

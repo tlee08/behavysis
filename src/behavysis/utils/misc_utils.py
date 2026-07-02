@@ -1,5 +1,9 @@
 """Miscellaneous utility functions."""
 
+import contextlib
+from collections.abc import Callable
+from functools import wraps
+
 import numpy as np
 
 
@@ -50,3 +54,14 @@ def listofvects2array(*list_of_vects) -> np.ndarray:
 def array2listofvect(arr: np.ndarray, vect_index: int) -> list:
     """Inverse of listofvects2array, except chooses only one of the vects."""
     return [arr[arr[:, 0] == i, vect_index] for i in np.sort(np.unique(arr[:, 0]))]
+
+
+def pass_exception(func: Callable) -> Callable:
+    """Don't raise exception."""
+
+    @wraps(func)
+    def wrapper(*args: object, **kwargs: object) -> object:
+        with contextlib.suppress(Exception):
+            return func(*args, **kwargs)
+
+    return wrapper

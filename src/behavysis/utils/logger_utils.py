@@ -80,7 +80,7 @@ def trace(_func: Callable | None = None, *, level: LogLevel = "INFO") -> Callabl
         func_name = f"{module_name}.{qual_name}"
 
         @functools.wraps(func)
-        def wrapper(*args, **kwargs) -> object:
+        def wrapper(*args: object, **kwargs: object) -> object:
             # Constructing extras context
             extras = {"func_name": func_name}
             if args:
