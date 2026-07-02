@@ -1,3 +1,3 @@
-::: behavysis.behav_classifier.behav_classifier.BehavClassifier
+::: behavysis.behaviour_classifier.behaviour_classifier.BehaviourClassifier
 
-::: behavysis.models.behav_classifier_config.BehavClassifierConfig
+::: behavysis.models.behaviour_classifier_config.BehaviourClassifierConfig

@@ -1,38 +1,46 @@
 # Running
 
-**Step 1:**
-
-Open a terminal (Mac or Linux) or Anaconda PowerShell Prompt (Windows)
-
-**Step 2:**
-
-Activate the program environment with the following command:
+**Step 1:** Activate the environment
 
 ```zsh
 conda activate behavysis
 ```
 
-**Step 3:**
-
-You can now use the `behavysis` package in a Jupyter kernel or regular Python script.
-
-See [here][explanation] for examples of Jupyter notebooks to run behaviour analysis.
-
-See [here][explanation] for examples of Jupyter notebooks to train behaviour classifiers.
-
-See [here][explanation] for a tutorial of `behavysis`'s workflow.
-
-See [here][behavysis] for API documentation.
-
-
-**Note**
-
-To run jupyter, run the following command in the terminal
+**Step 2:** Create a project
 
 ```zsh
-jupyter-lab
+behavysis-make-project
 ```
 
-This will open a browser to `http://127.0.0.1:8888/lab`, where you can run jupyter notebooks.
+This scaffolds a project directory with a preset config and notebook. Choose a
+preset that matches your experiment type:
 
-You can also run jupyter notebooks in [VS Code](https://code.visualstudio.com/).
+| Preset | Use case |
+|---|---|
+| `open_field_single` | One mouse, open field — speed, freezing, thigmotaxis |
+| `social_two_mice` | Two mice, social interaction — all above + social distance |
+| `dlc_only` | Just keypoint tracking, no analysis |
+| `behaviour_pipeline` | Full pipeline with automated behaviour classification |
+| `base` | All options documented — use as a reference |
+
+**Step 3:** Edit the config
+
+Open `default_config.yaml` and set at minimum:
+
+- `run_dlc.model_fp` — path to your DLC model's `config.yaml`
+- `calculate_parameters.px_per_mm.dist_mm` — real-world arena size (mm)
+
+**Step 4:** Add videos
+
+Copy your `.mp4` experiment video(s) into `1_raw_videos/`.
+
+**Step 5:** Run the pipeline
+
+Open `run_pipeline.py` in Jupyter Lab, VS Code, or any marimo-compatible editor.
+Run cells top-to-bottom — each cell runs one pipeline stage.
+
+Or run the marimo web UI:
+
+```zsh
+marimo edit run_pipeline.py
+```

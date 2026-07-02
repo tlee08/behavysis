@@ -52,7 +52,7 @@ requires = ["uv_build>=0.10.11,<0.11.0"]
 build-backend = "uv_build"
 
 [tool.ruff]
-extend-exclude = ["src/behavysis/templates/run_pipeline_script.py"]
+extend-exclude = ["src/behavysis/presets/*/run_pipeline.py"]
 
 [tool.ruff.lint]
 select = ["ALL"]
@@ -78,7 +78,7 @@ ignore = [
 ]
 fixable = ["ALL"]
 unfixable = []
-exclude = ["tests/*", "src/behavysis/templates/run_pipeline_notebook_simple.py"]
+exclude = ["tests/*"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"

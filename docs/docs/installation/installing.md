@@ -1,24 +1,14 @@
 # Installing
 
-**Step 1:**
+**Step 1: Install conda**
 
-Install conda by visiting the [Miniconda downloads page](https://docs.conda.io/en/latest/miniconda.html) and following the prompts to install on your system.
-
-Open the downloaded miniconda file and follow the installation prompts.
-
-**Step 2:**
-
-Open a terminal (Mac or Linux) or Anaconda PowerShell Prompt (Windows) and verify that conda has been installed with the following command.
+Download and install [Miniconda](https://docs.conda.io/en/latest/miniconda.html).
 
 ```zsh
-conda --version
+conda --version   # verify installation
 ```
 
-A response like `conda xx.xx.xx` indicates that it has been correctly installed.
-
-**Step 3:**
-
-Update conda and use the libmamba solver (makes downloading conda programs [MUCH faster](https://www.anaconda.com/blog/a-faster-conda-for-a-growing-community)):
+**Step 2: Speed up conda (recommended)**
 
 ```zsh
 conda update -n base conda
@@ -26,34 +16,36 @@ conda install -n base conda-libmamba-solver
 conda config --set solver libmamba
 ```
 
-**Step 4:**
+**Step 3: Install the behavysis environment**
 
-Install packages that help Jupyter notebooks read conda environments:
-
-```zsh
-conda install -n base nb_conda nb_conda_kernels
-```
-
-**Step 5:**
-
-Install the `behavysis` conda environment (download [here](https://github.com/tlee08/behavysis/blob/main/conda_env.yaml)).
+Download [`conda_env.yaml`](https://github.com/tlee08/behavysis/blob/main/conda_env.yaml) and run:
 
 ```zsh
 conda env create -f path/to/conda_env.yaml
 ```
 
-**Step 6:**
-
-Install the `DEEPLABCUT` conda environment (download [here](https://github.com/DeepLabCut/DeepLabCut/blob/main/conda-environments/DEEPLABCUT.yaml)).
+**Step 4: Install the DeepLabCut environment**
 
 ```zsh
-conda env create -f path/to/DEEPLABCUT.yaml
+conda activate behavysis
+behavysis-init
 ```
 
-**Step 7:**
+This creates the `DEEPLABCUT` conda environment needed for keypoint tracking.
 
-Install the `simba` conda environment (download [here](https://github.com/tlee08/behavysis/blob/main/simba_env.yaml)).
+**Step 5: Verify**
 
 ```zsh
-conda env create -f path/to/simba_env.yaml
+conda activate behavysis
+python -c "import behavysis"
+```
+
+## Developer installation
+
+For contributors — uses uv in addition to conda:
+
+```zsh
+conda env create -f conda_env.yaml
+conda activate behavysis
+uv pip install -e ".[dev]"
 ```

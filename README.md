@@ -1,40 +1,40 @@
 # behavysis
 
+Animal behaviour video-analysis pipeline: raw footage → DLC keypoint tracking →
+quantitative analysis → behaviour classification → combined summary.
+
 [Documentation](https://tlee08.github.io/behavysis/)
 
-## Installation
-
-### Dev installation
+## Quick start
 
 ```bash
 conda env create -f conda_env.yaml
 conda activate behavysis
-pip install poetry
-poetry install
+behavysis-init                       # install DEEPLABCUT environment
+behavysis-make-project               # scaffold a project (pick a preset)
+# Edit default_config.yaml
+# Copy .mp4 videos into 1_raw_videos/
+marimo edit run_pipeline.py          # run the pipeline
 ```
 
-### User installation
+See the [full installation guide](https://tlee08.github.io/behavysis/installation/installing/)
+
+## Developer setup
 
 ```bash
 conda env create -f conda_env.yaml
+conda activate behavysis
+uv pip install -e ".[dev]"
 ```
 
-## Future improvements
-
-### Prompt for improvements
-
-```
-You are an expert ML engineer and architect.
-Look at this current codebase, read the READMEs and understand the code structure.
-Then assess the robustness, best-practices, modularity, and clarity of the code. What has been done well, what can be improved, and how can we improve it?
-```
+See [AGENTS.md](AGENTS.md) for dev workflow.
 
 ## References
 
-Mathis, A., Mamidanna, P., Cury, K. M., Abe, T., Murthy, V. N., Mathis, M. W., & Bethge, M. (2018, August 20). DeepLabCut: markerless pose estimation of user-defined body parts with deep learning. Nature Neuroscience. Springer Science and Business Media LLC. http://doi.org/10.1038/s41593-018-0209-y
+Mathis, A., et al. (2018). DeepLabCut: markerless pose estimation of user-defined body parts with deep learning. *Nature Neuroscience*. [doi:10.1038/s41593-018-0209-y](http://doi.org/10.1038/s41593-018-0209-y)
 
-Nath, T., Mathis, A., Chen, A. C., Patel, A., Bethge, M., & Mathis, M. W. (2019, June 21). Using DeepLabCut for 3D markerless pose estimation across species and behaviours. Nature Protocols. Springer Science and Business Media LLC. http://doi.org/10.1038/s41596-019-0176-0
+Nath, T., et al. (2019). Using DeepLabCut for 3D markerless pose estimation across species and behaviours. *Nature Protocols*. [doi:10.1038/s41596-019-0176-0](http://doi.org/10.1038/s41596-019-0176-0)
 
-Lauer, J., Zhou, M., Ye, S., Menegas, W., Schneider, S., Nath, T., … Mathis, A. (2022, April). Multi-animal pose estimation, identification and tracking with DeepLabCut. Nature Methods. Springer Science and Business Media LLC. http://doi.org/10.1038/s41592-022-01443-0
+Lauer, J., et al. (2022). Multi-animal pose estimation, identification and tracking with DeepLabCut. *Nature Methods*. [doi:10.1038/s41592-022-01443-0](http://doi.org/10.1038/s41592-022-01443-0)
 
-Nilsson, S., Goodwin, N., Choong, J. J., Hwang, S., Wright, H., Norville, Z., Tong, X., Lin, D., Bentzley, B., Eshel, N., McLaughlin, R., & Golden, S. Simple Behavioural Analysis (SimBA): an open source toolkit for computer classification of complex social behaviours in experimental animals [Computer software]. https://github.com/sgoldenlab/simba
+Nilsson, S., et al. Simple Behavioural Analysis (SimBA). [github.com/sgoldenlab/simba](https://github.com/sgoldenlab/simba)

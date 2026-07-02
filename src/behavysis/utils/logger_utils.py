@@ -98,7 +98,7 @@ def trace(_func: Callable | None = None, *, level: LogLevel = "INFO") -> Callabl
                 except Exception:
                     elapsed = time.perf_counter() - t0
                     logger.exception("✗ FAILED after {:.2f}s", elapsed)
-                    # Don't raise so pipeline doesn't stop for other experiments
+                    raise
 
         return wrapper
 

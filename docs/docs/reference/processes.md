@@ -1,14 +1,6 @@
-<!-- ::: behavysis.funcs -->
-
-::: behavysis.funcs.update_config
-
-::: behavysis.funcs.format_vid
+::: behavysis.funcs.format_video
 
 ::: behavysis.funcs.run_dlc
-
-::: behavysis.funcs.calculate_parameters
-
-::: behavysis.funcs.preprocess
 
 ::: behavysis.funcs.extract_features
 
@@ -16,8 +8,4 @@
 
 ::: behavysis.funcs.analyse_behaviour
 
-::: behavysis.funcs.analyse
-
 ::: behavysis.funcs.combine_analysis
-
-::: behavysis.funcs.evaluate_vid

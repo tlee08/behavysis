@@ -7,7 +7,7 @@ theme:
   features:
     - content.code.copy
     - toc.follow
-    # - toc.integrate
+    - navigation.indexes
 
 markdown_extensions:
   # Python Markdown
@@ -68,24 +68,21 @@ plugins:
   - tags
 
 nav:
-  - index.md
-  - Installing and Running:
-      - installation/installing.md
-      - installation/running.md
-      - installation/updating.md
-      - installation/uninstalling.md
+  - Home: index.md
   - Tutorials:
-      - tutorials/explanation.md
-      - tutorials/setup.md
-      - tutorials/config_json.md
-      - tutorials/diagnostics_messages.md
-  - Examples:
-      - examples/analysis.md
-      - examples/train.md
-  - API Reference:
+      - tutorials/install.md
+  - How-to Guides:
+      - how-to/open-field.md
+      - how-to/social-interaction.md
+      - how-to/troubleshoot.md
+      - how-to/train-classifier.md
+  - Reference:
       - reference/behavysis.md
       - reference/project.md
       - reference/experiment.md
       - reference/processes.md
       - reference/behav_classifier.md
       - reference/behav_classifier_templates.md
+  - Explanation:
+      - explanation/pipeline.md
+      - explanation/config.md
