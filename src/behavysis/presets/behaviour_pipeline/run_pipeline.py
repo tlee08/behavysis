@@ -21,6 +21,9 @@ with app.setup:
         start_stop_trim,
         stop_frame_from_dur,
     )
+    from behavysis.utils import configure_logger
+
+    configure_logger()
 
 
 @app.cell(hide_code=True)

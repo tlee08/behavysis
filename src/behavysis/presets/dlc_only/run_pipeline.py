@@ -9,12 +9,14 @@ with app.setup:
     import marimo as mo
 
     from behavysis import Project
+    from behavysis.utils import configure_logger
+
+    configure_logger()
 
 
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""# Behavysis — DLC Keypoint Tracking Only""")
-
 
 @app.cell
 def _():

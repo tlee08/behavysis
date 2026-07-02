@@ -2,6 +2,7 @@ import contextlib
 from collections.abc import Generator
 
 from dask.distributed import Client, SpecCluster
+from loguru import logger
 
 
 @contextlib.contextmanager
@@ -12,7 +13,7 @@ def cluster_process(cluster: SpecCluster) -> Generator:
     then closes the client and cluster.
     """
     client = Client(cluster)
-    print(client.dashboard_link)
+    logger.info(client.dashboard_link)
     try:
         yield
     finally:

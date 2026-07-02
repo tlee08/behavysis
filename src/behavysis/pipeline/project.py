@@ -18,7 +18,14 @@ from behavysis.constants import (
 )
 from behavysis.funcs.run_dlc import ma_dlc_run_batch
 from behavysis.pipeline import Experiment
-from behavysis.schemas import BINNED_SCHEMA, SUMMARY_SCHEMA, read_df, write_df
+from behavysis.schemas import (
+    BINNED_SCHEMA,
+    COLLATED_BINNED_SCHEMA,
+    COLLATED_SUMMARY_SCHEMA,
+    SUMMARY_SCHEMA,
+    read_df,
+    write_df,
+)
 from behavysis.utils.dask_utils import cluster_process
 from behavysis.utils.misc_utils import pass_exception
 from behavysis.utils.multiproc_utils import get_gpu_ids
@@ -255,18 +262,7 @@ class Project:
                 combined = pl.concat(dfs_with_exp)
 
                 out_fp = subdir / f"__ALL_binned_{bin_size}.{DF_IO_FORMAT}"
-                write_df(
-                    combined,
-                    out_fp,
-                    {
-                        "bin_sec": pl.Float64,
-                        "experiment": pl.Utf8,
-                        "individual": pl.Utf8,
-                        "measure": pl.Utf8,
-                        "agg": pl.Utf8,
-                        "value": pl.Float64,
-                    },
-                )
+                write_df(combined, out_fp, COLLATED_BINNED_SCHEMA)
 
                 # Also write CSV
                 csv_fp = subdir / f"__ALL_binned_{bin_size}.csv"
@@ -299,17 +295,7 @@ class Project:
             combined = pl.concat(dfs_with_exp)
 
             out_fp = subdir / f"__ALL_summary.{DF_IO_FORMAT}"
-            write_df(
-                combined,
-                out_fp,
-                {
-                    "experiment": pl.Utf8,
-                    "individual": pl.Utf8,
-                    "measure": pl.Utf8,
-                    "agg": pl.Utf8,
-                    "value": pl.Float64,
-                },
-            )
+            write_df(combined, out_fp, COLLATED_SUMMARY_SCHEMA)
 
             csv_fp = subdir / "__ALL_summary.csv"
             csv_fp.parent.mkdir(parents=True, exist_ok=True)

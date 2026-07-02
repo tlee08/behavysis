@@ -19,13 +19,6 @@ import seaborn as sns
 
 from behavysis.constants import PLOT_DPI, PLOT_STYLE
 from behavysis.pipeline import Experiment, Project
-from behavysis.utils.logger_utils import configure_logger
-
-#####################################################################
-#              SETTING UP LOGGING
-#####################################################################
-
-configure_logger()
 
 #####################################################################
 #           INITIALISE MPL PLOTTING PARAMETERS
