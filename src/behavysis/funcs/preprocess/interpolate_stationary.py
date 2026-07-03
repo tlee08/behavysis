@@ -61,13 +61,6 @@ def interpolate_stationary(
     )
     width_px = metadata.require_width_px()
     height_px = metadata.require_height_px()
-    if width_px <= 0 or height_px <= 0:
-        msg = (
-            f"Video dimensions not set for experiment.\n"
-            f"  width_px={width_px}, height_px={height_px}\n"
-            f"  Run proj.format_video() first to set these values."
-        )
-        raise ValueError(msg)
 
     for cfg in cfg_ls:
         x_px = cfg.x * width_px

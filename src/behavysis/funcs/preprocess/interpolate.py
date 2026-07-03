@@ -51,16 +51,6 @@ def interpolate(
     (e.g., when the subject's head goes out of view).
     It does this by linearly interpolating the frames
     of a body part that are below a given likelihood pcutoff.
-
-    Notes:
-    -----
-    The config file must contain the following parameters:
-    ```
-    - user
-        - preprocess
-            - interpolate
-                - pcutoff: float
-    ```
     """
     cfg = config.require_preprocess().require("interpolate", InterpolateConfig)
 

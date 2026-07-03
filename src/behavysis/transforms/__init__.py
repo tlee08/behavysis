@@ -9,6 +9,7 @@ from .analysis import (
     summary_binned_quantitative,
 )
 from .behaviour import (
+    boris_to_behaviour,
     bouts2frames,
     frames2bouts,
     get_bouts_struct,
@@ -22,6 +23,7 @@ from .keypoint import check_bpts_exist, get_indivs_bpts
 __all__ = [
     "agg_behaviour",
     "agg_quantitative",
+    "boris_to_behaviour",
     "bouts2frames",
     "check_bpts_exist",
     "frames2bouts",

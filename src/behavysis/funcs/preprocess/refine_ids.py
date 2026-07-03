@@ -58,20 +58,6 @@ def refine_ids(
     """Ensures that the identity is correctly tracked for maDLC.
 
     Assumes interpolate_points has already been run.
-
-    Notes:
-    -----
-    The config file must contain the following parameters:
-    ```
-    - user
-        - preprocess
-            - refine_ids
-                - marked: str
-                - unmarked: str
-                - marking: str
-                - window_sec: float
-                - metric: ["current", "rolling", "binned"]
-    ```
     """
     cfg = config.require_preprocess().require("refine_ids", RefineIdsConfig)
     marked = cfg.marked
