@@ -72,10 +72,10 @@ class ExtractFeaturesConfig(BaseModel):
 
 
 class ClassifyBehaviourConfig(BaseModel):
-    """ClassifyBehavConfig."""
+    """ClassifyBehaviourConfig."""
 
     proj_dir: Path = Path("path") / "to" / "project_dir"
-    behav_name: str = "behav_name"
+    behaviour_name: str = "behaviour_name"
     pcutoff: PositiveFloat | None = None
     min_empty_window_secs: PositiveFloat = 0.2
     user_defined: list[str] = []

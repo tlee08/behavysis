@@ -9,7 +9,7 @@ class BehaviourClassifierConfig(BaseModel):
     """Behaviour Classifier Config Model."""
 
     proj_dir: Path = Path("project_dir")
-    behav_name: str = "behav_name"
+    behaviour_name: str = "behaviour_name"
     seed: int = 42
     oversample_ratio: float = 0.2
     undersample_ratio: float = 0.4

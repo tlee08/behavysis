@@ -59,8 +59,10 @@ def wrangle_columns_y(y: pd.DataFrame) -> pd.DataFrame:
     y = y.loc[:, columns_filter]
     # Setting the column names from `(behav, outcome)` to `{behav}__{outcome}`
     y.columns = [
-        f"{behav_name}" if outcome_name == ACTUAL else f"{behav_name}__{outcome_name}"
-        for behav_name, outcome_name in y.columns
+        f"{behaviour_name}"
+        if outcome_name == ACTUAL
+        else f"{behaviour_name}__{outcome_name}"
+        for behaviour_name, outcome_name in y.columns
     ]
     return y
 
@@ -175,7 +177,7 @@ def undersample(x: np.ndarray, y: np.ndarray, ratio: float) -> np.ndarray:
 def prepare_training_data(
     x_dir: Path,
     y_dir: Path,
-    behav_name: str,
+    behaviour_name: str,
     preproc_fp: Path,
     test_split: float,
     oversample_ratio: float,
@@ -189,7 +191,7 @@ def prepare_training_data(
         Directory containing feature files.
     y_dir : Path
         Directory containing scored behaviour files.
-    behav_name : str
+    behaviour_name : str
         Name of behaviour to train on.
     preproc_fp : Path
         Path to save preprocessing pipeline.
@@ -228,10 +230,13 @@ def prepare_training_data(
             value_name="value",
         )
         pivoted = melted.pivot_table(
-            index="frame", columns=["behaviour", "outcome"], values="value"
+            index="frame",
+            columns=["behaviour", "outcome"],
+            values="value",
         )
         pivoted.columns = pd.MultiIndex.from_tuples(
-            pivoted.columns, names=["behaviour", "outcomes"]
+            pivoted.columns,
+            names=["behaviour", "outcomes"],
         )
         return pivoted
 
@@ -239,7 +244,7 @@ def prepare_training_data(
     y_df_ls = async_read_files_run(y_fp_ls, _read_scored)
 
     # Format y dfs: select behaviour column, replace UNDETERMINED
-    y_df_ls = [y[(behav_name, ACTUAL)].replace(UNSURE, FALSE_POS) for y in y_df_ls]
+    y_df_ls = [y[(behaviour_name, ACTUAL)].replace(UNSURE, FALSE_POS) for y in y_df_ls]
 
     # Align x and y indices
     index_df_ls = [

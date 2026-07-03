@@ -8,7 +8,7 @@
 
 ## User
 
-Look at @src/behavysis/behav_classifier/ . I am concerned that this is overcomplicated. Let's start off with a simple row-by-row classifier (no CNN), and have separate functions to convert to windows for CNN (surely it's cleaner to load the window as it comes along and neglibible effect on compute, rather than pre-compute and load the window?).
+Look at @src/behavysis/behaviour_classifier/ . I am concerned that this is overcomplicated. Let's start off with a simple row-by-row classifier (no CNN), and have separate functions to convert to windows for CNN (surely it's cleaner to load the window as it comes along and neglibible effect on compute, rather than pre-compute and load the window?).
 Give your recommendations as a Principle Data Scientist. Be honest, be harsh but fair. Use your critical thinking and be inventive yet rigorous with your ideas. use tavily to inform your research and recommendations. Use karpathy guidelines. Can use context7
 
 ---

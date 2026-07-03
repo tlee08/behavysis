@@ -9,16 +9,16 @@ class Bout(BaseModel):
     start: int
     stop: int
     dur: int
-    behav: str
+    behaviour: str
     actual: int
-    user_defined: dict[str, int]
+    sub_behaviour: dict[str, int]
 
 
 class BoutStruct(BaseModel):
     """Bout Structure."""
 
-    behav: str
-    user_defined: list[str]
+    behaviour: str
+    sub_behaviour: list[str]
 
 
 class Bouts(BaseModel):
@@ -27,4 +27,4 @@ class Bouts(BaseModel):
     start: int
     stop: int
     bouts: list[Bout]
-    bouts_struct: list[BoutStruct]
+    bout_struct: list[BoutStruct]

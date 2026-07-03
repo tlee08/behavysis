@@ -110,7 +110,7 @@ def predicted2scored(
     result_df = result_df.drop(PRED)
     # Add user_defined columns initialised to TRUE_NEG
     for bout_struct in bouts_struct:
-        for user_col in bout_struct.user_defined:
+        for user_col in bout_struct.sub_behaviour:
             result_df = result_df.with_columns(pl.lit(TRUE_NEG).alias(user_col))
     # Return result df
     return result_df
@@ -133,25 +133,27 @@ def get_bouts_struct(df: pl.DataFrame) -> list[BoutStruct]:
     base_cols = {FRAME, BEHAVIOUR, ACTUAL}
     user_cols = [c for c in df.columns if c not in base_cols]
 
-    behaviours = df.select(BEHAVIOUR).unique().sort(BEHAVIOUR).to_series().to_list()
+    behaviours_ls = df.select(BEHAVIOUR).unique().sort(BEHAVIOUR).to_series().to_list()
 
     bouts_struct = []
-    for behav in behaviours:
+    for behaviour in behaviours_ls:
         # Determine which user_defined columns apply to this behaviour
         # (those that have non-null values for this behaviour)
-        behav_user_cols = []
+        sub_behaviour_ls = []
         for col in user_cols:
             null_count = (
-                df.filter(pl.col(BEHAVIOUR) == behav)
+                df.filter(pl.col(BEHAVIOUR) == behaviour)
                 .select(
                     pl.col(col).null_count(),
                 )
                 .item()
             )
-            total = df.filter(pl.col(BEHAVIOUR) == behav).height
+            total = df.filter(pl.col(BEHAVIOUR) == behaviour).height
             if total > 0 and null_count < total:
-                behav_user_cols.append(col)
-        bouts_struct.append(BoutStruct(behav=behav, user_defined=behav_user_cols))
+                sub_behaviour_ls.append(col)
+        bouts_struct.append(
+            BoutStruct(behaviour=behaviour, sub_behaviour=sub_behaviour_ls),
+        )
 
     return bouts_struct
 
@@ -171,22 +173,22 @@ def frames2bouts(df: pl.DataFrame) -> Bouts:
     """
     start_frame = df.select(FRAME).min().item()
     stop_frame = df.select(FRAME).max().item() + 1
-    behaviours = df.select(BEHAVIOUR).unique().sort(BEHAVIOUR).to_series().to_list()
+    behaviours_ls = df.select(BEHAVIOUR).unique().sort(BEHAVIOUR).to_series().to_list()
 
     bouts_struct = get_bouts_struct(df)
     bouts_ls = []
 
-    for behav in behaviours:
-        behav_df = df.filter(pl.col(BEHAVIOUR) == behav).sort(FRAME)
+    for behaviour in behaviours_ls:
+        behaviour_df = df.filter(pl.col(BEHAVIOUR) == behaviour).sort(FRAME)
 
         # Get boolean pred series for this behaviour (sorted by frame)
-        pred_bool = behav_df.select(PRED).to_series() == TRUE_POS
+        pred_bool = behaviour_df.select(PRED).to_series() == TRUE_POS
 
         if pred_bool.sum() == 0:
             continue
 
         # Compute frame offset for this behaviour's frame range
-        frame_offset = behav_df.select(FRAME).min().item()
+        frame_offset = behaviour_df.select(FRAME).min().item()
         bouts_df = vect2bouts(pred_bool, offset=frame_offset)
 
         for row in bouts_df.iter_rows(named=True):
@@ -195,7 +197,7 @@ def frames2bouts(df: pl.DataFrame) -> Bouts:
             dur_val = row[DUR]
 
             # Get actual value (mode of actual column within bout)
-            bout_slice = behav_df.filter(
+            bout_slice = behaviour_df.filter(
                 pl.col(FRAME).is_between(bout_start, bout_stop),
             )
             actual_vals = bout_slice.select(ACTUAL).to_series()
@@ -220,9 +222,9 @@ def frames2bouts(df: pl.DataFrame) -> Bouts:
                     start=bout_start,
                     stop=bout_stop,
                     dur=dur_val,
-                    behav=behav,
+                    behaviour=behaviour,
                     actual=actual_mode,
-                    user_defined=user_defined,
+                    sub_behaviour=user_defined,
                 ),
             )
 
@@ -230,7 +232,7 @@ def frames2bouts(df: pl.DataFrame) -> Bouts:
         start=start_frame,
         stop=stop_frame,
         bouts=bouts_ls,
-        bouts_struct=bouts_struct,
+        bout_struct=bouts_struct,
     )
 
 
@@ -247,8 +249,8 @@ def bouts2frames(bouts: Bouts) -> pl.DataFrame:
     pl.DataFrame
         Long-form scored behaviour DataFrame.
     """
-    behaviours = [b.behav for b in bouts.bouts_struct]
-    user_cols = list({col for b in bouts.bouts_struct for col in b.user_defined})
+    behaviours = [b.behaviour for b in bouts.bout_struct]
+    user_cols = list({col for b in bouts.bout_struct for col in b.sub_behaviour})
 
     # Build frame x behaviour grid
     frames = np.arange(bouts.start, bouts.stop, dtype=np.int64)
@@ -276,7 +278,7 @@ def bouts2frames(bouts: Bouts) -> pl.DataFrame:
         mask = (
             (pl.col(FRAME) >= bout.start)
             & (pl.col(FRAME) <= bout.stop)
-            & (pl.col(BEHAVIOUR) == bout.behav)
+            & (pl.col(BEHAVIOUR) == bout.behaviour)
         )
         df = df.with_columns(
             pl.when(mask).then(pl.lit(TRUE_POS)).otherwise(pl.col(PRED)).alias(PRED),
@@ -285,7 +287,7 @@ def bouts2frames(bouts: Bouts) -> pl.DataFrame:
             .otherwise(pl.col(ACTUAL))
             .alias(ACTUAL),
         )
-        for k, v in bout.user_defined.items():
+        for k, v in bout.sub_behaviour.items():
             df = df.with_columns(
                 pl.when(mask).then(pl.lit(v)).otherwise(pl.col(k)).alias(k),
             )
@@ -345,15 +347,15 @@ def import_boris_tsv(
 
     # Apply BORIS events
     for _, row_boris in df_boris.iterrows():
-        behav = row_boris[BEHAVIOUR]
+        behaviour = row_boris[BEHAVIOUR]
         frame = row_boris["Image index"]
         status = row_boris["Behaviour type"]
 
-        if behav not in behaviour_ls:
+        if behaviour not in behaviour_ls:
             continue
         val = TRUE_POS if status == START else TRUE_NEG
 
-        mask = (pl.col(FRAME) >= frame) & (pl.col(BEHAVIOUR) == behav)
+        mask = (pl.col(FRAME) >= frame) & (pl.col(BEHAVIOUR) == behaviour)
         df = df.with_columns(
             pl.when(mask).then(pl.lit(val)).otherwise(pl.col(PRED)).alias(PRED),
             pl.when(mask).then(pl.lit(val)).otherwise(pl.col(ACTUAL)).alias(ACTUAL),

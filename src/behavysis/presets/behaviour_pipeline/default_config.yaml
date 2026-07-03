@@ -60,7 +60,7 @@ extract_features:
 
 classify_behaviour:
   - proj_dir: /absolute/path/to/training/project
-    behav_name: example_behaviour
+    behaviour_name: example_behaviour
     pcutoff: 0.5
     min_empty_window_secs: 0.2
     user_defined: []

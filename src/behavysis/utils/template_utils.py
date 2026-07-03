@@ -20,7 +20,7 @@ def confirm(prompt: str, *, default: bool = False) -> bool:
         print("Please enter 'y' or 'n'.")  # noqa: T201
 
 
-def render_template(template_name: str, **kwargs) -> str:
+def render_template(template_name: str, **kwargs: object) -> str:
     """Render a template to a string."""
     env = Environment(
         loader=PackageLoader("behavysis", "templates"),
@@ -30,7 +30,7 @@ def render_template(template_name: str, **kwargs) -> str:
     return re.sub(r"\n{3,}", "\n\n", result).strip() + "\n"
 
 
-def save_template(template_name: str, dst: Path, **kwargs) -> None:
+def save_template(template_name: str, dst: Path, **kwargs: object) -> None:
     """Render and save a template."""
     dst.parent.mkdir(parents=True, exist_ok=True)
     dst.write_text(render_template(template_name, **kwargs))

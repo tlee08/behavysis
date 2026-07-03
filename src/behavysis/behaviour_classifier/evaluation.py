@@ -155,7 +155,7 @@ def save_training_history(history: pd.DataFrame, eval_dir: Path) -> None:
     eval_dir : Path
         Directory for evaluation outputs.
     """
-    history.to_parquet(eval_dir / f"history.parquet")
+    history.to_parquet(eval_dir / "history.parquet")
     fig, ax = plt.subplots(figsize=(10, 7))
     sns.lineplot(data=history, ax=ax)
     fig.savefig(eval_dir / "history.png")
@@ -166,7 +166,7 @@ def save_evaluation_results(
     y_true: np.ndarray,
     y_prob: np.ndarray,
     y_pred: np.ndarray,
-    behav_name: str,
+    behaviour_name: str,
     pcutoff: float,
     eval_dir: Path,
     name: str,
@@ -182,7 +182,7 @@ def save_evaluation_results(
         Predicted probabilities.
     y_pred : np.ndarray
         Predicted labels.
-    behav_name : str
+    behaviour_name : str
         Name of the behaviour.
     pcutoff : float
         Probability cutoff used.
@@ -201,7 +201,7 @@ def save_evaluation_results(
     # Build evaluation dataframe
     index = pd.Index(np.arange(np.concatenate(index_ls).shape[0]), name="frame")
     columns = pd.MultiIndex.from_tuples(
-        [(behav_name, PROB), (behav_name, PRED), (behav_name, ACTUAL)],
+        [(behaviour_name, PROB), (behaviour_name, PRED), (behaviour_name, ACTUAL)],
         names=["behaviour", "outcomes"],
     )
     eval_df = pd.DataFrame(

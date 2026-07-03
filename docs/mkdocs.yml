@@ -85,8 +85,8 @@ nav:
       - reference/project.md
       - reference/experiment.md
       - reference/processes.md
-      - reference/behav_classifier.md
-      - reference/behav_classifier_templates.md
+      - reference/behaviour_classifier.md
+      - reference/behaviour_classifier_templates.md
   - Explanation:
       - explanation/pipeline.md
       - explanation/config.md

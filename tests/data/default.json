@@ -64,9 +64,9 @@
     },
     "classify_behaviours": {
       "models": [
-        "Z:\\PRJ-BowenLab\\TimLee\\resources\\simba_model_aggr\\behav_models\\fight\\model_config.json",
-        "Z:\\PRJ-BowenLab\\TimLee\\resources\\simba_model_aggr\\behav_models\\marked_fight\\model_config.json",
-        "Z:\\PRJ-BowenLab\\TimLee\\resources\\simba_model_aggr\\behav_models\\unmarked_fight\\model_config.json"
+        "Z:\\PRJ-BowenLab\\TimLee\\resources\\simba_model_aggr\\behaviour_models\\fight\\model_config.json",
+        "Z:\\PRJ-BowenLab\\TimLee\\resources\\simba_model_aggr\\behaviour_models\\marked_fight\\model_config.json",
+        "Z:\\PRJ-BowenLab\\TimLee\\resources\\simba_model_aggr\\behaviour_models\\unmarked_fight\\model_config.json"
       ],
       "pcutoff": 0.4,
       "min_window_frames": 2,

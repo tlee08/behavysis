@@ -21,23 +21,23 @@ def classify_behaviour(
     behaviour_df_ls = []
     for model_config in model_config_ls:
         proj_dir = model_config.proj_dir
-        behav_name = model_config.behav_name
-        behav_model = BehaviourClassifier.load(proj_dir, behav_name)
-        pcutoff = model_config.pcutoff or behav_model.config.pcutoff
+        behaviour_name = model_config.behaviour_name
+        behaviour_model = BehaviourClassifier.load(proj_dir, behaviour_name)
+        pcutoff = model_config.pcutoff or behaviour_model.config.pcutoff
         min_window_secs = model_config.min_empty_window_secs
         min_window_frames = int(np.round(min_window_secs * metadata.require_fps()))
 
         # Run classifier pipeline (returns pandas DataFrame)
-        behav_df_i = behav_model.pipeline_inference(features_df.to_pandas())
+        behaviour_df_i = behaviour_model.pipeline_inference(features_df.to_pandas())
 
         # Convert to Polars long form
         df_pl = pl.DataFrame(
             {
-                FRAME: pl.Series(behav_df_i.index.to_numpy(), dtype=pl.Int64),
-                BEHAVIOUR: pl.lit(behav_name, dtype=pl.Utf8),
-                PROB: pl.Series(behav_df_i.iloc[:, 0].to_numpy(), dtype=pl.Float64),
+                FRAME: pl.Series(behaviour_df_i.index.to_numpy(), dtype=pl.Int64),
+                BEHAVIOUR: pl.lit(behaviour_name, dtype=pl.Utf8),
+                PROB: pl.Series(behaviour_df_i.iloc[:, 0].to_numpy(), dtype=pl.Float64),
                 PRED: pl.Series(
-                    (behav_df_i.iloc[:, 0].to_numpy() > pcutoff).astype(int),
+                    (behaviour_df_i.iloc[:, 0].to_numpy() > pcutoff).astype(int),
                     dtype=pl.Int64,
                 ),
             },
@@ -49,7 +49,7 @@ def classify_behaviour(
         )
 
         behaviour_df_ls.append(df_pl)
-        logger.info("Completed %s classification.", behav_name)
+        logger.info("Completed %s classification.", behaviour_name)
 
     if len(behaviour_df_ls) == 0:
         return pl.DataFrame(schema=BEHAVIOUR_PREDICTED_SCHEMA)

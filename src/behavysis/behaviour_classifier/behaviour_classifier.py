@@ -46,24 +46,24 @@ class BehaviourClassifier:
     ----------
     proj_dir : Path
         Project directory containing features and scored behaviours.
-    behav_name : str
+    behaviour_name : str
         Name of the behaviour being classified.
     clf : BaseTorchModel
         The trained classifier model.
     """
 
     _proj_dir: Path
-    _behav_name: str
+    _behaviour_name: str
     _clf: BaseTorchModel
 
-    def __init__(self, proj_dir: Path, behav_name: str) -> None:
+    def __init__(self, proj_dir: Path, behaviour_name: str) -> None:
         """Initialize classifier for a specific behaviour.
 
         Parameters
         ----------
         proj_dir : Path
             Project directory path.
-        behav_name : str
+        behaviour_name : str
             Name of behaviour to classify.
 
         Raises:
@@ -72,12 +72,12 @@ class BehaviourClassifier:
             If behaviour is not found in scored behaviours.
         """
         self._proj_dir = proj_dir.resolve()
-        self._behav_name = behav_name
+        self._behaviour_name = behaviour_name
 
         # Verify behaviour exists in scored data
         y_df = wrangle_columns_y(combine_dfs(self.y_dir))
-        assert np.isin(behav_name, y_df.columns), (
-            f"Behaviour '{behav_name}' not found in scored behaviours"
+        assert np.isin(behaviour_name, y_df.columns), (
+            f"Behaviour '{behaviour_name}' not found in scored behaviours"
         )
 
         # Load or create config
@@ -91,7 +91,7 @@ class BehaviourClassifier:
             logger.debug("Created new model config")
 
         config.proj_dir = self._proj_dir
-        config.behav_name = self._behav_name
+        config.behaviour_name = self._behaviour_name
         self.config = config
 
         # Load or create classifier
@@ -112,9 +112,9 @@ class BehaviourClassifier:
         return self._proj_dir
 
     @property
-    def behav_name(self) -> str:
+    def behaviour_name(self) -> str:
         """Behaviour name."""
-        return self._behav_name
+        return self._behaviour_name
 
     @property
     def clf(self) -> BaseTorchModel:
@@ -140,7 +140,7 @@ class BehaviourClassifier:
     @property
     def model_dir(self) -> Path:
         """Model directory for this behaviour."""
-        return self.proj_dir / "behav_models" / self.behav_name
+        return self.proj_dir / "behaviour_models" / self.behaviour_name
 
     @property
     def config_fp(self) -> Path:
@@ -204,71 +204,31 @@ class BehaviourClassifier:
 
     @classmethod
     def create_from_project_dir(cls, proj_dir: Path) -> list[BehaviourClassifier]:
-        """Create classifiers for all behaviours in project.
-
-        Parameters
-        ----------
-        proj_dir : Path
-            Project directory path.
-
-        Returns:
-        -------
-        list[BehavClassifier]
-            List of BehavClassifier instances, one per behaviour.
-        """
+        """Create classifiers for all behaviours in project."""
         proj_dir = proj_dir.resolve()
         y_df = wrangle_columns_y(combine_dfs(proj_dir / BEHAVIOUR_SCORED_DIR))
-        behaviour_ls = y_df.columns.to_list()
-        return [cls(proj_dir, behav) for behav in behaviour_ls]
+        behaviours_ls = y_df.columns.to_list()
+        return [cls(proj_dir, behaviour) for behaviour in behaviours_ls]
 
     @classmethod
     def create_from_project(cls, proj: Project) -> list[BehaviourClassifier]:
-        """Create classifiers from Project instance.
-
-        Parameters
-        ----------
-        proj : Project
-            Behavysis Project instance.
-
-        Returns:
-        -------
-        list[BehavClassifier]
-            List of BehavClassifier instances.
-        """
+        """Create classifiers from Project instance."""
         return cls.create_from_project_dir(proj.root_dir)
 
     @classmethod
-    def load(cls, proj_dir: Path, behav_name: str) -> BehaviourClassifier:
-        """Load existing classifier.
-
-        Parameters
-        ----------
-        proj_dir : Path
-            Project directory path.
-        behav_name : str
-            Behaviour name.
-
-        Returns:
-        -------
-        BehavClassifier
-            Loaded classifier instance.
-
-        Raises:
-        ------
-        ValueError
-            If model config file not found.
-        """
+    def load(cls, proj_dir: Path, behaviour_name: str) -> BehaviourClassifier:
+        """Load existing classifier."""
         proj_dir = proj_dir.resolve()
-        config_fp = proj_dir / "behav_models" / behav_name / "config.json"
+        config_fp = proj_dir / "behaviour_models" / behaviour_name / "config.json"
         try:
             BehaviourClassifierConfig.model_validate_json(config_fp.read_text())
         except (FileNotFoundError, OSError) as e:
             msg = (
-                f'Model in "{proj_dir}" with behaviour "{behav_name}" not found. '
+                f'Model in "{proj_dir}" with behaviour "{behaviour_name}" not found. '
                 "Check file path."
             )
             raise ValueError(msg) from e
-        return cls(proj_dir, behav_name)
+        return cls(proj_dir, behaviour_name)
 
     #################################################
     # Training Pipeline
@@ -282,7 +242,7 @@ class BehaviourClassifier:
         x_ls, y_ls, index_train_ls, index_test_ls = prepare_training_data(
             self.x_dir,
             self.y_dir,
-            self.config.behav_name,
+            self.config.behaviour_name,
             self.preproc_fp,
             self.config.test_split,
             self.config.oversample_ratio,
@@ -339,7 +299,7 @@ class BehaviourClassifier:
             y_true,
             y_prob,
             y_pred,
-            self.config.behav_name,
+            self.config.behaviour_name,
             self.config.pcutoff,
             self.eval_dir,
             name,
@@ -377,7 +337,7 @@ class BehaviourClassifier:
 
         # Return pandas DataFrame with prob/pred columns (consumer handles Polars conversion)
         columns = pd.MultiIndex.from_tuples(
-            [(self.config.behav_name, PROB), (self.config.behav_name, PRED)],
+            [(self.config.behaviour_name, PROB), (self.config.behaviour_name, PRED)],
             names=[BEHAVIOUR, OUTCOME],
         )
         return pd.DataFrame(

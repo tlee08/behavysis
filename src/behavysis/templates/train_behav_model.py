@@ -15,14 +15,14 @@ if __name__ == "__main__":
     behaviour_ls = ["potential huddling", "huddling"]
     # Paths
     boris_dir = root_dir / "boris"
-    behav_dir = root_dir / "7_scored_behaviour"
+    behaviour_dir = root_dir / "7_scored_behaviour"
     config_dir = root_dir / "0_config"
     for i in boris_dir.iterdir():
         name = i.stem
         print(name)
         outcome = boris2behaviour(
             src_fp=boris_dir / f"{name}.tsv",
-            dst_fp=behav_dir / f"{name}.parquet",
+            dst_fp=behaviour_dir / f"{name}.parquet",
             config_fp=config_dir / f"{name}.json",
             behaviour_ls=behaviour_ls,
             overwrite=overwrite,
@@ -39,7 +39,7 @@ if __name__ == "__main__":
 
     # Loading a BehavModel
     behaviour = "fight"
-    model_fp = root_dir / "behav_models" / behaviour
+    model_fp = root_dir / "behaviour_models" / behaviour
     model = BehaviourClassifier.load(model_fp, behaviour)
     # Testing all different classifiers
     model.pipeline_training_all()

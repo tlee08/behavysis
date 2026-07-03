@@ -15,6 +15,9 @@ from behavysis.schemas import (
 )
 from behavysis.utils.io_utils import file_exists_msg
 
+# TODO: Refactor export and the sub-schema functions
+# Schema has identity crisis
+
 
 def df2df(
     src_fp: Path,
@@ -56,8 +59,8 @@ def predictedbehaviour2scoredbehaviour(
 
     Namely:
     - Adds an "actual" column to the df.
-        All predicted positive BEHAV frames are set to UNDETERMINED.
-    - Adds user_defined columns to the df and sets all values to 0 (NON_BEHAV).
+        All predicted positive TRUE_POS frames are set to UNSURE.
+    - Adds user_defined columns to the df and sets all values to 0 (TRUE_NEG).
     """
     # Load configs
     models_ls = config.require_classify_behaviour()
@@ -65,10 +68,12 @@ def predictedbehaviour2scoredbehaviour(
     bouts_struct = []
     for model_config in models_ls:
         proj_dir = model_config.proj_dir
-        behav_name = model_config.behav_name
+        behaviour_name = model_config.behaviour_name
         user_defined = model_config.user_defined
-        BehaviourClassifier.load(proj_dir, behav_name)
-        bouts_struct.append(BoutStruct(behav=behav_name, user_defined=user_defined))
+        BehaviourClassifier.load(proj_dir, behaviour_name)
+        bouts_struct.append(
+            BoutStruct(behaviour=behaviour_name, sub_behaviour=user_defined),
+        )
     # Convert predicted df to scored df format
     return predicted2scored(behaviour_predicted_df, bouts_struct)
 
@@ -93,4 +98,4 @@ def boris2behaviour(
         metadata.require_stop_frame() + 1,
     )
     write_df(df, dst_fp, BEHAVIOUR_SCORED_BASE)
-    logger.info("boris tsv to behav")
+    logger.info("boris tsv to behaviour")
