@@ -56,12 +56,20 @@ def array2listofvect(arr: np.ndarray, vect_index: int) -> list:
     return [arr[arr[:, 0] == i, vect_index] for i in np.sort(np.unique(arr[:, 0]))]
 
 
-def pass_exception(func: Callable) -> Callable:
+def pass_exception(
+    _func: Callable,
+    exception: type[BaseException] = Exception,
+) -> Callable:
     """Don't raise exception."""
 
-    @wraps(func)
-    def wrapper(*args: object, **kwargs: object) -> object:
-        with contextlib.suppress(Exception):
-            return func(*args, **kwargs)
+    def decorator(func: Callable) -> Callable:
 
-    return wrapper
+        @wraps(func)
+        def wrapper(*args: object, **kwargs: object) -> object:
+            with contextlib.suppress(exception):
+                return func(*args, **kwargs)
+
+        return wrapper
+
+    # Allow both @pass_exception and @pass_exception(exception=...)
+    return decorator(_func) if _func else decorator

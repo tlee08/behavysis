@@ -104,3 +104,12 @@ def trace(_func: Callable | None = None, *, level: LogLevel = "INFO") -> Callabl
 
     # allows both @trace and @trace(level=...)
     return decorator(_func) if _func else decorator
+
+
+def log_file_exists(fp: Path | str | None = None) -> None:
+    """Log a file-exists warning message."""
+    fp_str = f", {fp}, " if fp else " "
+    logger.warning(
+        f"Output file{fp_str}already exists - not overwriting file.\n"
+        "To overwrite, specify `overwrite=True`."
+    )

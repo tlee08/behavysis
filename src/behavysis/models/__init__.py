@@ -16,7 +16,6 @@ from .experiment_metadata import ExperimentMetadata, VideoMetadata
 
 __all__ = [
     "AnalyseConfig",
-    "AnalysisConfig",
     "BehaviourClassifierConfig",
     "Bout",
     "BoutStruct",

@@ -18,7 +18,7 @@ from loguru import logger
 from scipy.spatial import ConvexHull
 
 from behavysis.constants.bodypoints import BPMAP_SIMBA, INDIVS_SIMBA
-from behavysis.schemas import check_bpts_exist
+from behavysis.transforms.keypoint import check_bpts_exist
 
 if TYPE_CHECKING:
     from behavysis.models import ExperimentConfig, ExperimentMetadata

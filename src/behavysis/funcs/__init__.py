@@ -1,7 +1,7 @@
-"""Processing functions."""
+"""Pipeline stage functions."""
 
 from .analyse import AnalyseFunc, distance, freezing, in_roi, speed
-from .analyse_behaviour import analyse_behaviour
+from .behaviour import analyse_behaviour, classify_behaviour
 from .calculate_parameters import (
     CalculateParametersFunc,
     dur_frames_from_likelihood,
@@ -11,9 +11,7 @@ from .calculate_parameters import (
     stop_frame_from_dur,
     stop_frame_from_likelihood,
 )
-from .classify_behaviour import classify_behaviour
 from .combine_analysis import combine_analysis
-from .export import boris2behaviour, df2csv, df2df, predictedbehaviour2scoredbehaviour
 from .extract_features import extract_features
 from .format_video import format_video, get_vid_metadata
 from .preprocess import (
@@ -48,7 +46,6 @@ __all__ = [
     "interpolate_stationary",
     "ma_dlc_run_batch",
     "ma_dlc_run_single",
-    "predictedbehaviour2scoredbehaviour",
     "px_per_mm",
     "refine_ids",
     "speed",

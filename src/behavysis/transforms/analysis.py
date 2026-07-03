@@ -1,11 +1,10 @@
-"""Aggregated analysis functions operating on Polars long-form DataFrames.
+"""Helper funcs."""
 
-All functions operate on DataFrames conforming to ANALYSIS_SCHEMA:
-(frame, individual, measure, value).
-"""
+from __future__ import annotations
 
 from collections.abc import Callable
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import numpy as np
 import polars as pl
@@ -21,9 +20,13 @@ from behavysis.constants import (
     PLOT,
     SUMMARY,
 )
+from behavysis.schemas import BINNED_SCHEMA, SUMMARY_SCHEMA, write_df
 
 from .behaviour import vect2bouts
-from .schemas import BINNED_SCHEMA, SUMMARY_SCHEMA, write_df
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+    from pathlib import Path
 
 
 def agg_quantitative(df: pl.DataFrame, fps: float) -> pl.DataFrame:
@@ -149,7 +152,6 @@ def make_binned(
 
     labels = bins_arr[1:]
 
-    # Polars-native binning via searchsorted + take
     ts_np = timestamps.to_numpy()
     indices = np.searchsorted(bins_arr, ts_np, side="right") - 1
     indices = np.clip(indices, 0, len(labels) - 1)
@@ -250,7 +252,6 @@ def summary_binned_behaviour(
         cbins_ls=custom_bins_sec_ls,
     )
 
-    # Latency: time from start to first positive value per (individual, measure)
     latency_rows = _compute_latency(analysis_df, fps)
 
     if latency_rows:
@@ -314,13 +315,11 @@ def summary_binned(
     cbins_ls : list[int]
         Custom bin sizes in seconds.
     """
-    # Offset frames to start from 0
     min_frame = analysis_df.select("frame").min().item()
     analysis_df = analysis_df.with_columns(
         (pl.col("frame") - min_frame).alias("frame"),
     )
 
-    # Generate summary
     summary_fp = dst_dir / SUMMARY / f"{name}.{DF_IO_FORMAT}"
     summary_df = summary_func(analysis_df, fps)
     write_df(summary_df, summary_fp, SUMMARY_SCHEMA)
@@ -330,7 +329,6 @@ def summary_binned(
     ).to_series()
     t_max = float(timestamps.max())
 
-    # Standard bins
     for bin_sec in bins_ls:
         binned_fp = dst_dir / f"{BINNED}_{bin_sec}" / f"{name}.{DF_IO_FORMAT}"
         binned_plot_fp = dst_dir / f"{BINNED}_{bin_sec}_{PLOT}" / f"{name}.png"
@@ -339,7 +337,6 @@ def summary_binned(
         write_df(binned_df, binned_fp, BINNED_SCHEMA)
         make_binned_plot(binned_df, binned_plot_fp, agg_column)
 
-    # Custom bins
     if cbins_ls:
         binned_fp = dst_dir / f"{BINNED}_{CUSTOM}" / f"{name}.{DF_IO_FORMAT}"
         binned_plot_fp = dst_dir / f"{BINNED}_{CUSTOM}_{PLOT}" / f"{name}.png"

@@ -141,7 +141,9 @@ class Project:
         dlc_config_fp_set = {
             exp.read_config().require_run_dlc().model_fp for exp in exp_ls
         }
-        assert len(dlc_config_fp_set) == 1
+        if len(dlc_config_fp_set) != 1:
+            logger.warning("All experiments must have the same DLC config file")
+            return
         dlc_config_fp = dlc_config_fp_set.pop()
         # Splitting into nprocs batches
         exp_batches = np.array_split(np.array(exp_ls), nprocs)

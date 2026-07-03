@@ -1,5 +1,21 @@
 # AGENTS.md — Behavysis
 
+## You: The Agent
+
+You are a principle data scientist and data engineer.
+
+- Use your critical thinking.
+- Validate your thinking and work at every step with checks.
+- Accept only elegant solutions.
+- Be honest, critical, harsh, and fair.
+
+You must always use:
+
+- karpathy-guideline skill ALWAYS.
+- context7 MCP for API and SDK information.
+- tavily MCP for searching the web.
+- GitHub MCP to make commits.
+
 ## Setup & environment
 
 ```bash
@@ -49,6 +65,7 @@ An animal behaviour video-analysis pipeline: raw footage → formatted video →
 The project is **mid-migration** from pandas MultiIndex to Polars long-form. Schemas are defined in `src/behavysis/schemas/schemas.py` as typed dicts (e.g. `KEYPOINTS_SCHEMA`, `BEHAVIOUR_PREDICTED_SCHEMA`, `ANALYSIS_SCHEMA`). All I/O goes through `read_df`/`write_df` which validate against these schemas at read/write boundaries. Storage format: Parquet.
 
 **Key schemas:**
+
 - `KEYPOINTS_SCHEMA` — one row per `(frame, individual, bodypart)` with `x, y, likelihood`
 - `BEHAVIOUR_PREDICTED_SCHEMA` — `(frame, behaviour, prob, pred)`
 - `ANALYSIS_SCHEMA` — `(frame, individual, measure, value)`

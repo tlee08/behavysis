@@ -7,7 +7,8 @@ from loguru import logger
 from behavysis.behaviour_classifier import BehaviourClassifier
 from behavysis.constants import BEHAVIOUR, FRAME, PRED, PROB
 from behavysis.models import ExperimentConfig, ExperimentMetadata
-from behavysis.schemas import BEHAVIOUR_PREDICTED_SCHEMA, merge_bouts
+from behavysis.schemas import BEHAVIOUR_PREDICTED_SCHEMA
+from behavysis.transforms.behaviour import merge_bouts
 
 
 def classify_behaviour(
@@ -27,10 +28,8 @@ def classify_behaviour(
         min_window_secs = model_config.min_empty_window_secs
         min_window_frames = int(np.round(min_window_secs * metadata.require_fps()))
 
-        # Run classifier pipeline (returns pandas DataFrame)
         behaviour_df_i = behaviour_model.pipeline_inference(features_df.to_pandas())
 
-        # Convert to Polars long form
         df_pl = pl.DataFrame(
             {
                 FRAME: pl.Series(behaviour_df_i.index.to_numpy(), dtype=pl.Int64),
@@ -43,7 +42,6 @@ def classify_behaviour(
             },
         )
 
-        # Merge close bouts
         df_pl = df_pl.with_columns(
             merge_bouts(df_pl.select(PRED).to_series(), min_window_frames).alias(PRED),
         )
@@ -54,5 +52,4 @@ def classify_behaviour(
     if len(behaviour_df_ls) == 0:
         return pl.DataFrame(schema=BEHAVIOUR_PREDICTED_SCHEMA)
 
-    # Concatenate all behaviours vertically
     return pl.concat(behaviour_df_ls)

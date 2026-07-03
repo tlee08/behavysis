@@ -7,10 +7,7 @@ from pydantic import BaseModel, PositiveFloat
 
 from behavysis.constants import BPTS_SIMBA
 from behavysis.models import ExperimentConfig, ExperimentMetadata
-from behavysis.schemas import (
-    check_bpts_exist,
-    get_indivs_bpts,
-)
+from behavysis.transforms.keypoint import check_bpts_exist, get_indivs_bpts
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Config Models

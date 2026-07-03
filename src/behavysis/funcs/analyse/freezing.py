@@ -16,13 +16,12 @@ from behavysis.constants import BPTS_SIMBA, DF_IO_FORMAT, FBF
 from behavysis.schemas import (
     ANALYSIS_SCHEMA,
     KEYPOINTS_SCHEMA,
-    check_bpts_exist,
-    get_indivs_bpts,
     read_df,
-    summary_binned_behaviour,
-    vect2bouts,
     write_df,
 )
+from behavysis.transforms.analysis import summary_binned_behaviour
+from behavysis.transforms.behaviour import vect2bouts
+from behavysis.transforms.keypoint import check_bpts_exist, get_indivs_bpts
 
 if TYPE_CHECKING:
     from pathlib import Path

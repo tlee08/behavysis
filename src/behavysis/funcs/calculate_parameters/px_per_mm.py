@@ -6,7 +6,7 @@ from pydantic import BaseModel, PositiveFloat
 
 from behavysis.constants import LIKELIHOOD, SINGLE
 from behavysis.models import ExperimentConfig, ExperimentMetadata
-from behavysis.schemas import check_bpts_exist
+from behavysis.transforms.keypoint import check_bpts_exist
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Config Models

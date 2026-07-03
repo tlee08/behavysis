@@ -15,12 +15,11 @@ from behavysis.constants import BPTS_SIMBA, DF_IO_FORMAT, FBF
 from behavysis.schemas import (
     ANALYSIS_SCHEMA,
     KEYPOINTS_SCHEMA,
-    check_bpts_exist,
-    get_indivs_bpts,
     read_df,
-    summary_binned_quantitative,
     write_df,
 )
+from behavysis.transforms.analysis import summary_binned_quantitative
+from behavysis.transforms.keypoint import check_bpts_exist, get_indivs_bpts
 
 from ._helper import _bodypart_avg_xy
 

@@ -4,7 +4,6 @@ from pathlib import Path
 
 import numpy as np
 import polars as pl
-from loguru import logger
 
 from behavysis.constants import (
     ANALYSIS_COMBINED_DIR,
@@ -29,23 +28,21 @@ from behavysis.funcs import (
     analyse_behaviour,
     classify_behaviour,
     combine_analysis,
-    df2csv,
     extract_features,
     format_video,
     get_vid_metadata,
     ma_dlc_run_single,
-    predictedbehaviour2scoredbehaviour,
     update_config,
 )
-from behavysis.models import ExperimentConfig, ExperimentMetadata
+from behavysis.models import BoutStruct, ExperimentConfig, ExperimentMetadata
 from behavysis.schemas import (
     BEHAVIOUR_PREDICTED_SCHEMA,
     KEYPOINTS_SCHEMA,
     read_df,
     write_df,
 )
-from behavysis.utils.io_utils import file_exists_msg
-from behavysis.utils.logger_utils import trace
+from behavysis.transforms import predicted_to_scored
+from behavysis.utils import log_file_exists, trace
 
 
 class Experiment:
@@ -120,7 +117,7 @@ class Experiment:
         """Formats the video with ffmpeg to fit the formatted config."""
         # Overwrite check
         if not overwrite and self.get_fp(FORMATTED_VIDEO_DIR).exists():
-            logger.warning(file_exists_msg(self.get_fp(FORMATTED_VIDEO_DIR)))
+            log_file_exists(self.get_fp(FORMATTED_VIDEO_DIR))
             return
         # Process
         format_video(
@@ -139,7 +136,7 @@ class Experiment:
         # Update
         metadata.raw_video = get_vid_metadata(self.get_fp(RAW_VIDEO_DIR))
         metadata.formatted_video = get_vid_metadata(self.get_fp(FORMATTED_VIDEO_DIR))
-        # Save
+        # Write
         self.write_metadata(metadata)
 
     @trace
@@ -147,7 +144,7 @@ class Experiment:
         """Run the DLC model on the formatted video."""
         # Overwrite check
         if not overwrite and self.get_fp(KEYPOINTS_DIR).exists():
-            logger.warning(file_exists_msg(self.get_fp(KEYPOINTS_DIR)))
+            log_file_exists(self.get_fp(KEYPOINTS_DIR))
             return
         # Process
         ma_dlc_run_single(
@@ -168,6 +165,7 @@ class Experiment:
                 config=self.read_config(),
                 metadata=metadata,
             )
+        # Write
         self.write_metadata(metadata)
 
     @trace
@@ -175,7 +173,7 @@ class Experiment:
         """Preprocessing pipeline for keypoints data."""
         # Overwrite check
         if not overwrite and self.get_fp(PREPROCESSED_DIR).exists():
-            logger.warning(file_exists_msg(self.get_fp(PREPROCESSED_DIR)))
+            log_file_exists(self.get_fp(PREPROCESSED_DIR))
             return
         # Process
         keypoints_df = read_df(self.get_fp(KEYPOINTS_DIR), KEYPOINTS_SCHEMA)
@@ -185,6 +183,7 @@ class Experiment:
                 config=self.read_config(),
                 metadata=self.read_metadata(),
             )
+        # Write
         write_df(keypoints_df, self.get_fp(PREPROCESSED_DIR), KEYPOINTS_SCHEMA)
 
     @trace
@@ -192,7 +191,7 @@ class Experiment:
         """Extracts features from the preprocessed dlc file."""
         # Overwrite check
         if not overwrite and self.get_fp(FEATURES_EXTRACTED_DIR).exists():
-            logger.warning(file_exists_msg(self.get_fp(FEATURES_EXTRACTED_DIR)))
+            log_file_exists(self.get_fp(FEATURES_EXTRACTED_DIR))
             return
         # Process
         keypoints_df = read_df(self.get_fp(KEYPOINTS_DIR), KEYPOINTS_SCHEMA)
@@ -201,6 +200,7 @@ class Experiment:
             config=self.read_config(),
             metadata=self.read_metadata(),
         )
+        # Write
         features_df.write_parquet(self.get_fp(FEATURES_EXTRACTED_DIR))
 
     @trace
@@ -208,7 +208,7 @@ class Experiment:
         """Classify behaviours using trained models."""
         # Overwrite check
         if not overwrite and self.get_fp(BEHAVIOUR_PREDICTED_DIR).exists():
-            logger.warning(file_exists_msg(self.get_fp(BEHAVIOUR_PREDICTED_DIR)))
+            log_file_exists(self.get_fp(BEHAVIOUR_PREDICTED_DIR))
             return
         # Process
         features_df = pl.read_parquet(self.get_fp(FEATURES_EXTRACTED_DIR))
@@ -217,6 +217,7 @@ class Experiment:
             config=self.read_config(),
             metadata=self.read_metadata(),
         )
+        # Write
         write_df(
             behaviour_df,
             self.get_fp(BEHAVIOUR_PREDICTED_DIR),
@@ -228,17 +229,26 @@ class Experiment:
         """Export predicted behaviours to scored behaviours."""
         # Overwrite check
         if not overwrite and self.get_fp(BEHAVIOUR_SCORED_DIR).exists():
-            logger.warning(file_exists_msg(self.get_fp(BEHAVIOUR_SCORED_DIR)))
+            log_file_exists(self.get_fp(BEHAVIOUR_SCORED_DIR))
             return
         # Process
+        # Read
         behaviour_predicted_df = read_df(
             self.get_fp(BEHAVIOUR_PREDICTED_DIR),
             BEHAVIOUR_PREDICTED_SCHEMA,
         )
-        behaviour_scored_df = predictedbehaviour2scoredbehaviour(
-            behaviour_predicted_df=behaviour_predicted_df,
-            config=self.read_config(),
-        )
+        # Make list of bouts (behaviour and sub-behaviour)
+        config = self.read_config()
+        bouts_struct = [
+            BoutStruct(
+                behaviour=model_config.behaviour_name,
+                sub_behaviour=model_config.user_defined,
+            )
+            for model_config in config.require_classify_behaviour()
+        ]
+        # Convert predicted to scored
+        behaviour_scored_df = predicted_to_scored(behaviour_predicted_df, bouts_struct)
+        # Write
         behaviour_scored_df.write_parquet(self.get_fp(BEHAVIOUR_SCORED_DIR))
 
     @trace
@@ -275,8 +285,11 @@ class Experiment:
     @trace
     def export2csv(self, src_dir: str, dst_dir: str | Path, *, overwrite: bool) -> None:
         """Export dataframe to CSV."""
-        df2csv(
-            src_fp=self.get_fp(src_dir),
-            dst_fp=Path(dst_dir) / f"{self.name}.csv",
-            overwrite=overwrite,
-        )
+        # Overwrite check
+        if not overwrite and self.get_fp(BEHAVIOUR_SCORED_DIR).exists():
+            log_file_exists(self.get_fp(BEHAVIOUR_SCORED_DIR))
+            return
+        # Read
+        df = pl.read_parquet(self.get_fp(src_dir))
+        # Write
+        df.write_csv(Path(dst_dir) / f"{self.name}.csv")

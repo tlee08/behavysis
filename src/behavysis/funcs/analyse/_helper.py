@@ -3,13 +3,17 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from pathlib import Path
 from typing import TYPE_CHECKING, Protocol
 
 import polars as pl
 from pydantic import BaseModel
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
     from pathlib import Path
+
+    import numpy as np
 
     from behavysis.models import ExperimentConfig, ExperimentMetadata
 
@@ -21,23 +25,24 @@ class AnalyseFunc(Protocol):
 
     def __call__(
         self,
-        keypoints_fp: Path,
-        formatted_vid_fp: Path,
+        keypoints_df: pl.DataFrame,
+        vid_frame: np.ndarray[tuple[int, int, int], np.dtype[np.float64]],
         config: ExperimentConfig,
         metadata: ExperimentMetadata,
-        dst_dir: Path,
-    ) -> None:
+    ) -> list[AnalysisResult]:
         """Protocol for analyse functions."""
 
 
 class AnalysisResult(BaseModel):
     """Analysis result of path, object, and saver func."""
 
-    # TODO: swap out alaysis funcs return to this so it's testable.
-
     relative_path: Path
-    obj: object
-    save_func: Callable
+    result: object
+    save_func: Callable[[Path, object], None]
+
+    def save(self, dst_dir: Path) -> None:
+        """Save."""
+        self.save_func(dst_dir / self.relative_path, self.result)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

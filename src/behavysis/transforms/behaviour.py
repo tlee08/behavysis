@@ -9,6 +9,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import polars as pl
+from loguru import logger
 
 from behavysis.constants import (
     ACTUAL,
@@ -22,9 +23,14 @@ from behavysis.constants import (
     TRUE_POS,
     UNSURE,
 )
-from behavysis.models import Bout, Bouts, BoutStruct
-
-from .schemas import BEHAVIOUR_SCORED_BASE
+from behavysis.models import (
+    Bout,
+    Bouts,
+    BoutStruct,
+    ExperimentMetadata,
+)
+from behavysis.schemas import BEHAVIOUR_SCORED_BASE, write_df
+from behavysis.utils import log_file_exists
 
 COUNT = "count"
 
@@ -46,11 +52,9 @@ def vect2bouts(vect: pl.Series, offset: int = 0) -> pl.DataFrame:
     """
     if vect.is_empty():
         return pl.DataFrame(schema={START: pl.Int64, STOP: pl.Int64, DUR: pl.Int64})
-    # Use numpy for edge detection (fast and simple)
     z = np.concatenate(([TRUE_NEG], vect.to_numpy(), [TRUE_NEG]))
     starts = np.flatnonzero(~z[:-1] & z[1:])
     stops = np.flatnonzero(z[:-1] & ~z[1:]) - 1
-    # Return df where each row is each bout's start-stop-duration
     return pl.DataFrame(
         {
             START: pl.Series(starts + offset, dtype=pl.Int64),
@@ -67,11 +71,8 @@ def merge_bouts(vect: pl.Series, min_window_frames: int) -> pl.Series:
     """
     if vect.is_empty():
         return vect
-    # Find gaps (frames that are not TRUE_POS)
     nonbouts_df = vect2bouts(vect != TRUE_POS)
-    # To numpy for run-length encoding operations
     arr = vect.to_numpy().copy()
-    # For each non-bout, if less than min duration, then fill
     for nonbout_row in nonbouts_df.iter_rows(named=True):
         if nonbout_row[DUR] < min_window_frames:
             arr[nonbout_row[START] : nonbout_row[STOP] + 1] = TRUE_POS
@@ -79,7 +80,7 @@ def merge_bouts(vect: pl.Series, min_window_frames: int) -> pl.Series:
     return pl.Series(arr)
 
 
-def predicted2scored(
+def predicted_to_scored(
     df: pl.DataFrame,
     bouts_struct: list[BoutStruct],
 ) -> pl.DataFrame:
@@ -97,22 +98,17 @@ def predicted2scored(
     pl.DataFrame
         Scored behaviour DataFrame with pred, actual, and user_defined columns.
     """
-    # Start with frame, behaviour, pred
     result_df = df.select([FRAME, BEHAVIOUR, PRED])
-    # actual = pred but positive predictions become UNSURE (unscored)
     result_df = result_df.with_columns(
         pl.when(pl.col(PRED) == TRUE_POS)
         .then(pl.lit(UNSURE))
         .otherwise(pl.col(PRED))
         .alias(ACTUAL),
     )
-    # Drop the pred column
     result_df = result_df.drop(PRED)
-    # Add user_defined columns initialised to TRUE_NEG
     for bout_struct in bouts_struct:
         for user_col in bout_struct.sub_behaviour:
             result_df = result_df.with_columns(pl.lit(TRUE_NEG).alias(user_col))
-    # Return result df
     return result_df
 
 
@@ -129,7 +125,6 @@ def get_bouts_struct(df: pl.DataFrame) -> list[BoutStruct]:
     list[BoutStruct]
         Bout structure definitions.
     """
-    # Get user_defined columns (everything except frame, behaviour, actual)
     base_cols = {FRAME, BEHAVIOUR, ACTUAL}
     user_cols = [c for c in df.columns if c not in base_cols]
 
@@ -137,8 +132,6 @@ def get_bouts_struct(df: pl.DataFrame) -> list[BoutStruct]:
 
     bouts_struct = []
     for behaviour in behaviours_ls:
-        # Determine which user_defined columns apply to this behaviour
-        # (those that have non-null values for this behaviour)
         sub_behaviour_ls = []
         for col in user_cols:
             null_count = (
@@ -180,14 +173,11 @@ def frames2bouts(df: pl.DataFrame) -> Bouts:
 
     for behaviour in behaviours_ls:
         behaviour_df = df.filter(pl.col(BEHAVIOUR) == behaviour).sort(FRAME)
-
-        # Get boolean pred series for this behaviour (sorted by frame)
         pred_bool = behaviour_df.select(PRED).to_series() == TRUE_POS
 
         if pred_bool.sum() == 0:
             continue
 
-        # Compute frame offset for this behaviour's frame range
         frame_offset = behaviour_df.select(FRAME).min().item()
         bouts_df = vect2bouts(pred_bool, offset=frame_offset)
 
@@ -196,7 +186,6 @@ def frames2bouts(df: pl.DataFrame) -> Bouts:
             bout_stop = row[STOP]
             dur_val = row[DUR]
 
-            # Get actual value (mode of actual column within bout)
             bout_slice = behaviour_df.filter(
                 pl.col(FRAME).is_between(bout_start, bout_stop),
             )
@@ -205,7 +194,6 @@ def frames2bouts(df: pl.DataFrame) -> Bouts:
                 actual_vals.value_counts().sort(COUNT, descending=True).row(0)[0],
             )
 
-            # Get user_defined values
             user_defined = {}
             for col in [
                 c for c in df.columns if c not in {FRAME, BEHAVIOUR, PRED, ACTUAL}
@@ -252,7 +240,6 @@ def bouts2frames(bouts: Bouts) -> pl.DataFrame:
     behaviours = [b.behaviour for b in bouts.bout_struct]
     user_cols = list({col for b in bouts.bout_struct for col in b.sub_behaviour})
 
-    # Build frame x behaviour grid
     frames = np.arange(bouts.start, bouts.stop, dtype=np.int64)
     rows = []
 
@@ -273,7 +260,6 @@ def bouts2frames(bouts: Bouts) -> pl.DataFrame:
         schema={**BEHAVIOUR_SCORED_BASE, **dict.fromkeys(user_cols, pl.Int64)},
     )
 
-    # Fill in bout values
     for bout in bouts.bouts:
         mask = (
             (pl.col(FRAME) >= bout.start)
@@ -332,7 +318,6 @@ def import_boris_tsv(
 
     frames = np.arange(start_frame, stop_frame, dtype=np.int64)
 
-    # Build frame x behaviour grid
     rows = [
         {
             FRAME: int(f),
@@ -345,7 +330,6 @@ def import_boris_tsv(
     ]
     df = pl.DataFrame(rows, schema=BEHAVIOUR_SCORED_BASE)
 
-    # Apply BORIS events
     for _, row_boris in df_boris.iterrows():
         behaviour = row_boris[BEHAVIOUR]
         frame = row_boris["Image index"]
@@ -362,3 +346,26 @@ def import_boris_tsv(
         )
 
     return df
+
+
+def boris_to_behaviour(
+    src_fp: Path,
+    dst_fp: Path,
+    metadata: ExperimentMetadata,
+    behaviour_ls: list[str],
+    *,
+    overwrite: bool,
+) -> None:
+    """Boris to Behaviour."""
+    if not overwrite and dst_fp.exists():
+        log_file_exists(dst_fp)
+        return
+
+    df = import_boris_tsv(
+        src_fp,
+        behaviour_ls,
+        metadata.require_start_frame(),
+        metadata.require_stop_frame() + 1,
+    )
+    write_df(df, dst_fp, BEHAVIOUR_SCORED_BASE)
+    logger.info("boris tsv to behaviour")
