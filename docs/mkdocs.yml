@@ -37,7 +37,10 @@ markdown_extensions:
   - pymdownx.keys
   - pymdownx.mark
   - pymdownx.smartsymbols
-  - pymdownx.snippets
+  - pymdownx.snippets:
+      base_path:
+        - docs/docs
+        - ../src/behavysis/presets
   - pymdownx.superfences
   - pymdownx.tabbed:
       alternate_style: true
@@ -77,6 +80,7 @@ nav:
       - how-to/troubleshoot.md
       - how-to/train-classifier.md
   - Reference:
+      - reference/presets.md
       - reference/behavysis.md
       - reference/project.md
       - reference/experiment.md

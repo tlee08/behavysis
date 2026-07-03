@@ -1,23 +1,17 @@
 # Config System
 
-Diátaxis: **Explanation** — understanding the config model and preset system.
-
 ## Config model
 
 Config files are YAML validated against `ExperimentConfig` (Pydantic v2). Every
-top-level key maps to a pipeline stage:
+top-level key maps to a pipeline stage. All seven keys are required — set unused
+stages to `null`.
 
 ```yaml
-format_video: {...}           # video resolution, fps, trim
-run_dlc: {...}                # DLC model path
-calculate_parameters: {...}   # auto-calculated experiment params
-preprocess: {...}             # keypoint cleaning functions
-extract_features: {...}       # SimBA feature extraction settings
-classify_behaviour: [...]     # behaviour model list
-analyse: {...}                # quantitative analysis functions
+--8<-- "base/default_config.yaml"
 ```
 
-All seven keys are required by the validator. Set unused stages to `null`.
+The canonical config reference is the [`base` preset](../reference/presets.md),
+with every field documented inline.
 
 ## Sub-function config
 
@@ -36,9 +30,7 @@ behavysis-make-project --preset open_field_single
 ```
 
 Each preset is a validated `default_config.yaml` + matching `run_pipeline.py`
-notebook. The `base` preset documents every field.
-
-Presets live in `src/behavysis/presets/` and ship with the package. To see them:
+notebook, shipped in `src/behavysis/presets/`.
 
 ```python
 from behavysis.presets import list_presets, describe_presets

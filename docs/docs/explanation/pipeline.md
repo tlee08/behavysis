@@ -1,7 +1,5 @@
 # Pipeline Architecture
 
-Diátaxis: **Explanation** — understanding-oriented background.
-
 ## The 10 stages
 
 Behavysis processes experiments through numbered stages. Each stage reads the

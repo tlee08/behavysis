@@ -15,8 +15,6 @@ with app.setup:
     import deeplabcut
     import marimo as mo
     import numpy as np
-    import pandas as pd
-    import yaml
 
 
 @app.cell(hide_code=True)
@@ -56,26 +54,6 @@ def _():
     """)
 
 
-@app.cell
-def _():
-    _d = Path("/path/to/videos")
-    rows = []
-    for _f in _d.iterdir():
-        if _f.suffix != ".mp4":
-            continue
-        _cap = cv2.VideoCapture(str(_f))
-        rows.append(
-            [
-                _f.name,
-                int(_cap.get(cv2.CAP_PROP_FRAME_WIDTH)),
-                int(_cap.get(cv2.CAP_PROP_FRAME_HEIGHT)),
-            ],
-        )
-        _cap.release()
-    _df = pd.DataFrame(rows, columns=["vid_name", "width", "height"])
-    _df
-
-
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
@@ -104,7 +82,7 @@ def _(display):
     proj_dir = Path(root_dir) / proj_name
     config_fp = Path(proj_dir) / "config.yaml"
 
-    display(config_fp.is_file())
+    config_fp.is_file()
     return (
         config_fp,
         experimenter,
@@ -161,7 +139,7 @@ def _(
             copy_videos=True,
             multianimal=True,
         )
-        os.rename(src=temp_config_fp.parent, dst=proj_dir)
+        os.rename(src=Path(temp_config_fp).parent, dst=proj_dir)
         deeplabcut.auxiliaryfunctions.edit_config(
             config_fp,
             {"identity": True, "project_path": proj_dir, "batch_size": 8},
@@ -312,15 +290,13 @@ def _():
 
 
 @app.cell
-def _(config_fp, proj_dir):
+def _(proj_dir):
     # EXTRACTING FRAMES
     videos_dir = proj_dir / "videos"
     # Getting folder names for videos and labeled data
     labeled_dir = proj_dir / "labeled-data"
-    with open(config_fp) as _f:
-        # Get `n` from config file
-        config = yaml.safe_load(_f)
-    n = config["numframes2pick"]
+
+    n = 5
     for i in videos_dir.iterdir():
         # For each video, extract `n` frames
         vid_name = i.stem

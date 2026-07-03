@@ -9,7 +9,7 @@ def main() -> None:
     """Make DLC builder."""
     if not confirm("Create DLC builder script in current directory?"):
         return
-    if Path("dlc_builder.ipynb").exists() and not confirm("Overwrite existing file?"):
+    if Path("dlc_builder.py").exists() and not confirm("Overwrite existing file?"):
         return
     save_template("dlc_builder.ipynb", Path("dlc_builder.ipynb"))
 
