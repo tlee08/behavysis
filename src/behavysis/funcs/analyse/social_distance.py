@@ -1,37 +1,25 @@
-"""Analysis functions operating on Polars long-form keypoints DataFrames.
-
-Functions have the following format:
-    func(keypoints_fp, formatted_vid_fp, dst_dir, config_fp) -> None
-"""
+"""Analysis functions operating on Polars long-form keypoints DataFrames."""
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import polars as pl
 from pydantic import BaseModel, PositiveFloat
 
 from behavysis.constants import BPTS_SIMBA, DF_IO_FORMAT, FBF
-from behavysis.schemas import (
-    ANALYSIS_SCHEMA,
-    KEYPOINTS_SCHEMA,
-    read_df,
-    write_df,
-)
+from behavysis.models import AnalysisResult
+from behavysis.schemas import ANALYSIS_SCHEMA, write_df
 from behavysis.transforms.analysis import summary_binned_quantitative
 from behavysis.transforms.keypoint import check_bpts_exist, get_indivs_bpts
 
 from ._helper import _bodypart_avg_xy
 
 if TYPE_CHECKING:
-    from pathlib import Path
+    import numpy as np
 
     from behavysis.models import ExperimentConfig, ExperimentMetadata
-
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# Config Models
-# ═══════════════════════════════════════════════════════════════════════════════
 
 
 class SocialDistanceConfig(BaseModel):
@@ -41,30 +29,20 @@ class SocialDistanceConfig(BaseModel):
     bodyparts: list[str] = BPTS_SIMBA
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# Functions
-# ═══════════════════════════════════════════════════════════════════════════════
-
-
 def social_distance(
-    keypoints_fp: Path,
-    formatted_vid_fp: Path,  # noqa: ARG001
+    keypoints_df: pl.DataFrame,
+    vid_frame: np.ndarray,  # noqa: ARG001
     config: ExperimentConfig,
     metadata: ExperimentMetadata,
-    dst_dir: Path,
-) -> None:
+) -> list[AnalysisResult]:
     """Determines the social distance between two individuals."""
-    name = keypoints_fp.stem
+    name = metadata.require_name()
 
-    cfg = config.require_analyse().require(
-        "social_distance",
-        SocialDistanceConfig,
-    )
+    cfg = config.require_analyse().require("social_distance", SocialDistanceConfig)
     bpts = cfg.bodyparts
     smoothing_sec = cfg.smoothing_sec
     smoothing_frames = int(smoothing_sec * metadata.require_fps())
 
-    keypoints_df = read_df(keypoints_fp, KEYPOINTS_SCHEMA)
     check_bpts_exist(keypoints_df, bpts)
     indivs, _ = get_indivs_bpts(keypoints_df)
     assert len(indivs) >= 2, "Social distance requires at least 2 individuals."
@@ -111,14 +89,17 @@ def social_distance(
         )
     )
 
-    fbf_fp = dst_dir / FBF / f"{name}.{DF_IO_FORMAT}"
-    write_df(analysis_df, fbf_fp, ANALYSIS_SCHEMA)
-
-    summary_binned_quantitative(
-        analysis_df,
-        dst_dir,
-        name,
-        metadata.require_fps(),
-        config.require_analyse().bins_sec_ls,
-        config.require_analyse().custom_bins_sec_ls,
-    )
+    return [
+        AnalysisResult(
+            relative_path=Path(FBF) / f"{name}.{DF_IO_FORMAT}",
+            result=analysis_df,
+            save_func=lambda fp, obj: write_df(obj, fp, ANALYSIS_SCHEMA),
+        ),
+        *summary_binned_quantitative(
+            analysis_df,
+            name,
+            metadata.require_fps(),
+            config.require_analyse().bins_sec_ls,
+            config.require_analyse().custom_bins_sec_ls,
+        ),
+    ]

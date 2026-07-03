@@ -1,11 +1,8 @@
-"""Analysis functions operating on Polars long-form keypoints DataFrames.
-
-Functions have the following format:
-    func(keypoints_fp, formatted_vid_fp, dst_dir, config_fp) -> None
-"""
+"""Analysis functions operating on Polars long-form keypoints DataFrames."""
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -13,25 +10,14 @@ import polars as pl
 from pydantic import BaseModel, PositiveFloat
 
 from behavysis.constants import BPTS_SIMBA, DF_IO_FORMAT, FBF
-from behavysis.schemas import (
-    ANALYSIS_SCHEMA,
-    KEYPOINTS_SCHEMA,
-    read_df,
-    write_df,
-)
+from behavysis.models import AnalysisResult
+from behavysis.schemas import ANALYSIS_SCHEMA, write_df
 from behavysis.transforms.analysis import summary_binned_behaviour
 from behavysis.transforms.behaviour import vect2bouts
 from behavysis.transforms.keypoint import check_bpts_exist, get_indivs_bpts
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
     from behavysis.models import ExperimentConfig, ExperimentMetadata
-
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# Config Models
-# ═══════════════════════════════════════════════════════════════════════════════
 
 
 class FreezingConfig(BaseModel):
@@ -43,20 +29,14 @@ class FreezingConfig(BaseModel):
     bodyparts: list[str] = BPTS_SIMBA
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# Functions
-# ═══════════════════════════════════════════════════════════════════════════════
-
-
 def freezing(
-    keypoints_fp: Path,
-    formatted_vid_fp: Path,  # noqa: ARG001
+    keypoints_df: pl.DataFrame,
+    vid_frame: np.ndarray,  # noqa: ARG001
     config: ExperimentConfig,
     metadata: ExperimentMetadata,
-    dst_dir: Path,
-) -> None:
+) -> list[AnalysisResult]:
     """Determines frames where the subject is frozen (movement below threshold)."""
-    name = keypoints_fp.stem
+    name = metadata.require_name()
 
     cfg = config.require_analyse().require("freezing", FreezingConfig)
     bpts = cfg.bodyparts
@@ -68,7 +48,6 @@ def freezing(
     smoothing_frames = int(smoothing_sec * metadata.require_fps())
     window_frames = int(np.round(metadata.require_fps() * window_sec))
 
-    keypoints_df = read_df(keypoints_fp, KEYPOINTS_SCHEMA)
     check_bpts_exist(keypoints_df, bpts)
     indivs, _ = get_indivs_bpts(keypoints_df)
 
@@ -78,7 +57,6 @@ def freezing(
         indiv_df = keypoints_df.filter(pl.col("individual") == indiv)
         frames = indiv_df.select("frame").unique().sort("frame").to_series()
 
-        # For each bodypart, compute per-frame delta
         deltas_list = []
         for bpt in bpts:
             bpt_df = indiv_df.filter(pl.col("bodypart") == bpt).sort("frame")
@@ -92,13 +70,11 @@ def freezing(
             )
             deltas_list.append(smoothed.to_list())
 
-        # Freezing if ALL bodyparts are below threshold
         n = len(frames)
         is_freezing = np.ones(n, dtype=bool)
         for deltas in deltas_list:
             is_freezing &= np.array(deltas[:n]) < thresh_px
 
-        # Filter out short freezing bouts
         freezing_np = is_freezing.astype(np.int32)
         bouts = vect2bouts(pl.Series(freezing_np) == 1)
         for row in bouts.iter_rows(named=True):
@@ -119,14 +95,17 @@ def freezing(
 
     analysis_df = pl.concat(all_dfs)
 
-    fbf_fp = dst_dir / FBF / f"{name}.{DF_IO_FORMAT}"
-    write_df(analysis_df, fbf_fp, ANALYSIS_SCHEMA)
-
-    summary_binned_behaviour(
-        analysis_df,
-        dst_dir,
-        name,
-        metadata.require_fps(),
-        config.require_analyse().bins_sec_ls,
-        config.require_analyse().custom_bins_sec_ls,
-    )
+    return [
+        AnalysisResult(
+            relative_path=Path(FBF) / f"{name}.{DF_IO_FORMAT}",
+            result=analysis_df,
+            save_func=lambda fp, obj: write_df(obj, fp, ANALYSIS_SCHEMA),
+        ),
+        *summary_binned_behaviour(
+            analysis_df,
+            name,
+            metadata.require_fps(),
+            config.require_analyse().bins_sec_ls,
+            config.require_analyse().custom_bins_sec_ls,
+        ),
+    ]

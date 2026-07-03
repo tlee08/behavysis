@@ -2,6 +2,7 @@
 
 from pathlib import Path
 
+import cv2
 import numpy as np
 import polars as pl
 
@@ -37,12 +38,27 @@ from behavysis.funcs import (
 from behavysis.models import BoutStruct, ExperimentConfig, ExperimentMetadata
 from behavysis.schemas import (
     BEHAVIOUR_PREDICTED_SCHEMA,
+    BEHAVIOUR_SCORED_BASE,
     KEYPOINTS_SCHEMA,
     read_df,
     write_df,
 )
 from behavysis.transforms import predicted_to_scored
 from behavysis.utils import log_file_exists, trace
+
+
+def _get_frame(vid_fp: Path, metadata: ExperimentMetadata) -> np.ndarray:
+    """Extract frame 150 (0-indexed 149) for background plots, or black frame."""
+    cap = cv2.VideoCapture(str(vid_fp))
+    cap.set(cv2.CAP_PROP_POS_FRAMES, 149)
+    ret, frame = cap.read()
+    cap.release()
+    if not ret:
+        return np.zeros(
+            (metadata.require_height_px(), metadata.require_width_px(), 3),
+            dtype=np.uint8,
+        )
+    return frame
 
 
 class Experiment:
@@ -254,24 +270,29 @@ class Experiment:
     @trace
     def analyse(self, funcs: tuple[AnalyseFunc, ...]) -> None:
         """Analyse preprocessed keypoints data."""
+        keypoints_df = read_df(self.get_fp(KEYPOINTS_DIR), KEYPOINTS_SCHEMA)
+        vid_frame = _get_frame(self.get_fp(FORMATTED_VIDEO_DIR), self.read_metadata())
+        config = self.read_config()
+        metadata = self.read_metadata()
         for func in funcs:
-            func(
-                keypoints_fp=self.get_fp(KEYPOINTS_DIR),
-                formatted_vid_fp=self.get_fp(FORMATTED_VIDEO_DIR),
-                config=self.read_config(),
-                metadata=self.read_metadata(),
-                dst_dir=self.root_dir / ANALYSIS_DIR / func.__name__,
-            )
+            dst_dir = self.root_dir / ANALYSIS_DIR / func.__name__
+            for result in func(keypoints_df, vid_frame, config, metadata):
+                result.save(dst_dir)
 
     @trace
     def analyse_behaviour(self) -> None:
         """Analyse scored behaviours."""
-        analyse_behaviour(
-            behaviour_fp=self.get_fp(BEHAVIOUR_SCORED_DIR),
-            config=self.read_config(),
-            metadata=self.read_metadata(),
-            dst_dir=self.root_dir / ANALYSIS_DIR / "analyse_behaviour",
+        behaviour_df = read_df(
+            self.get_fp(BEHAVIOUR_SCORED_DIR),
+            BEHAVIOUR_SCORED_BASE,
         )
+        dst_dir = self.root_dir / ANALYSIS_DIR / "analyse_behaviour"
+        for result in analyse_behaviour(
+            behaviour_df,
+            self.read_config(),
+            self.read_metadata(),
+        ):
+            result.save(dst_dir)
 
     @trace
     def combine_analysis(self) -> None:
@@ -286,8 +307,9 @@ class Experiment:
     def export2csv(self, src_dir: str, dst_dir: str | Path, *, overwrite: bool) -> None:
         """Export dataframe to CSV."""
         # Overwrite check
-        if not overwrite and self.get_fp(BEHAVIOUR_SCORED_DIR).exists():
-            log_file_exists(self.get_fp(BEHAVIOUR_SCORED_DIR))
+        dst_dir = Path(dst_dir)
+        if not overwrite and dst_dir.exists():
+            log_file_exists(dst_dir)
             return
         # Read
         df = pl.read_parquet(self.get_fp(src_dir))

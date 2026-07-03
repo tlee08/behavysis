@@ -1,41 +1,24 @@
-"""Analysis functions operating on Polars long-form keypoints DataFrames.
-
-Functions have the following format:
-    func(keypoints_fp, formatted_vid_fp, dst_dir, config_fp) -> None
-"""
+"""Analysis functions operating on Polars long-form keypoints DataFrames."""
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import cv2
 import numpy as np
 import polars as pl
-import seaborn as sns
-from matplotlib import pyplot as plt
 from pydantic import BaseModel, PositiveFloat
 
 from behavysis.constants import BPTS_CORNERS, BPTS_SIMBA, DF_IO_FORMAT, FBF
 from behavysis.funcs.analyse._helper import _bodypart_avg_xy
-from behavysis.schemas import (
-    ANALYSIS_SCHEMA,
-    KEYPOINTS_SCHEMA,
-    read_df,
-    write_df,
-)
+from behavysis.models import AnalysisResult
+from behavysis.schemas import ANALYSIS_SCHEMA, write_df
 from behavysis.transforms.analysis import summary_binned_behaviour
 from behavysis.transforms.keypoint import check_bpts_exist, get_indivs_bpts
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
-    from matplotlib.axes import Axes
-
     from behavysis.models import ExperimentConfig, ExperimentMetadata
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# Config Models
-# ═══════════════════════════════════════════════════════════════════════════════
 
 
 class InRoiConfig(BaseModel):
@@ -48,30 +31,34 @@ class InRoiConfig(BaseModel):
     bodyparts: list[str] = BPTS_SIMBA
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# Analysis functions
-# ═══════════════════════════════════════════════════════════════════════════════
+SPACING = 30
+FONT = cv2.FONT_HERSHEY_SIMPLEX
+FONT_SCALE = 0.6
+FONT_THICKNESS = 1
+FONT_COLOR = (0, 0, 0)
+GREEN = (0, 255, 0)
+ORANGE = (0, 165, 255)
+RED = (0, 0, 255)
+POINT_RADIUS = 2
 
 
 def in_roi(
-    keypoints_fp: Path,
-    formatted_vid_fp: Path,
+    keypoints_df: pl.DataFrame,
+    vid_frame: np.ndarray,
     config: ExperimentConfig,
     metadata: ExperimentMetadata,
-    dst_dir: Path,
-) -> None:
+) -> list[AnalysisResult]:
     """Determines frames where subject is inside ROI from average bpts."""
-    name = keypoints_fp.stem
+    name = metadata.require_name()
 
     cfg_ls = config.require_analyse().require_list("in_roi", InRoiConfig)
-
-    keypoints_df = read_df(keypoints_fp, KEYPOINTS_SCHEMA)
 
     indivs, _ = get_indivs_bpts(keypoints_df)
 
     all_analysis_rows = []
     all_corners_rows = []
     roi_names = []
+    avg_positions_by_indiv: dict[str, pl.DataFrame] = {}
 
     for cfg in cfg_ls:
         roi_name = cfg.roi_name
@@ -85,7 +72,6 @@ def in_roi(
         check_bpts_exist(keypoints_df, bpts)
         check_bpts_exist(keypoints_df, roi_corners)
 
-        # Average corner coordinates (assumed stationary)
         corners_rows = []
         for pt in roi_corners:
             avg = keypoints_df.filter(pl.col("bodypart") == pt).select(
@@ -95,13 +81,9 @@ def in_roi(
             corners_rows.append(avg)
 
         corners_i = pl.concat(corners_rows)
-        corners_i = (
-            corners_i.drop("likelihood")
-            if "likelihood" in corners_i.columns
-            else corners_i
-        )
+        if "likelihood" in corners_i.columns:
+            corners_i = corners_i.drop("likelihood")
 
-        # Adjust corners by padding
         roi_center = corners_i.select(pl.col("x").mean(), pl.col("y").mean())
         cx, cy = roi_center.row(0)
 
@@ -116,9 +98,10 @@ def in_roi(
             )
         corners_i = pl.DataFrame(adjusted)
 
-        # For each individual, determine in-roi status (vectorized)
         for indiv in indivs:
             avg = _bodypart_avg_xy(keypoints_df, indiv, bpts)
+            avg_positions_by_indiv[indiv] = avg
+
             frames = avg.select("frame").to_series().to_numpy()
             xs = avg.select("x").to_series().to_numpy()
             ys = avg.select("y").to_series().to_numpy()
@@ -137,7 +120,6 @@ def in_roi(
                     },
                 )
 
-        # Store corner positions for scatter plot
         all_corners_rows.extend(
             {
                 "roi": roi_name,
@@ -151,36 +133,139 @@ def in_roi(
     analysis_df = pl.DataFrame(all_analysis_rows, schema=ANALYSIS_SCHEMA)
     corners_df = pl.DataFrame(all_corners_rows)
 
-    fbf_fp = dst_dir / FBF / f"{name}.{DF_IO_FORMAT}"
-    write_df(analysis_df, fbf_fp, ANALYSIS_SCHEMA)
-
-    # Scatter plot
-    # Get video frame (150 frames in) or black frame if no video
-    cap = cv2.VideoCapture(str(formatted_vid_fp))
-    cap.set(cv2.CAP_PROP_POS_FRAMES, 149)
-    ret, frame_img = cap.read()
-    cap.release()
-    if not ret:
-        frame_img = np.zeros(
-            [metadata.require_height_px(), metadata.require_width_px(), 3],
-        )
-    # Make scatter plot
-    plot_fp = dst_dir / "scatter_plot" / f"{name}.png"
-    _make_location_scatterplot(analysis_df, corners_df, frame_img, plot_fp)
-
-    summary_binned_behaviour(
+    scatter_img = _make_location_scatterplot(
         analysis_df,
-        dst_dir,
-        name,
-        metadata.require_fps(),
-        config.require_analyse().bins_sec_ls,
-        config.require_analyse().custom_bins_sec_ls,
+        corners_df,
+        avg_positions_by_indiv,
+        vid_frame,
+        roi_names,
+        indivs,
     )
 
+    results = [
+        AnalysisResult(
+            relative_path=Path(FBF) / f"{name}.{DF_IO_FORMAT}",
+            result=analysis_df,
+            save_func=lambda fp, obj: write_df(obj, fp, ANALYSIS_SCHEMA),
+        ),
+        AnalysisResult(
+            relative_path=Path("scatter_plot") / f"{name}.png",
+            result=scatter_img,
+            save_func=lambda fp, obj: cv2.imwrite(str(fp), obj),
+        ),
+    ]
+    results.extend(
+        summary_binned_behaviour(
+            analysis_df,
+            name,
+            metadata.require_fps(),
+            config.require_analyse().bins_sec_ls,
+            config.require_analyse().custom_bins_sec_ls,
+        ),
+    )
+    return results
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# Helper Funcs
-# ═══════════════════════════════════════════════════════════════════════════════
+
+def _make_location_scatterplot(
+    analysis_df: pl.DataFrame,
+    corners_df: pl.DataFrame,
+    avg_positions: dict[str, pl.DataFrame],
+    bg_frame: np.ndarray,
+    roi_names: list[str],
+    indivs: list[str],
+) -> np.ndarray:
+    """Build a facet-grid scatter plot: rows=ROI, cols=individual.
+
+    Each cell shows the background frame with:
+    - ROI polygon (red outline)
+    - Individual's bodypart positions colored green (in ROI) or orange (out)
+    - Title: "ROI_name - individual"
+    """
+    n_rois = len(roi_names)
+    n_indivs = len(indivs)
+    fh, fw = bg_frame.shape[:2]
+
+    canvas_h = n_rois * (fh + SPACING) + SPACING
+    canvas_w = n_indivs * (fw + SPACING) + SPACING
+    canvas = np.full((canvas_h, canvas_w, 3), 255, dtype=np.uint8)
+
+    for ri, roi_name in enumerate(roi_names):
+        for ci, indiv in enumerate(indivs):
+            y0 = SPACING + ri * (fh + SPACING)
+            x0 = SPACING + ci * (fw + SPACING)
+
+            cell = bg_frame.copy()
+            labels = _draw_scatter_points(
+                cell, analysis_df, avg_positions, indiv, roi_name
+            )
+            labels += _draw_roi_polygon(cell, corners_df, roi_name)
+
+            canvas[y0 : y0 + fh, x0 : x0 + fw] = cell
+
+            title = f"{roi_name} - {indiv}"
+            text_x = x0 + 5
+            text_y = y0 - 8 if ri == 0 else y0 - 5
+            cv2.putText(
+                canvas, title, (text_x, text_y),
+                FONT, FONT_SCALE, FONT_COLOR, FONT_THICKNESS,
+            )
+
+    return canvas
+
+
+def _draw_scatter_points(
+    img: np.ndarray,
+    analysis_df: pl.DataFrame,
+    avg_positions: dict[str, pl.DataFrame],
+    indiv: str,
+    roi_name: str,
+) -> list[str]:
+    """Draw scatter points for one individual colored by in/out status."""
+    if indiv not in avg_positions:
+        return []
+    pos = avg_positions[indiv]
+
+    in_roi_mask = (
+        analysis_df.filter(
+            pl.col("individual") == indiv,
+            pl.col("measure") == roi_name,
+        )
+        .sort("frame")
+        .select("value")
+        .to_series()
+        .to_numpy()
+    )
+
+    frames_pos = pos.select("frame").to_series().to_numpy()
+    xs = pos.select("x").to_series().to_numpy()
+    ys = pos.select("y").to_series().to_numpy()
+
+    label_set = set()
+    for i in range(len(xs)):
+        f = frames_pos[i]
+        if f >= len(in_roi_mask):
+            break
+        color = GREEN if in_roi_mask[f] == 1 else ORANGE
+        label_set.add("In ROI" if in_roi_mask[f] == 1 else "Out of ROI")
+        cv2.circle(img, (int(xs[i]), int(ys[i])), POINT_RADIUS, color, thickness=-1)
+    return list(label_set)
+
+
+def _draw_roi_polygon(
+    img: np.ndarray,
+    corners_df: pl.DataFrame,
+    roi_name: str,
+) -> list[str]:
+    """Draw ROI polygon outline."""
+    roi_corners = corners_df.filter(pl.col("roi") == roi_name)
+    if roi_corners.height == 0:
+        return []
+    pts = np.array(
+        [[int(row["x"]), int(row["y"])] for row in roi_corners.iter_rows(named=True)],
+        dtype=np.int32,
+    )
+    cv2.polylines(img, [pts], isClosed=True, color=RED, thickness=2)
+    return [roi_name]
 
 
 def _pt_in_roi(pt_x: float, pt_y: float, corners_df: pl.DataFrame) -> bool:
@@ -219,156 +304,3 @@ def _pts_in_roi(
             x_int = (c2_x - c1_x) * (py_arr[y_between] - c1_y) / (c2_y - c1_y) + c1_x
             crossings[y_between] ^= (px_arr[y_between] < x_int).astype(np.int32)
     return (crossings % 2) == 1
-
-
-def _compute_movement(
-    keypoints_df: pl.DataFrame,
-    bpts: list[str],
-    indivs: list[str],
-    px_per_mm: float,
-    smoothing_frames: int,
-) -> pl.DataFrame:
-    """Compute frame-by-frame movement distance for each individual."""
-    jitter_frames = 3
-    results = []
-
-    for indiv in indivs:
-        avg = _bodypart_avg_xy(keypoints_df, indiv, bpts)
-
-        dist = (
-            avg.with_columns(
-                (
-                    avg.select("x")
-                    .to_series()
-                    .rolling_mean(window_size=jitter_frames, min_samples=1, center=True)
-                    .diff()
-                    .fill_null(0)
-                    .alias("x_delta")
-                ),
-                (
-                    avg.select("y")
-                    .to_series()
-                    .rolling_mean(window_size=jitter_frames, min_samples=1, center=True)
-                    .diff()
-                    .fill_null(0)
-                    .alias("y_delta")
-                ),
-            )
-            .with_columns(
-                (
-                    (pl.col("x_delta").pow(2) + pl.col("y_delta").pow(2)).sqrt()
-                    / px_per_mm
-                ).alias("DistMM"),
-            )
-            .with_columns(
-                pl.col("DistMM")
-                .rolling_mean(window_size=smoothing_frames, min_samples=1, center=True)
-                .alias("DistMMSmoothed"),
-            )
-        )
-
-        dist_long = dist.select(
-            pl.col("frame"),
-            pl.lit(indiv).alias("individual"),
-            pl.col("DistMM"),
-            pl.col("DistMMSmoothed"),
-        ).unpivot(
-            index=["frame", "individual"],
-            variable_name="measure",
-            value_name="value",
-        )
-
-        results.append(dist_long)
-
-    if not results:
-        return pl.DataFrame(schema=ANALYSIS_SCHEMA)
-
-    return pl.concat(results)
-
-
-def _make_location_scatterplot(
-    scatter_df: pl.DataFrame,
-    corners_df: pl.DataFrame,
-    frame: np.ndarray,
-    dst_fp: Path,
-) -> None:
-    """Make location scatterplot from Polars long-form scatter data."""
-    # scatter_df is in ANALYSIS_SCHEMA with x and y as measure values
-    indivs = (
-        scatter_df.select("individual")
-        .unique()
-        .sort("individual")
-        .to_series()
-        .to_list()
-    )
-    measures = scatter_df.select("measure").unique().to_series().to_list()
-    roi_ls = [m for m in measures if m not in ["x", "y"]]
-
-    ax_size = 5
-    nrows = max(len(roi_ls), 1)
-    ncols = max(len(indivs), 1)
-    fig, axes = plt.subplots(
-        nrows=nrows,
-        ncols=ncols,
-        figsize=(ax_size * ncols, ax_size * nrows),
-    )
-    axes = np.atleast_2d(np.asarray(axes)).reshape(nrows, ncols)
-
-    for i, roi in enumerate(roi_ls):
-        for j, indiv in enumerate(indivs):
-            ax: Axes = axes[i, j]
-            ax.imshow(frame, alpha=0.5)
-
-            # Plot x-y scatter for this individual, colored by ROI
-            indiv_data = scatter_df.filter(pl.col("individual") == indiv)
-            plot_data = indiv_data.pivot(
-                index="frame",
-                on="measure",
-                values="value",
-            ).to_pandas()
-
-            if (
-                roi in plot_data.columns
-                and "x" in plot_data.columns
-                and "y" in plot_data.columns
-            ):
-                sns.scatterplot(
-                    data=plot_data,
-                    x="x",
-                    y="y",
-                    hue=roi,
-                    palette={0: "orange", 1: "green"},
-                    alpha=0.3,
-                    linewidth=0,
-                    marker=".",
-                    s=5,
-                    legend=False,
-                    ax=ax,
-                )
-
-            # ROI polygon
-            if corners_df is not None and "roi" in corners_df.columns:
-                roi_corners = corners_df.filter(pl.col("roi") == roi)
-                if roi_corners.height > 0:
-                    corners_pd = roi_corners.to_pandas()
-                    sns.lineplot(
-                        data=corners_pd,
-                        x="x",
-                        y="y",
-                        linewidth=1,
-                        marker="+",
-                        markeredgecolor=(1, 0, 0),
-                        markeredgewidth=2,
-                        markersize=5,
-                        estimator=None,
-                        sort=False,
-                        legend=False,
-                        ax=ax,
-                    )
-
-            ax.set_title(f"{roi} - {indiv}")
-            ax.set_aspect("equal")
-
-    dst_fp.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(dst_fp)
-    fig.clf()

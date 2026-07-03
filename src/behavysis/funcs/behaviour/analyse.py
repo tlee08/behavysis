@@ -5,26 +5,18 @@ from pathlib import Path
 import polars as pl
 
 from behavysis.constants import DF_IO_FORMAT, FALSE_POS, FBF, UNSURE
-from behavysis.models import ExperimentConfig, ExperimentMetadata
-from behavysis.schemas import (
-    ANALYSIS_SCHEMA,
-    BEHAVIOUR_SCORED_BASE,
-    read_df,
-    write_df,
-)
+from behavysis.models import AnalysisResult, ExperimentConfig, ExperimentMetadata
+from behavysis.schemas import ANALYSIS_SCHEMA, write_df
 from behavysis.transforms.analysis import summary_binned_behaviour
 
 
 def analyse_behaviour(
-    behaviour_fp: Path,
+    behaviour_df: pl.DataFrame,
     config: ExperimentConfig,
     metadata: ExperimentMetadata,
-    dst_dir: Path,
-) -> None:
+) -> list[AnalysisResult]:
     """Takes a behaviour df and generates a summary and binned version of the data."""
-    name = behaviour_fp.stem
-
-    behaviour_df = read_df(behaviour_fp, BEHAVIOUR_SCORED_BASE)
+    name = metadata.require_name()
 
     behaviour_df = behaviour_df.fill_null(0).with_columns(
         pl.when(pl.col("actual") == UNSURE)
@@ -54,14 +46,17 @@ def analyse_behaviour(
         pl.col("value").fill_null(0),
     )
 
-    fbf_fp = dst_dir / FBF / f"{name}.{DF_IO_FORMAT}"
-    write_df(analysis_df, fbf_fp, ANALYSIS_SCHEMA)
-
-    summary_binned_behaviour(
-        analysis_df,
-        dst_dir,
-        name,
-        metadata.require_fps(),
-        config.require_analyse().bins_sec_ls,
-        config.require_analyse().custom_bins_sec_ls(),
-    )
+    return [
+        AnalysisResult(
+            relative_path=Path(FBF) / f"{name}.{DF_IO_FORMAT}",
+            result=analysis_df,
+            save_func=lambda fp, obj: write_df(obj, fp, ANALYSIS_SCHEMA),
+        ),
+        *summary_binned_behaviour(
+            analysis_df,
+            name,
+            metadata.require_fps(),
+            config.require_analyse().bins_sec_ls,
+            config.require_analyse().custom_bins_sec_ls,
+        ),
+    ]

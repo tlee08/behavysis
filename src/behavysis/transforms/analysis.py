@@ -1,14 +1,14 @@
-"""Helper funcs."""
+"""Aggregated analysis functions operating on Polars long-form DataFrames.
 
-from __future__ import annotations
+All functions operate on DataFrames conforming to ANALYSIS_SCHEMA:
+(frame, individual, measure, value).
+"""
 
 from collections.abc import Callable
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 import numpy as np
 import polars as pl
-import seaborn as sns
 
 from behavysis.constants import (
     BIN_SEC,
@@ -17,16 +17,12 @@ from behavysis.constants import (
     DF_IO_FORMAT,
     INDIVIDUAL,
     MEASURE,
-    PLOT,
     SUMMARY,
 )
+from behavysis.models import AnalysisResult
 from behavysis.schemas import BINNED_SCHEMA, SUMMARY_SCHEMA, write_df
 
 from .behaviour import vect2bouts
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
-    from pathlib import Path
 
 
 def agg_quantitative(df: pl.DataFrame, fps: float) -> pl.DataFrame:
@@ -42,10 +38,9 @@ def agg_quantitative(df: pl.DataFrame, fps: float) -> pl.DataFrame:
     Returns:
     -------
     pl.DataFrame
-        SUMMARY_SCHEMA DataFrame with agg values:
-        mean, std, min, Q1, median, Q3, max, sum.
+        SUMMARY_SCHEMA DataFrame with agg values.
     """
-    _ = fps  # unused in quantitative agg
+    _ = fps
     return (
         df.group_by(INDIVIDUAL, MEASURE)
         .agg(
@@ -171,62 +166,19 @@ def make_binned(
     return pl.concat(results).select([BIN_SEC, INDIVIDUAL, MEASURE, "agg", "value"])
 
 
-def make_binned_plot(
-    binned_df: pl.DataFrame,
-    dst_fp: Path,
-    agg_column: str,
-) -> None:
-    """Plot binned data over time using seaborn.
-
-    Parameters
-    ----------
-    binned_df : pl.DataFrame
-        BINNED_SCHEMA DataFrame.
-    dst_fp : Path
-        Filepath to save the plot.
-    agg_column : str
-        Aggregation column to plot (e.g. "mean", "bout_dur_total").
-    """
-    plot_df = binned_df.filter(pl.col("agg") == agg_column).to_pandas()
-
-    g = sns.relplot(
-        data=plot_df,
-        x=BIN_SEC,
-        y="value",
-        hue=MEASURE,
-        col=INDIVIDUAL,
-        kind="line",
-        height=4,
-        aspect=1.5,
-        alpha=0.5,
-        marker="X",
-        markersize=10,
-        legend=True,
-    )
-    g.set_titles(col_template="{col_name}")
-    g.figure.subplots_adjust(top=0.85)
-    g.figure.suptitle("Binned data", fontsize=12)
-    dst_fp.parent.mkdir(parents=True, exist_ok=True)
-    g.savefig(dst_fp)
-    g.figure.clf()
-
-
 def summary_binned_quantitative(
     analysis_df: pl.DataFrame,
-    dst_dir: Path,
     name: str,
     fps: float,
     bins_ls: list[int],
     cbins_ls: list[int],
-) -> None:
+) -> list[AnalysisResult]:
     """Generate binned summary for quantitative data."""
-    summary_binned(
+    return summary_binned(
         analysis_df=analysis_df,
-        dst_dir=dst_dir,
         name=name,
         fps=fps,
         summary_func=agg_quantitative,
-        agg_column="mean",
         bins_ls=bins_ls,
         cbins_ls=cbins_ls,
     )
@@ -234,32 +186,34 @@ def summary_binned_quantitative(
 
 def summary_binned_behaviour(
     analysis_df: pl.DataFrame,
-    dst_dir: Path,
     name: str,
     fps: float,
     bins_sec_ls: list[int],
     custom_bins_sec_ls: list[int],
-) -> None:
+) -> list[AnalysisResult]:
     """Generate binned summary for behavioural data including latency."""
-    summary_binned(
+    results = summary_binned(
         analysis_df=analysis_df,
-        dst_dir=dst_dir,
         name=name,
         fps=fps,
         summary_func=agg_behaviour,
-        agg_column="bout_dur_total",
         bins_ls=bins_sec_ls,
         cbins_ls=custom_bins_sec_ls,
     )
 
     latency_rows = _compute_latency(analysis_df, fps)
-
     if latency_rows:
         latency_df = pl.DataFrame(latency_rows, schema=SUMMARY_SCHEMA)
         summary_df = agg_behaviour(analysis_df, fps)
         summary_df = pl.concat([summary_df, latency_df])
-        summary_fp = dst_dir / SUMMARY / f"{name}.{DF_IO_FORMAT}"
-        write_df(summary_df, summary_fp, SUMMARY_SCHEMA)
+        results.append(
+            AnalysisResult(
+                relative_path=Path(SUMMARY) / f"{name}.{DF_IO_FORMAT}",
+                result=summary_df,
+                save_func=lambda fp, obj: write_df(obj, fp, SUMMARY_SCHEMA),
+            ),
+        )
+    return results
 
 
 def _compute_latency(analysis_df: pl.DataFrame, fps: float) -> list[dict]:
@@ -286,30 +240,24 @@ def _compute_latency(analysis_df: pl.DataFrame, fps: float) -> list[dict]:
 
 def summary_binned(
     analysis_df: pl.DataFrame,
-    dst_dir: Path,
     name: str,
     fps: float,
     summary_func: Callable[[pl.DataFrame, float], pl.DataFrame],
-    agg_column: str,
     bins_ls: list[int],
     cbins_ls: list[int],
-) -> None:
-    """Generate binned summaries for standard and custom bins.
+) -> list[AnalysisResult]:
+    """Return AnalysisResult objects for summary + binned DataFrames.
 
     Parameters
     ----------
     analysis_df : pl.DataFrame
         ANALYSIS_SCHEMA DataFrame.
-    dst_dir : Path
-        Destination directory for outputs.
     name : str
         Experiment name.
     fps : float
         Frames per second.
     summary_func : Callable
         Summary function (agg_quantitative or agg_behaviour).
-    agg_column : str
-        Aggregation column for plotting.
     bins_ls : list[int]
         Standard bin sizes in seconds.
     cbins_ls : list[int]
@@ -320,9 +268,14 @@ def summary_binned(
         (pl.col("frame") - min_frame).alias("frame"),
     )
 
-    summary_fp = dst_dir / SUMMARY / f"{name}.{DF_IO_FORMAT}"
     summary_df = summary_func(analysis_df, fps)
-    write_df(summary_df, summary_fp, SUMMARY_SCHEMA)
+    results = [
+        AnalysisResult(
+            relative_path=Path(SUMMARY) / f"{name}.{DF_IO_FORMAT}",
+            result=summary_df,
+            save_func=lambda fp, obj: write_df(obj, fp, SUMMARY_SCHEMA),
+        ),
+    ]
 
     timestamps = analysis_df.select(
         (pl.col("frame") / fps).alias("timestamp"),
@@ -330,16 +283,24 @@ def summary_binned(
     t_max = float(timestamps.max())
 
     for bin_sec in bins_ls:
-        binned_fp = dst_dir / f"{BINNED}_{bin_sec}" / f"{name}.{DF_IO_FORMAT}"
-        binned_plot_fp = dst_dir / f"{BINNED}_{bin_sec}_{PLOT}" / f"{name}.png"
         bins = np.arange(0, t_max + bin_sec, bin_sec).tolist()
         binned_df = make_binned(analysis_df, fps, bins, summary_func)
-        write_df(binned_df, binned_fp, BINNED_SCHEMA)
-        make_binned_plot(binned_df, binned_plot_fp, agg_column)
+        results.append(
+            AnalysisResult(
+                relative_path=Path(f"{BINNED}_{bin_sec}") / f"{name}.{DF_IO_FORMAT}",
+                result=binned_df,
+                save_func=lambda fp, obj: write_df(obj, fp, BINNED_SCHEMA),
+            ),
+        )
 
     if cbins_ls:
-        binned_fp = dst_dir / f"{BINNED}_{CUSTOM}" / f"{name}.{DF_IO_FORMAT}"
-        binned_plot_fp = dst_dir / f"{BINNED}_{CUSTOM}_{PLOT}" / f"{name}.png"
         binned_df = make_binned(analysis_df, fps, cbins_ls, summary_func)
-        write_df(binned_df, binned_fp, BINNED_SCHEMA)
-        make_binned_plot(binned_df, binned_plot_fp, agg_column)
+        results.append(
+            AnalysisResult(
+                relative_path=Path(f"{BINNED}_{CUSTOM}") / f"{name}.{DF_IO_FORMAT}",
+                result=binned_df,
+                save_func=lambda fp, obj: write_df(obj, fp, BINNED_SCHEMA),
+            ),
+        )
+
+    return results
