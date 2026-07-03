@@ -1,228 +1,58 @@
-"""Data loading and preprocessing for behavioural classifier."""
+"""Data loading, splitting, and resampling for behavioural classifier."""
 
 from pathlib import Path
 
 import numpy as np
-import pandas as pd
 import polars as pl
-from joblib import dump, load
-from sklearn.model_selection import train_test_split
-from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import FunctionTransformer, MinMaxScaler
+from sklearn.model_selection import StratifiedGroupKFold
 
-from behavysis.constants import ACTUAL, FALSE_POS, OUTCOME, PRED, TRUE_POS, UNSURE
-from behavysis.utils.io_utils import (
-    async_read_files_run,
-)
-from behavysis.utils.misc_utils import array2listofvect, listofvects2array
+from behavysis.constants import FALSE_POS, TRUE_POS, UNSURE
+from behavysis.utils.io_utils import async_read_files_run
 
 
-def combine_dfs(src_dir: Path) -> pd.DataFrame:
-    """Combine all dataframes in directory into a single multi-indexed dataframe.
-
-    Parameters
-    ----------
-    src_dir : Path
-        Directory containing dataframe files.
-
-    Returns:
-    -------
-    pd.DataFrame
-        Combined dataframe with experiment names as index level.
-    """
-    data_dict = {
-        i.stem: pl.read_parquet(src_dir / i).to_pandas() for i in src_dir.iterdir()
-    }
-    df = pd.concat(data_dict.values(), axis=0, keys=data_dict.keys())
-    return df
+def list_behaviours(y_dir: Path) -> list[str]:
+    """List all behaviour names present in scored behaviour files."""
+    fp_ls = sorted(y_dir.iterdir())
+    if not fp_ls:
+        return []
+    df = pl.read_parquet(fp_ls[0])
+    behaviour_col = "behaviour" if "behaviour" in df.columns else "behaviour"
+    return sorted(df.select(pl.col(behaviour_col)).unique().to_series().to_list())
 
 
-def wrangle_columns_y(y: pd.DataFrame) -> pd.DataFrame:
-    """Filter y dataframe to actual columns and rename to `{behav}__{outcome}` format.
-
-    Parameters
-    ----------
-    y : pd.DataFrame
-        Scored behaviours dataframe.
+def load_features(x_dir: Path) -> tuple[list[np.ndarray], list[str]]:
+    """Load feature files as numpy arrays.
 
     Returns:
-    -------
-    pd.DataFrame
-        Wrangled dataframe with simplified column names.
+        (x_ls, names_ls) — per-experiment arrays and experiment names.
     """
-    # Filtering out the pred columns (in the `outcomes` level)
-    columns_filter = np.isin(
-        y.columns.get_level_values(OUTCOME),
-        [PRED],
-        invert=True,
-    )
-    y = y.loc[:, columns_filter]
-    # Setting the column names from `(behav, outcome)` to `{behav}__{outcome}`
-    y.columns = [
-        f"{behaviour_name}"
-        if outcome_name == ACTUAL
-        else f"{behaviour_name}__{outcome_name}"
-        for behaviour_name, outcome_name in y.columns
-    ]
-    return y
+    fp_ls = sorted(x_dir.iterdir())
+    names = [fp.stem for fp in fp_ls]
+
+    def _read(fp: Path) -> np.ndarray:
+        return pl.read_parquet(fp).to_pandas().set_index("frame").to_numpy()
+
+    x_ls = async_read_files_run(fp_ls, _read)
+    return x_ls, names
 
 
-def preproc_x_fit(x: np.ndarray, preproc_fp: Path) -> None:
-    """Fit preprocessing pipeline on features.
-
-    Pipeline steps:
-    - Select derived features (skip first 48 x-y-l columns)
-    - MinMax scaling
-
-    Parameters
-    ----------
-    x : np.ndarray
-        Feature array of shape (samples, features).
-    preproc_fp : Path
-        Path to save fitted pipeline.
-    """
-    preproc_pipe = Pipeline(
-        steps=[
-            ("select_columns", FunctionTransformer(_select_derived_features)),
-            ("min_max_scaler", MinMaxScaler()),
-        ],
-    )
-    preproc_pipe.fit(x)
-    dump(preproc_pipe, preproc_fp)
-
-
-def preproc_x_transform(x: np.ndarray, preproc_fp: Path) -> np.ndarray:
-    """Apply fitted preprocessing pipeline to features.
-
-    Parameters
-    ----------
-    x : np.ndarray
-        Feature array to transform.
-    preproc_fp : Path
-        Path to fitted pipeline.
-
-    Returns:
-    -------
-    np.ndarray
-        Transformed features.
-    """
-    preproc_pipe: Pipeline = load(preproc_fp)
-    return preproc_pipe.transform(x)
-
-
-def _select_derived_features(x: np.ndarray) -> np.ndarray:
-    """Select only derived features, excluding raw x-y-l coordinates.
-
-    First 48 columns: 2 indivs * 8 bodyparts * 3 coords (x, y, likelihood)
-    """
-    return x[:, 48:]
-
-
-def oversample(x: np.ndarray, y: np.ndarray, ratio: float) -> np.ndarray:
-    """Oversample positive class to achieve target ratio.
-
-    Parameters
-    ----------
-    x : np.ndarray
-        Feature array.
-    y : np.ndarray
-        Label array.
-    ratio : float
-        Target ratio of positive to negative samples.
-
-    Returns:
-    -------
-    np.ndarray
-        Resampled feature array.
-    """
-    assert x.shape[0] == y.shape[0]
-    index = np.arange(y.shape[0])
-    t = index[y == TRUE_POS]
-    f = index[y == FALSE_POS]
-    new_t_size = int(np.round(f.shape[0] * ratio))
-    rng = np.random.default_rng()
-    t = rng.choice(t, size=new_t_size, replace=True)
-    new_index = np.concatenate([t, f])
-    return x[new_index]
-
-
-def undersample(x: np.ndarray, y: np.ndarray, ratio: float) -> np.ndarray:
-    """Undersample negative class to achieve target ratio.
-
-    Parameters
-    ----------
-    x : np.ndarray
-        Feature array.
-    y : np.ndarray
-        Label array.
-    ratio : float
-        Target ratio of positive to negative samples.
-
-    Returns:
-    -------
-    np.ndarray
-        Resampled feature array.
-    """
-    assert x.shape[0] == y.shape[0]
-    index = np.arange(y.shape[0])
-    t = index[y == TRUE_POS]
-    f = index[y == FALSE_POS]
-    new_f_size = int(np.round(t.shape[0] / ratio))
-    rng = np.random.default_rng()
-    f = rng.choice(f, size=new_f_size, replace=False)
-    new_index = np.concatenate([t, f])
-    return x[new_index]
-
-
-def prepare_training_data(
-    x_dir: Path,
+def load_labels(
     y_dir: Path,
     behaviour_name: str,
-    preproc_fp: Path,
-    test_split: float,
-    oversample_ratio: float,
-    undersample_ratio: float,
-) -> tuple[list[np.ndarray], list[np.ndarray], list[np.ndarray], list[np.ndarray]]:
-    """Load and prepare training data from features and scored behaviours.
-
-    Parameters
-    ----------
-    x_dir : Path
-        Directory containing feature files.
-    y_dir : Path
-        Directory containing scored behaviour files.
-    behaviour_name : str
-        Name of behaviour to train on.
-    preproc_fp : Path
-        Path to save preprocessing pipeline.
-    test_split : float
-        Fraction of data for testing.
-    oversample_ratio : float
-        Ratio for oversampling positive class.
-    undersample_ratio : float
-        Ratio for undersampling negative class.
+) -> tuple[list[np.ndarray], list[str]]:
+    """Load scored behaviour labels as per-experiment numpy arrays.
 
     Returns:
-    -------
-    tuple
-        (x_ls, y_ls, index_train_ls, index_test_ls)
+        (y_ls, names_ls) — aligned with features.
     """
-    # Load feature and behaviour files
-    x_fp_ls = [x_dir / i for i in x_dir.iterdir()]
-    y_fp_ls = [y_dir / i for i in y_dir.iterdir()]
+    fp_ls = sorted(y_dir.iterdir())
+    names = [fp.stem for fp in fp_ls]
 
-    def _read_features(fp: Path) -> pd.DataFrame:
-        return pl.read_parquet(fp).to_pandas().set_index("frame")
-
-    def _read_scored(fp: Path) -> pd.DataFrame:
-        """Read Polars long-form scored behaviour and convert to pandas MultiIndex."""
+    def _read(fp: Path) -> np.ndarray:
         df_pl = pl.read_parquet(fp)
-        # Pivot behaviour names → column level 0, outcomes → column level 1
-        # Columns: frame, behaviour, pred, actual, [user_defined...]
-        id_vars = ["frame", "behaviour"]
-        value_vars = [c for c in df_pl.columns if c not in id_vars]
         df_pd = df_pl.to_pandas()
-        # Melt then pivot to get MultiIndex columns
+        id_vars = ["frame", "behaviour"]
+        value_vars = [c for c in df_pd.columns if c not in id_vars]
         melted = df_pd.melt(
             id_vars=id_vars,
             value_vars=value_vars,
@@ -234,60 +64,88 @@ def prepare_training_data(
             columns=["behaviour", "outcome"],
             values="value",
         )
-        pivoted.columns = pd.MultiIndex.from_tuples(
-            pivoted.columns,
-            names=["behaviour", "outcomes"],
+        pivoted.columns = pivoted.columns.map(
+            lambda x: f"{x[0]}__{x[1]}" if x[1] != "actual" else x[0],
         )
-        return pivoted
+        y = pivoted[behaviour_name].replace(UNSURE, FALSE_POS).to_numpy()
+        return y.reshape(-1)
 
-    x_df_ls = async_read_files_run(x_fp_ls, _read_features)
-    y_df_ls = async_read_files_run(y_fp_ls, _read_scored)
+    y_ls = async_read_files_run(fp_ls, _read)
+    return y_ls, names
 
-    # Format y dfs: select behaviour column, replace UNDETERMINED
-    y_df_ls = [y[(behaviour_name, ACTUAL)].replace(UNSURE, FALSE_POS) for y in y_df_ls]
 
-    # Align x and y indices
-    index_df_ls = [
-        x.index.intersection(y.index) for x, y in zip(x_df_ls, y_df_ls, strict=False)
+def align_features_labels(
+    x_ls: list[np.ndarray],
+    y_ls: list[np.ndarray],
+    x_names: list[str],
+    y_names: list[str],
+) -> tuple[list[np.ndarray], list[np.ndarray], list[str]]:
+    """Align x and y arrays by finding common experiment names.
+
+    Returns filtered (x_ls, y_ls, names).
+    """
+    common = sorted(set(x_names) & set(y_names))
+    x_idx = [x_names.index(n) for n in common]
+    y_idx = [y_names.index(n) for n in common]
+    return [x_ls[i] for i in x_idx], [y_ls[i] for i in y_idx], common
+
+
+def stratified_split_by_video(
+    x_ls: list[np.ndarray],
+    y_ls: list[np.ndarray],
+    test_size: float,
+    random_state: int = 42,
+) -> tuple[list[np.ndarray], list[np.ndarray]]:
+    """Split per-video arrays into train/test indices, stratified by label.
+
+    Uses StratifiedGroupKFold with each video as a group.
+
+    Returns:
+        (train_idx_per_vid, test_idx_per_vid) — each list of np.ndarray row indices.
+    """
+    groups = np.concatenate([np.full(len(x), i) for i, x in enumerate(x_ls)])
+    X = np.concatenate(x_ls, axis=0)
+    y = np.concatenate(y_ls, axis=0)
+
+    n_splits = max(2, int(1 / test_size))
+    sgkf = StratifiedGroupKFold(n_splits=n_splits, shuffle=True, random_state=random_state)
+    train_idx, test_idx = next(sgkf.split(X, y, groups))
+
+    offsets = np.cumsum([0] + [x.shape[0] for x in x_ls[:-1]])
+    train_per_vid = [
+        train_idx[
+            (train_idx >= offsets[i]) & (train_idx < offsets[i] + x_ls[i].shape[0])
+        ]
+        - offsets[i]
+        for i in range(len(x_ls))
     ]
-    x_df_ls = [x.loc[index] for x, index in zip(x_df_ls, index_df_ls, strict=False)]
-    y_df_ls = [y.loc[index] for y, index in zip(y_df_ls, index_df_ls, strict=False)]
+    test_per_vid = [
+        test_idx[
+            (test_idx >= offsets[i]) & (test_idx < offsets[i] + x_ls[i].shape[0])
+        ]
+        - offsets[i]
+        for i in range(len(x_ls))
+    ]
+    return train_per_vid, test_per_vid
 
-    assert np.all(
-        [x.shape[0] == y.shape[0] for x, y in zip(x_df_ls, y_df_ls, strict=False)],
-    )
 
-    # Convert to numpy
-    x_ls = [x.to_numpy() for x in x_df_ls]
-    y_ls = [y.to_numpy() for y in y_df_ls]
-    index_ls = [np.arange(x.shape[0]) for x in x_ls]
+def oversample(x: np.ndarray, y: np.ndarray, ratio: float) -> np.ndarray:
+    """Oversample positive class to reach target pos/neg ratio."""
+    assert x.shape[0] == y.shape[0]
+    pos = np.flatnonzero(y == TRUE_POS)
+    neg = np.flatnonzero(y == FALSE_POS)
+    target = int(np.round(neg.shape[0] * ratio))
+    rng = np.random.default_rng()
+    new_pos = rng.choice(pos, size=target, replace=True)
+    return x[np.concatenate([new_pos, neg])]
 
-    # Fit and apply preprocessing
-    preproc_x_fit(np.concatenate(x_ls, axis=0), preproc_fp)
-    x_ls = [preproc_x_transform(x, preproc_fp) for x in x_ls]
 
-    # Train-test split
-    index_flat = listofvects2array(index_ls, y_ls)
-    index_train_flat, index_test_flat = train_test_split(
-        index_flat,
-        test_size=test_split,
-        stratify=index_flat[:, 2],
-    )
-
-    # Resample training data
-    index_train_flat = oversample(
-        index_train_flat,
-        index_train_flat[:, 2],
-        oversample_ratio,
-    )
-    index_train_flat = undersample(
-        index_train_flat,
-        index_train_flat[:, 2],
-        undersample_ratio,
-    )
-
-    # Reshape back to per-dataframe lists
-    index_train_ls = array2listofvect(index_train_flat, 1)
-    index_test_ls = array2listofvect(index_test_flat, 1)
-
-    return x_ls, y_ls, index_train_ls, index_test_ls
+def undersample(x: np.ndarray, y: np.ndarray, ratio: float) -> np.ndarray:
+    """Undersample negative class to reach target pos/neg ratio."""
+    assert x.shape[0] == y.shape[0]
+    pos = np.flatnonzero(y == TRUE_POS)
+    neg = np.flatnonzero(y == FALSE_POS)
+    target = int(np.round(pos.shape[0] / ratio))
+    rng = np.random.default_rng()
+    new_neg = rng.choice(neg, size=target, replace=False)
+    return x[np.concatenate([pos, new_neg])]

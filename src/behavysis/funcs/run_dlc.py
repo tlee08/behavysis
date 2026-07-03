@@ -27,6 +27,9 @@ from behavysis.utils.template_utils import save_template
 
 DLC_HDF_KEY = "data"
 
+# TODO: just run in current environment
+# because deeplabcut PyTorch runs with behavysis env.
+
 
 def ma_dlc_run_single(
     vid_fp: Path,

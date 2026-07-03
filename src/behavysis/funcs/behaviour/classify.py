@@ -28,7 +28,7 @@ def classify_behaviour(
         min_window_secs = model_config.min_empty_window_secs
         min_window_frames = int(np.round(min_window_secs * metadata.require_fps()))
 
-        behaviour_df_i = behaviour_model.pipeline_inference(features_df.to_pandas())
+        behaviour_df_i = behaviour_model.predict(features_df.to_pandas())
 
         df_pl = pl.DataFrame(
             {

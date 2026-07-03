@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
-from joblib import dump, load
 from loguru import logger
 
 from behavysis.constants import (
@@ -17,327 +17,224 @@ from behavysis.constants import (
     PRED,
     PROB,
 )
-from behavysis.models import BehaviourClassifierConfig
 
-from .clf_models.clf_templates import CLF_TEMPLATES, CNN1
+from .config import BehaviourClassifierConfig
 from .data import (
-    combine_dfs,
-    prepare_training_data,
-    preproc_x_transform,
-    wrangle_columns_y,
+    align_features_labels,
+    load_features,
+    load_labels,
+    stratified_split_by_video,
 )
 from .evaluation import save_evaluation_results, save_training_history
+from .registry import MODEL_REGISTRY
+from .storage import classifier_fp, config_fp, eval_dir
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
     from behavysis.pipeline.project import Project
-
-    from .clf_models.base_torch_model import BaseTorchModel
 
 
 class BehaviourClassifier:
-    """Behavioural classifier for training and inference.
+    """Behavioural classifier — training, evaluation, and inference.
 
-    Manages model training, evaluation, and prediction for animal behaviour
-    classification from pose estimation features.
-
-    Attributes:
-    ----------
-    proj_dir : Path
-        Project directory containing features and scored behaviours.
-    behaviour_name : str
-        Name of the behaviour being classified.
-    clf : BaseTorchModel
-        The trained classifier model.
+    Each instance is bound to one (project, behaviour_name) pair. The
+    model type is determined by config.model_type, resolved through
+    MODEL_REGISTRY.
     """
 
-    _proj_dir: Path
-    _behaviour_name: str
-    _clf: BaseTorchModel
-
-    def __init__(self, proj_dir: Path, behaviour_name: str) -> None:
-        """Initialize classifier for a specific behaviour.
-
-        Parameters
-        ----------
-        proj_dir : Path
-            Project directory path.
-        behaviour_name : str
-            Name of behaviour to classify.
-
-        Raises:
-        ------
-        AssertionError
-            If behaviour is not found in scored behaviours.
-        """
+    def __init__(
+        self,
+        proj_dir: Path,
+        behaviour_name: str,
+        config: BehaviourClassifierConfig | None = None,
+    ) -> None:
         self._proj_dir = proj_dir.resolve()
         self._behaviour_name = behaviour_name
 
-        # Verify behaviour exists in scored data
-        y_df = wrangle_columns_y(combine_dfs(self.y_dir))
-        assert np.isin(behaviour_name, y_df.columns), (
-            f"Behaviour '{behaviour_name}' not found in scored behaviours"
-        )
-
-        # Load or create config
-        try:
-            config = BehaviourClassifierConfig.model_validate_json(
-                self.config_fp.read_text(),
-            )
-            logger.debug("Loaded existing config")
-        except FileNotFoundError:
-            config = BehaviourClassifierConfig()
-            logger.debug("Created new model config")
-
-        config.proj_dir = self._proj_dir
-        config.behaviour_name = self._behaviour_name
-        self.config = config
-
-        # Load or create classifier
-        try:
-            self.clf = load(self.clf_fp)
-            logger.debug("Loaded existing classifier")
-        except FileNotFoundError:
-            self.clf = CNN1()
-            logger.debug("Created new classifier")
-
-    #################################################
-    # Properties
-    #################################################
-
-    @property
-    def proj_dir(self) -> Path:
-        """Project directory."""
-        return self._proj_dir
-
-    @property
-    def behaviour_name(self) -> str:
-        """Behaviour name."""
-        return self._behaviour_name
-
-    @property
-    def clf(self) -> BaseTorchModel:
-        """Classifier model."""
-        return self._clf
-
-    @clf.setter
-    def clf(self, clf: BaseTorchModel | str) -> None:
-        """Set classifier from model instance or saved model name."""
-        if isinstance(clf, str):
-            clf_name = clf
-            self._clf = load(self.clfs_dir / clf / "classifier.sav")
-            logger.debug(f"Loaded classifier: {clf_name}")
+        if config is None:
+            config = self._load_or_create_config()
         else:
-            clf_name = type(clf).__name__
-            self._clf = clf
-            logger.debug(f"Initialized classifier: {clf_name}")
+            config.proj_dir = self._proj_dir
+            config.behaviour_name = self._behaviour_name
+        self._config = config
 
-        config = self.config
-        config.clf_struct = clf_name
-        self.config = config
-
-    @property
-    def model_dir(self) -> Path:
-        """Model directory for this behaviour."""
-        return self.proj_dir / "behaviour_models" / self.behaviour_name
-
-    @property
-    def config_fp(self) -> Path:
-        """Path to model config file."""
-        return self.model_dir / "config.json"
+        self._adapter = self._load_or_create_adapter()
 
     @property
     def config(self) -> BehaviourClassifierConfig:
-        """Current model configuration."""
-        return BehaviourClassifierConfig.model_validate_json(self.config_fp.read_text())
+        return self._config
 
-    @config.setter
-    def config(self, config: BehaviourClassifierConfig) -> None:
-        """Update model configuration."""
-        try:
-            if self.config == config:
-                return
-        except FileNotFoundError:
-            pass
-        logger.debug("Config changed. Updating on disk")
-        self.config_fp.write_text(config.model_dump_json(indent=2))
-
-    @property
-    def clfs_dir(self) -> Path:
-        """Directory containing classifier variants."""
-        return self.model_dir / "classifiers"
-
-    @property
-    def clf_dir(self) -> Path:
-        """Directory for current classifier structure."""
-        return self.clfs_dir / self.config.clf_struct
-
-    @property
-    def clf_fp(self) -> Path:
-        """Path to saved classifier."""
-        return self.clf_dir / "classifier.sav"
-
-    @property
-    def preproc_fp(self) -> Path:
-        """Path to preprocessing pipeline."""
-        return self.clf_dir / "preproc.sav"
-
-    @property
-    def eval_dir(self) -> Path:
-        """Directory for evaluation outputs."""
-        return self.clf_dir / "evaluation"
-
-    @property
-    def x_dir(self) -> Path:
-        """Directory containing feature files."""
-        return self.proj_dir / FEATURES_EXTRACTED_DIR
-
-    @property
-    def y_dir(self) -> Path:
-        """Directory containing scored behaviour files."""
-        return self.proj_dir / BEHAVIOUR_SCORED_DIR
-
-    #################################################
-    # Factory Methods
-    #################################################
+    # ── factories ──────────────────────────────────────────────────────
 
     @classmethod
-    def create_from_project_dir(cls, proj_dir: Path) -> list[BehaviourClassifier]:
-        """Create classifiers for all behaviours in project."""
+    def from_adapter(
+        cls,
+        proj_dir: Path,
+        behaviour_name: str,
+        config: BehaviourClassifierConfig,
+    ) -> BehaviourClassifier:
+        """Create with explicit config."""
+        instance = cls.__new__(cls)
+        instance._proj_dir = proj_dir.resolve()
+        instance._behaviour_name = behaviour_name
+        instance._config = config
+        instance._adapter = instance._load_or_create_adapter()
+        return instance
+
+    @classmethod
+    def create_all_from_project_dir(
+        cls,
+        proj_dir: Path,
+    ) -> list[BehaviourClassifier]:
+        """Create classifiers for all behaviours in a project directory."""
         proj_dir = proj_dir.resolve()
-        y_df = wrangle_columns_y(combine_dfs(proj_dir / BEHAVIOUR_SCORED_DIR))
-        behaviours_ls = y_df.columns.to_list()
-        return [cls(proj_dir, behaviour) for behaviour in behaviours_ls]
+        from .data import list_behaviours
+
+        behaviour_names = list_behaviours(proj_dir / BEHAVIOUR_SCORED_DIR)
+        return [cls(proj_dir, behav) for behav in behaviour_names]
 
     @classmethod
     def create_from_project(cls, proj: Project) -> list[BehaviourClassifier]:
         """Create classifiers from Project instance."""
-        return cls.create_from_project_dir(proj.root_dir)
+        return cls.create_all_from_project_dir(proj.root_dir)
 
     @classmethod
     def load(cls, proj_dir: Path, behaviour_name: str) -> BehaviourClassifier:
-        """Load existing classifier."""
+        """Load existing classifier from disk."""
         proj_dir = proj_dir.resolve()
-        config_fp = proj_dir / "behaviour_models" / behaviour_name / "config.json"
-        try:
-            BehaviourClassifierConfig.model_validate_json(config_fp.read_text())
-        except (FileNotFoundError, OSError) as e:
+        fp = config_fp(proj_dir, behaviour_name)
+        if not fp.exists():
             msg = (
-                f'Model in "{proj_dir}" with behaviour "{behaviour_name}" not found. '
-                "Check file path."
+                f'Model for behaviour "{behaviour_name}" not found in "{proj_dir}". '
+                "Check path or train first."
             )
-            raise ValueError(msg) from e
-        return cls(proj_dir, behaviour_name)
+            raise ValueError(msg)
+        config = BehaviourClassifierConfig.model_validate_json(fp.read_text())
+        return cls.from_adapter(proj_dir, behaviour_name, config)
 
-    #################################################
-    # Training Pipeline
-    #################################################
+    # ── config / adapter lifecycle ─────────────────────────────────────
 
-    def pipeline_training(self) -> None:
-        """Train classifier and save to model directory."""
-        logger.info(f"Training {self.config.clf_struct}")
-
-        # Prepare data
-        x_ls, y_ls, index_train_ls, index_test_ls = prepare_training_data(
-            self.x_dir,
-            self.y_dir,
-            self.config.behaviour_name,
-            self.preproc_fp,
-            self.config.test_split,
-            self.config.oversample_ratio,
-            self.config.undersample_ratio,
+    def _load_or_create_config(self) -> BehaviourClassifierConfig:
+        fp = config_fp(self._proj_dir, self._behaviour_name)
+        if fp.exists():
+            logger.debug("Loaded existing config")
+            return BehaviourClassifierConfig.model_validate_json(fp.read_text())
+        logger.debug("Created new model config")
+        return BehaviourClassifierConfig(
+            proj_dir=self._proj_dir,
+            behaviour_name=self._behaviour_name,
         )
 
-        # Train model
-        history = self.clf.fit(
-            x_ls=x_ls,
-            y_ls=y_ls,
-            index_ls=index_train_ls,
-            batch_size=self.config.batch_size,
-            epochs=self.config.epochs,
-            val_split=self.config.val_split,
+    def _load_or_create_adapter(self):
+        fp = classifier_fp(
+            self._proj_dir,
+            self._behaviour_name,
+            self._config.model_type,
+        )
+        if fp.exists():
+            logger.debug(f"Loaded existing adapter: {self._config.model_type}")
+            from joblib import load
+
+            return load(fp)
+
+        logger.debug(f"Creating new adapter: {self._config.model_type}")
+        factory = MODEL_REGISTRY[self._config.model_type]
+        return factory()
+
+    def _save(self) -> None:
+        fp = classifier_fp(self._proj_dir, self._behaviour_name, self._config.model_type)
+        self._adapter.save(fp)
+
+    def _save_config(self) -> None:
+        fp = config_fp(self._proj_dir, self._behaviour_name)
+        fp.parent.mkdir(parents=True, exist_ok=True)
+        fp.write_text(self._config.model_dump_json(indent=2))
+
+    # ── training ───────────────────────────────────────────────────────
+
+    def train(self) -> None:
+        """Train the classifier and save all artifacts."""
+        logger.info(f"Training {self._config.model_type} for {self._behaviour_name}")
+
+        x_ls, x_names = load_features(self._proj_dir / FEATURES_EXTRACTED_DIR)
+        y_ls, y_names = load_labels(
+            self._proj_dir / BEHAVIOUR_SCORED_DIR,
+            self._behaviour_name,
+        )
+        x_ls, y_ls, exp_names = align_features_labels(x_ls, y_ls, x_names, y_names)
+
+        train_idx, test_idx = stratified_split_by_video(
+            x_ls,
+            y_ls,
+            self._config.test_split,
+            self._config.seed,
         )
 
-        # Save training history
-        save_training_history(history, self.eval_dir)
+        history = self._adapter.fit(x_ls, y_ls, train_idx, self._config)
 
-        # Evaluate on train and test sets
-        self._evaluate_and_save(x_ls, y_ls, index_train_ls, "train")
-        self._evaluate_and_save(x_ls, y_ls, index_test_ls, "test")
+        eval_d = eval_dir(self._proj_dir, self._behaviour_name, self._config.model_type)
+        save_training_history(history, eval_d)
 
-        # Save model
-        dump(self.clf, self.clf_fp)
+        self._evaluate(x_ls, y_ls, train_idx, "train")
+        self._evaluate(x_ls, y_ls, test_idx, "test")
 
-    def pipeline_training_all(self) -> None:
-        """Train classifiers for all available templates."""
-        clf = self.clf
-        for clf_cls in CLF_TEMPLATES:
-            self.clf = clf_cls()
-            self.pipeline_training()
-        self.clf = clf
+        self._save_config()
+        self._save()
 
-    def _evaluate_and_save(
+        from .snapshot import TrainingSnapshot
+
+        TrainingSnapshot.create(x_ls, y_ls, exp_names, self._config)
+
+    def _evaluate(
         self,
         x_ls: list[np.ndarray],
         y_ls: list[np.ndarray],
         index_ls: list[np.ndarray],
         name: str,
     ) -> None:
-        """Evaluate model on data split and save results."""
-        y_true_ls = [y[index] for y, index in zip(y_ls, index_ls, strict=False)]
+        y_true_ls = [y[idx] for y, idx in zip(y_ls, index_ls, strict=True)]
         y_prob_ls = [
-            self.clf.predict(x=x, index=index, batch_size=self.config.batch_size)
-            for x, index in zip(x_ls, index_ls, strict=False)
+            self._adapter.predict(x, idx, self._config.batch_size)
+            for x, idx in zip(x_ls, index_ls, strict=True)
         ]
 
         y_true = np.concatenate(y_true_ls)
         y_prob = np.concatenate(y_prob_ls)
-        y_pred = (y_prob > self.config.pcutoff).astype(int)
+        y_pred = (y_prob > self._config.pcutoff).astype(int)
 
+        d = eval_dir(self._proj_dir, self._behaviour_name, self._config.model_type)
         save_evaluation_results(
             y_true,
             y_prob,
             y_pred,
-            self.config.behaviour_name,
-            self.config.pcutoff,
-            self.eval_dir,
+            self._config.behaviour_name,
+            self._config.pcutoff,
+            d,
             name,
             index_ls,
         )
 
-    #################################################
-    # Inference Pipeline
-    #################################################
+    # ── inference ─────────────────────────────────────────────────────
 
-    def pipeline_inference(self, x_df: pd.DataFrame) -> pd.DataFrame:
+    def predict(self, features_df: pd.DataFrame) -> pd.DataFrame:
         """Run inference on feature dataframe.
 
         Parameters
         ----------
-        x_df : pd.DataFrame
-            Unprocessed features dataframe.
+        features_df : pd.DataFrame
+            Unprocessed features DataFrame (wide format, index = frame).
 
         Returns:
         -------
         pd.DataFrame
-            Predictions with probability and label columns.
+            MultiIndex columns: (behaviour_name, prob), (behaviour_name, pred).
         """
-        index = x_df.index
-        x = preproc_x_transform(x_df.to_numpy(), self.preproc_fp)
+        index = features_df.index
+        x = features_df.to_numpy()
+        y_prob = self._adapter.predict(x, np.arange(x.shape[0]), self._config.batch_size)
+        y_pred = (y_prob > self._config.pcutoff).astype(int)
 
-        self.clf = load(self.clf_fp)
-
-        y_prob = self.clf.predict(
-            x=x,
-            index=np.arange(x.shape[0]),
-            batch_size=self.config.batch_size,
-        )
-        y_pred = (y_prob > self.config.pcutoff).astype(int)
-
-        # Return pandas DataFrame with prob/pred columns (consumer handles Polars conversion)
         columns = pd.MultiIndex.from_tuples(
-            [(self.config.behaviour_name, PROB), (self.config.behaviour_name, PRED)],
+            [(self._config.behaviour_name, PROB), (self._config.behaviour_name, PRED)],
             names=[BEHAVIOUR, OUTCOME],
         )
         return pd.DataFrame(
@@ -345,3 +242,29 @@ class BehaviourClassifier:
             index=pd.Index(index, name="frame"),
             columns=columns,
         )
+
+
+# ── batch training across model types ────────────────────────────────
+
+def train_all_models(
+    proj_dir: Path,
+    behaviour_name: str,
+    *,
+    model_types: list[str] | None = None,
+    config_overrides: dict | None = None,
+) -> list[BehaviourClassifier]:
+    """Train every model in MODEL_REGISTRY (or the given subset) for a behaviour.
+
+    Returns the list of trained BehaviourClassifier instances.
+    """
+    types = model_types or list(MODEL_REGISTRY.keys())
+    results = []
+    for model_type in types:
+        config = BehaviourClassifierConfig(
+            model_type=model_type,
+            **(config_overrides or {}),
+        )
+        clf = BehaviourClassifier.from_adapter(proj_dir, behaviour_name, config)
+        clf.train()
+        results.append(clf)
+    return results

@@ -1,7 +1,6 @@
 """Pydantic Models."""
 
 from .analysis_result import AnalysisResult
-from .behaviour_classifier_config import BehaviourClassifierConfig
 from .bouts import Bout, Bouts, BoutStruct
 from .experiment_config import (
     AnalyseConfig,
@@ -18,7 +17,6 @@ from .experiment_metadata import ExperimentMetadata, VideoMetadata
 __all__ = [
     "AnalyseConfig",
     "AnalysisResult",
-    "BehaviourClassifierConfig",
     "Bout",
     "BoutStruct",
     "Bouts",
