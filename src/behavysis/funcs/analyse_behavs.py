@@ -4,7 +4,7 @@ import numpy as np
 
 from behavysis.df_classes.analysis_agg_df import AnalysisBinnedDf
 from behavysis.df_classes.analysis_df import FBF, AnalysisDf
-from behavysis.df_classes.behav_df import BehavScoredDf, BehavValues
+from behavysis.df_classes.behav_df import BehavScoredDf, BehavValues, OutcomesPredictedCols
 from behavysis.models.experiment_configs import ExperimentConfigs
 
 
@@ -29,7 +29,7 @@ def analyse_behavs(
     # Not incl. the `pred` or `prob` (`prob` shouldn't be here anyway) columns
     columns = np.isin(
         behavs_df.columns.get_level_values(BehavScoredDf.CN.OUTCOMES.value),
-        [BehavScoredDf.OutcomesCols.PRED.value],
+        [OutcomesPredictedCols.PRED.value],
         invert=True,
     )
     behavs_df = behavs_df.loc[:, columns]

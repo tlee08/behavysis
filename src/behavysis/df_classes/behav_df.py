@@ -100,7 +100,37 @@ class BehavScoredDf(BehavDf):
         # Set MultiIndex columns
         df.columns = df.columns.str.split("__", expand=True)
 
-        return cls.clean_and_validate(df)
+        df = cls.clean_and_validate(df)
+        for col in df.columns:
+            df[col] = df[col].astype(np.int8)
+        return df
+
+    @classmethod
+    def write(cls, df: pd.DataFrame, fp: Path, fmt: str | None = None) -> None:
+        """Validate schema, transform to TS viewer format, and write dataframe to file."""
+        df = cls.clean_and_validate(df)
+        fp.parent.mkdir(parents=True, exist_ok=True)
+
+        # Transform to TS viewer format: frame as column, __-delimited behaviour columns
+        df_out = df.reset_index()
+        df_out.columns = ["__".join(filter(None, c)) for c in df_out.columns]
+        df_out["frame"] = df_out["frame"].astype(np.int64)
+        for col in df_out.columns:
+            if col != "frame":
+                df_out[col] = df_out[col].astype(np.int8)
+
+        fmt = fmt or cls.IO
+        raise_msg = f"Unsupported format: {fmt}. Use: csv, h5, feather, parquet."
+        if fmt == "csv":
+            df_out.to_csv(fp)
+        elif fmt == "h5":
+            df_out.to_hdf(fp, key="data", mode="w")
+        elif fmt == "feather":
+            df_out.to_feather(fp)
+        elif fmt == "parquet":
+            df_out.to_parquet(fp)
+        else:
+            raise ValueError(raise_msg)
 
     @classmethod
     def _validate(cls, df: pd.DataFrame) -> None:
@@ -156,12 +186,15 @@ class BehavScoredDf(BehavDf):
     @classmethod
     def get_bouts_struct(cls, df: pd.DataFrame) -> list[BoutStruct]:
         """Extract BoutStruct from DataFrame columns."""
+        standard = {e.value for e in OutcomesScoredCols} | {
+            e.value for e in OutcomesPredictedCols
+        }
         bouts_struct = []
         for behav in df.columns.unique(cls.CN.BEHAVS.value):
             user_defined = [
                 c
                 for c in df[behav].columns.unique(cls.CN.OUTCOMES.value)
-                if c not in (e.value for e in cls.OutcomesCols)
+                if c not in standard
             ]
             bouts_struct.append(BoutStruct(behav=behav, user_defined=user_defined))
         return bouts_struct
@@ -175,11 +208,13 @@ class BehavScoredDf(BehavDf):
         scored_df = cls.init_df(df.index)
         for bout in bouts_struct:
             behav = bout.behav
-            scored_df[(behav, cls.OutcomesCols.ACTUAL.value)] = scored_df[
-                (behav, OutcomesPredictedCols.PRED.value)
-            ].replace(BehavValues.TRUE_POS.value, BehavValues.UNSURE.value)
+            scored_df[(behav, cls.OutcomesCols.ACTUAL.value)] = (
+                df[(behav, OutcomesPredictedCols.PRED.value)]
+                .replace(BehavValues.TRUE_POS.value, BehavValues.UNSURE.value)
+                .astype(np.int8)
+            )
             for user_col in bout.user_defined:
-                scored_df[(behav, user_col)] = BehavValues.TRUE_NEG.value
+                scored_df[(behav, user_col)] = np.int8(BehavValues.TRUE_NEG.value)
         return cls.clean_and_validate(scored_df)
 
     @classmethod
