@@ -6,7 +6,7 @@ for video in {{vid_fp_ls}}:
             config=r"{{ model_fp}}",
             videos=[video],
             videotype="mp4",
-            destfolder=r"{{ temp_dlc_dir }}",
+            destfolder=r"{{ temp_dir }}",
             gputouse={{gputouse}},
             save_as_csv=False,
             calibrate=False,

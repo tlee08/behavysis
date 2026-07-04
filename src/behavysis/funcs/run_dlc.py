@@ -22,13 +22,9 @@ from behavysis.constants import (
 )
 from behavysis.models import ExperimentConfig
 from behavysis.schemas import KEYPOINTS_SCHEMA, write_df
-from behavysis.utils.io_utils import silent_remove
 from behavysis.utils.template_utils import save_template
 
 DLC_HDF_KEY = "data"
-
-# TODO: just run in current environment
-# because deeplabcut PyTorch runs with behavysis env.
 
 
 def ma_dlc_run_single(
@@ -46,7 +42,6 @@ def ma_dlc_run_single(
             config.require_run_dlc().model_fp,
             [vid_fp],
             out_dir,
-            CACHE_DIR,
             gputouse,
         )
         # Exporting the h5 to chosen file format
@@ -66,7 +61,7 @@ def ma_dlc_run_batch(
     with tempfile.TemporaryDirectory(dir=CACHE_DIR) as _out_dir:
         out_dir = Path(_out_dir)
         # Running the DLC subprocess (in a separate conda env)
-        _run_dlc_subproc(dlc_config_fp, vid_fp_ls, out_dir, CACHE_DIR, gputouse)
+        _run_dlc_subproc(dlc_config_fp, vid_fp_ls, out_dir, gputouse)
         # Exporting the h5 to chosen file format
         for vid_fp in vid_fp_ls:
             _export2df(vid_fp.stem, out_dir, keypoints_dir)
@@ -75,7 +70,6 @@ def ma_dlc_run_batch(
 def _run_dlc_subproc(
     dlc_config_fp: Path,
     vid_fp_ls: list[Path],
-    temp_dlc_dir: Path,
     temp_dir: Path,
     gputouse: int | None,
 ) -> None:
@@ -91,7 +85,7 @@ def _run_dlc_subproc(
         script_fp,
         vid_fp_ls=[str(_i) for _i in vid_fp_ls],
         model_fp=dlc_config_fp,
-        temp_dlc_dir=temp_dlc_dir,
+        temp_dir=temp_dir,
         gputouse=gputouse,
     )
     logger.info("Running the DLC subprocess in a separate conda environment.")
@@ -105,7 +99,6 @@ def _run_dlc_subproc(
         str(script_fp),
     ]
     subprocess.run(cmd, check=True)
-    silent_remove(script_fp)
 
 
 def _export2df(name: str, src_dir: Path, dst_dir: Path) -> None:
