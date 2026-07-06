@@ -1,11 +1,8 @@
-"""Tests for native SimBA feature extraction against real parquet data.
+"""Tests for generic feature extraction against real parquet data.
 
-These tests validate that the native Polars+NumPy+SciPy feature extraction
-produces output structurally compatible with what the SimBA conda subprocess
-would produce for the "2 animals; 16 body-parts" configuration.
-
-Cross-validation against actual SimBA output requires a system with the SimBA
-conda environment installed. Placeholder tests are provided for that scenario.
+Validates that the generic Polars+NumPy+SciPy feature extraction produces
+output for the classic 2-animal, 8-bodypart configuration and for
+alternative bodypoint configs.
 """
 
 from pathlib import Path
@@ -19,218 +16,190 @@ from behavysis.schemas import KEYPOINTS_SCHEMA, read_df
 RESOURCES_DIR = Path(__file__).parent.parent.parent / "resources"
 TEST_PARQUET = RESOURCES_DIR / "VIDEO_001_short.parquet"
 
+INDIVS_2 = ["mouse1marked", "mouse2unmarked"]
+BPTS_8 = [
+    "LeftEar", "RightEar", "Nose", "BodyCentre",
+    "LeftFlankMid", "RightFlankMid", "TailBase1", "TailTip4",
+]
+
 
 @pytest.fixture(scope="module")
 def keypoints_df():
     """Load the real test parquet for feature extraction tests."""
     df = read_df(TEST_PARQUET, KEYPOINTS_SCHEMA)
-    from behavysis.constants.bodypoints import BPTS_SIMBA, INDIVS_SIMBA
-
     return df.filter(
-        pl.col("individual").is_in(INDIVS_SIMBA),
-        pl.col("bodypart").is_in(BPTS_SIMBA),
+        pl.col("individual").is_in(INDIVS_2),
+        pl.col("bodypart").is_in(BPTS_8),
     )
 
 
 @pytest.fixture(scope="module")
-def features_df(keypoints_df):
-    """Compute features once per module for all tests."""
-    from behavysis.funcs.extract_features import compute_simba_features
+def features_df_2x8(keypoints_df):
+    """Compute features for 2 individuals × 8 bodyparts."""
+    from behavysis.funcs.extract_features import compute_features
 
-    return compute_simba_features(keypoints_df, fps=30.0, px_per_mm=4.0)
+    return compute_features(
+        keypoints_df,
+        individuals=INDIVS_2,
+        bodyparts=BPTS_8,
+        fps=30.0,
+        px_per_mm=4.0,
+    )
 
 
-class TestSimbaFeaturesCompute:
-    """Tests for the core compute() function on real data."""
+@pytest.fixture(scope="module")
+def features_df_1x4(keypoints_df):
+    """Compute features for 1 individual × 4 bodyparts."""
+    indivs = ["mouse1marked"]
+    bps = ["Nose", "BodyCentre", "TailBase1", "TailTip4"]
+    df = keypoints_df.filter(
+        pl.col("individual").is_in(indivs),
+        pl.col("bodypart").is_in(bps),
+    )
+    from behavysis.funcs.extract_features import compute_features
 
-    def test_output_shape(self, keypoints_df, features_df):
-        """Output should have one row per unique frame."""
+    return compute_features(df, individuals=indivs, bodyparts=bps, fps=30.0, px_per_mm=4.0)
+
+
+class TestGenericFeatures2x8:
+    """Tests for generic features on 2 individuals × 8 bodyparts."""
+
+    def test_output_shape(self, keypoints_df, features_df_2x8):
         n_frames = keypoints_df.select("frame").n_unique()
-        assert features_df.height == n_frames
+        assert features_df_2x8.height == n_frames
 
-    def test_has_frame_column(self, features_df):
-        """Output must have a frame column as the first column."""
-        assert features_df.columns[0] == "frame"
-        assert features_df.schema["frame"] == pl.Int64
+    def test_has_frame_column(self, features_df_2x8):
+        assert features_df_2x8.columns[0] == "frame"
+        assert features_df_2x8.schema["frame"] == pl.Int64
 
-    def test_frame_monotonic(self, features_df):
-        """Frames should be in ascending order."""
-        frames = features_df.select("frame").to_series()
+    def test_frame_monotonic(self, features_df_2x8):
+        frames = features_df_2x8.select("frame").to_series()
         assert frames.is_sorted()
 
-    def test_no_nulls(self, features_df):
-        """No feature columns should contain null values."""
-        nulls = features_df.null_count()
-        for col in features_df.columns:
+    def test_no_nulls(self, features_df_2x8):
+        nulls = features_df_2x8.null_count()
+        for col in features_df_2x8.columns:
             assert nulls.select(col).item() == 0, f"Null in column: {col}"
 
-    def test_no_infinite(self, features_df):
-        """No feature columns should contain infinite values."""
-        for col in features_df.columns:
+    def test_no_infinite(self, features_df_2x8):
+        for col in features_df_2x8.columns:
             if col == "frame":
                 continue
-            series = features_df.select(col).to_series()
+            series = features_df_2x8.select(col).to_series()
             assert not series.is_infinite().any(), f"Inf in column: {col}"
 
-    def test_feature_count(self, features_df):
-        """Should produce 400+ features (SimBA produces ~600+ for 2-animal 16-bp)."""
-        # frame column + features
-        assert len(features_df.columns) > 400, (
-            f"Expected 400+ features, got {len(features_df.columns) - 1}"
-        )
+    def test_feature_count(self, features_df_2x8):
+        """Should produce many features for 2-animal 8-bp config."""
+        n_cols = len(features_df_2x8.columns)
+        assert n_cols > 100, f"Expected 100+ columns, got {n_cols - 1}"
 
-    def test_distance_features_exist(self, features_df):
-        """Core distance features must be present."""
-        required = [
-            "Mouse_1_nose_to_tail",
-            "Mouse_2_nose_to_tail",
-            "Centroid_distance",
-            "Nose_to_nose_distance",
-        ]
-        for name in required:
-            assert name in features_df.columns, f"Missing: {name}"
+    def test_within_distance_features(self, features_df_2x8):
+        col = f"{INDIVS_2[0]}_Nose_to_TailBase1_dist"
+        assert col in features_df_2x8.columns, f"Missing: {col}"
 
-    def test_hull_features_exist(self, features_df):
-        """Convex hull features must be present (any naming convention)."""
-        hull_cols = [c for c in features_df.columns if "poly_area" in c.lower()]
-        assert len(hull_cols) >= 2, f"Expected 2+ hull columns, got: {hull_cols}"
+    def test_cross_distance_features(self, features_df_2x8):
+        col = f"{INDIVS_2[0]}_Nose_to_{INDIVS_2[1]}_Nose_dist"
+        assert col in features_df_2x8.columns, f"Missing: {col}"
 
-    def test_movement_features_exist(self, features_df):
-        """Movement features must be present for key body-parts."""
-        movement_cols = [
-            c for c in features_df.columns if c.startswith("Movement_mouse_")
-        ]
-        assert len(movement_cols) >= 16, (
-            f"Expected 16+ movement cols (8 bp x 2 animals), got: {len(movement_cols)}"
-        )
+    def test_movement_features(self, features_df_2x8):
+        col = f"{INDIVS_2[0]}_Nose_movement"
+        assert col in features_df_2x8.columns, f"Missing: {col}"
 
-    def test_angle_features_exist(self, features_df):
-        """3-point angle features must be present."""
-        assert "Mouse_1_angle" in features_df.columns
-        assert "Mouse_2_angle" in features_df.columns
+    def test_hull_features(self, features_df_2x8):
+        assert f"{INDIVS_2[0]}_hull_perimeter" in features_df_2x8.columns
 
-    def test_rolling_features_exist(self, features_df):
-        """Rolling window features must be present."""
+    def test_cdist_features(self, features_df_2x8):
+        assert f"{INDIVS_2[0]}_cdist_max" in features_df_2x8.columns
+        assert f"{INDIVS_2[0]}_cdist_mean" in features_df_2x8.columns
+
+    def test_total_movement_features(self, features_df_2x8):
+        assert f"total_movement_{INDIVS_2[0]}" in features_df_2x8.columns
+        assert "total_movement_all" in features_df_2x8.columns
+
+    def test_probability_features(self, features_df_2x8):
+        assert "sum_probabilities" in features_df_2x8.columns
+        assert "low_prob_detections_0.1" in features_df_2x8.columns
+
+    def test_rolling_features(self, features_df_2x8):
         rolling_cols = [
-            c for c in features_df.columns if "_median_" in c or "_mean_" in c
+            c for c in features_df_2x8.columns if "_mean_" in c or "_median_" in c
         ]
-        assert len(rolling_cols) > 10, (
-            f"Expected 10+ rolling cols, got: {len(rolling_cols)}"
-        )
+        assert len(rolling_cols) > 10, f"Expected 10+ rolling cols, got {len(rolling_cols)}"
 
-    def test_probability_features_exist(self, features_df):
-        """Probability-based features must be present."""
-        assert "Sum_probabilities" in features_df.columns
-        assert "Low_prob_detections_0.1" in features_df.columns
+    def test_deviation_features(self, features_df_2x8):
+        dev_cols = [c for c in features_df_2x8.columns if "_deviation" in c]
+        assert len(dev_cols) > 3, f"Expected 3+ deviation cols, got {len(dev_cols)}"
 
-    def test_deviation_features_exist(self, features_df):
-        """Deviation features must be present."""
-        dev_cols = [c for c in features_df.columns if "_deviation" in c]
-        assert len(dev_cols) > 5, f"Expected 5+ deviation cols, got: {len(dev_cols)}"
+    def test_percentile_rank_features(self, features_df_2x8):
+        pr_cols = [c for c in features_df_2x8.columns if "percentile_rank" in c]
+        assert len(pr_cols) > 1, f"Expected 1+ percentile rank cols, got {len(pr_cols)}"
 
-    def test_tortuosity_features_exist(self, features_df):
-        """Tortuosity features must be present."""
-        tort_cols = [c for c in features_df.columns if "Tortuosity" in c]
-        assert len(tort_cols) >= 2, (
-            f"Expected 2+ tortuosity cols, got: {len(tort_cols)}"
-        )
-
-    def test_percentile_rank_features_exist(self, features_df):
-        """Percentile rank features must be present."""
-        pr_cols = [c for c in features_df.columns if "percentile_rank" in c]
-        assert len(pr_cols) > 3, (
-            f"Expected 3+ percentile rank cols, got: {len(pr_cols)}"
-        )
-
-    def test_features_are_numeric(self, features_df):
-        """All non-frame feature columns must be Float64."""
-        for col in features_df.columns:
+    def test_features_are_numeric(self, features_df_2x8):
+        for col in features_df_2x8.columns:
             if col == "frame":
                 continue
-            assert features_df.schema[col] == pl.Float64, (
-                f"Column {col} has type {features_df.schema[col]}, expected Float64"
+            assert features_df_2x8.schema[col] == pl.Float64, (
+                f"Column {col} has type {features_df_2x8.schema[col]}, expected Float64"
             )
 
 
-class TestSimbaFeaturesValues:
+class TestGenericFeaturesValues:
     """Tests validating that feature values are in reasonable ranges."""
 
-    def test_distances_non_negative(self, features_df):
-        """All distance features should be non-negative (allow fp rounding)."""
-        dist_cols = [
-            c
-            for c in features_df.columns
-            if any(kw in c for kw in ["distance", "Distance", "nose_to_tail", "width"])
-            and "_deviation" not in c
-            and "percentile" not in c
-        ]
+    def test_distances_non_negative(self, features_df_2x8):
+        dist_cols = [c for c in features_df_2x8.columns if "_to_" in c and "_dist" in c and "_deviation" not in c]
         eps = 1e-12
         for col in dist_cols:
-            vals = features_df.select(col).to_series()
+            vals = features_df_2x8.select(col).to_series()
             assert vals.min() >= -eps, f"Negative values in {col}: min={vals.min()}"
 
-    def test_movement_non_negative(self, features_df):
-        """Movement (raw) features should be non-negative. Deviation is excluded."""
-        move_cols = [
-            c
-            for c in features_df.columns
-            if c.startswith("Movement_mouse_") and "_deviation" not in c
-        ]
+    def test_movement_non_negative(self, features_df_2x8):
+        move_cols = [c for c in features_df_2x8.columns if c.endswith("_movement") and "_deviation" not in c]
         eps = 1e-12
         for col in move_cols:
-            vals = features_df.select(col).to_series()
+            vals = features_df_2x8.select(col).to_series()
             assert vals.min() >= -eps, f"Negative values in {col}: min={vals.min()}"
 
-    def test_angles_in_range(self, features_df):
-        """Angle features should be in [0, 360] degrees."""
-        ang_cols = [c for c in features_df.columns if c.endswith("_angle")]
-        for col in ang_cols:
-            vals = features_df.select(col).to_series()
-            assert (vals >= 0).all(), f"Negative angle in {col}"
-            assert (vals <= 360).all(), f"Angle > 360 in {col}"
-
-    def test_low_prob_detections_in_range(self, features_df):
-        """Low probability detection counts should be 0 to n_bodyparts."""
-        lp_cols = [
-            c for c in features_df.columns if c.startswith("Low_prob_detections")
-        ]
+    def test_low_prob_detections_in_range(self, features_df_2x8):
+        lp_cols = [c for c in features_df_2x8.columns if c.startswith("low_prob_detections")]
+        n_bp = 16  # 2 individuals × 8 bodyparts
         for col in lp_cols:
-            vals = features_df.select(col).to_series()
+            vals = features_df_2x8.select(col).to_series()
             assert (vals >= 0).all(), f"Negative count in {col}"
-            assert (vals <= 16).all(), f"Count > 16 (n_bodyparts) in {col}"
+            assert (vals <= n_bp).all(), f"Count > {n_bp} in {col}"
 
-    def test_percentile_ranks_in_range(self, features_df):
-        """Percentile ranks should be in [0, 1]."""
-        pr_cols = [c for c in features_df.columns if "percentile_rank" in c]
+    def test_percentile_ranks_in_range(self, features_df_2x8):
+        pr_cols = [c for c in features_df_2x8.columns if "percentile_rank" in c]
         for col in pr_cols:
-            vals = features_df.select(col).to_series()
+            vals = features_df_2x8.select(col).to_series()
             assert (vals >= 0).all(), f"Negative percentile in {col}"
             assert (vals <= 1).all(), f"Percentile > 1 in {col}"
 
-    def test_centroid_distance_reasonable(self, features_df):
-        """Centroid distance between two mice should be plausible (5-200mm)."""
-        vals = features_df.select("Centroid_distance").to_series()
-        assert vals.min() > 0, f"Min centroid distance is {vals.min()}"
 
+class TestSingleAnimalFeatures:
+    """Tests for generic features on 1 individual × 4 bodyparts."""
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# Cross-validation placeholder
-# ═══════════════════════════════════════════════════════════════════════════════
+    def test_no_cross_individual_features(self, features_df_1x4):
+        """Single animal should have no cross-individual distance features."""
+        cross_cols = [c for c in features_df_1x4.columns if "mouse2" in c.lower()]
+        assert len(cross_cols) == 0
 
+    def test_output_shape(self, features_df_1x4):
+        assert features_df_1x4.height == 1801
 
-@pytest.mark.skip(
-    reason="Requires SimBA conda environment for cross-validation. "
-    "Run on a system with 'simba' conda env to validate output compatibility."
-)
-class TestSimbaCrossValidation:
-    """Cross-validate native output against actual SimBA subprocess output."""
+    def test_no_nulls(self, features_df_1x4):
+        nulls = features_df_1x4.null_count()
+        for col in features_df_1x4.columns:
+            assert nulls.select(col).item() == 0, f"Null in column: {col}"
 
-    def test_column_names_match_simba(self, features_df):
-        """Output column names should match SimBA's feature_extraction_headers.csv."""
-        # Load reference column names from SimBA's assets
-        ...
+    def test_no_infinite(self, features_df_1x4):
+        for col in features_df_1x4.columns:
+            if col == "frame":
+                continue
+            series = features_df_1x4.select(col).to_series()
+            assert not series.is_infinite().any(), f"Inf in column: {col}"
 
-    def test_feature_values_match_simba(self, features_df, keypoints_df):
-        """Feature values should match SimBA output within floating-point tolerance."""
-        # Run SimBA subprocess on the same data, compare output
-        ...
+    def test_has_basic_features(self, features_df_1x4):
+        assert "mouse1marked_hull_perimeter" in features_df_1x4.columns
+        assert "total_movement_mouse1marked" in features_df_1x4.columns
+        assert "sum_probabilities" in features_df_1x4.columns

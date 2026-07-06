@@ -2,6 +2,7 @@
 
 import json
 from datetime import UTC, datetime
+from pathlib import Path
 
 import numpy as np
 import polars as pl
@@ -19,10 +20,11 @@ class TrainingSnapshot:
         x_ls: list[np.ndarray],
         y_ls: list[np.ndarray],
         experiment_names: list[str],
+        proj_dir: Path,
         config: BehaviourClassifierConfig,
     ) -> None:
         snap_dir = training_data_dir(
-            config.proj_dir,
+            proj_dir,
             config.behaviour_name,
             config.model_type,
         )
@@ -49,7 +51,7 @@ class TrainingSnapshot:
         vid_dir = snap_dir / "videos"
         vid_dir.mkdir(parents=True, exist_ok=True)
         for name in experiment_names:
-            src = config.proj_dir / "2_formatted_videos" / f"{name}.mp4"
+            src = proj_dir / "2_formatted_videos" / f"{name}.mp4"
             dst = vid_dir / f"{name}.mp4"
             if src.exists() and not dst.exists():
                 dst.symlink_to(src)

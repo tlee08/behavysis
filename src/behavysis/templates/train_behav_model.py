@@ -3,7 +3,7 @@ from pathlib import Path
 import pandas as pd
 
 from behavysis import Project
-from behavysis.behaviour_classifier import BehaviourClassifier
+from behavysis.behaviour_classifier import BehaviourClassifier, BehaviourClassifierConfig
 from behavysis.funcs import boris2behaviour
 
 if __name__ == "__main__":
@@ -27,35 +27,45 @@ if __name__ == "__main__":
             behaviour_ls=behaviour_ls,
             overwrite=overwrite,
         )
-    # Making BehaviourClassifier objects
+    # Making BehaviourClassifier objects for all behaviours
     for behaviour in behaviour_ls:
-        BehaviourClassifier.create_from_project_dir(root_dir)
+        BehaviourClassifier.create_all_from_project_dir(root_dir)
 
     # Option 2: From previous behavysis project
     proj = Project(root_dir)
     proj.import_experiments()
-    # Making BehaviourClassifier objects
+
+    # Create classifiers for all labelled behaviours
     BehaviourClassifier.create_from_project(proj)
 
-    # Loading a BehavModel
-    behaviour = "fight"
-    model_fp = root_dir / "behaviour_models" / behaviour
-    model = BehaviourClassifier.load(model_fp, behaviour)
-    # Testing all different classifiers
-    model.pipeline_training_all()
-    # MANUALLY LOOK AT THE BEST CLASSIFIER AND SELECT
-    model.clf = "CNN1"
+    # Train a specific model
+    config = BehaviourClassifierConfig(
+        behaviour_name="attack",
+        model_type="rf",
+        individuals=["mouse1marked", "mouse2unmarked"],
+        bodyparts=["Nose", "BodyCentre", "LeftEar", "RightEar"],
+        pcutoff=0.2,
+    )
+    clf = BehaviourClassifier.create(root_dir, "attack", config)
+    clf.train()
 
-    # Example of evaluating model with novel data
-    x = pd.read_parquet("path/to/features_extracted")
-    y = pd.read_parquet("path/to/scored_behaviour")
-    # Evaluating classifier (results stored in "eval" folder)
-    model.clf_eval_save_performance(x, y)
+    # Train all model types for comparison
+    from behavysis.behaviour_classifier import train_all_models
 
-    # Example of using model for inference
-    # Loading a BehavModel
-    model = BehaviourClassifier.load(model_fp, behaviour)
-    # Getting data
+    train_all_models(
+        root_dir,
+        "attack",
+        config_overrides={
+            "individuals": ["mouse1marked", "mouse2unmarked"],
+            "bodyparts": ["Nose", "BodyCentre", "LeftEar", "RightEar"],
+        },
+    )
+
+    # Load a trained classifier
+    clf = BehaviourClassifier.load(root_dir, "attack")
+    # Or load a specific model type
+    clf = BehaviourClassifier.load(root_dir, "attack", model_type="dnn1")
+
+    # Inference
     x = pd.read_parquet("path/to/features_extracted.parquet")
-    # Running inference
-    res = model.pipeline_inference(x)
+    res = clf.predict(x)

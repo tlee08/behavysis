@@ -36,6 +36,18 @@ def load_features(x_dir: Path) -> tuple[list[np.ndarray], list[str]]:
     return x_ls, names
 
 
+def load_feature_names(x_dir: Path) -> list[str]:
+    """Load feature column names from the first features parquet file.
+
+    Returns column names excluding "frame".
+    """
+    fp_ls = sorted(x_dir.iterdir())
+    if not fp_ls:
+        return []
+    df = pl.read_parquet(fp_ls[0])
+    return [c for c in df.columns if c != "frame"]
+
+
 def load_labels(
     y_dir: Path,
     behaviour_name: str,

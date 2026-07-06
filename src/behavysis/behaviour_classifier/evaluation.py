@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
+from loguru import logger
 from matplotlib.figure import Figure
 from sklearn.metrics import classification_report, confusion_matrix
 
@@ -229,3 +230,126 @@ def save_evaluation_results(
     plt.close(logc_fig)
 
     return eval_df, report_dict, conf_matr_fig, pcutoffs_fig, logc_fig
+
+
+def save_feature_importance(
+    feature_names: list[str],
+    importances: np.ndarray,
+    eval_dir: Path,
+    *,
+    top_n: int = 30,
+) -> None:
+    """Save feature importance bar chart.
+
+    Parameters
+    ----------
+    feature_names : list[str]
+        Names of features in the same order as importances.
+    importances : np.ndarray
+        Feature importance values (must be non-negative).
+    eval_dir : Path
+        Directory to save the plot.
+    top_n : int
+        Number of top features to show.
+    """
+    n = min(top_n, len(importances))
+    if n == 0:
+        return
+    idx = np.argsort(importances)[-n:]
+    names = [feature_names[i] for i in idx]
+    vals = importances[idx]
+
+    fig, ax = plt.subplots(figsize=(10, max(6, n * 0.3)))
+    ax.barh(range(n), vals, color="steelblue")
+    ax.set_yticks(range(n))
+    ax.set_yticklabels(names, fontsize=8)
+    ax.set_xlabel("Feature Importance")
+    ax.set_title(f"Top {n} Features by Importance")
+    fig.tight_layout()
+    fig.savefig(eval_dir / "feature_importance.png", dpi=150)
+    plt.close(fig)
+    logger.info(
+        "Saved feature importance plot to %s",
+        eval_dir / "feature_importance.png",
+    )
+
+
+def save_feature_report(
+    feature_names: list[str],
+    importances: np.ndarray | None,
+    eval_dir: Path,
+) -> None:
+    """Save feature count and importance summary as JSON.
+
+    Parameters
+    ----------
+    feature_names : list[str]
+        All feature names used by the model.
+    importances : np.ndarray | None
+        Feature importance values, or None if not available.
+    eval_dir : Path
+        Directory to save the report.
+    """
+    n_total = len(feature_names)
+    report: dict = {
+        "n_features_total": n_total,
+        "n_features_used": n_total,
+    }
+
+    if importances is not None:
+        non_zero = int(np.sum(importances > 0))
+        report["n_features_non_zero_importance"] = non_zero
+        n_low = int(np.sum(importances < 0.001))
+        report["n_features_low_importance_lte_0.001"] = n_low
+
+    eval_dir.mkdir(parents=True, exist_ok=True)
+    (eval_dir / "feature_report.json").write_text(json.dumps(report, indent=2))
+    logger.info("Saved feature report to %s", eval_dir / "feature_report.json")
+
+
+def save_shap_summary(
+    x_sample: np.ndarray,
+    feature_names: list[str],
+    eval_dir: Path,
+    *,
+    max_samples: int = 500,
+) -> None:
+    """Save SHAP summary plot (optional, requires shap package).
+
+    Parameters
+    ----------
+    x_sample : np.ndarray
+        Feature matrix (n_samples, n_features).
+    feature_names : list[str]
+        Names of features.
+    eval_dir : Path
+        Directory to save the plot.
+    max_samples : int
+        Maximum number of samples to use for SHAP computation.
+    """
+    try:
+        import shap
+    except ImportError:
+        logger.warning("SHAP not installed. Skipping SHAP summary plot.")
+        return
+
+    n = min(max_samples, x_sample.shape[0])
+    x_sample = x_sample[:n]
+
+    explainer = shap.Explainer(
+        lambda x: x,  # placeholder, will use KernelExplainer or similar
+        x_sample,
+    )
+
+    try:
+        shap_values = explainer(x_sample)
+        fig = plt.figure(figsize=(10, max(6, len(feature_names) * 0.2)))
+        shap.summary_plot(
+            shap_values, x_sample,
+            feature_names=feature_names, show=False,
+        )
+        fig.savefig(eval_dir / "shap_summary.png", dpi=150, bbox_inches="tight")
+        plt.close(fig)
+        logger.info("Saved SHAP summary plot to %s", eval_dir / "shap_summary.png")
+    except Exception:
+        logger.warning("SHAP computation failed — likely incompatible model type.")

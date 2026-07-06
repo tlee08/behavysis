@@ -1,11 +1,11 @@
 """Experiment configuration models for the behavysis pipeline."""
 
+from __future__ import annotations
+
 from pathlib import Path
 
 import yaml
 from pydantic import BaseModel, ConfigDict, PositiveFloat, PositiveInt
-
-from behavysis.constants import BPTS_SIMBA, INDIVS_SIMBA
 
 from ._validators import ConfigNotConfiguredError
 
@@ -65,17 +65,45 @@ class PreprocessConfig(SubfuncModel):
 
 
 class ExtractFeaturesConfig(BaseModel):
-    """ExtractFeaturesConfig."""
+    """Configuration for generic feature extraction.
 
-    individuals: list[str] = INDIVS_SIMBA
-    bodyparts: list[str] = BPTS_SIMBA
+    Specifies which individuals and bodyparts to include. Features are
+    computed programmatically from the full cartesian product — no
+    semantic bodypart roles required.
+    """
+
+    individuals: list[str]
+    bodyparts: list[str]
+
+    def validate_bodypart_match(self, other: ExtractFeaturesConfig) -> None:
+        """Validate that another config has matching individuals and bodyparts."""
+        if set(self.individuals) != set(other.individuals):
+            msg = (
+                f"Individual mismatch: {sorted(self.individuals)} vs "
+                f"{sorted(other.individuals)}"
+            )
+            raise ValueError(msg)
+        if set(self.bodyparts) != set(other.bodyparts):
+            msg = (
+                f"Bodypart mismatch: {sorted(self.bodyparts)} vs "
+                f"{sorted(other.bodyparts)}"
+            )
+            raise ValueError(msg)
 
 
 class ClassifyBehaviourConfig(BaseModel):
-    """ClassifyBehaviourConfig."""
+    """ClassifyBehaviourConfig.
+
+    Specifies which trained model to use for behaviour classification.
+    ``individuals`` and ``bodyparts`` must match the experiment's
+    extract_features config — validated at classify time.
+    """
 
     proj_dir: Path = Path("path") / "to" / "project_dir"
     behaviour_name: str = "behaviour_name"
+    model_type: str = "rf"
+    individuals: list[str]
+    bodyparts: list[str]
     pcutoff: PositiveFloat | None = None
     min_empty_window_secs: PositiveFloat = 0.2
     user_defined: list[str] = []
@@ -105,7 +133,7 @@ class ExperimentConfig(BaseModel):
     analyse: AnalyseConfig | None
 
     @classmethod
-    def read_yaml(cls, fp: Path) -> "ExperimentConfig":
+    def read_yaml(cls, fp: Path) -> ExperimentConfig:
         """Read the config from a yaml file."""
         return ExperimentConfig.model_validate(
             yaml.safe_load(fp.open("r")),

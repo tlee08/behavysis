@@ -55,7 +55,7 @@ class SklearnAdapter(BaseAdapter):
         index_ls: list[np.ndarray],
         config: object,
     ) -> pd.DataFrame:
-        start_col = getattr(config, "feature_start_col", 48)
+        start_col = getattr(config, "feature_start_col", 0)
         x_train = [
             select_features(x[idx], start_col)
             for x, idx in zip(x_ls, index_ls, strict=True)
@@ -111,7 +111,7 @@ class TorchAdapter(BaseAdapter):
         index_ls: list[np.ndarray],
         config: object,
     ) -> pd.DataFrame:
-        start_col = getattr(config, "feature_start_col", 48)
+        start_col = getattr(config, "feature_start_col", 0)
         batch_size = getattr(config, "batch_size", 256)
         epochs = getattr(config, "epochs", 100)
         val_split = getattr(config, "val_split", 0.2)
