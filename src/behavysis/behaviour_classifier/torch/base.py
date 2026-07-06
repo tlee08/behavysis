@@ -93,7 +93,9 @@ class TorchModel(nn.Module, ABC):
         """Return predicted probabilities for indexed samples."""
         self.to_device()
         idx = index if index is not None else np.arange(x.shape[0])
-        dl = self._make_loader([x], [np.zeros(x.shape[0])], [idx], batch_size, shuffle=False)
+        dl = self._make_loader(
+            [x], [np.zeros(x.shape[0])], [idx], batch_size, shuffle=False
+        )
 
         self.eval()
         probs = torch.zeros((len(idx), 1), device=self.device)

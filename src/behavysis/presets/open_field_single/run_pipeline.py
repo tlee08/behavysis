@@ -28,7 +28,10 @@ with app.setup:
 
 @app.cell(hide_code=True)
 def _():
-    mo.md(r"""# Behavysis — Open Field (Single Mouse)""")
+    mo.md(r"""
+    # Behavysis — Open Field (Single Mouse)
+    """)
+    return
 
 
 @app.cell
@@ -52,16 +55,19 @@ def _(names_ls, nprocs, proj_dir):
 @app.cell
 def _(config_fp, proj):
     proj.update_config(default_config_fp=config_fp)
+    return
 
 
 @app.cell
 def _(overwrite, proj):
     proj.format_video(overwrite=overwrite)
+    return
 
 
 @app.cell
 def _(overwrite, proj):
     proj.run_dlc(gputouse=None, overwrite=overwrite)
+    return
 
 
 @app.cell
@@ -74,6 +80,7 @@ def _(proj):
             px_per_mm,
         ),
     )
+    return
 
 
 @app.cell
@@ -82,6 +89,7 @@ def _(overwrite, proj):
         funcs=(start_stop_trim, interpolate),
         overwrite=overwrite,
     )
+    return
 
 
 @app.cell
@@ -91,6 +99,7 @@ def _(proj):
     )
     proj.combine_analysis()
     proj.collate_analysis()
+    return
 
 
 if __name__ == "__main__":

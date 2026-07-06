@@ -141,7 +141,9 @@ class BehaviourClassifier:
         return factory()
 
     def _save(self) -> None:
-        fp = classifier_fp(self._proj_dir, self._behaviour_name, self._config.model_type)
+        fp = classifier_fp(
+            self._proj_dir, self._behaviour_name, self._config.model_type
+        )
         self._adapter.save(fp)
 
     def _save_config(self) -> None:
@@ -230,7 +232,9 @@ class BehaviourClassifier:
         """
         index = features_df.index
         x = features_df.to_numpy()
-        y_prob = self._adapter.predict(x, np.arange(x.shape[0]), self._config.batch_size)
+        y_prob = self._adapter.predict(
+            x, np.arange(x.shape[0]), self._config.batch_size
+        )
         y_pred = (y_prob > self._config.pcutoff).astype(int)
 
         columns = pd.MultiIndex.from_tuples(
@@ -245,6 +249,7 @@ class BehaviourClassifier:
 
 
 # ── batch training across model types ────────────────────────────────
+
 
 def train_all_models(
     proj_dir: Path,

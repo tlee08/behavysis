@@ -32,7 +32,8 @@ class TrainingSnapshot:
         feat_dir.mkdir(parents=True, exist_ok=True)
         for name, x in zip(experiment_names, x_ls, strict=True):
             pl.DataFrame(
-                x, schema=[f"f{i}" for i in range(x.shape[1])],
+                x,
+                schema=[f"f{i}" for i in range(x.shape[1])],
             ).write_parquet(feat_dir / f"{name}.parquet")
 
         # Labels

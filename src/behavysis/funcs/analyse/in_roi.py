@@ -206,8 +206,13 @@ def _make_location_scatterplot(
             text_x = x0 + 5
             text_y = y0 - 8 if ri == 0 else y0 - 5
             cv2.putText(
-                canvas, title, (text_x, text_y),
-                FONT, FONT_SCALE, FONT_COLOR, FONT_THICKNESS,
+                canvas,
+                title,
+                (text_x, text_y),
+                FONT,
+                FONT_SCALE,
+                FONT_COLOR,
+                FONT_THICKNESS,
             )
 
     return canvas

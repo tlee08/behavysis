@@ -30,7 +30,9 @@ class DNN1(TorchModel):
         return self._optimizer
 
     def forward(self, x):
-        return self.sigmoid1(self.fc2(self.dropout1(self.relu1(self.fc1(self.flatten(x))))))
+        return self.sigmoid1(
+            self.fc2(self.dropout1(self.relu1(self.fc1(self.flatten(x)))))
+        )
 
 
 class DNN2(TorchModel):
@@ -58,7 +60,9 @@ class DNN2(TorchModel):
         return self._optimizer
 
     def forward(self, x):
-        return self.sigmoid1(self.fc2(self.dropout1(self.relu1(self.fc1(self.flatten(x))))))
+        return self.sigmoid1(
+            self.fc2(self.dropout1(self.relu1(self.fc1(self.flatten(x)))))
+        )
 
 
 class DNN3(TorchModel):

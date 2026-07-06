@@ -56,7 +56,10 @@ class SklearnAdapter(BaseAdapter):
         config: object,
     ) -> pd.DataFrame:
         start_col = getattr(config, "feature_start_col", 48)
-        x_train = [select_features(x[idx], start_col) for x, idx in zip(x_ls, index_ls, strict=True)]
+        x_train = [
+            select_features(x[idx], start_col)
+            for x, idx in zip(x_ls, index_ls, strict=True)
+        ]
         y_train = [y[idx] for y, idx in zip(y_ls, index_ls, strict=True)]
         X = np.concatenate(x_train, axis=0)
         y = np.concatenate(y_train, axis=0)
@@ -72,7 +75,9 @@ class SklearnAdapter(BaseAdapter):
     ) -> np.ndarray:
         _ = batch_size
         idx = index if index is not None else np.arange(x.shape[0])
-        x_sel = select_features(x[idx], self.scaler._scaler.n_features_in_ - sum(1 for _ in []))  # noqa: SLF001
+        x_sel = select_features(
+            x[idx], self.scaler._scaler.n_features_in_ - sum(1 for _ in [])
+        )  # noqa: SLF001
         # Re-select with correct offset: scaler was fitted on selected features
         start_col = x.shape[1] - self.scaler._scaler.n_features_in_  # noqa: SLF001
         x_sel = select_features(x[idx], start_col)
@@ -111,7 +116,10 @@ class TorchAdapter(BaseAdapter):
         epochs = getattr(config, "epochs", 100)
         val_split = getattr(config, "val_split", 0.2)
 
-        x_train = [select_features(x[idx], start_col) for x, idx in zip(x_ls, index_ls, strict=True)]
+        x_train = [
+            select_features(x[idx], start_col)
+            for x, idx in zip(x_ls, index_ls, strict=True)
+        ]
         y_train = [y[idx] for y, idx in zip(y_ls, index_ls, strict=True)]
 
         X = np.concatenate(x_train, axis=0)

@@ -12,7 +12,9 @@ ModelFactory = Callable[[], BaseAdapter]
 
 MODEL_REGISTRY: dict[str, ModelFactory] = {
     "rf": lambda: SklearnAdapter(
-        RandomForestClassifier(n_estimators=200, max_depth=8, random_state=42, n_jobs=-1),
+        RandomForestClassifier(
+            n_estimators=200, max_depth=8, random_state=42, n_jobs=-1
+        ),
     ),
     "logreg": lambda: SklearnAdapter(
         LogisticRegression(max_iter=1000, random_state=42),

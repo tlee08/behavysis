@@ -108,7 +108,9 @@ def stratified_split_by_video(
     y = np.concatenate(y_ls, axis=0)
 
     n_splits = max(2, int(1 / test_size))
-    sgkf = StratifiedGroupKFold(n_splits=n_splits, shuffle=True, random_state=random_state)
+    sgkf = StratifiedGroupKFold(
+        n_splits=n_splits, shuffle=True, random_state=random_state
+    )
     train_idx, test_idx = next(sgkf.split(X, y, groups))
 
     offsets = np.cumsum([0] + [x.shape[0] for x in x_ls[:-1]])
@@ -120,9 +122,7 @@ def stratified_split_by_video(
         for i in range(len(x_ls))
     ]
     test_per_vid = [
-        test_idx[
-            (test_idx >= offsets[i]) & (test_idx < offsets[i] + x_ls[i].shape[0])
-        ]
+        test_idx[(test_idx >= offsets[i]) & (test_idx < offsets[i] + x_ls[i].shape[0])]
         - offsets[i]
         for i in range(len(x_ls))
     ]
