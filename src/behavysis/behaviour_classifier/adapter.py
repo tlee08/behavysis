@@ -1,4 +1,4 @@
-"""Classifier adapters: SklearnAdapter (row-by-row) and TorchAdapter (temporal)."""
+"""Classifier adapters: SklearnAdapter and TorchAdapter."""
 
 from abc import ABC, abstractmethod
 from collections.abc import Callable
@@ -8,13 +8,13 @@ import numpy as np
 import pandas as pd
 from joblib import dump, load
 from sklearn.base import BaseEstimator
+from sklearn.preprocessing import MinMaxScaler
 
-from .preprocessing import Scaler, select_features
 from .torch.base import TorchModel
 
 
 class BaseAdapter(ABC):
-    """Self-contained classifier with model + scaler. Serialisable via joblib."""
+    """Self-contained classifier with model + scaler. Serialised via joblib."""
 
     @abstractmethod
     def fit(
@@ -41,12 +41,9 @@ class BaseAdapter(ABC):
 class SklearnAdapter(BaseAdapter):
     """Wraps any sklearn estimator. Row-by-row (no temporal context)."""
 
-    scaler: Scaler
-    estimator: BaseEstimator
-
     def __init__(self, estimator: BaseEstimator) -> None:
         self.estimator = estimator
-        self.scaler = Scaler()
+        self.scaler = MinMaxScaler()
 
     def fit(
         self,
@@ -55,17 +52,13 @@ class SklearnAdapter(BaseAdapter):
         index_ls: list[np.ndarray],
         config: object,
     ) -> pd.DataFrame:
-        start_col = getattr(config, "feature_start_col", 0)
-        x_train = [
-            select_features(x[idx], start_col)
-            for x, idx in zip(x_ls, index_ls, strict=True)
-        ]
+        x_train = [x[idx] for x, idx in zip(x_ls, index_ls, strict=True)]
         y_train = [y[idx] for y, idx in zip(y_ls, index_ls, strict=True)]
         X = np.concatenate(x_train, axis=0)
         y = np.concatenate(y_train, axis=0)
         X = self.scaler.fit_transform(X)
         self.estimator.fit(X, y)
-        return pd.DataFrame(columns=["loss", "vloss"])  # sklearn has no history
+        return pd.DataFrame(columns=["loss", "vloss"])
 
     def predict(
         self,
@@ -75,13 +68,7 @@ class SklearnAdapter(BaseAdapter):
     ) -> np.ndarray:
         _ = batch_size
         idx = index if index is not None else np.arange(x.shape[0])
-        x_sel = select_features(
-            x[idx], self.scaler._scaler.n_features_in_ - sum(1 for _ in [])
-        )  # noqa: SLF001
-        # Re-select with correct offset: scaler was fitted on selected features
-        start_col = x.shape[1] - self.scaler._scaler.n_features_in_  # noqa: SLF001
-        x_sel = select_features(x[idx], start_col)
-        x_scaled = self.scaler.transform(x_sel)
+        x_scaled = self.scaler.transform(x[idx])
         return self.estimator.predict_proba(x_scaled)[:, 1]
 
     def save(self, fp: Path) -> None:
@@ -94,15 +81,12 @@ class SklearnAdapter(BaseAdapter):
 
 
 class TorchAdapter(BaseAdapter):
-    """Wraps a TorchModel factory. Built at fit time when nfeatures is known."""
+    """Wraps a TorchModel factory. Model built at fit time when nfeatures known."""
 
-    scaler: Scaler
-    model: TorchModel | None
-
-    def __init__(self, model_factory: Callable[[int, int], TorchModel]) -> None:
+    def __init__(self, model_factory: Callable[[int], TorchModel]) -> None:
         self.model_factory = model_factory
-        self.model = None
-        self.scaler = Scaler()
+        self.model: TorchModel | None = None
+        self.scaler = MinMaxScaler()
 
     def fit(
         self,
@@ -111,15 +95,11 @@ class TorchAdapter(BaseAdapter):
         index_ls: list[np.ndarray],
         config: object,
     ) -> pd.DataFrame:
-        start_col = getattr(config, "feature_start_col", 0)
         batch_size = getattr(config, "batch_size", 256)
         epochs = getattr(config, "epochs", 100)
         val_split = getattr(config, "val_split", 0.2)
 
-        x_train = [
-            select_features(x[idx], start_col)
-            for x, idx in zip(x_ls, index_ls, strict=True)
-        ]
+        x_train = [x[idx] for x, idx in zip(x_ls, index_ls, strict=True)]
         y_train = [y[idx] for y, idx in zip(y_ls, index_ls, strict=True)]
 
         X = np.concatenate(x_train, axis=0)
@@ -127,9 +107,8 @@ class TorchAdapter(BaseAdapter):
 
         x_scaled = [self.scaler.transform(x) for x in x_train]
         nfeatures = x_scaled[0].shape[1]
-        window_frames = getattr(config, "window_frames", 0)
 
-        self.model = self.model_factory(nfeatures, window_frames)
+        self.model = self.model_factory(nfeatures)
         idx_per_video = [np.arange(len(x)) for x in x_scaled]
 
         return self.model.fit(
@@ -149,9 +128,7 @@ class TorchAdapter(BaseAdapter):
     ) -> np.ndarray:
         if self.model is None:
             raise RuntimeError("Model not fitted. Call fit() first.")
-        start_col = x.shape[1] - self.scaler._scaler.n_features_in_  # noqa: SLF001
-        x_sel = select_features(x, start_col)
-        x_scaled = self.scaler.transform(x_sel)
+        x_scaled = self.scaler.transform(x)
         return self.model.predict(x_scaled, index=index, batch_size=batch_size)
 
     def save(self, fp: Path) -> None:

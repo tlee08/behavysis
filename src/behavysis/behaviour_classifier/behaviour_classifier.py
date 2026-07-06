@@ -34,7 +34,7 @@ from .evaluation import (
     save_training_history,
 )
 from .registry import MODEL_REGISTRY
-from .storage import classifier_fp, config_fp, eval_dir, training_data_dir
+from .storage import classifier_fp, config_fp, eval_dir
 
 if TYPE_CHECKING:
     from behavysis.pipeline.project import Project
@@ -246,7 +246,7 @@ class BehaviourClassifier:
     def _get_feature_importances(self) -> np.ndarray:
         """Extract feature importances from the fitted adapter."""
         adapter = self._adapter
-        n_features = adapter.scaler._scaler.n_features_in_  # noqa: SLF001
+        n_features = adapter.scaler.n_features_in_
         importances = np.zeros(n_features, dtype=np.float64)
 
         if hasattr(adapter, "estimator"):

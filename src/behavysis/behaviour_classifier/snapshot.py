@@ -56,6 +56,15 @@ class TrainingSnapshot:
             if src.exists() and not dst.exists():
                 dst.symlink_to(src)
 
+        # Keypoints symlinks — for training data quality validation
+        kp_dir = snap_dir / "keypoints"
+        kp_dir.mkdir(parents=True, exist_ok=True)
+        for name in experiment_names:
+            src = proj_dir / "3_keypoints" / f"{name}.parquet"
+            dst = kp_dir / f"{name}.parquet"
+            if src.exists() and not dst.exists():
+                dst.symlink_to(src)
+
         # Manifest
         (snap_dir / "manifest.json").write_text(
             json.dumps(
