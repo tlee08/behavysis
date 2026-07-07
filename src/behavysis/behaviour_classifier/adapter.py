@@ -1,30 +1,45 @@
-"""Classifier adapters: SklearnAdapter and TorchAdapter."""
+"""Model adapters for sklearn and PyTorch classifiers.
+
+SklearnAdapter wraps any sklearn estimator with MinMaxScaler.
+TorchAdapter wraps a TorchModel with MinMaxScaler.
+
+Serialisation:
+- sklearn: model.joblib (joblib dump of entire adapter)
+- torch:   model.pt (state_dict) + scaler.joblib (MinMaxScaler)
+"""
+
+from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import Callable
 from pathlib import Path
+from typing import TYPE_CHECKING, ClassVar
 
+import joblib
 import numpy as np
 import pandas as pd
-from joblib import dump, load
-from sklearn.base import BaseEstimator
+import torch
+from loguru import logger
 from sklearn.preprocessing import MinMaxScaler
 
-from .torch.base import TorchModel
+if TYPE_CHECKING:
+    from .config import TrainingRecipe
+    from .torch.base import TorchModel
 
 
 class BaseAdapter(ABC):
-    """Self-contained classifier with model + scaler. Serialised via joblib."""
+    """Abstract adapter with fit / predict."""
+
+    framework: ClassVar[str]
 
     @abstractmethod
     def fit(
         self,
         x_ls: list[np.ndarray],
         y_ls: list[np.ndarray],
-        index_ls: list[np.ndarray],
-        config: object,
+        train_idx: list[np.ndarray],
+        config: TrainingRecipe,
     ) -> pd.DataFrame:
-        """Train on indexed samples. Returns training history DataFrame."""
+        """Train on train_idx subsets. Returns per-epoch history (empty for sklearn)."""
         ...
 
     @abstractmethod
@@ -34,14 +49,24 @@ class BaseAdapter(ABC):
         index: np.ndarray | None = None,
         batch_size: int = 256,
     ) -> np.ndarray:
-        """Return predicted probabilities for indexed samples."""
+        """Return predicted probabilities for indexed rows."""
+        ...
+
+    @abstractmethod
+    def save(self, version_dir: Path) -> None:
+        """Persist model artifacts inside version_dir."""
         ...
 
 
 class SklearnAdapter(BaseAdapter):
-    """Wraps any sklearn estimator. Row-by-row (no temporal context)."""
+    """Adapter for sklearn estimators (RF, LogisticRegression, etc.).
 
-    def __init__(self, estimator: BaseEstimator) -> None:
+    Serialises as a single model.joblib blob (estimator + scaler).
+    """
+
+    framework: ClassVar[str] = "sklearn"
+
+    def __init__(self, estimator: object) -> None:
         self.estimator = estimator
         self.scaler = MinMaxScaler()
 
@@ -49,11 +74,11 @@ class SklearnAdapter(BaseAdapter):
         self,
         x_ls: list[np.ndarray],
         y_ls: list[np.ndarray],
-        index_ls: list[np.ndarray],
-        config: object,
+        train_idx: list[np.ndarray],
+        _config: TrainingRecipe,
     ) -> pd.DataFrame:
-        x_train = [x[idx] for x, idx in zip(x_ls, index_ls, strict=True)]
-        y_train = [y[idx] for y, idx in zip(y_ls, index_ls, strict=True)]
+        x_train = [x[idx] for x, idx in zip(x_ls, train_idx, strict=True)]
+        y_train = [y[idx] for y, idx in zip(y_ls, train_idx, strict=True)]
         X = np.concatenate(x_train, axis=0)
         y = np.concatenate(y_train, axis=0)
         X = self.scaler.fit_transform(X)
@@ -71,53 +96,53 @@ class SklearnAdapter(BaseAdapter):
         x_scaled = self.scaler.transform(x[idx])
         return self.estimator.predict_proba(x_scaled)[:, 1]
 
-    def save(self, fp: Path) -> None:
-        fp.parent.mkdir(parents=True, exist_ok=True)
-        dump(self, fp)
-
-    @classmethod
-    def load(cls, fp: Path) -> BaseAdapter:
-        return load(fp)
+    def save(self, version_dir: Path) -> None:
+        version_dir.mkdir(parents=True, exist_ok=True)
+        joblib.dump(self, version_dir / "model.joblib")
+        logger.info("Saved sklearn model to %s", version_dir)
 
 
 class TorchAdapter(BaseAdapter):
-    """Wraps a TorchModel factory. Model built at fit time when nfeatures known."""
+    """Adapter for PyTorch models with lazy architecture instantiation.
 
-    def __init__(self, model_factory: Callable[[int], TorchModel]) -> None:
+    model_factory: Callable[[int], TorchModel] — takes nfeatures,
+    returns a fresh architecture. Model created at fit() or load_state()
+    time when nfeatures is known.
+
+    Serialises as model.pt (state_dict) + scaler.joblib.
+    """
+
+    framework: ClassVar[str] = "torch"
+
+    def __init__(self, model_factory) -> None:
         self.model_factory = model_factory
         self.model: TorchModel | None = None
-        self.scaler = MinMaxScaler()
+        self.scaler: MinMaxScaler | None = None
 
     def fit(
         self,
         x_ls: list[np.ndarray],
         y_ls: list[np.ndarray],
-        index_ls: list[np.ndarray],
-        config: object,
+        train_idx: list[np.ndarray],
+        config: TrainingRecipe,
     ) -> pd.DataFrame:
-        batch_size = getattr(config, "batch_size", 256)
-        epochs = getattr(config, "epochs", 100)
-        val_split = getattr(config, "val_split", 0.2)
-
-        x_train = [x[idx] for x, idx in zip(x_ls, index_ls, strict=True)]
-        y_train = [y[idx] for y, idx in zip(y_ls, index_ls, strict=True)]
-
+        x_train = [x[idx] for x, idx in zip(x_ls, train_idx, strict=True)]
+        y_train = [y[idx] for y, idx in zip(y_ls, train_idx, strict=True)]
         X = np.concatenate(x_train, axis=0)
-        self.scaler.fit(X)
+        y = np.concatenate(y_train, axis=0)
 
-        x_scaled = [self.scaler.transform(x) for x in x_train]
-        nfeatures = x_scaled[0].shape[1]
+        self.scaler = MinMaxScaler()
+        X = self.scaler.fit_transform(X)
+        nfeatures = X.shape[1]
 
         self.model = self.model_factory(nfeatures)
-        idx_per_video = [np.arange(len(x)) for x in x_scaled]
-
         return self.model.fit(
-            x_ls=x_scaled,
-            y_ls=y_train,
-            index_ls=idx_per_video,
-            batch_size=batch_size,
-            epochs=epochs,
-            val_split=val_split,
+            [X],
+            [y],
+            [np.arange(X.shape[0])],
+            batch_size=config.batch_size,
+            epochs=config.epochs,
+            val_split=config.val_split,
         )
 
     def predict(
@@ -126,15 +151,36 @@ class TorchAdapter(BaseAdapter):
         index: np.ndarray | None = None,
         batch_size: int = 256,
     ) -> np.ndarray:
-        if self.model is None:
-            raise RuntimeError("Model not fitted. Call fit() first.")
-        x_scaled = self.scaler.transform(x)
-        return self.model.predict(x_scaled, index=index, batch_size=batch_size)
+        if self.scaler is None or self.model is None:
+            msg = "Model not fitted. Call fit() or load_state() first."
+            raise RuntimeError(msg)
+        X = self.scaler.transform(x)
+        idx = index if index is not None else np.arange(X.shape[0])
+        return self.model.predict(X, idx, batch_size=batch_size)
 
-    def save(self, fp: Path) -> None:
-        fp.parent.mkdir(parents=True, exist_ok=True)
-        dump(self, fp)
+    def save(self, version_dir: Path) -> None:
+        if self.model is None or self.scaler is None:
+            msg = "Cannot save unfitted torch model."
+            raise RuntimeError(msg)
+        version_dir.mkdir(parents=True, exist_ok=True)
+        torch.save(self.model.state_dict(), version_dir / "model.pt")
+        joblib.dump(self.scaler, version_dir / "scaler.joblib")
+        logger.info("Saved torch model to %s", version_dir)
 
-    @classmethod
-    def load(cls, fp: Path) -> BaseAdapter:
-        return load(fp)
+    def load_state(self, version_dir: Path) -> None:
+        """Reconstruct model + scaler from version_dir artifacts.
+
+        Requires self.model_factory to be set (from MODEL_REGISTRY
+        instantiation before calling this method).
+        """
+        self.scaler = joblib.load(version_dir / "scaler.joblib")
+        nfeatures = self.scaler.n_features_in_
+        self.model = self.model_factory(nfeatures)
+        self.model.load_state_dict(
+            torch.load(
+                version_dir / "model.pt",
+                map_location=torch.device("cpu"),
+                weights_only=True,
+            )
+        )
+        logger.info("Loaded torch model from %s", version_dir)

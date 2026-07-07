@@ -118,34 +118,6 @@ def eval_logc(y_true: np.ndarray, y_prob: np.ndarray) -> Figure:
     return fig
 
 
-def eval_bouts(y_true: np.ndarray, y_pred: np.ndarray) -> pd.DataFrame:
-    """Analyze prediction accuracy by behavioural bout.
-
-    Parameters
-    ----------
-    y_true : np.ndarray
-        True labels.
-    y_pred : np.ndarray
-        Predicted labels.
-
-    Returns:
-    -------
-    pd.DataFrame
-        Summary of prediction accuracy per bout.
-    """
-    y_eval = pd.DataFrame({"y_true": y_true, "y_pred": y_pred})
-    y_eval["ids"] = np.cumsum(y_eval["y_true"] != y_eval["y_true"].shift())
-    y_eval_grouped = y_eval.groupby("ids")
-    y_eval_summary = pd.DataFrame(
-        y_eval_grouped.apply(lambda x: (x["y_pred"] == x["y_true"]).mean()),
-        columns=["proportion"],
-    )
-    y_eval_summary["actual_bout"] = y_eval_grouped.apply(lambda x: x["y_true"].mean())
-    y_eval_summary["bout_len"] = y_eval_grouped.apply(lambda x: x.shape[0])
-    y_eval_summary = y_eval_summary.sort_values("proportion")
-    return y_eval_summary
-
-
 def save_training_history(history: pd.DataFrame, eval_dir: Path) -> None:
     """Save training history dataframe and plot.
 
@@ -305,51 +277,3 @@ def save_feature_report(
     eval_dir.mkdir(parents=True, exist_ok=True)
     (eval_dir / "feature_report.json").write_text(json.dumps(report, indent=2))
     logger.info("Saved feature report to %s", eval_dir / "feature_report.json")
-
-
-def save_shap_summary(
-    x_sample: np.ndarray,
-    feature_names: list[str],
-    eval_dir: Path,
-    *,
-    max_samples: int = 500,
-) -> None:
-    """Save SHAP summary plot (optional, requires shap package).
-
-    Parameters
-    ----------
-    x_sample : np.ndarray
-        Feature matrix (n_samples, n_features).
-    feature_names : list[str]
-        Names of features.
-    eval_dir : Path
-        Directory to save the plot.
-    max_samples : int
-        Maximum number of samples to use for SHAP computation.
-    """
-    try:
-        import shap
-    except ImportError:
-        logger.warning("SHAP not installed. Skipping SHAP summary plot.")
-        return
-
-    n = min(max_samples, x_sample.shape[0])
-    x_sample = x_sample[:n]
-
-    explainer = shap.Explainer(
-        lambda x: x,  # placeholder, will use KernelExplainer or similar
-        x_sample,
-    )
-
-    try:
-        shap_values = explainer(x_sample)
-        fig = plt.figure(figsize=(10, max(6, len(feature_names) * 0.2)))
-        shap.summary_plot(
-            shap_values, x_sample,
-            feature_names=feature_names, show=False,
-        )
-        fig.savefig(eval_dir / "shap_summary.png", dpi=150, bbox_inches="tight")
-        plt.close(fig)
-        logger.info("Saved SHAP summary plot to %s", eval_dir / "shap_summary.png")
-    except Exception:
-        logger.warning("SHAP computation failed — likely incompatible model type.")

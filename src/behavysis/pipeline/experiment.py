@@ -6,6 +6,7 @@ import cv2
 import numpy as np
 import polars as pl
 
+from behavysis.behaviour_classifier import ProductionPointer
 from behavysis.constants import (
     ANALYSIS_COMBINED_DIR,
     ANALYSIS_DIR,
@@ -257,7 +258,9 @@ class Experiment:
         config = self.read_config()
         bouts_struct = [
             BoutStruct(
-                behaviour=model_config.behaviour_name,
+                behaviour=ProductionPointer.read_yaml(
+                    model_config.clf_fp
+                ).behaviour_name,
                 sub_behaviour=model_config.user_defined,
             )
             for model_config in config.require_classify_behaviour()

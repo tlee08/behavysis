@@ -75,8 +75,7 @@ extract_features:
 
 # ---- Behaviour classification (stage 6) ----
 classify_behaviour:
-  - proj_dir: /absolute/path/to/training/project
-    behaviour_name: example_behaviour
+  - clf_fp: /absolute/path/to/behaviour_classifier/production.yaml
     pcutoff: 0.5
     min_empty_window_secs: 0.2
     user_defined: []

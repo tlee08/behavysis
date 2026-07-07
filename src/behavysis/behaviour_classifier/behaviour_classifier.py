@@ -1,24 +1,48 @@
-"""Behavioural classifier for training and inference on animal behaviour data."""
+"""Behaviour classifier — training, versioning, promotion, and inference.
+
+A classifier is fully self-contained in its own directory (``clf_dir``). The
+directory name is arbitrary; the behaviour it classifies is authored in each
+model_type's ``config.yaml`` (``TrainingRecipe.behaviour_name``) and is the
+single source of truth. Training data lives inside the classifier at
+``{clf_dir}/training_data/`` and mirrors the inference pipeline's stage folders
+(``5_features_extracted/``, ``7_behaviour_scored/``, …). See ``storage`` for the
+full on-disk layout.
+"""
 
 from __future__ import annotations
 
+import re
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import TYPE_CHECKING
 
+import joblib
 import numpy as np
 import pandas as pd
 from loguru import logger
+from sklearn.metrics import classification_report
+from sklearn.model_selection import train_test_split
 
 from behavysis.constants import (
     BEHAVIOUR,
-    BEHAVIOUR_SCORED_DIR,
-    FEATURES_EXTRACTED_DIR,
     OUTCOME,
     PRED,
     PROB,
 )
 
-from .config import BehaviourClassifierConfig
+from .adapter import BaseAdapter, SklearnAdapter, TorchAdapter
+from .config import (
+    ActivePointer,
+    DatasetManifest,
+    DataSummary,
+    EvalSummary,
+    Leaderboard,
+    LeaderboardEntry,
+    ProductionPointer,
+    ResolvedHyperparams,
+    TrainingRecipe,
+    TrainingSummary,
+    VersionMetadata,
+)
 from .data import (
     align_features_labels,
     load_feature_names,
@@ -30,270 +54,546 @@ from .evaluation import (
     save_evaluation_results,
     save_feature_importance,
     save_feature_report,
-    save_shap_summary,
     save_training_history,
 )
 from .registry import MODEL_REGISTRY
-from .storage import classifier_fp, config_fp, eval_dir
+from .storage import (
+    active_fp,
+    config_fp,
+    dataset_manifest_fp,
+    eval_dir,
+    features_dir,
+    labels_dir,
+    leaderboard_fp,
+    metadata_fp,
+    model_fp,
+    production_fp,
+    versions_dir,
+)
 
-if TYPE_CHECKING:
-    from behavysis.pipeline.project import Project
+# ── version string generation ────────────────────────────────────────
+
+_VERSION_RE = re.compile(r"^v(\d+)_")
+
+
+def _next_version(clf_dir: Path, model_type: str) -> str:
+    """Generate the next version string."""
+    vd = versions_dir(clf_dir, model_type)
+    seq = 1
+    if vd.exists():
+        nums = [
+            int(m.group(1))
+            for d in vd.iterdir()
+            if d.is_dir() and (m := _VERSION_RE.match(d.name))
+        ]
+        seq = max(nums) + 1 if nums else 1
+    ts = datetime.now(UTC).strftime("%Y-%m-%dT%H%M%S")
+    return f"v{seq:03d}_{ts}"
+
+
+# ── training ─────────────────────────────────────────────────────────
+
+
+def train(
+    clf_dir: Path,
+    model_type: str,
+    behaviour_name: str | None = None,
+) -> str:
+    """Train a classifier and persist all versioned artifacts.
+
+    ``clf_dir`` is the self-contained classifier directory (its name is
+    arbitrary); training data is read from ``clf_dir/training_data/``. The
+    behaviour name lives in ``config.yaml`` and is the source of truth: it is
+    read from an existing config, or — when none exists — created from the
+    ``behaviour_name`` argument (required in that case).
+
+    Auto-promotes within model_type if the new version improves
+    ``test_f1_behav`` over the currently active version.
+
+    Returns the version string.
+    """
+    clf_dir = clf_dir.resolve()
+
+    # 1. Read or create config (behaviour_name lives in the config, not the dir name)
+    config = _read_or_create_config(clf_dir, model_type, behaviour_name)
+
+    logger.info(
+        "Training {} (model_type={})", config.behaviour_name, model_type,
+    )
+
+    # 2. Load and align data
+    x_ls, x_names = load_features(features_dir(clf_dir))
+    y_ls, y_names = load_labels(labels_dir(clf_dir), config.behaviour_name)
+    x_ls, y_ls, exp_names = align_features_labels(
+        x_ls, y_ls, x_names, y_names,
+    )
+
+    # 3. Three-way split: test (grouped), then val from remaining
+    train_idx, val_idx, test_idx = _three_way_split(
+        x_ls, y_ls, config.test_split, config.val_split, config.seed,
+    )
+
+    # 4. Train
+    start = datetime.now(UTC)
+    factory = MODEL_REGISTRY[model_type]
+    adapter: BaseAdapter = factory()
+    history = adapter.fit(x_ls, y_ls, train_idx, config)
+    duration = (datetime.now(UTC) - start).total_seconds()
+
+    # 5. Generate version & create output dir
+    version = _next_version(clf_dir, model_type)
+    ed = eval_dir(clf_dir, model_type, version)
+    ed.mkdir(parents=True, exist_ok=True)
+
+    # 6. Save model
+    adapter.save(model_fp(clf_dir, model_type, version))
+
+    # 7. Evaluate all splits
+    train_acc, train_f1 = _eval_split(
+        adapter, x_ls, y_ls, train_idx, config, ed, "train",
+    )
+    val_acc, val_f1 = _eval_split(
+        adapter, x_ls, y_ls, val_idx, config, ed, "val",
+    )
+    test_acc, test_f1 = _eval_split(
+        adapter, x_ls, y_ls, test_idx, config, ed, "test",
+    )
+
+    # 8. Training history plot
+    if not history.empty:
+        save_training_history(history, ed)
+
+    # 9. Diagnostics
+    _run_diagnostics(adapter, clf_dir, ed)
+
+    # 10. Metadata
+    data_summary = _make_data_summary(
+        x_ls, y_ls, train_idx, val_idx, test_idx,
+    )
+    meta = VersionMetadata(
+        version=version,
+        framework=adapter.framework,
+        model_type=model_type,
+        created_at=datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        resolved=ResolvedHyperparams(
+            seed=config.seed,
+            batch_size=config.batch_size,
+            epochs=config.epochs,
+            oversample_ratio=config.oversample_ratio,
+            undersample_ratio=config.undersample_ratio,
+            test_split=config.test_split,
+            val_split=config.val_split,
+        ),
+        data=data_summary,
+        training=TrainingSummary(duration_seconds=round(duration, 1)),
+        evaluation=EvalSummary(
+            train_accuracy=round(train_acc, 4) if train_acc is not None else None,
+            train_f1_behav=round(train_f1, 4) if train_f1 is not None else None,
+            val_accuracy=round(val_acc, 4) if val_acc is not None else None,
+            val_f1_behav=round(val_f1, 4) if val_f1 is not None else None,
+            test_accuracy=round(test_acc, 4) if test_acc is not None else None,
+            test_f1_behav=round(test_f1, 4) if test_f1 is not None else None,
+        ),
+    )
+    meta.write_yaml(metadata_fp(clf_dir, model_type, version))
+
+    # 11. Dataset manifest
+    train_ids = [exp_names[i] for i in range(len(exp_names)) if len(train_idx[i]) > 0]
+    val_ids = [exp_names[i] for i in range(len(exp_names)) if len(val_idx[i]) > 0]
+    test_ids = [exp_names[i] for i in range(len(exp_names)) if len(test_idx[i]) > 0]
+    manifest = DatasetManifest(
+        version=version,
+        train_ids=train_ids,
+        val_ids=val_ids,
+        test_ids=test_ids,
+        n_train=sum(len(idx) for idx in train_idx),
+        n_val=sum(len(idx) for idx in val_idx),
+        n_test=sum(len(idx) for idx in test_idx),
+    )
+    manifest.write_yaml(dataset_manifest_fp(clf_dir, model_type, version))
+
+    # 12. Auto-promote if better
+    _auto_promote(clf_dir, model_type, version, test_f1)
+
+    logger.info(
+        "Training complete: {} {} (test_f1={:.4f})",
+        model_type, version, test_f1,
+    )
+    return version
+
+
+def train_all_models(
+    clf_dir: Path,
+    behaviour_name: str | None = None,
+    **overrides: object,
+) -> list[str]:
+    """Train every model type in MODEL_REGISTRY for this classifier.
+
+    ``behaviour_name`` is written into each freshly created ``config.yaml`` and
+    is required unless every model_type's config already exists. Keyword
+    arguments override TrainingRecipe defaults for configs that don't yet exist.
+    """
+    clf_dir = clf_dir.resolve()
+    results: list[str] = []
+    for mt in MODEL_REGISTRY:
+        cfp = config_fp(clf_dir, mt)
+        if not cfp.exists():
+            if behaviour_name is None:
+                msg = (
+                    f"No config for '{mt}' in {clf_dir} and no behaviour_name "
+                    "provided to create one."
+                )
+                raise ValueError(msg)
+            cfg = TrainingRecipe(
+                model_type=mt,
+                behaviour_name=behaviour_name,
+                **{k: v for k, v in overrides.items() if hasattr(TrainingRecipe, k)},
+            )
+            cfg.write_yaml(cfp)
+        version = train(clf_dir, mt)
+        results.append(version)
+
+    _ = regenerate_leaderboard(clf_dir)
+    return results
+
+
+def _read_or_create_config(
+    clf_dir: Path,
+    model_type: str,
+    behaviour_name: str | None,
+) -> TrainingRecipe:
+    """Load a model_type's config, or create it from ``behaviour_name``.
+
+    ``config.yaml`` is the source of truth for the behaviour name. The
+    ``behaviour_name`` argument only seeds a new config and is required when
+    none exists.
+    """
+    cfp = config_fp(clf_dir, model_type)
+    if cfp.exists():
+        return TrainingRecipe.read_yaml(cfp)
+    if behaviour_name is None:
+        msg = (
+            f"No config for '{model_type}' in {clf_dir} and no behaviour_name "
+            "provided to create one."
+        )
+        raise ValueError(msg)
+    config = TrainingRecipe(model_type=model_type, behaviour_name=behaviour_name)
+    config.write_yaml(cfp)
+    return config
+
+
+# ── promotion ────────────────────────────────────────────────────────
+
+
+def promote(clf_dir: Path, model_type: str, version: str) -> None:
+    """Set the active version for a model_type."""
+    vd = model_fp(clf_dir, model_type, version)
+    if not vd.exists():
+        msg = f"Version {version} not found for {model_type} in {clf_dir.name}"
+        raise FileNotFoundError(msg)
+
+    ptr = ActivePointer(
+        version=version,
+        promoted_at=datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
+    )
+    ptr.write_yaml(active_fp(clf_dir, model_type))
+    logger.info(
+        "Promoted %s/%s to %s", clf_dir.name, model_type, version,
+    )
+
+
+def promote_to_best(clf_dir: Path, model_type: str | None = None) -> None:
+    """Scan versions and promote the best by test_f1_behav.
+
+    If model_type is None, does this for every model_type.
+    """
+    types = [model_type] if model_type else list(_model_types(clf_dir))
+
+    for mt in types:
+        best = _find_best_version(clf_dir, mt)
+        if best is None:
+            logger.warning("No versions found for %s/%s", clf_dir.name, mt)
+            continue
+        promote(clf_dir, mt, best)
+
+
+def _find_best_version(clf_dir: Path, model_type: str) -> str | None:
+    """Return the version with highest test_f1_behav for a model_type."""
+    vd = versions_dir(clf_dir, model_type)
+    if not vd.exists():
+        return None
+
+    best_f1: float = -1.0
+    best_ver: str | None = None
+
+    for d in sorted(vd.iterdir()):
+        if not d.is_dir():
+            continue
+        mfp = metadata_fp(clf_dir, model_type, d.name)
+        if not mfp.exists():
+            continue
+        meta = VersionMetadata.read_yaml(mfp)
+        f1 = meta.evaluation.test_f1_behav
+        if f1 is not None and f1 > best_f1:
+            best_f1 = f1
+            best_ver = d.name
+
+    return best_ver
+
+
+def _auto_promote(
+    clf_dir: Path,
+    model_type: str,
+    new_version: str,
+    new_test_f1: float | None,
+) -> None:
+    """Promote new version if it beats the current active."""
+    if new_test_f1 is None:
+        return
+
+    afp = active_fp(clf_dir, model_type)
+    if not afp.exists():
+        promote(clf_dir, model_type, new_version)
+        return
+
+    active = ActivePointer.read_yaml(afp)
+    mfp = metadata_fp(clf_dir, model_type, active.version)
+    if not mfp.exists():
+        promote(clf_dir, model_type, new_version)
+        return
+
+    cur_meta = VersionMetadata.read_yaml(mfp)
+    cur_f1 = cur_meta.evaluation.test_f1_behav
+
+    if cur_f1 is None or new_test_f1 > cur_f1:
+        promote(clf_dir, model_type, new_version)
+
+
+# ── leaderboard ──────────────────────────────────────────────────────
+
+
+def regenerate_leaderboard(clf_dir: Path) -> Leaderboard:
+    """Rebuild leaderboard.yaml from all model_types' active versions."""
+    clf_dir = clf_dir.resolve()
+    rankings: list[LeaderboardEntry] = []
+
+    for mt in _model_types(clf_dir):
+        afp = active_fp(clf_dir, mt)
+        if not afp.exists():
+            continue
+
+        active = ActivePointer.read_yaml(afp)
+        mfp = metadata_fp(clf_dir, mt, active.version)
+        if not mfp.exists():
+            continue
+
+        meta = VersionMetadata.read_yaml(mfp)
+        test_f1 = meta.evaluation.test_f1_behav
+        train_f1 = meta.evaluation.train_f1_behav
+        test_acc = meta.evaluation.test_accuracy
+
+        overfit = None
+        if train_f1 is not None and test_f1 is not None and train_f1 > 0:
+            overfit = round(train_f1 - test_f1, 4)
+
+        rankings.append(LeaderboardEntry(
+            model_type=mt,
+            version=active.version,
+            test_f1_behav=round(test_f1, 4) if test_f1 is not None else None,
+            test_accuracy=round(test_acc, 4) if test_acc is not None else None,
+            train_f1_behav=round(train_f1, 4) if train_f1 is not None else None,
+            overfit_ratio=overfit,
+        ))
+
+    rankings.sort(
+        key=lambda e: e.test_f1_behav if e.test_f1_behav is not None else -1.0,
+        reverse=True,
+    )
+
+    board = Leaderboard(
+        behaviour_name=_behaviour_name(clf_dir),
+        generated_at=datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        rankings=rankings,
+    )
+    board.write_yaml(leaderboard_fp(clf_dir))
+    logger.info("Regenerated leaderboard for %s", clf_dir.name)
+    return board
+
+
+def _behaviour_name(clf_dir: Path) -> str:
+    """Return the behaviour name from the first available model_type config."""
+    for mt in _model_types(clf_dir):
+        cfp = config_fp(clf_dir, mt)
+        if cfp.exists():
+            return TrainingRecipe.read_yaml(cfp).behaviour_name
+    return ""
+
+
+# ── production ───────────────────────────────────────────────────────
+
+
+def promote_to_production(clf_dir: Path, model_type: str, version: str) -> None:
+    """Set the production pointer, copying the model's contract from its config.
+
+    ``behaviour_name`` and the feature contract (``individuals``/``bodyparts``)
+    are read from the model_type's ``config.yaml`` and recorded in
+    ``production.yaml`` so downstream inference resolves them from one place.
+    """
+    clf_dir = clf_dir.resolve()
+    vd = model_fp(clf_dir, model_type, version)
+    if not vd.exists():
+        msg = f"Version {version} not found for {model_type} in {clf_dir.name}"
+        raise FileNotFoundError(msg)
+
+    cfp = config_fp(clf_dir, model_type)
+    if not cfp.exists():
+        msg = f"Missing config.yaml for {model_type} in {clf_dir}"
+        raise FileNotFoundError(msg)
+    config = TrainingRecipe.read_yaml(cfp)
+
+    ptr = ProductionPointer(
+        behaviour_name=config.behaviour_name,
+        model_type=model_type,
+        version=version,
+        individuals=config.individuals,
+        bodyparts=config.bodyparts,
+        promoted_at=datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
+    )
+    ptr.write_yaml(production_fp(clf_dir))
+    logger.info(
+        "Promoted {} to production: {}/{}", config.behaviour_name, model_type, version,
+    )
+
+
+# ── inference ────────────────────────────────────────────────────────
 
 
 class BehaviourClassifier:
-    """Behavioural classifier — training, evaluation, and inference.
+    """Thin wrapper around a trained adapter for inference.
 
-    Each instance is bound to one (project, behaviour_name) pair.
-    The model type is determined by ``config.model_type``.
-
-    Create a new (untrained) classifier::
-
-        clf = BehaviourClassifier.create(proj_dir, "attack", config)
-        clf.train()
-
-    Load a trained classifier::
-
-        clf = BehaviourClassifier.load(proj_dir, "attack")
-        clf = BehaviourClassifier.load(proj_dir, "attack", model_type="dnn1")
+    Obtained via ``BehaviourClassifier.load()``, not constructed directly.
     """
 
     def __init__(
         self,
-        proj_dir: Path,
-        behaviour_name: str,
-        config: BehaviourClassifierConfig,
-        adapter: object,
+        config: TrainingRecipe,
+        adapter: BaseAdapter,
     ) -> None:
-        self._proj_dir = proj_dir.resolve()
-        self._behaviour_name = behaviour_name
         self._config = config
         self._adapter = adapter
 
     @property
-    def config(self) -> BehaviourClassifierConfig:
+    def config(self) -> TrainingRecipe:
         return self._config
-
-    # ── factories ──────────────────────────────────────────────────────
-
-    @classmethod
-    def create(
-        cls,
-        proj_dir: Path,
-        behaviour_name: str,
-        config: BehaviourClassifierConfig,
-    ) -> BehaviourClassifier:
-        """Create a new untrained classifier and persist its config.
-
-        Writes ``config.yaml`` to disk immediately.
-        """
-        proj_dir = proj_dir.resolve()
-
-        factory = MODEL_REGISTRY[config.model_type]
-        adapter = factory()
-
-        instance = cls(proj_dir, behaviour_name, config, adapter)
-        instance._save_config()
-        return instance
-
-    @classmethod
-    def create_all_from_project_dir(
-        cls,
-        proj_dir: Path,
-        *,
-        config: BehaviourClassifierConfig | None = None,
-    ) -> list[BehaviourClassifier]:
-        """Create classifiers for all labelled behaviours in a project."""
-        proj_dir = proj_dir.resolve()
-        from .data import list_behaviours
-
-        behaviour_names = list_behaviours(proj_dir / BEHAVIOUR_SCORED_DIR)
-        results = []
-        for behav in behaviour_names:
-            cfg = (
-                config.model_copy(update={"behaviour_name": behav})
-                if config
-                else BehaviourClassifierConfig(behaviour_name=behav)
-            )
-            results.append(cls.create(proj_dir, behav, cfg))
-        return results
-
-    @classmethod
-    def create_from_project(
-        cls,
-        proj: Project,
-        *,
-        config: BehaviourClassifierConfig | None = None,
-    ) -> list[BehaviourClassifier]:
-        """Create classifiers from a Project instance."""
-        return cls.create_all_from_project_dir(proj.root_dir, config=config)
 
     @classmethod
     def load(
         cls,
-        proj_dir: Path,
-        behaviour_name: str,
+        clf_dir: Path,
         *,
         model_type: str | None = None,
+        version: str | None = None,
     ) -> BehaviourClassifier:
-        """Load a trained classifier from disk.
+        """Load a trained classifier for inference.
 
-        Reads ``config.yaml`` and ``{model_type}/model.sav``.
-        If ``model_type`` is omitted, uses the value from config.yaml.
+        Resolution order:
+        1. If model_type AND version given → load that exact version
+        2. If only model_type given → read active.yaml for that type
+        3. If neither → read production.yaml
         """
-        proj_dir = proj_dir.resolve()
-        fp = config_fp(proj_dir, behaviour_name)
-        if not fp.exists():
+        clf_dir = clf_dir.resolve()
+
+        if model_type and version:
+            return cls._load_version(clf_dir, model_type, version)
+
+        if model_type:
+            return cls._load_active(clf_dir, model_type)
+
+        return cls._load_production(clf_dir)
+
+    @classmethod
+    def _load_version(
+        cls,
+        clf_dir: Path,
+        model_type: str,
+        version: str,
+    ) -> BehaviourClassifier:
+        vd = model_fp(clf_dir, model_type, version)
+        if not vd.exists():
+            msg = f"Version {version} not found for {model_type} in {clf_dir.name}"
+            raise FileNotFoundError(msg)
+
+        cfp = config_fp(clf_dir, model_type)
+        if not cfp.exists():
             msg = (
-                f'Model for behaviour "{behaviour_name}" not found in '
-                f'"{proj_dir}". Train first or check path.'
+                f"Missing config.yaml for {model_type} in {clf_dir}; "
+                "cannot resolve the behaviour name."
+            )
+            raise FileNotFoundError(msg)
+        config = TrainingRecipe.read_yaml(cfp)
+
+        adapter = cls._load_adapter(clf_dir, model_type, version)
+        return cls(config, adapter)
+
+    @classmethod
+    def _load_active(
+        cls,
+        clf_dir: Path,
+        model_type: str,
+    ) -> BehaviourClassifier:
+        afp = active_fp(clf_dir, model_type)
+        if not afp.exists():
+            msg = (
+                f"No active version for {model_type} in {clf_dir.name}. "
+                "Train first or set active.yaml."
             )
             raise FileNotFoundError(msg)
 
-        config = BehaviourClassifierConfig.read_yaml(fp)
-        mt = model_type or config.model_type
+        active = ActivePointer.read_yaml(afp)
+        return cls._load_version(clf_dir, model_type, active.version)
 
-        model_fp = classifier_fp(proj_dir, behaviour_name, mt)
-        if not model_fp.exists():
-            available = [
-                d.name for d in (config_fp(proj_dir, behaviour_name).parent).iterdir()
-                if d.is_dir() and (d / "model.sav").exists()
-            ]
+    @classmethod
+    def _load_production(cls, clf_dir: Path) -> BehaviourClassifier:
+        pfp = production_fp(clf_dir)
+        if not pfp.exists():
             msg = (
-                f'No trained model found for type "{mt}" in behaviour '
-                f'"{behaviour_name}". Available: {available or "none"}'
+                f"No production model for {clf_dir.name}. "
+                "Train and promote_to_production first."
             )
             raise FileNotFoundError(msg)
 
-        from joblib import load
+        prod = ProductionPointer.read_yaml(pfp)
+        return cls._load_version(clf_dir, prod.model_type, prod.version)
 
-        adapter = load(model_fp)
-        return cls(proj_dir, behaviour_name, config, adapter)
+    @staticmethod
+    def _load_adapter(
+        clf_dir: Path,
+        model_type: str,
+        version: str,
+    ) -> BaseAdapter:
+        vd = model_fp(clf_dir, model_type, version)
+        factory = MODEL_REGISTRY[model_type]
+        adapter: BaseAdapter = factory()
 
-    # ── persistence ────────────────────────────────────────────────────
+        if isinstance(adapter, SklearnAdapter):
+            loaded = joblib.load(vd / "model.joblib")
+            if isinstance(loaded, BaseAdapter):
+                return loaded
+            return adapter  # fallback, shouldn't happen
 
-    def _save_config(self) -> None:
-        fp = config_fp(self._proj_dir, self._behaviour_name)
-        self._config.write_yaml(fp)
+        if isinstance(adapter, TorchAdapter):
+            adapter.load_state(vd)
+            return adapter
 
-    def _save_model(self) -> None:
-        fp = classifier_fp(
-            self._proj_dir, self._behaviour_name, self._config.model_type,
-        )
-        self._adapter.save(fp)
-
-    # ── training ───────────────────────────────────────────────────────
-
-    def train(self) -> None:
-        """Train the classifier and persist all artifacts."""
-        logger.info(
-            f"Training {self._config.model_type} for {self._behaviour_name}",
-        )
-
-        x_ls, x_names = load_features(self._proj_dir / FEATURES_EXTRACTED_DIR)
-        y_ls, y_names = load_labels(
-            self._proj_dir / BEHAVIOUR_SCORED_DIR,
-            self._behaviour_name,
-        )
-        x_ls, y_ls, exp_names = align_features_labels(x_ls, y_ls, x_names, y_names)
-
-        train_idx, test_idx = stratified_split_by_video(
-            x_ls,
-            y_ls,
-            self._config.test_split,
-            self._config.seed,
-        )
-
-        history = self._adapter.fit(x_ls, y_ls, train_idx, self._config)
-
-        eval_d = eval_dir(
-            self._proj_dir, self._behaviour_name, self._config.model_type,
-        )
-        save_training_history(history, eval_d)
-
-        self._evaluate(x_ls, y_ls, train_idx, "train")
-        self._evaluate(x_ls, y_ls, test_idx, "test")
-
-        self._run_diagnostics(x_ls, eval_d)
-
-        self._save_config()
-        self._save_model()
-
-        from .snapshot import TrainingSnapshot
-
-        TrainingSnapshot.create(
-            x_ls, y_ls, exp_names, self._proj_dir, self._config,
-        )
-
-    def _run_diagnostics(
-        self,
-        x_ls: list[np.ndarray],
-        eval_d: Path,
-    ) -> None:
-        """Run diagnostic reporting: feature importance, SHAP, feature report."""
-        feature_names = load_feature_names(self._proj_dir / FEATURES_EXTRACTED_DIR)
-        if not feature_names:
-            logger.warning("No feature names found for diagnostics.")
-            return
-
-        importances = self._get_feature_importances()
-
-        save_feature_importance(feature_names, importances, eval_d)
-        save_feature_report(feature_names, importances, eval_d)
-
-        x_sample = np.concatenate([x[:100] for x in x_ls], axis=0)
-        save_shap_summary(x_sample, feature_names, eval_d)
-
-    def _get_feature_importances(self) -> np.ndarray:
-        """Extract feature importances from the fitted adapter."""
-        adapter = self._adapter
-        n_features = adapter.scaler.n_features_in_
-        importances = np.zeros(n_features, dtype=np.float64)
-
-        if hasattr(adapter, "estimator"):
-            est = adapter.estimator
-            if hasattr(est, "feature_importances_"):
-                importances = est.feature_importances_
-            elif hasattr(est, "coef_"):
-                importances = np.abs(est.coef_).flatten()
-
-        return importances
-
-    def _evaluate(
-        self,
-        x_ls: list[np.ndarray],
-        y_ls: list[np.ndarray],
-        index_ls: list[np.ndarray],
-        name: str,
-    ) -> None:
-        y_true_ls = [y[idx] for y, idx in zip(y_ls, index_ls, strict=True)]
-        y_prob_ls = [
-            self._adapter.predict(x, idx, self._config.batch_size)
-            for x, idx in zip(x_ls, index_ls, strict=True)
-        ]
-
-        y_true = np.concatenate(y_true_ls)
-        y_prob = np.concatenate(y_prob_ls)
-        y_pred = (y_prob > self._config.pcutoff).astype(int)
-
-        d = eval_dir(
-            self._proj_dir, self._behaviour_name, self._config.model_type,
-        )
-        save_evaluation_results(
-            y_true,
-            y_prob,
-            y_pred,
-            self._config.behaviour_name,
-            self._config.pcutoff,
-            d,
-            name,
-            index_ls,
-        )
-
-    # ── inference ─────────────────────────────────────────────────────
+        msg = f"Unknown adapter type: {type(adapter)}"
+        raise TypeError(msg)
 
     def predict(self, features_df: pd.DataFrame) -> pd.DataFrame:
-        """Run inference on feature dataframe."""
-        index = features_df.index
+        """Run inference on feature DataFrame.
+
+        Returns DataFrame with MultiIndex columns:
+        (behaviour_name, prob) and (behaviour_name, pred).
+        """
         x = features_df.to_numpy()
         y_prob = self._adapter.predict(
             x, np.arange(x.shape[0]), self._config.batch_size,
@@ -301,40 +601,158 @@ class BehaviourClassifier:
         y_pred = (y_prob > self._config.pcutoff).astype(int)
 
         columns = pd.MultiIndex.from_tuples(
-            [(self._config.behaviour_name, PROB), (self._config.behaviour_name, PRED)],
+            [(self._config.behaviour_name, PROB),
+             (self._config.behaviour_name, PRED)],
             names=[BEHAVIOUR, OUTCOME],
         )
         return pd.DataFrame(
             np.column_stack([y_prob, y_pred]),
-            index=pd.Index(index, name="frame"),
+            index=pd.Index(features_df.index, name="frame"),
             columns=columns,
         )
 
 
-# ── batch training across model types ────────────────────────────────
+# ── internal helpers ─────────────────────────────────────────────────
 
 
-def train_all_models(
-    proj_dir: Path,
-    behaviour_name: str,
-    *,
-    model_types: list[str] | None = None,
-    config_overrides: dict | None = None,
-) -> list[BehaviourClassifier]:
-    """Train every model type in MODEL_REGISTRY for a behaviour.
+def _eval_split(
+    adapter: BaseAdapter,
+    x_ls: list[np.ndarray],
+    y_ls: list[np.ndarray],
+    index_ls: list[np.ndarray],
+    config: TrainingRecipe,
+    eval_d: Path,
+    name: str,
+) -> tuple[float | None, float | None]:
+    """Evaluate on a data split and save artifacts."""
+    y_true_ls = [
+        y[idx] for y, idx in zip(y_ls, index_ls, strict=True)
+    ]
+    y_prob_ls = [
+        adapter.predict(x, idx, config.batch_size)
+        for x, idx in zip(x_ls, index_ls, strict=True)
+    ]
 
-    Each model's config and artifacts are saved. The final config.yaml
-    reflects the last-trained model type as the active one.
-    """
-    types = model_types or list(MODEL_REGISTRY.keys())
-    results = []
-    for mt in types:
-        config = BehaviourClassifierConfig(
-            behaviour_name=behaviour_name,
-            model_type=mt,
-            **(config_overrides or {}),
-        )
-        clf = BehaviourClassifier.create(proj_dir, behaviour_name, config)
-        clf.train()
-        results.append(clf)
-    return results
+    y_true = np.concatenate(y_true_ls)
+    y_prob = np.concatenate(y_prob_ls)
+    y_pred = (y_prob > config.pcutoff).astype(int)
+
+    report = classification_report(
+        y_true, y_pred, target_names=["nil", "behav"], output_dict=True,
+    )
+    accuracy: float | None = report.get("accuracy")
+    f1_behav: float | None = report["behav"]["f1-score"]
+
+    _ = save_evaluation_results(
+        y_true, y_prob, y_pred,
+        config.behaviour_name, config.pcutoff,
+        eval_d, name, index_ls,
+    )
+
+    return accuracy, f1_behav
+
+
+def _make_data_summary(
+    x_ls: list[np.ndarray],
+    y_ls: list[np.ndarray],
+    train_idx: list[np.ndarray],
+    val_idx: list[np.ndarray],
+    test_idx: list[np.ndarray],
+) -> DataSummary:
+    y_train = np.concatenate(
+        [y[idx] for y, idx in zip(y_ls, train_idx, strict=True)]
+    )
+    y_test = np.concatenate(
+        [y[idx] for y, idx in zip(y_ls, test_idx, strict=True)]
+    )
+    return DataSummary(
+        n_samples=sum(x.shape[0] for x in x_ls),
+        n_features=x_ls[0].shape[1] if x_ls else 0,
+        n_train=sum(len(idx) for idx in train_idx),
+        n_val=sum(len(idx) for idx in val_idx),
+        n_test=sum(len(idx) for idx in test_idx),
+        train_pos_ratio=round(float(np.mean(y_train)), 4),
+        test_pos_ratio=round(float(np.mean(y_test)), 4),
+    )
+
+
+def _model_types(clf_dir: Path) -> list[str]:
+    """List model_type directories that exist for this classifier."""
+    clf_dir = clf_dir.resolve()
+    if not clf_dir.exists():
+        return []
+    return sorted(
+        d.name
+        for d in clf_dir.iterdir()
+        if d.is_dir()
+        and (config_fp(clf_dir, d.name).exists() or d.name in MODEL_REGISTRY)
+    )
+
+
+def _run_diagnostics(
+    adapter: BaseAdapter,
+    clf_dir: Path,
+    eval_d: Path,
+) -> None:
+    """Run feature importance and SHAP diagnostics."""
+    feature_names = load_feature_names(features_dir(clf_dir))
+    if not feature_names:
+        logger.warning("No feature names found for diagnostics.")
+        return
+
+    importances: np.ndarray | None = None
+    if isinstance(adapter, SklearnAdapter):
+        n_features = adapter.scaler.n_features_in_
+        importances = np.zeros(n_features, dtype=np.float64)
+        est = adapter.estimator
+        if hasattr(est, "feature_importances_"):
+            importances = est.feature_importances_
+        elif hasattr(est, "coef_"):
+            importances = np.abs(est.coef_).flatten()  # type: ignore[assignment]
+
+    if importances is not None:
+        save_feature_importance(feature_names, importances, eval_d)
+        save_feature_report(feature_names, importances, eval_d)
+
+
+def _three_way_split(
+    x_ls: list[np.ndarray],
+    y_ls: list[np.ndarray],
+    test_size: float,
+    val_size: float,
+    seed: int,
+) -> tuple[list[np.ndarray], list[np.ndarray], list[np.ndarray]]:
+    """Split into train/val/test, respecting video groups for test."""
+    train_val_idx, test_idx = stratified_split_by_video(
+        x_ls, y_ls, test_size, seed,
+    )
+
+    x_train_val = np.concatenate(
+        [x[idx] for x, idx in zip(x_ls, train_val_idx, strict=True)]
+    )
+    y_train_val = np.concatenate(
+        [y[idx] for y, idx in zip(y_ls, train_val_idx, strict=True)]
+    )
+
+    val_ratio = val_size / (1 - test_size)
+    tv_flat, val_flat = train_test_split(
+        np.arange(x_train_val.shape[0]),
+        stratify=y_train_val,
+        test_size=val_ratio,
+        random_state=seed,
+    )
+
+    t_offsets = np.cumsum([0] + [len(idx) for idx in train_val_idx[:-1]])
+    train_idx: list[np.ndarray] = []
+    val_idx: list[np.ndarray] = []
+    for i in range(len(train_val_idx)):
+        lo = t_offsets[i]
+        hi = t_offsets[i] + len(train_val_idx[i])
+
+        tr = tv_flat[(tv_flat >= lo) & (tv_flat < hi)] - lo
+        train_idx.append(train_val_idx[i][tr])
+
+        vr = val_flat[(val_flat >= lo) & (val_flat < hi)] - lo
+        val_idx.append(train_val_idx[i][vr])
+
+    return train_idx, val_idx, test_idx

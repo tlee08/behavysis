@@ -7,7 +7,20 @@ from pathlib import Path
 import yaml
 from pydantic import BaseModel, ConfigDict, PositiveFloat, PositiveInt
 
-from ._validators import ConfigNotConfiguredError
+# ═══════════════════════════════════════════════════════════════════════════════
+# Config Not Configured Error
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+class ConfigNotConfiguredError(ValueError):
+    """A config field has not been configured yet."""
+
+    def __init__(self, field: str) -> None:
+        """Initialize ConfigNotConfiguredError."""
+        super().__init__(
+            f"Config field '{field}' is not set",
+        )
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Config Sub Models
@@ -75,35 +88,11 @@ class ExtractFeaturesConfig(BaseModel):
     individuals: list[str]
     bodyparts: list[str]
 
-    def validate_bodypart_match(self, other: ExtractFeaturesConfig) -> None:
-        """Validate that another config has matching individuals and bodyparts."""
-        if set(self.individuals) != set(other.individuals):
-            msg = (
-                f"Individual mismatch: {sorted(self.individuals)} vs "
-                f"{sorted(other.individuals)}"
-            )
-            raise ValueError(msg)
-        if set(self.bodyparts) != set(other.bodyparts):
-            msg = (
-                f"Bodypart mismatch: {sorted(self.bodyparts)} vs "
-                f"{sorted(other.bodyparts)}"
-            )
-            raise ValueError(msg)
-
 
 class ClassifyBehaviourConfig(BaseModel):
-    """ClassifyBehaviourConfig.
+    """ClassifyBehaviourConfig."""
 
-    Specifies which trained model to use for behaviour classification.
-    ``individuals`` and ``bodyparts`` must match the experiment's
-    extract_features config — validated at classify time.
-    """
-
-    proj_dir: Path = Path("path") / "to" / "project_dir"
-    behaviour_name: str = "behaviour_name"
-    model_type: str = "rf"
-    individuals: list[str]
-    bodyparts: list[str]
+    clf_fp: Path = Path("path") / "to" / "behaviour_classifier" / "production.yaml"
     pcutoff: PositiveFloat | None = None
     min_empty_window_secs: PositiveFloat = 0.2
     user_defined: list[str] = []

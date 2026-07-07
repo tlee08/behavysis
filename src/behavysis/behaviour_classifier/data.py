@@ -1,4 +1,6 @@
-"""Data loading, splitting, and resampling for behavioural classifier."""
+"""Data loading and splitting for behavioural classifier."""
+
+from __future__ import annotations
 
 from pathlib import Path
 
@@ -6,18 +8,8 @@ import numpy as np
 import polars as pl
 from sklearn.model_selection import StratifiedGroupKFold
 
-from behavysis.constants import FALSE_POS, TRUE_POS, UNSURE
+from behavysis.constants import FALSE_POS, UNSURE
 from behavysis.utils.io_utils import async_read_files_run
-
-
-def list_behaviours(y_dir: Path) -> list[str]:
-    """List all behaviour names present in scored behaviour files."""
-    fp_ls = sorted(y_dir.iterdir())
-    if not fp_ls:
-        return []
-    df = pl.read_parquet(fp_ls[0])
-    behaviour_col = "behaviour" if "behaviour" in df.columns else "behaviour"
-    return sorted(df.select(pl.col(behaviour_col)).unique().to_series().to_list())
 
 
 def load_features(x_dir: Path) -> tuple[list[np.ndarray], list[str]]:
@@ -139,25 +131,3 @@ def stratified_split_by_video(
         for i in range(len(x_ls))
     ]
     return train_per_vid, test_per_vid
-
-
-def oversample(x: np.ndarray, y: np.ndarray, ratio: float) -> np.ndarray:
-    """Oversample positive class to reach target pos/neg ratio."""
-    assert x.shape[0] == y.shape[0]
-    pos = np.flatnonzero(y == TRUE_POS)
-    neg = np.flatnonzero(y == FALSE_POS)
-    target = int(np.round(neg.shape[0] * ratio))
-    rng = np.random.default_rng()
-    new_pos = rng.choice(pos, size=target, replace=True)
-    return x[np.concatenate([new_pos, neg])]
-
-
-def undersample(x: np.ndarray, y: np.ndarray, ratio: float) -> np.ndarray:
-    """Undersample negative class to reach target pos/neg ratio."""
-    assert x.shape[0] == y.shape[0]
-    pos = np.flatnonzero(y == TRUE_POS)
-    neg = np.flatnonzero(y == FALSE_POS)
-    target = int(np.round(pos.shape[0] / ratio))
-    rng = np.random.default_rng()
-    new_neg = rng.choice(neg, size=target, replace=False)
-    return x[np.concatenate([pos, new_neg])]

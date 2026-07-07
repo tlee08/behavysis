@@ -2,7 +2,24 @@
 
 from pydantic import BaseModel, ConfigDict, PositiveFloat, PositiveInt
 
-from ._validators import MetadataNotReadyError
+# ═══════════════════════════════════════════════════════════════════════════════
+# Config Not Configured Error
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+class MetadataNotReadyError(ValueError):
+    """A metadata field has not been computed yet."""
+
+    def __init__(self, field: str, stage: str) -> None:
+        """Initialize MetadataNotReadyError."""
+        super().__init__(
+            f"Metadata field '{field}' is not set. Run '{stage}' first.",
+        )
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Metadata Configs
+# ═══════════════════════════════════════════════════════════════════════════════
 
 
 class VideoMetadata(BaseModel):

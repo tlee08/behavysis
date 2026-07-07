@@ -4,10 +4,9 @@ import numpy as np
 import polars as pl
 from loguru import logger
 
-from behavysis.behaviour_classifier import BehaviourClassifier
+from behavysis.behaviour_classifier import BehaviourClassifier, ProductionPointer
 from behavysis.constants import BEHAVIOUR, FRAME, PRED, PROB
 from behavysis.models import (
-    ClassifyBehaviourConfig,
     ExperimentConfig,
     ExperimentMetadata,
     ExtractFeaturesConfig,
@@ -23,22 +22,23 @@ def classify_behaviour(
 ) -> pl.DataFrame:
     """Classify behaviour using trained models.
 
-    Validates that each model's bodypoint config matches the experiment's
-    extract_features config before classifying.
+    Each classifier's identity and feature contract are resolved from its
+    ``production.yaml``. The experiment's ``extract_features`` config is
+    validated against that contract before classifying.
     """
     model_config_ls = config.require_classify_behaviour()
     feat_cfg = config.require_extract_features()
 
     behaviour_df_ls = []
     for model_config in model_config_ls:
-        _validate_bodypoint_match(feat_cfg, model_config)
+        prod = ProductionPointer.read_yaml(model_config.clf_fp)
+        _validate_feature_contract(feat_cfg, prod)
 
-        proj_dir = model_config.proj_dir
-        behaviour_name = model_config.behaviour_name
-        model_type = model_config.model_type
-
+        behaviour_name = prod.behaviour_name
         behaviour_model = BehaviourClassifier.load(
-            proj_dir, behaviour_name, model_type=model_type,
+            model_config.clf_fp.parent,
+            model_type=prod.model_type,
+            version=prod.version,
         )
         pcutoff = model_config.pcutoff or behaviour_model.config.pcutoff
         min_window_secs = model_config.min_empty_window_secs
@@ -63,7 +63,7 @@ def classify_behaviour(
         )
 
         behaviour_df_ls.append(df_pl)
-        logger.info("Completed %s classification.", behaviour_name)
+        logger.info("Completed {} classification.", behaviour_name)
 
     if len(behaviour_df_ls) == 0:
         return pl.DataFrame(schema=BEHAVIOUR_PREDICTED_SCHEMA)
@@ -71,22 +71,31 @@ def classify_behaviour(
     return pl.concat(behaviour_df_ls)
 
 
-def _validate_bodypoint_match(
+def _validate_feature_contract(
     feat_cfg: ExtractFeaturesConfig,
-    model_config: ClassifyBehaviourConfig,
+    prod: ProductionPointer,
 ) -> None:
-    """Validate that the model's bodypoint config matches the experiment's."""
-    if set(feat_cfg.individuals) != set(model_config.individuals):
+    """Validate the experiment's features match the classifier's contract.
+
+    Skipped (with a warning) when the classifier recorded no contract.
+    """
+    if not prod.individuals and not prod.bodyparts:
+        logger.warning(
+            "Classifier '{}' recorded no feature contract; skipping validation.",
+            prod.behaviour_name,
+        )
+        return
+    if set(feat_cfg.individuals) != set(prod.individuals):
         msg = (
-            f"Individual mismatch for '{model_config.behaviour_name}': "
+            f"Individual mismatch for '{prod.behaviour_name}': "
             f"experiment={sorted(feat_cfg.individuals)}, "
-            f"model={sorted(model_config.individuals)}"
+            f"model={sorted(prod.individuals)}"
         )
         raise ValueError(msg)
-    if set(feat_cfg.bodyparts) != set(model_config.bodyparts):
+    if set(feat_cfg.bodyparts) != set(prod.bodyparts):
         msg = (
-            f"Bodypart mismatch for '{model_config.behaviour_name}': "
+            f"Bodypart mismatch for '{prod.behaviour_name}': "
             f"experiment={sorted(feat_cfg.bodyparts)}, "
-            f"model={sorted(model_config.bodyparts)}"
+            f"model={sorted(prod.bodyparts)}"
         )
         raise ValueError(msg)
