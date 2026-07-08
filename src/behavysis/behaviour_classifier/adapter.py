@@ -99,7 +99,7 @@ class SklearnAdapter(BaseAdapter):
     def save(self, version_dir: Path) -> None:
         version_dir.mkdir(parents=True, exist_ok=True)
         joblib.dump(self, version_dir / "model.joblib")
-        logger.info("Saved sklearn model to %s", version_dir)
+        logger.info("Saved sklearn model to {}", version_dir)
 
 
 class TorchAdapter(BaseAdapter):
@@ -165,7 +165,7 @@ class TorchAdapter(BaseAdapter):
         version_dir.mkdir(parents=True, exist_ok=True)
         torch.save(self.model.state_dict(), version_dir / "model.pt")
         joblib.dump(self.scaler, version_dir / "scaler.joblib")
-        logger.info("Saved torch model to %s", version_dir)
+        logger.info("Saved torch model to {}", version_dir)
 
     def load_state(self, version_dir: Path) -> None:
         """Reconstruct model + scaler from version_dir artifacts.
@@ -183,4 +183,4 @@ class TorchAdapter(BaseAdapter):
                 weights_only=True,
             )
         )
-        logger.info("Loaded torch model from %s", version_dir)
+        logger.info("Loaded torch model from {}", version_dir)

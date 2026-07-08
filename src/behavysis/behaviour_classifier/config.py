@@ -2,22 +2,28 @@
 
 from __future__ import annotations
 
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import yaml
 from pydantic import BaseModel
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 class TrainingRecipe(BaseModel):
     """Human-authored training recipe (config.yaml per model_type).
 
-    Edited by hand before training. Never auto-modified.
+    Declares the behaviour, the feature contract (``individuals``/``bodyparts``
+    the model is trained on) and hyperparameters. Authored before training and
+    never auto-modified. ``behaviour_name``, ``individuals`` and ``bodyparts``
+    are required — there are no implied defaults.
     """
 
     model_type: str
-    behaviour_name: str = ""
-    individuals: list[str] = []
-    bodyparts: list[str] = []
+    behaviour_name: str
+    individuals: list[str]
+    bodyparts: list[str]
     seed: int = 42
     oversample_ratio: float = 0.2
     undersample_ratio: float = 0.4

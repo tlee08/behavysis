@@ -18,8 +18,14 @@ TEST_PARQUET = RESOURCES_DIR / "VIDEO_001_short.parquet"
 
 INDIVS_2 = ["mouse1marked", "mouse2unmarked"]
 BPTS_8 = [
-    "LeftEar", "RightEar", "Nose", "BodyCentre",
-    "LeftFlankMid", "RightFlankMid", "TailBase1", "TailTip4",
+    "LeftEar",
+    "RightEar",
+    "Nose",
+    "BodyCentre",
+    "LeftFlankMid",
+    "RightFlankMid",
+    "TailBase1",
+    "TailTip4",
 ]
 
 
@@ -58,7 +64,9 @@ def features_df_1x4(keypoints_df):
     )
     from behavysis.funcs.extract_features import compute_features
 
-    return compute_features(df, individuals=indivs, bodyparts=bps, fps=30.0, px_per_mm=4.0)
+    return compute_features(
+        df, individuals=indivs, bodyparts=bps, fps=30.0, px_per_mm=4.0
+    )
 
 
 class TestGenericFeatures2x8:
@@ -124,7 +132,9 @@ class TestGenericFeatures2x8:
         rolling_cols = [
             c for c in features_df_2x8.columns if "_mean_" in c or "_median_" in c
         ]
-        assert len(rolling_cols) > 10, f"Expected 10+ rolling cols, got {len(rolling_cols)}"
+        assert len(rolling_cols) > 10, (
+            f"Expected 10+ rolling cols, got {len(rolling_cols)}"
+        )
 
     def test_deviation_features(self, features_df_2x8):
         dev_cols = [c for c in features_df_2x8.columns if "_deviation" in c]
@@ -147,21 +157,31 @@ class TestGenericFeaturesValues:
     """Tests validating that feature values are in reasonable ranges."""
 
     def test_distances_non_negative(self, features_df_2x8):
-        dist_cols = [c for c in features_df_2x8.columns if "_to_" in c and "_dist" in c and "_deviation" not in c]
+        dist_cols = [
+            c
+            for c in features_df_2x8.columns
+            if "_to_" in c and "_dist" in c and "_deviation" not in c
+        ]
         eps = 1e-12
         for col in dist_cols:
             vals = features_df_2x8.select(col).to_series()
             assert vals.min() >= -eps, f"Negative values in {col}: min={vals.min()}"
 
     def test_movement_non_negative(self, features_df_2x8):
-        move_cols = [c for c in features_df_2x8.columns if c.endswith("_movement") and "_deviation" not in c]
+        move_cols = [
+            c
+            for c in features_df_2x8.columns
+            if c.endswith("_movement") and "_deviation" not in c
+        ]
         eps = 1e-12
         for col in move_cols:
             vals = features_df_2x8.select(col).to_series()
             assert vals.min() >= -eps, f"Negative values in {col}: min={vals.min()}"
 
     def test_low_prob_detections_in_range(self, features_df_2x8):
-        lp_cols = [c for c in features_df_2x8.columns if c.startswith("low_prob_detections")]
+        lp_cols = [
+            c for c in features_df_2x8.columns if c.startswith("low_prob_detections")
+        ]
         n_bp = 16  # 2 individuals × 8 bodyparts
         for col in lp_cols:
             vals = features_df_2x8.select(col).to_series()

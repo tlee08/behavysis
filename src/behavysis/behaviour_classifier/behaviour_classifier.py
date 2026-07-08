@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import re
 from datetime import UTC, datetime
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import joblib
 import numpy as np
@@ -71,6 +71,9 @@ from .storage import (
     versions_dir,
 )
 
+if TYPE_CHECKING:
+    from pathlib import Path
+
 # ── version string generation ────────────────────────────────────────
 
 _VERSION_RE = re.compile(r"^v(\d+)_")
@@ -94,18 +97,14 @@ def _next_version(clf_dir: Path, model_type: str) -> str:
 # ── training ─────────────────────────────────────────────────────────
 
 
-def train(
-    clf_dir: Path,
-    model_type: str,
-    behaviour_name: str | None = None,
-) -> str:
+def train(clf_dir: Path, model_type: str) -> str:
     """Train a classifier and persist all versioned artifacts.
 
     ``clf_dir`` is the self-contained classifier directory (its name is
-    arbitrary); training data is read from ``clf_dir/training_data/``. The
-    behaviour name lives in ``config.yaml`` and is the source of truth: it is
-    read from an existing config, or — when none exists — created from the
-    ``behaviour_name`` argument (required in that case).
+    arbitrary); training data is read from ``clf_dir/training_data/``. A
+    human-authored ``config.yaml`` (a ``TrainingRecipe`` declaring
+    ``behaviour_name`` and the ``individuals``/``bodyparts`` feature contract)
+    must already exist for ``model_type`` — configs are never auto-created.
 
     Auto-promotes within model_type if the new version improves
     ``test_f1_behav`` over the currently active version.
@@ -114,23 +113,40 @@ def train(
     """
     clf_dir = clf_dir.resolve()
 
-    # 1. Read or create config (behaviour_name lives in the config, not the dir name)
-    config = _read_or_create_config(clf_dir, model_type, behaviour_name)
+    # 1. Load the authored recipe (config.yaml is the single source of truth)
+    cfp = config_fp(clf_dir, model_type)
+    if not cfp.exists():
+        msg = (
+            f"No config.yaml for '{model_type}' in {clf_dir}. "
+            "Author a TrainingRecipe first (via train_all_models or "
+            "TrainingRecipe(...).write_yaml(config_fp(clf_dir, model_type)))."
+        )
+        raise FileNotFoundError(msg)
+    config = TrainingRecipe.read_yaml(cfp)
 
     logger.info(
-        "Training {} (model_type={})", config.behaviour_name, model_type,
+        "Training {} (model_type={})",
+        config.behaviour_name,
+        model_type,
     )
 
     # 2. Load and align data
     x_ls, x_names = load_features(features_dir(clf_dir))
     y_ls, y_names = load_labels(labels_dir(clf_dir), config.behaviour_name)
     x_ls, y_ls, exp_names = align_features_labels(
-        x_ls, y_ls, x_names, y_names,
+        x_ls,
+        y_ls,
+        x_names,
+        y_names,
     )
 
     # 3. Three-way split: test (grouped), then val from remaining
     train_idx, val_idx, test_idx = _three_way_split(
-        x_ls, y_ls, config.test_split, config.val_split, config.seed,
+        x_ls,
+        y_ls,
+        config.test_split,
+        config.val_split,
+        config.seed,
     )
 
     # 4. Train
@@ -150,13 +166,31 @@ def train(
 
     # 7. Evaluate all splits
     train_acc, train_f1 = _eval_split(
-        adapter, x_ls, y_ls, train_idx, config, ed, "train",
+        adapter,
+        x_ls,
+        y_ls,
+        train_idx,
+        config,
+        ed,
+        "train",
     )
     val_acc, val_f1 = _eval_split(
-        adapter, x_ls, y_ls, val_idx, config, ed, "val",
+        adapter,
+        x_ls,
+        y_ls,
+        val_idx,
+        config,
+        ed,
+        "val",
     )
     test_acc, test_f1 = _eval_split(
-        adapter, x_ls, y_ls, test_idx, config, ed, "test",
+        adapter,
+        x_ls,
+        y_ls,
+        test_idx,
+        config,
+        ed,
+        "test",
     )
 
     # 8. Training history plot
@@ -168,7 +202,11 @@ def train(
 
     # 10. Metadata
     data_summary = _make_data_summary(
-        x_ls, y_ls, train_idx, val_idx, test_idx,
+        x_ls,
+        y_ls,
+        train_idx,
+        val_idx,
+        test_idx,
     )
     meta = VersionMetadata(
         version=version,
@@ -217,69 +255,41 @@ def train(
 
     logger.info(
         "Training complete: {} {} (test_f1={:.4f})",
-        model_type, version, test_f1,
+        model_type,
+        version,
+        test_f1,
     )
     return version
 
 
 def train_all_models(
     clf_dir: Path,
-    behaviour_name: str | None = None,
-    **overrides: object,
+    behaviour_name: str,
+    individuals: list[str],
+    bodyparts: list[str],
 ) -> list[str]:
-    """Train every model type in MODEL_REGISTRY for this classifier.
+    """Author a default recipe per model_type (if missing) and train them all.
 
-    ``behaviour_name`` is written into each freshly created ``config.yaml`` and
-    is required unless every model_type's config already exists. Keyword
-    arguments override TrainingRecipe defaults for configs that don't yet exist.
+    ``behaviour_name`` and the feature contract (``individuals``/``bodyparts``)
+    are written into each freshly created ``config.yaml``; existing configs are
+    left untouched. Hyperparameters use ``TrainingRecipe`` defaults — edit the
+    written ``config.yaml`` and re-run ``train`` for finer control.
     """
     clf_dir = clf_dir.resolve()
     results: list[str] = []
     for mt in MODEL_REGISTRY:
         cfp = config_fp(clf_dir, mt)
         if not cfp.exists():
-            if behaviour_name is None:
-                msg = (
-                    f"No config for '{mt}' in {clf_dir} and no behaviour_name "
-                    "provided to create one."
-                )
-                raise ValueError(msg)
-            cfg = TrainingRecipe(
+            TrainingRecipe(
                 model_type=mt,
                 behaviour_name=behaviour_name,
-                **{k: v for k, v in overrides.items() if hasattr(TrainingRecipe, k)},
-            )
-            cfg.write_yaml(cfp)
-        version = train(clf_dir, mt)
-        results.append(version)
+                individuals=individuals,
+                bodyparts=bodyparts,
+            ).write_yaml(cfp)
+        results.append(train(clf_dir, mt))
 
     _ = regenerate_leaderboard(clf_dir)
     return results
-
-
-def _read_or_create_config(
-    clf_dir: Path,
-    model_type: str,
-    behaviour_name: str | None,
-) -> TrainingRecipe:
-    """Load a model_type's config, or create it from ``behaviour_name``.
-
-    ``config.yaml`` is the source of truth for the behaviour name. The
-    ``behaviour_name`` argument only seeds a new config and is required when
-    none exists.
-    """
-    cfp = config_fp(clf_dir, model_type)
-    if cfp.exists():
-        return TrainingRecipe.read_yaml(cfp)
-    if behaviour_name is None:
-        msg = (
-            f"No config for '{model_type}' in {clf_dir} and no behaviour_name "
-            "provided to create one."
-        )
-        raise ValueError(msg)
-    config = TrainingRecipe(model_type=model_type, behaviour_name=behaviour_name)
-    config.write_yaml(cfp)
-    return config
 
 
 # ── promotion ────────────────────────────────────────────────────────
@@ -298,7 +308,10 @@ def promote(clf_dir: Path, model_type: str, version: str) -> None:
     )
     ptr.write_yaml(active_fp(clf_dir, model_type))
     logger.info(
-        "Promoted %s/%s to %s", clf_dir.name, model_type, version,
+        "Promoted %s/%s to %s",
+        clf_dir.name,
+        model_type,
+        version,
     )
 
 
@@ -396,14 +409,16 @@ def regenerate_leaderboard(clf_dir: Path) -> Leaderboard:
         if train_f1 is not None and test_f1 is not None and train_f1 > 0:
             overfit = round(train_f1 - test_f1, 4)
 
-        rankings.append(LeaderboardEntry(
-            model_type=mt,
-            version=active.version,
-            test_f1_behav=round(test_f1, 4) if test_f1 is not None else None,
-            test_accuracy=round(test_acc, 4) if test_acc is not None else None,
-            train_f1_behav=round(train_f1, 4) if train_f1 is not None else None,
-            overfit_ratio=overfit,
-        ))
+        rankings.append(
+            LeaderboardEntry(
+                model_type=mt,
+                version=active.version,
+                test_f1_behav=round(test_f1, 4) if test_f1 is not None else None,
+                test_accuracy=round(test_acc, 4) if test_acc is not None else None,
+                train_f1_behav=round(train_f1, 4) if train_f1 is not None else None,
+                overfit_ratio=overfit,
+            )
+        )
 
     rankings.sort(
         key=lambda e: e.test_f1_behav if e.test_f1_behav is not None else -1.0,
@@ -461,7 +476,10 @@ def promote_to_production(clf_dir: Path, model_type: str, version: str) -> None:
     )
     ptr.write_yaml(production_fp(clf_dir))
     logger.info(
-        "Promoted {} to production: {}/{}", config.behaviour_name, model_type, version,
+        "Promoted {} to production: {}/{}",
+        config.behaviour_name,
+        model_type,
+        version,
     )
 
 
@@ -596,13 +614,14 @@ class BehaviourClassifier:
         """
         x = features_df.to_numpy()
         y_prob = self._adapter.predict(
-            x, np.arange(x.shape[0]), self._config.batch_size,
+            x,
+            np.arange(x.shape[0]),
+            self._config.batch_size,
         )
         y_pred = (y_prob > self._config.pcutoff).astype(int)
 
         columns = pd.MultiIndex.from_tuples(
-            [(self._config.behaviour_name, PROB),
-             (self._config.behaviour_name, PRED)],
+            [(self._config.behaviour_name, PROB), (self._config.behaviour_name, PRED)],
             names=[BEHAVIOUR, OUTCOME],
         )
         return pd.DataFrame(
@@ -625,9 +644,7 @@ def _eval_split(
     name: str,
 ) -> tuple[float | None, float | None]:
     """Evaluate on a data split and save artifacts."""
-    y_true_ls = [
-        y[idx] for y, idx in zip(y_ls, index_ls, strict=True)
-    ]
+    y_true_ls = [y[idx] for y, idx in zip(y_ls, index_ls, strict=True)]
     y_prob_ls = [
         adapter.predict(x, idx, config.batch_size)
         for x, idx in zip(x_ls, index_ls, strict=True)
@@ -638,15 +655,23 @@ def _eval_split(
     y_pred = (y_prob > config.pcutoff).astype(int)
 
     report = classification_report(
-        y_true, y_pred, target_names=["nil", "behav"], output_dict=True,
+        y_true,
+        y_pred,
+        target_names=["nil", "behav"],
+        output_dict=True,
     )
     accuracy: float | None = report.get("accuracy")
     f1_behav: float | None = report["behav"]["f1-score"]
 
     _ = save_evaluation_results(
-        y_true, y_prob, y_pred,
-        config.behaviour_name, config.pcutoff,
-        eval_d, name, index_ls,
+        y_true,
+        y_prob,
+        y_pred,
+        config.behaviour_name,
+        config.pcutoff,
+        eval_d,
+        name,
+        index_ls,
     )
 
     return accuracy, f1_behav
@@ -659,12 +684,8 @@ def _make_data_summary(
     val_idx: list[np.ndarray],
     test_idx: list[np.ndarray],
 ) -> DataSummary:
-    y_train = np.concatenate(
-        [y[idx] for y, idx in zip(y_ls, train_idx, strict=True)]
-    )
-    y_test = np.concatenate(
-        [y[idx] for y, idx in zip(y_ls, test_idx, strict=True)]
-    )
+    y_train = np.concatenate([y[idx] for y, idx in zip(y_ls, train_idx, strict=True)])
+    y_test = np.concatenate([y[idx] for y, idx in zip(y_ls, test_idx, strict=True)])
     return DataSummary(
         n_samples=sum(x.shape[0] for x in x_ls),
         n_features=x_ls[0].shape[1] if x_ls else 0,
@@ -724,7 +745,10 @@ def _three_way_split(
 ) -> tuple[list[np.ndarray], list[np.ndarray], list[np.ndarray]]:
     """Split into train/val/test, respecting video groups for test."""
     train_val_idx, test_idx = stratified_split_by_video(
-        x_ls, y_ls, test_size, seed,
+        x_ls,
+        y_ls,
+        test_size,
+        seed,
     )
 
     x_train_val = np.concatenate(
