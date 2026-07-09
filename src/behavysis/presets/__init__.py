@@ -61,16 +61,10 @@ _DESCRIPTIONS: dict[str, str] = {
         "good starting point to understand every field."
     ),
     "open_field_single": (
-        "Single-mouse open field: speed, freezing, in_roi (thigmotaxis) analysis."
+        "Single-mouse open field: speed, in_roi (thigmotaxis) analysis."
     ),
     "social_two_mice": (
-        "Two-mouse social interaction: speed, distance, freezing, social distance."
-    ),
-    "dlc_only": (
-        "DLC keypoint tracking only — format video then run DLC, no analysis."
-    ),
-    "behaviour_pipeline": (
-        "Full pipeline including behaviour classification and analysis."
+        "Two-mouse social interaction: speed, distance, social distance."
     ),
 }
 

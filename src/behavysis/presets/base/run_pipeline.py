@@ -12,7 +12,6 @@ with app.setup:
     from behavysis.funcs import (
         distance,
         dur_frames_from_likelihood,
-        freezing,
         in_roi,
         interpolate,
         px_per_mm,
@@ -106,7 +105,7 @@ def _(overwrite, proj):
 @app.cell
 def _(proj):
     proj.analyse(
-        funcs=(speed, distance, freezing, in_roi, social_distance),
+        funcs=(speed, distance, in_roi, social_distance),
     )
 
 @app.cell

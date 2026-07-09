@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 import cv2
 import numpy as np
 import polars as pl
-from pydantic import BaseModel, PositiveFloat
+from pydantic import BaseModel
 
 from behavysis.constants import DF_IO_FORMAT, FBF
 from behavysis.funcs.analyse._helper import _bodypart_avg_xy
@@ -28,7 +28,7 @@ class InRoiConfig(BaseModel):
     bodyparts: list[str]
     roi_name: str
     is_in: bool = True
-    padding_mm: PositiveFloat = 0.0
+    padding_mm: float = 0.0
 
 
 SPACING = 30

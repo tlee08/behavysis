@@ -2,7 +2,7 @@
 # Open Field — Single Mouse
 # =============================================================================
 #
-# Standard open field test: one mouse, measures speed, freezing, distance,
+# Standard open field test: one mouse, measures speed, distance,
 # and thigmotaxis (in_roi).
 #
 # Edit the DLC model path and arena measurements, then run the notebook.
@@ -73,10 +73,6 @@ analyse:
     bodyparts: *bpts_centre
   distance:
     smoothing_sec: 1.0
-    bodyparts: *bpts_centre
-  freezing:
-    window_sec: 2.0
-    thresh_mm: 5.0
     bodyparts: *bpts_centre
   in_roi:
     - roi_name: thigmotaxis

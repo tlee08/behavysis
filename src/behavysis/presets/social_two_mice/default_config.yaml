@@ -3,7 +3,7 @@
 # =============================================================================
 #
 # Social interaction test: two mice (one marked, one unmarked).
-# Measures speed, distance, freezing, social distance, and thigmotaxis.
+# Measures speed, distance, social distance, and thigmotaxis.
 # =============================================================================
 
 _bpts_front: &bpts_front
@@ -80,10 +80,6 @@ analyse:
     bodyparts: *bpts_centre
   distance:
     smoothing_sec: 1.0
-    bodyparts: *bpts_centre
-  freezing:
-    window_sec: 2.0
-    thresh_mm: 5.0
     bodyparts: *bpts_centre
   in_roi:
     - roi_name: thigmotaxis

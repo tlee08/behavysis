@@ -1,6 +1,6 @@
 """Pipeline stage functions."""
 
-from .analyse import AnalyseFunc, distance, freezing, in_roi, speed
+from .analyse import AnalyseFunc, distance, in_roi, speed
 from .behaviour import analyse_behaviour, classify_behaviour
 from .calculate_parameters import (
     CalculateParametersFunc,
@@ -34,7 +34,6 @@ __all__ = [
     "dur_frames_from_likelihood",
     "extract_features",
     "format_video",
-    "freezing",
     "get_vid_metadata",
     "in_roi",
     "interpolate",

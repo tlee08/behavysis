@@ -85,10 +85,6 @@ analyse:
   distance:
     smoothing_sec: 1.0
     bodyparts: *bpts_centre
-  freezing:
-    window_sec: 2.0
-    thresh_mm: 5.0
-    bodyparts: *bpts_centre
   in_roi:
     - roi_name: in_centre
       is_in: true
