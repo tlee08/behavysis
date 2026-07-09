@@ -40,7 +40,7 @@ GREEN = (0, 255, 0)
 ORANGE = (0, 165, 255)
 RED = (0, 0, 255)
 POINT_RADIUS = 2
-POINT_ALPHA = 0.4
+POINT_ALPHA = 0.2
 
 
 def in_roi(
