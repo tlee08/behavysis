@@ -280,7 +280,6 @@ class Experiment:
         for func in funcs:
             dst_dir = self.root_dir / ANALYSIS_DIR / func.__name__
             for result in func(keypoints_df, vid_frame, config, metadata):
-                result.relative_path.parent.mkdir(parents=True, exist_ok=True)
                 result.save(dst_dir)
 
     @trace

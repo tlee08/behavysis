@@ -25,4 +25,6 @@ class AnalysisResult(BaseModel):
 
     def save(self, dst_dir: Path) -> None:
         """Save result to ``dst_dir / self.relative_path``."""
-        self.save_func(dst_dir / self.relative_path, self.result)
+        full_path = dst_dir / self.relative_path
+        full_path.parent.mkdir(parents=True, exist_ok=True)
+        self.save_func(full_path, self.result)
