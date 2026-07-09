@@ -102,12 +102,26 @@ def _(overwrite, proj):
         overwrite=overwrite,
     )
 
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""## Manually check behaviour labels
+
+Run `behavysis-viewer-app` to verify and correct automated classifications
+before proceeding to behaviour analysis.
+""")
+
+@app.cell
+def _(proj):
+    proj.analyse_behaviour()
 
 @app.cell
 def _(proj):
     proj.analyse(
         funcs=(speed, distance, freezing, in_roi, social_distance),
     )
+
+@app.cell
+def _(proj):
     proj.combine_analysis()
     proj.collate_analysis()
 

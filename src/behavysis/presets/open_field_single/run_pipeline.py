@@ -106,6 +106,9 @@ def _(proj):
     proj.analyse(
         funcs=(speed, distance, freezing, in_roi),
     )
+
+@app.cell
+def _(proj):
     proj.combine_analysis()
     proj.collate_analysis()
     return
