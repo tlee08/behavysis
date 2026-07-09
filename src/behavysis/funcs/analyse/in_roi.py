@@ -153,6 +153,11 @@ def in_roi(
             result=scatter_img,
             save_func=lambda fp, obj: cv2.imwrite(str(fp), obj),
         ),
+        AnalysisResult(
+            relative_path=Path("roi_corners") / f"{name}.{DF_IO_FORMAT}",
+            result=corners_df,
+            save_func=lambda fp, obj: obj.write_parquet(fp),
+        ),
     ]
     results.extend(
         summary_binned_behaviour(

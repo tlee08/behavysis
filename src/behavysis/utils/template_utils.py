@@ -1,6 +1,5 @@
 """Template utilities."""
 
-import re
 from pathlib import Path
 
 from jinja2 import Environment, PackageLoader
@@ -26,8 +25,7 @@ def render_template(template_name: str, **kwargs: object) -> str:
         loader=PackageLoader("behavysis", "templates"),
         autoescape=False,  # noqa: S701
     )
-    result = env.get_template(template_name).render(**kwargs)
-    return re.sub(r"\n{3,}", "\n\n", result).strip() + "\n"
+    return env.get_template(template_name).render(**kwargs)
 
 
 def save_template(template_name: str, dst: Path, **kwargs: object) -> None:
