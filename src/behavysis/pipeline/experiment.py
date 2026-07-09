@@ -123,7 +123,7 @@ class Experiment:
         self,
         default_config_fp: Path,
     ) -> None:
-        """Initialises the JSON config files with the given configurations."""
+        """Copy the default configs to this project."""
         # Parsing in the new config to see if it is valid
         ExperimentConfig.read_yaml(default_config_fp)
         # Overwriting the config file with the new config
@@ -280,6 +280,7 @@ class Experiment:
         for func in funcs:
             dst_dir = self.root_dir / ANALYSIS_DIR / func.__name__
             for result in func(keypoints_df, vid_frame, config, metadata):
+                result.relative_path.parent.mkdir(parents=True, exist_ok=True)
                 result.save(dst_dir)
 
     @trace
