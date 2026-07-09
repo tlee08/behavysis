@@ -27,7 +27,7 @@ def list_presets() -> list[str]:
     )
 
 
-def copy_preset(name: str, dst: str | Path) -> Path:
+def copy_preset(name: str, dst: Path) -> Path:
     """Copy a preset folder to *dst*, creating a project directory.
 
     Args:
@@ -44,7 +44,6 @@ def copy_preset(name: str, dst: str | Path) -> Path:
         msg = f"Unknown preset '{name}'. Available presets: {list_presets()}"
         raise ValueError(msg)
 
-    dst = Path(dst)
     dst.mkdir(parents=True, exist_ok=True)
     shutil.copytree(
         _PRESETS_ROOT / name,

@@ -1,5 +1,6 @@
 """Experiment class for processing a single experiment in the behavysis pipeline."""
 
+import shutil
 from pathlib import Path
 
 import cv2
@@ -34,7 +35,6 @@ from behavysis.funcs import (
     format_video,
     get_vid_metadata,
     ma_dlc_run_single,
-    update_config,
 )
 from behavysis.models import BoutStruct, ExperimentConfig, ExperimentMetadata
 from behavysis.schemas import (
@@ -121,13 +121,13 @@ class Experiment:
     @trace
     def update_config(
         self,
-        default_config_fp: str | Path,
+        default_config_fp: Path,
     ) -> None:
         """Initialises the JSON config files with the given configurations."""
-        update_config(
-            config_fp=self.get_fp(CONFIG_DIR),
-            default_config_fp=Path(default_config_fp),
-        )
+        # Parsing in the new config to see if it is valid
+        ExperimentConfig.read_yaml(default_config_fp)
+        # Overwriting the config file with the new config
+        shutil.copyfile(default_config_fp, self.get_fp(CONFIG_DIR))
 
     @trace
     def format_video(self, *, overwrite: bool) -> None:
@@ -305,16 +305,3 @@ class Experiment:
             analysis_combined_fp=self.get_fp(ANALYSIS_COMBINED_DIR),
             analysis_dir=self.root_dir / ANALYSIS_DIR,
         )
-
-    @trace
-    def export2csv(self, src_dir: str, dst_dir: str | Path, *, overwrite: bool) -> None:
-        """Export dataframe to CSV."""
-        # Overwrite check
-        dst_dir = Path(dst_dir)
-        if not overwrite and dst_dir.exists():
-            log_file_exists(dst_dir)
-            return
-        # Read
-        df = pl.read_parquet(self.get_fp(src_dir))
-        # Write
-        df.write_csv(Path(dst_dir) / f"{self.name}.csv")

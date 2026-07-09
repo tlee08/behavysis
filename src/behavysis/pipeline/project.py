@@ -219,15 +219,6 @@ class Project:
             Experiment.combine_analysis,
         )
 
-    def export2csv(self, src_dir: str, dst_dir: str | Path, *, overwrite: bool) -> None:
-        """Export dataframe to CSV for all experiments."""
-        self._run(
-            Experiment.export2csv,
-            src_dir=src_dir,
-            dst_dir=dst_dir,
-            overwrite=overwrite,
-        )
-
     def collate_analysis(self) -> None:
         """Combine analysis across all experiments."""
         self._collate_binned()
