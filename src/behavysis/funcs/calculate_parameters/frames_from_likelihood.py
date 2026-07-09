@@ -5,7 +5,6 @@ import pandas as pd
 import polars as pl
 from pydantic import BaseModel, PositiveFloat
 
-from behavysis.constants import BPTS_SIMBA
 from behavysis.models import ExperimentConfig, ExperimentMetadata
 from behavysis.transforms.keypoint import check_bpts_exist, get_indivs_bpts
 
@@ -17,7 +16,7 @@ from behavysis.transforms.keypoint import check_bpts_exist, get_indivs_bpts
 class FromLikelihoodConfig(BaseModel):
     """FromLikelihoodConfig."""
 
-    bodyparts: list[str] = BPTS_SIMBA
+    bodyparts: list[str]
     window_sec: PositiveFloat = 1.0
     pcutoff: PositiveFloat = 0.8
 

@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 import polars as pl
 from pydantic import BaseModel, PositiveFloat
 
-from behavysis.constants import BPTS_SIMBA, DF_IO_FORMAT, FBF
+from behavysis.constants import DF_IO_FORMAT, FBF
 from behavysis.models import AnalysisResult
 from behavysis.schemas import ANALYSIS_SCHEMA, write_df
 from behavysis.transforms.analysis import summary_binned_quantitative
@@ -25,8 +25,8 @@ if TYPE_CHECKING:
 class SocialDistanceConfig(BaseModel):
     """SocialDistanceConfig."""
 
+    bodyparts: list[str]
     smoothing_sec: PositiveFloat = 1.0
-    bodyparts: list[str] = BPTS_SIMBA
 
 
 def social_distance(

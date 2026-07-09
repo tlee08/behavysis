@@ -18,7 +18,6 @@ from .preprocess import (
     PreprocessFunc,
     interpolate,
     interpolate_stationary,
-    refine_ids,
     start_stop_trim,
 )
 from .run_dlc import ma_dlc_run_batch, ma_dlc_run_single
@@ -43,7 +42,6 @@ __all__ = [
     "ma_dlc_run_batch",
     "ma_dlc_run_single",
     "px_per_mm",
-    "refine_ids",
     "speed",
     "start_frame_from_csv",
     "start_frame_from_likelihood",

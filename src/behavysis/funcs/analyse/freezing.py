@@ -9,7 +9,7 @@ import numpy as np
 import polars as pl
 from pydantic import BaseModel, PositiveFloat
 
-from behavysis.constants import BPTS_SIMBA, DF_IO_FORMAT, FBF
+from behavysis.constants import DF_IO_FORMAT, FBF
 from behavysis.models import AnalysisResult
 from behavysis.schemas import ANALYSIS_SCHEMA, write_df
 from behavysis.transforms.analysis import summary_binned_behaviour
@@ -23,10 +23,10 @@ if TYPE_CHECKING:
 class FreezingConfig(BaseModel):
     """FreezingConfig."""
 
+    bodyparts: list[str]
     window_sec: PositiveFloat = 2.0
     thresh_mm: PositiveFloat = 5.0
     smoothing_sec: PositiveFloat = 0.2
-    bodyparts: list[str] = BPTS_SIMBA
 
 
 def freezing(

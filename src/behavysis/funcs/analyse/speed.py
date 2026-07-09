@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 import polars as pl
 from pydantic import BaseModel, PositiveFloat
 
-from behavysis.constants import BPTS_SIMBA, DF_IO_FORMAT, FBF
+from behavysis.constants import DF_IO_FORMAT, FBF
 from behavysis.funcs.analyse._helper import _bodypart_avg_xy
 from behavysis.models import AnalysisResult
 from behavysis.schemas import ANALYSIS_SCHEMA, write_df
@@ -24,8 +24,8 @@ if TYPE_CHECKING:
 class SpeedConfig(BaseModel):
     """SpeedConfig."""
 
+    bodyparts: list[str]
     smoothing_sec: PositiveFloat = 1.0
-    bodyparts: list[str] = BPTS_SIMBA
 
 
 def speed(

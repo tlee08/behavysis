@@ -17,7 +17,7 @@ from behavysis.models import ExperimentConfig, ExperimentMetadata
 class StartFrameFromCsvConfig(BaseModel):
     """StartFrameFromCsvConfig."""
 
-    csv_fp: Path = Path("path_to") / "start_times.csv"
+    csv_fp: Path
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

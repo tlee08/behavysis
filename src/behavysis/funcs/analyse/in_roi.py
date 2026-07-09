@@ -10,7 +10,7 @@ import numpy as np
 import polars as pl
 from pydantic import BaseModel, PositiveFloat
 
-from behavysis.constants import BPTS_CORNERS, BPTS_SIMBA, DF_IO_FORMAT, FBF
+from behavysis.constants import DF_IO_FORMAT, FBF
 from behavysis.funcs.analyse._helper import _bodypart_avg_xy
 from behavysis.models import AnalysisResult
 from behavysis.schemas import ANALYSIS_SCHEMA, write_df
@@ -24,11 +24,11 @@ if TYPE_CHECKING:
 class InRoiConfig(BaseModel):
     """InRoiConfig."""
 
-    roi_name: str = "in_my_roi"
+    roi_corners: list[str]
+    bodyparts: list[str]
+    roi_name: str
     is_in: bool = True
     padding_mm: PositiveFloat = 0.0
-    roi_corners: list[str] = BPTS_CORNERS
-    bodyparts: list[str] = BPTS_SIMBA
 
 
 SPACING = 30

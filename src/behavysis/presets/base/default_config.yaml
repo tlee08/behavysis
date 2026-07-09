@@ -54,6 +54,7 @@ calculate_parameters:
     pt_a: TopLeft
     pt_b: TopRight
     dist_mm: 400
+    pcutoff: 0.5
 
 # ---- Preprocess keypoints (stage 4) ----
 preprocess:
@@ -61,12 +62,6 @@ preprocess:
   interpolate:
     pcutoff: 0.5
   interpolate_stationary: {}
-  refine_ids: # only for two-animal experiments
-    marked: mouse1marked
-    unmarked: mouse2unmarked
-    marking: AnimalColourMark
-    window_sec: 0.5
-    bodyparts: *bpts_centre
 
 # ---- Extract features for behaviour classifier (stage 5) ----
 extract_features:

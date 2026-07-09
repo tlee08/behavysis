@@ -16,7 +16,6 @@ with app.setup:
         in_roi,
         interpolate,
         px_per_mm,
-        refine_ids,
         speed,
         start_frame_from_likelihood,
         start_stop_trim,
@@ -81,7 +80,7 @@ def _(proj):
 @app.cell
 def _(overwrite, proj):
     proj.preprocess(
-        funcs=(start_stop_trim, interpolate, refine_ids),
+        funcs=(start_stop_trim, interpolate),
         overwrite=overwrite,
     )
 

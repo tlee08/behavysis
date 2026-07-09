@@ -16,10 +16,10 @@ from behavysis.transforms.keypoint import check_bpts_exist
 class PxPerMmConfig(BaseModel):
     """PxPerMmConfig."""
 
-    pt_a: str = "pt_a"
-    pt_b: str = "pt_b"
-    pcutoff: PositiveFloat = 0.5
+    pt_a: str
+    pt_b: str
     dist_mm: PositiveFloat = 400.0
+    pcutoff: PositiveFloat = 0.5
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

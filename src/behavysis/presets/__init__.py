@@ -64,8 +64,7 @@ _DESCRIPTIONS: dict[str, str] = {
         "Single-mouse open field: speed, freezing, in_roi (thigmotaxis) analysis."
     ),
     "social_two_mice": (
-        "Two-mouse social interaction: speed, distance, freezing, "
-        "social distance, ID refinement."
+        "Two-mouse social interaction: speed, distance, freezing, social distance."
     ),
     "dlc_only": (
         "DLC keypoint tracking only — format video then run DLC, no analysis."
