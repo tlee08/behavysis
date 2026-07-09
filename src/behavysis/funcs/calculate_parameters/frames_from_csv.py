@@ -39,10 +39,12 @@ def start_frame_from_csv(
     # Read csv with start times
     start_times_df = pd.read_csv(cfg.csv_fp, index_col=0)
     start_times_df.index = start_times_df.index.astype(str)
-    assert metadata.require_name() in start_times_df.index.to_numpy(), (
-        f"{metadata.require_name()} not in {cfg.csv_fp}.\n"
-        "Update `name` parameter in config file or check the start_frames csv file."
-    )
+    if metadata.require_name() not in start_times_df.index.to_numpy():
+        msg = (
+            f"{metadata.require_name()} not in {cfg.csv_fp}.\n"
+            "Update `name` parameter in config file or check the start_frames csv file."
+        )
+        raise ValueError(msg)
     # Get start frame
     start_sec = start_times_df.loc[metadata.require_name()][0]
     start_frame = int(np.round(start_sec * metadata.require_fps(), 0))

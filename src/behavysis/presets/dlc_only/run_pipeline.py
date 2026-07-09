@@ -10,6 +10,7 @@ with app.setup:
 
     from behavysis import Project
     from behavysis.utils import configure_logger
+    from behavysis.models import ExperimentConfig
 
     configure_logger()
 
@@ -25,6 +26,12 @@ def _():
     names_ls = [i.stem for i in (proj_dir / "1_raw_videos").iterdir()]
     config_fp = proj_dir / "default_config.yaml"
     nprocs = 4
+    mo.accordion(
+        {
+            "Videos": names_ls,
+            "Config": ExperimentConfig.read_yaml(config_fp).model_dump(),
+        }
+    )
     return config_fp, names_ls, nprocs, overwrite, proj_dir
 
 
