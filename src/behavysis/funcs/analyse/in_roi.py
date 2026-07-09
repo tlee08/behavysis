@@ -156,7 +156,9 @@ def in_roi(
         AnalysisResult(
             relative_path=Path("roi_corners") / f"{name}.{DF_IO_FORMAT}",
             result=corners_df,
-            save_func=lambda fp, obj: obj.write_parquet(fp),
+            save_func=lambda fp, obj: write_df(
+                obj, fp, {"roi": pl.Utf8, "x": pl.Float64, "y": pl.Float64}
+            ),
         ),
     ]
     results.extend(
