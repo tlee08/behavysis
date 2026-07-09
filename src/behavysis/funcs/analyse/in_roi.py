@@ -40,7 +40,7 @@ GREEN = (0, 255, 0)
 ORANGE = (0, 165, 255)
 RED = (0, 0, 255)
 POINT_RADIUS = 2
-POINT_ALPHA = 0.2
+POINT_ALPHA = 0.4
 
 
 def in_roi(
@@ -68,7 +68,7 @@ def in_roi(
         padding_mm = cfg.padding_mm
         roi_corners = cfg.roi_corners
 
-        padding_px = padding_mm / metadata.require_px_per_mm()
+        padding_px = padding_mm * metadata.require_px_per_mm()
 
         check_bpts_exist(keypoints_df, bpts)
         check_bpts_exist(keypoints_df, roi_corners)
