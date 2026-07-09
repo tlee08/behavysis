@@ -17,17 +17,18 @@ from typing import TYPE_CHECKING
 
 import joblib
 import numpy as np
-import pandas as pd
+import polars as pl
 from loguru import logger
 from sklearn.metrics import classification_report
 from sklearn.model_selection import train_test_split
 
 from behavysis.constants import (
     BEHAVIOUR,
-    OUTCOME,
+    FRAME,
     PRED,
     PROB,
 )
+from behavysis.schemas import BEHAVIOUR_PREDICTED_SCHEMA
 
 from .adapter import BaseAdapter, SklearnAdapter, TorchAdapter
 from .config import (
@@ -308,7 +309,7 @@ def promote(clf_dir: Path, model_type: str, version: str) -> None:
     )
     ptr.write_yaml(active_fp(clf_dir, model_type))
     logger.info(
-        "Promoted %s/%s to %s",
+        "Promoted {}/{} to {}",
         clf_dir.name,
         model_type,
         version,
@@ -325,7 +326,7 @@ def promote_to_best(clf_dir: Path, model_type: str | None = None) -> None:
     for mt in types:
         best = _find_best_version(clf_dir, mt)
         if best is None:
-            logger.warning("No versions found for %s/%s", clf_dir.name, mt)
+            logger.warning("No versions found for {}/{}", clf_dir.name, mt)
             continue
         promote(clf_dir, mt, best)
 
@@ -431,7 +432,7 @@ def regenerate_leaderboard(clf_dir: Path) -> Leaderboard:
         rankings=rankings,
     )
     board.write_yaml(leaderboard_fp(clf_dir))
-    logger.info("Regenerated leaderboard for %s", clf_dir.name)
+    logger.info("Regenerated leaderboard for {}", clf_dir.name)
     return board
 
 
@@ -606,28 +607,30 @@ class BehaviourClassifier:
         msg = f"Unknown adapter type: {type(adapter)}"
         raise TypeError(msg)
 
-    def predict(self, features_df: pd.DataFrame) -> pd.DataFrame:
-        """Run inference on feature DataFrame.
+    def predict(self, features_df: pl.DataFrame) -> pl.DataFrame:
+        """Run inference on a wide features DataFrame.
 
-        Returns DataFrame with MultiIndex columns:
-        (behaviour_name, prob) and (behaviour_name, pred).
+        ``features_df`` is the wide feature table used at training time: a
+        ``frame`` column plus one column per feature. Returns a long-form
+        DataFrame conforming to ``BEHAVIOUR_PREDICTED_SCHEMA`` — one row per
+        frame with ``(frame, behaviour, prob, pred)``.
         """
-        x = features_df.to_numpy()
+        frames = features_df.get_column(FRAME)
+        x = features_df.drop(FRAME).to_numpy()
         y_prob = self._adapter.predict(
             x,
             np.arange(x.shape[0]),
             self._config.batch_size,
         )
         y_pred = (y_prob > self._config.pcutoff).astype(int)
-
-        columns = pd.MultiIndex.from_tuples(
-            [(self._config.behaviour_name, PROB), (self._config.behaviour_name, PRED)],
-            names=[BEHAVIOUR, OUTCOME],
-        )
-        return pd.DataFrame(
-            np.column_stack([y_prob, y_pred]),
-            index=pd.Index(features_df.index, name="frame"),
-            columns=columns,
+        return pl.DataFrame(
+            {
+                FRAME: frames,
+                BEHAVIOUR: [self._config.behaviour_name] * len(frames),
+                PROB: y_prob,
+                PRED: y_pred,
+            },
+            schema=BEHAVIOUR_PREDICTED_SCHEMA,
         )
 
 

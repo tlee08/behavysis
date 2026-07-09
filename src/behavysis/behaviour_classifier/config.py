@@ -35,9 +35,11 @@ class TrainingRecipe(BaseModel):
 
     @classmethod
     def read_yaml(cls, fp: Path) -> TrainingRecipe:
+        """Read the config from a yaml file."""
         return cls.model_validate(yaml.safe_load(fp.read_text()))
 
     def write_yaml(self, fp: Path) -> None:
+        """Write the config to a yaml file."""
         fp.parent.mkdir(parents=True, exist_ok=True)
         fp.write_text(yaml.dump(self.model_dump(), default_flow_style=False))
 

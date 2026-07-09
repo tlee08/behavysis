@@ -1,12 +1,7 @@
 """Utils."""
 
 from .dask_utils import cluster_process
-from .io_utils import (
-    async_read,
-    async_read_files,
-    async_read_files_run,
-    silent_remove,
-)
+from .io_utils import async_read, async_read_files, async_read_files_run
 from .logger_utils import configure_logger, log_file_exists, trace
 from .multiproc_utils import get_gpu_ids
 from .template_utils import confirm, render_template, save_template
@@ -22,6 +17,5 @@ __all__ = [
     "log_file_exists",
     "render_template",
     "save_template",
-    "silent_remove",
     "trace",
 ]

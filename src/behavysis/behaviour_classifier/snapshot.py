@@ -18,14 +18,13 @@ from pathlib import Path
 from loguru import logger
 
 from behavysis.constants.pipeline import (
-    FEATURES_EXTRACTED_DIR,
-    KEYPOINTS_DIR,
     BEHAVIOUR_SCORED_DIR,
     CONFIG_DIR,
+    FEATURES_EXTRACTED_DIR,
     FORMATTED_VIDEO_DIR,
+    KEYPOINTS_DIR,
     METADATA_DIR,
 )
-
 
 _SYMLINK_STAGES = [
     CONFIG_DIR,

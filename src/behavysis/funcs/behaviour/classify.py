@@ -5,7 +5,7 @@ import polars as pl
 from loguru import logger
 
 from behavysis.behaviour_classifier import BehaviourClassifier, ProductionPointer
-from behavysis.constants import BEHAVIOUR, FRAME, PRED, PROB
+from behavysis.constants import PRED, PROB
 from behavysis.models import (
     ExperimentConfig,
     ExperimentMetadata,
@@ -44,20 +44,11 @@ def classify_behaviour(
         min_window_secs = model_config.min_empty_window_secs
         min_window_frames = int(np.round(min_window_secs * metadata.require_fps()))
 
-        behaviour_df_i = behaviour_model.predict(features_df.to_pandas())
+        behaviour_df_i = behaviour_model.predict(features_df)
 
-        df_pl = pl.DataFrame(
-            {
-                FRAME: pl.Series(behaviour_df_i.index.to_numpy(), dtype=pl.Int64),
-                BEHAVIOUR: pl.lit(behaviour_name, dtype=pl.Utf8),
-                PROB: pl.Series(behaviour_df_i.iloc[:, 0].to_numpy(), dtype=pl.Float64),
-                PRED: pl.Series(
-                    (behaviour_df_i.iloc[:, 0].to_numpy() > pcutoff).astype(int),
-                    dtype=pl.Int64,
-                ),
-            },
+        df_pl = behaviour_df_i.with_columns(
+            (pl.col(PROB) > pcutoff).cast(pl.Int64).alias(PRED),
         )
-
         df_pl = df_pl.with_columns(
             merge_bouts(df_pl.select(PRED).to_series(), min_window_frames).alias(PRED),
         )

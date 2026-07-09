@@ -1,25 +1,9 @@
 """Utility functions."""
 
 import asyncio
-import shutil
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-
-
-def silent_remove(fp: Path) -> None:
-    """Removes the given file or dir if it exists.
-
-    Does nothing if not.
-    Does not throw any errors,
-    """
-    try:
-        if fp.is_file():
-            fp.unlink()
-        elif fp.is_dir():
-            shutil.rmtree(fp)
-    except (OSError, FileNotFoundError):
-        pass
 
 
 async def async_read(
