@@ -8,19 +8,32 @@
 # =============================================================================
 
 # ---- Anchors ----
-_bpts_centre: &bpts_centre [BodyCentre, TailBase1]
-_bpts_front: &bpts_front [Nose]
-_bpts_corners: &bpts_corners [TopLeft, TopRight, BottomLeft, BottomRight]
-_bpts_simba: &bpts_simba
+_bpts_front: &bpts_front
   - Nose
   - LeftEar
   - RightEar
+  - NeckBase
   - BodyCentre
-  - LeftFlankMid
-  - RightFlankMid
-  - TailBase1
+_bpts_centre: &bpts_centre
+  - NeckBase
+  - BodyCentre
+  - TailBase
+_bpts_all: &bpts_all
+  - Nose
+  - LeftEar
+  - RightEar
+  - NeckBase
+  - BodyCentre
+  - TailBase
+  - TailMid
   - TailTip
-_indivs_simba: &indivs_simba [mouse1marked, mouse2unmarked]
+_bpts_corners: &bpts_corners
+  - TopLeft
+  - TopRight
+  - BottomRight
+  - BottomLeft
+_individuals: &individuals
+  - mouse
 
 # ---- Format raw .mp4 to standard resolution/fps (stage 2) ----
 format_video:
@@ -37,17 +50,17 @@ run_dlc:
 # ---- Calculate auto-parameters from keypoints ----
 calculate_parameters:
   start_frame_from_likelihood:
-    bodyparts: *bpts_simba
+    bodyparts: *bpts_all
     window_sec: 1.0
     pcutoff: 0.8
   stop_frame_from_dur:
     dur_sec: 600
   stop_frame_from_likelihood:
-    bodyparts: *bpts_simba
+    bodyparts: *bpts_all
     window_sec: 1.0
     pcutoff: 0.8
   dur_frames_from_likelihood:
-    bodyparts: *bpts_simba
+    bodyparts: *bpts_all
     window_sec: 1.0
     pcutoff: 0.8
   px_per_mm:
@@ -65,8 +78,8 @@ preprocess:
 
 # ---- Extract features for behaviour classifier (stage 5) ----
 extract_features:
-  individuals: *indivs_simba
-  bodyparts: *bpts_simba
+  individuals: *individuals
+  bodyparts: *bpts_all
 
 # ---- Behaviour classification (stage 6) ----
 classify_behaviour:

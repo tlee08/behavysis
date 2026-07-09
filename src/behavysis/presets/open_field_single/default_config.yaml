@@ -30,8 +30,8 @@ _bpts_all: &bpts_all
 _bpts_corners: &bpts_corners
   - TopLeft
   - TopRight
-  - BottomLeft
   - BottomRight
+  - BottomLeft
 _individuals: &individuals
   - mouse
 
