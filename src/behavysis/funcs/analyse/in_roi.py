@@ -40,6 +40,7 @@ GREEN = (0, 255, 0)
 ORANGE = (0, 165, 255)
 RED = (0, 0, 255)
 POINT_RADIUS = 2
+POINT_ALPHA = 0.4
 
 
 def in_roi(
@@ -253,13 +254,15 @@ def _draw_scatter_points(
     ys = pos.select("y").to_series().to_numpy()
 
     label_set = set()
+    overlay = img.copy()
     for i in range(len(xs)):
         f = frames_pos[i]
         if f >= len(in_roi_mask):
             break
         color = GREEN if in_roi_mask[f] == 1 else ORANGE
         label_set.add("In ROI" if in_roi_mask[f] == 1 else "Out of ROI")
-        cv2.circle(img, (int(xs[i]), int(ys[i])), POINT_RADIUS, color, thickness=-1)
+        cv2.circle(overlay, (int(xs[i]), int(ys[i])), POINT_RADIUS, color, thickness=-1)
+    cv2.addWeighted(overlay, POINT_ALPHA, img, 1 - POINT_ALPHA, 0, dst=img)
     return list(label_set)
 
 
