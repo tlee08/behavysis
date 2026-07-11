@@ -13,6 +13,7 @@ from natsort import natsorted
 from behavysis.constants import (
     ANALYSIS_DIR,
     DF_IO_FORMAT,
+    EXPERIMENT,
     FORMATTED_VIDEO_DIR,
     KEYPOINTS_DIR,
 )
@@ -20,11 +21,7 @@ from behavysis.funcs.run_dlc import ma_dlc_run_batch
 from behavysis.pipeline import Experiment
 from behavysis.schemas import (
     BINNED_SCHEMA,
-    COLLATED_BINNED_SCHEMA,
-    COLLATED_SUMMARY_SCHEMA,
-    SUMMARY_SCHEMA,
     read_df,
-    write_df,
 )
 from behavysis.utils.dask_utils import cluster_process
 from behavysis.utils.misc_utils import pass_exception
@@ -221,75 +218,37 @@ class Project:
 
     def collate_analysis(self) -> None:
         """Combine analysis across all experiments."""
-        self._collate_binned()
-        self._collate_summary()
-
-    def _collate_binned(self) -> None:
-        """Combine binned analysis data across experiments."""
         logger.info("Collating binned analysis...")
         proj_analyse_dir = self.root_dir / ANALYSIS_DIR
         if not proj_analyse_dir.is_dir():
             return
-
-        config = self.experiments[0].read_config()
-        bin_sizes = [*list(config.require_analyse().bins_sec_ls), "custom"]
-
-        for subdir in proj_analyse_dir.iterdir():
-            if not subdir.is_dir():
+        # For each subdir, loop throught dirs in that subdir to
+        # combine dataframes
+        for subdir1 in proj_analyse_dir.iterdir():
+            if not subdir1.is_dir():
                 continue
-            for bin_size in bin_sizes:
-                df_ls, names_ls = [], []
+            for subdir2 in subdir1.iterdir():
+                df_ls = []
                 for exp in self.experiments:
-                    in_fp = subdir / f"binned_{bin_size}" / f"{exp.name}.{DF_IO_FORMAT}"
+                    # Construct filepath for experiment's analysis
+                    in_fp = subdir2 / f"{exp.name}.{DF_IO_FORMAT}"
                     if in_fp.is_file():
-                        df_ls.append(read_df(in_fp, BINNED_SCHEMA))
-                        names_ls.append(exp.name)
+                        # Read
+                        df = read_df(in_fp, BINNED_SCHEMA)
+                        # Add experiment column
+                        df = df.with_columns(pl.lit(exp.name).alias(EXPERIMENT)).select(
+                            pl.col(EXPERIMENT), pl.all().exclude(EXPERIMENT)
+                        )
+                        # Append to list
+                        df_ls.append(df)
+                # Skip if no data
                 if not df_ls:
                     continue
-
-                # Add experiment column and concatenate
-                dfs_with_exp = [
-                    df.with_columns(pl.lit(name).alias("experiment"))
-                    for df, name in zip(df_ls, names_ls, strict=True)
-                ]
-                combined = pl.concat(dfs_with_exp)
-
-                out_fp = subdir / f"__ALL_binned_{bin_size}.{DF_IO_FORMAT}"
-                write_df(combined, out_fp, COLLATED_BINNED_SCHEMA)
-
+                # Concatenate data
+                combined = pl.concat(df_ls)
+                # Write Parquet
+                out_fp = subdir1 / f"all_{subdir2.stem}.{DF_IO_FORMAT}"
+                combined.write_parquet(out_fp)
                 # Also write CSV
-                csv_fp = subdir / f"__ALL_binned_{bin_size}.csv"
-                csv_fp.parent.mkdir(parents=True, exist_ok=True)
+                csv_fp = subdir1 / f"all_{subdir2.stem}.csv"
                 combined.write_csv(csv_fp)
-
-    def _collate_summary(self) -> None:
-        """Combine summary analysis data across experiments."""
-        logger.info("Collating summary analysis...")
-        proj_analyse_dir = self.root_dir / ANALYSIS_DIR
-        if not proj_analyse_dir.is_dir():
-            return
-
-        for subdir in proj_analyse_dir.iterdir():
-            if not subdir.is_dir():
-                continue
-            df_ls, names_ls = [], []
-            for exp in self.experiments:
-                in_fp = subdir / "summary" / f"{exp.name}.{DF_IO_FORMAT}"
-                if in_fp.is_file():
-                    df_ls.append(read_df(in_fp, SUMMARY_SCHEMA))
-                    names_ls.append(exp.name)
-            if not df_ls:
-                continue
-
-            dfs_with_exp = [
-                df.with_columns(pl.lit(name).alias("experiment"))
-                for df, name in zip(df_ls, names_ls, strict=True)
-            ]
-            combined = pl.concat(dfs_with_exp)
-
-            out_fp = subdir / f"__ALL_summary.{DF_IO_FORMAT}"
-            write_df(combined, out_fp, COLLATED_SUMMARY_SCHEMA)
-
-            csv_fp = subdir / "__ALL_summary.csv"
-            csv_fp.parent.mkdir(parents=True, exist_ok=True)
-            combined.write_csv(csv_fp)
