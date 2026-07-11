@@ -9,7 +9,7 @@ import polars as pl
 from sklearn.model_selection import StratifiedGroupKFold
 
 from behavysis.constants import FALSE_POS, UNSURE
-from behavysis.utils.io_utils import async_read_files_run
+from behavysis.utils.io_utils import read_files_parallel
 
 
 def load_features(x_dir: Path) -> tuple[list[np.ndarray], list[str]]:
@@ -24,7 +24,7 @@ def load_features(x_dir: Path) -> tuple[list[np.ndarray], list[str]]:
     def _read(fp: Path) -> np.ndarray:
         return pl.read_parquet(fp).to_pandas().set_index("frame").to_numpy()
 
-    x_ls = async_read_files_run(fp_ls, _read)
+    x_ls = read_files_parallel(fp_ls, _read)
     return x_ls, names
 
 
@@ -74,7 +74,7 @@ def load_labels(
         y = pivoted[behaviour_name].replace(UNSURE, FALSE_POS).to_numpy()
         return y.reshape(-1)
 
-    y_ls = async_read_files_run(fp_ls, _read)
+    y_ls = read_files_parallel(fp_ls, _read)
     return y_ls, names
 
 

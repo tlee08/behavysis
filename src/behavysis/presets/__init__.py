@@ -15,6 +15,8 @@ import shutil
 from importlib.resources import files
 from pathlib import Path
 
+from behavysis.utils import confirm
+
 _PRESETS_ROOT = Path(str(files("behavysis"))) / "presets"
 
 
@@ -27,31 +29,22 @@ def list_presets() -> list[str]:
     )
 
 
-def copy_preset(name: str, dst: Path) -> Path:
-    """Copy a preset folder to *dst*, creating a project directory.
-
-    Args:
-        name: Preset name (e.g. ``"open_field_single"``).
-        dst: Destination directory (created if it doesn't exist).
-
-    Returns:
-        The destination path.
-
-    Raises:
-        ValueError: If *name* is not a recognised preset.
-    """
+def copy_preset(name: str, dst_dir: Path) -> Path:
+    """Copy a preset folder to *dst*, creating a project directory."""
     if name not in list_presets():
         msg = f"Unknown preset '{name}'. Available presets: {list_presets()}"
         raise ValueError(msg)
 
-    dst.mkdir(parents=True, exist_ok=True)
-    shutil.copytree(
-        _PRESETS_ROOT / name,
-        dst,
-        dirs_exist_ok=True,
-        ignore=shutil.ignore_patterns("__pycache__"),
-    )
-    return dst
+    dst_dir.mkdir(parents=True, exist_ok=True)
+
+    # Copy run_pipeline.py and default_config.yaml
+    for _i in ["run_pipeline.py", "default_config.yaml"]:
+        _preset_fp = _PRESETS_ROOT / name / _i
+        _dst_fp = dst_dir / _i
+        if not _dst_fp.exists() or confirm(f"Overwrite {_i}?"):
+            shutil.copy2(_preset_fp, _dst_fp)
+    # Return dst_dir path
+    return dst_dir
 
 
 _DESCRIPTIONS: dict[str, str] = {

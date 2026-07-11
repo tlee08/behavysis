@@ -1,9 +1,16 @@
 """Make a new behavysis project directory."""
 
 import argparse
+import sys
 from pathlib import Path
 
-from behavysis.constants import CONFIG_DIR, DEFAULT_CONFIG_FP, STAGES
+from behavysis.constants import (
+    ANALYSIS_COMBINED_DIR,
+    CONFIG_DIR,
+    DEFAULT_CONFIG_FP,
+    RAW_VIDEO_DIR,
+    STAGES,
+)
 from behavysis.presets import copy_preset, describe_presets, list_presets
 from behavysis.utils.template_utils import confirm
 
@@ -34,31 +41,32 @@ def main() -> None:
 
     if args.list:
         _print_presets()
-        return
+        sys.exit(0)
+
+    dst = Path(args.project_dir).resolve()
 
     # Determine preset
     preset_name = args.preset or _choose_preset()
     if preset_name is None:
-        return
+        sys.exit(0)
     # Validate (catchs --preset xyz before confirmation prompt)
     if preset_name not in list_presets():
         _print_presets()
         print(f"\nUnknown preset '{preset_name}'. Use --list to see available.")  # noqa: T201
-        return
-
-    dst = Path(args.project_dir).resolve()
-
+        sys.exit(1)
+    # Confirm create project in the directory
     if not confirm(f"Create behavysis project in {dst}?"):
-        return
+        sys.exit(0)
 
     # Copy preset
     copy_preset(preset_name, dst)
-
     # Make stage folders
     for folder in STAGES:
         (dst / folder).mkdir(parents=True, exist_ok=True)
 
     _print_next_steps(dst, preset_name)
+
+    sys.exit(0)
 
 
 def _print_presets() -> None:
@@ -91,9 +99,9 @@ def _print_next_steps(dst: Path, preset_name: str) -> None:
         f"\nProject created ({preset_name}):\n"
         f"  {dst / config_name}     ← edit this for your experiment\n"
         f"  {dst / 'run_pipeline.py'}     ← open in Jupyter/marimo/VS Code\n"
-        f"  {dst / CONFIG_DIR}/  …  {dst / '9_analysis_combined'}/  ← stage folders\n"
+        f"  {dst / CONFIG_DIR}/  …  {dst / ANALYSIS_COMBINED_DIR}/  ← stage folders\n"
         f"\nNext:\n"
-        f"  1. Copy .mp4 video(s) into {dst / '1_raw_videos'}/\n"
+        f"  1. Copy .mp4 video(s) into {dst / RAW_VIDEO_DIR}/\n"
         f"  2. Edit {config_name}:\n"
         f"     - Set run_dlc.model_fp to your DLC model config.yaml\n"
         f"     - Set px_per_mm.dist_mm to your arena size\n"
