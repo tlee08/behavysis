@@ -123,10 +123,10 @@ class Project:
             overwrite=overwrite,
         )
 
-    def get_vid_metadata(self) -> None:
-        """Get vid metadata and save."""
+    def get_video_metadata(self) -> None:
+        """Get video metadata and save."""
         self._run(
-            Experiment.get_vid_metadata,
+            Experiment.get_video_metadata,
         )
 
     def run_dlc(self, gputouse: int | None = None, *, overwrite: bool) -> None:

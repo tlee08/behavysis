@@ -33,7 +33,7 @@ from behavysis.funcs import (
     combine_analysis,
     extract_features,
     format_video,
-    get_vid_metadata,
+    get_video_metadata,
     ma_dlc_run_single,
 )
 from behavysis.models import BoutStruct, ExperimentConfig, ExperimentMetadata
@@ -143,16 +143,16 @@ class Experiment:
             config=self.read_config(),
         )
         # Update metadata
-        self.get_vid_metadata()
+        self.get_video_metadata()
 
     @trace
-    def get_vid_metadata(self) -> None:
+    def get_video_metadata(self) -> None:
         """Get vid metadata and save."""
         # Read
         metadata = self.read_metadata()
         # Update
-        metadata.raw_video = get_vid_metadata(self.get_fp(RAW_VIDEO_DIR))
-        metadata.formatted_video = get_vid_metadata(self.get_fp(FORMATTED_VIDEO_DIR))
+        metadata.raw_video = get_video_metadata(self.get_fp(RAW_VIDEO_DIR))
+        metadata.formatted_video = get_video_metadata(self.get_fp(FORMATTED_VIDEO_DIR))
         # Write
         self.write_metadata(metadata)
 

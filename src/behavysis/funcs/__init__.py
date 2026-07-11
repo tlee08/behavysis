@@ -13,7 +13,7 @@ from .calculate_parameters import (
 )
 from .combine_analysis import combine_analysis
 from .extract_features import extract_features
-from .format_video import format_video, get_vid_metadata
+from .format_video import format_video, get_video_metadata
 from .preprocess import (
     PreprocessFunc,
     interpolate,
@@ -33,7 +33,7 @@ __all__ = [
     "dur_frames_from_likelihood",
     "extract_features",
     "format_video",
-    "get_vid_metadata",
+    "get_video_metadata",
     "in_roi",
     "interpolate",
     "interpolate_stationary",

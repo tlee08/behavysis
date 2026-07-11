@@ -48,7 +48,7 @@ def format_video(
     subprocess.run(cmd, check=True)
 
 
-def get_vid_metadata(vid_fp: Path) -> VideoMetadata:
+def get_video_metadata(vid_fp: Path) -> VideoMetadata:
     """Extract metadata from video file."""
     video_metadata = VideoMetadata()
     cap = cv2.VideoCapture(vid_fp)
