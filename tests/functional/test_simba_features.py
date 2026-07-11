@@ -136,6 +136,25 @@ class TestGenericFeatures2x8:
             f"Expected 10+ rolling cols, got {len(rolling_cols)}"
         )
 
+    def test_rolling_windows_deduplicated(self, features_df_2x8):
+        """Rolling windows are distinct integer frame counts (no divisor dupes)."""
+        from behavysis.funcs.extract_features.extract_features import (
+            ROLL_WINDOW_DIVISORS,
+        )
+
+        windows = {
+            c.split("_w", 1)[1].split("_", 1)[0]
+            for c in features_df_2x8.columns
+            if "_mean_w" in c or "_median_w" in c
+        }
+        assert all(w.isdigit() for w in windows), windows
+        assert len(windows) < len(ROLL_WINDOW_DIVISORS), (
+            f"Windows not deduplicated: {windows}"
+        )
+
+    def test_no_rolling_sum(self, features_df_2x8):
+        assert not [c for c in features_df_2x8.columns if "_sum_w" in c]
+
     def test_deviation_features(self, features_df_2x8):
         dev_cols = [c for c in features_df_2x8.columns if "_deviation" in c]
         assert len(dev_cols) > 3, f"Expected 3+ deviation cols, got {len(dev_cols)}"

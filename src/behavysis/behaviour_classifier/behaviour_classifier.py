@@ -208,6 +208,7 @@ def train(clf_dir: Path, model_type: str) -> str:
         train_idx,
         val_idx,
         test_idx,
+        n_features_selected=len(adapter.feature_mask),
     )
     meta = VersionMetadata(
         version=version,
@@ -686,12 +687,14 @@ def _make_data_summary(
     train_idx: list[np.ndarray],
     val_idx: list[np.ndarray],
     test_idx: list[np.ndarray],
+    n_features_selected: int,
 ) -> DataSummary:
     y_train = np.concatenate([y[idx] for y, idx in zip(y_ls, train_idx, strict=True)])
     y_test = np.concatenate([y[idx] for y, idx in zip(y_ls, test_idx, strict=True)])
     return DataSummary(
         n_samples=sum(x.shape[0] for x in x_ls),
         n_features=x_ls[0].shape[1] if x_ls else 0,
+        n_features_selected=n_features_selected,
         n_train=sum(len(idx) for idx in train_idx),
         n_val=sum(len(idx) for idx in val_idx),
         n_test=sum(len(idx) for idx in test_idx),
@@ -726,8 +729,9 @@ def _run_diagnostics(
 
     importances: np.ndarray | None = None
     if isinstance(adapter, SklearnAdapter):
-        n_features = adapter.scaler.n_features_in_
-        importances = np.zeros(n_features, dtype=np.float64)
+        if adapter.feature_mask is not None:
+            feature_names = [feature_names[i] for i in adapter.feature_mask]
+        importances = np.zeros(len(feature_names), dtype=np.float64)
         est = adapter.estimator
         if hasattr(est, "feature_importances_"):
             importances = est.feature_importances_

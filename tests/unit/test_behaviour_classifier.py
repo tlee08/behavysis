@@ -1,10 +1,100 @@
 """Unit tests for behavioural classifier dataloaders and models."""
 
+import joblib
 import numpy as np
 import torch
+from sklearn.linear_model import LogisticRegression
 
+from behavysis.behaviour_classifier.adapter import SklearnAdapter, select_features
+from behavysis.behaviour_classifier.config import TrainingRecipe
 from behavysis.behaviour_classifier.torch.base import TorchModel
 from behavysis.behaviour_classifier.torch.dataset import WindowDataset
+
+
+def _recipe(**kw) -> TrainingRecipe:
+    base = dict(
+        model_type="logreg",
+        behaviour_name="behav",
+        individuals=["m1"],
+        bodyparts=["nose"],
+    )
+    base.update(kw)
+    return TrainingRecipe(**base)
+
+
+class TestFeatureSelection:
+    """Tests for supervised feature selection."""
+
+    def test_drops_constant_columns(self) -> None:
+        rng = np.random.default_rng(0)
+        x = rng.standard_normal((50, 4))
+        x[:, 2] = 1.0  # constant → zero variance
+        y = rng.integers(0, 2, 50)
+        keep = select_features(x, y, _recipe())
+        assert 2 not in keep
+        assert set(keep) == {0, 1, 3}
+
+    def test_disabled_keeps_all(self) -> None:
+        x = np.zeros((10, 5))
+        y = np.zeros(10, dtype=int)
+        keep = select_features(x, y, _recipe(feature_selection=False))
+        assert list(keep) == [0, 1, 2, 3, 4]
+
+    def test_max_features_caps(self) -> None:
+        rng = np.random.default_rng(1)
+        x = rng.standard_normal((80, 10))
+        y = rng.integers(0, 2, 80)
+        keep = select_features(x, y, _recipe(max_features=3))
+        assert len(keep) == 3
+        assert list(keep) == sorted(keep)
+
+
+class TestSklearnAdapterMask:
+    """Feature mask flows through fit/predict and joblib round-trip."""
+
+    def test_fit_predict_shapes(self) -> None:
+        rng = np.random.default_rng(2)
+        x = rng.standard_normal((60, 6))
+        x[:, 1] = 0.0  # constant column dropped by selection
+        y = rng.integers(0, 2, 60)
+        adapter = SklearnAdapter(LogisticRegression(max_iter=200))
+        adapter.fit([x], [y], [np.arange(60)], _recipe())
+        assert 1 not in adapter.feature_mask
+        prob = adapter.predict(x)
+        assert prob.shape == (60,)
+
+    def test_joblib_roundtrip(self, tmp_path) -> None:
+        rng = np.random.default_rng(3)
+        x = rng.standard_normal((60, 6))
+        y = rng.integers(0, 2, 60)
+        adapter = SklearnAdapter(LogisticRegression(max_iter=200))
+        adapter.fit([x], [y], [np.arange(60)], _recipe())
+        adapter.save(tmp_path)
+        loaded = joblib.load(tmp_path / "model.joblib")
+        np.testing.assert_array_equal(loaded.feature_mask, adapter.feature_mask)
+        np.testing.assert_allclose(loaded.predict(x), adapter.predict(x))
+
+
+class TestTorchAdapterMask:
+    """Torch adapter save/load reconstructs nfeatures from the mask."""
+
+    def test_save_load_roundtrip(self, tmp_path) -> None:
+        from behavysis.behaviour_classifier.adapter import TorchAdapter
+        from behavysis.behaviour_classifier.torch.architectures import DNN1
+
+        rng = np.random.default_rng(4)
+        x = rng.standard_normal((60, 8)).astype(np.float32)
+        x[:, 3] = 0.0  # constant → dropped
+        y = rng.integers(0, 2, 60).astype(np.float32)
+        adapter = TorchAdapter(lambda nf: DNN1(nf, window_frames=0))
+        adapter.fit([x], [y], [np.arange(60)], _recipe(epochs=1, batch_size=16))
+        assert 3 not in adapter.feature_mask
+        adapter.save(tmp_path)
+
+        reloaded = TorchAdapter(lambda nf: DNN1(nf, window_frames=0))
+        reloaded.load_state(tmp_path)
+        assert reloaded.model.nfeatures == len(adapter.feature_mask)
+        np.testing.assert_allclose(reloaded.predict(x), adapter.predict(x), atol=1e-5)
 
 
 def make_x_y_arrays(nrows: int, ncols: int) -> tuple[np.ndarray, np.ndarray]:

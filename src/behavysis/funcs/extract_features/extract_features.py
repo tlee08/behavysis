@@ -120,11 +120,11 @@ def _count_in_ranges(
     return results
 
 
-def _roll_median_mean_sum(
+def _roll_median_mean(
     series: Array1D,
     window_frames: int,
 ) -> dict[str, Array1D]:
-    """Compute rolling median, mean, sum for a single window size."""
+    """Compute rolling median and mean for a single window size."""
     return {
         "_median": (
             pl.Series(series)
@@ -134,11 +134,6 @@ def _roll_median_mean_sum(
         "_mean": (
             pl.Series(series)
             .rolling_mean(window_size=window_frames, min_samples=1)
-            .to_numpy()
-        ),
-        "_sum": (
-            pl.Series(series)
-            .rolling_sum(window_size=window_frames, min_samples=1)
             .to_numpy()
         ),
     }
@@ -255,11 +250,13 @@ def compute_features(
     """
     n_frames = keypoints_df.select("frame").n_unique()
 
-    roll_windows: list[float] = []
-    for d in ROLL_WINDOW_DIVISORS:
-        w = max(2, int(fps / d))
-        if w <= n_frames / 2:
-            roll_windows.append(d)
+    roll_windows: list[int] = sorted(
+        {
+            w
+            for d in ROLL_WINDOW_DIVISORS
+            if (w := max(2, int(fps / d))) <= n_frames / 2
+        }
+    )
 
     arrs, arr_prob = _pivot_to_wide(keypoints_df, individuals, bodyparts)
 
@@ -273,7 +270,7 @@ def compute_features(
     features |= _compute_total_movements(features, individuals, bodyparts)
     features |= _compute_total_cdist(features, individuals)
     features |= _compute_probability(arr_prob)
-    features |= _compute_rolling(features, roll_windows, fps)
+    features |= _compute_rolling(features, roll_windows)
     features |= _compute_deviations(features)
     features |= _compute_percentile_ranks(features)
 
@@ -554,14 +551,14 @@ def _compute_probability(arr_prob: Array2D) -> dict[str, Array1D]:
 
 def _compute_rolling(
     features: dict[str, Array1D],
-    roll_windows: list[float],
-    fps: float,
+    roll_windows: list[int],
 ) -> dict[str, Array1D]:
-    """Rolling window median/mean/sum for all base numeric features.
+    """Rolling window median/mean for all base numeric features.
 
-    Columns: ``{base_name}_median/mean/sum_{window}``.
+    Columns: ``{base_name}_median/mean_w{frames}``.
 
-    Only applies to base (non-derived) features.
+    Only applies to base (non-derived) features. Windows are distinct integer
+    frame counts.
     """
     aggs: dict[str, Array1D] = {}
 
@@ -576,21 +573,16 @@ def _compute_rolling(
             not any(k.startswith(p) for p in exclude)
             and "_median_" not in k
             and "_mean_" not in k
-            and "_sum_" not in k
             and "_deviation" not in k
             and "_percentile_rank" not in k
         )
     ]
 
-    for w in roll_windows:
-        wf = max(2, int(fps / w))
-        wl = str(w)
+    for wf in roll_windows:
         for key in base_keys:
-            if key in features:
-                stats = _roll_median_mean_sum(features[key], wf)
-                aggs[f"{key}_median_{wl}"] = stats["_median"]
-                aggs[f"{key}_mean_{wl}"] = stats["_mean"]
-                aggs[f"{key}_sum_{wl}"] = stats["_sum"]
+            stats = _roll_median_mean(features[key], wf)
+            aggs[f"{key}_median_w{wf}"] = stats["_median"]
+            aggs[f"{key}_mean_w{wf}"] = stats["_mean"]
 
     return aggs
 
@@ -638,7 +630,7 @@ def _compute_percentile_ranks(
 
     Columns: ``{name}_percentile_rank``.
 
-    Computed for total movements, cdist sums, and their deviations.
+    Computed for total movements, cdist sums, and their deviations only.
     """
     aggs: dict[str, Array1D] = {}
 
@@ -646,11 +638,7 @@ def _compute_percentile_ranks(
     for key in features:
         if "_percentile_rank" in key:
             continue
-        if key.startswith(rank_prefixes) and "_deviation" not in key:
-            aggs[f"{key}_percentile_rank"] = _pct_rank(features[key])
-
-    for key in features:
-        if "_deviation" in key and "_percentile_rank" not in key:
+        if key.startswith(rank_prefixes):
             aggs[f"{key}_percentile_rank"] = _pct_rank(features[key])
 
     return aggs

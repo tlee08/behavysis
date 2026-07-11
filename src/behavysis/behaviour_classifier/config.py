@@ -32,6 +32,9 @@ class TrainingRecipe(BaseModel):
     batch_size: int = 256
     epochs: int = 100
     pcutoff: float = 0.2
+    feature_selection: bool = True
+    variance_threshold: float = 0.0
+    max_features: int | None = None
 
     @classmethod
     def read_yaml(cls, fp: Path) -> TrainingRecipe:
@@ -57,6 +60,7 @@ class ResolvedHyperparams(BaseModel):
 class DataSummary(BaseModel):
     n_samples: int
     n_features: int
+    n_features_selected: int
     n_train: int
     n_val: int
     n_test: int
