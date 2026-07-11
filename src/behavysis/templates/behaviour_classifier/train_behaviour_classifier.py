@@ -74,7 +74,7 @@ def _():
     # A behavysis project whose experiments have been processed through the
     # `extract_features` stage — the source of the training features.
     training_project_dir = Path("/absolute/path/to/behavysis_project")
-    experiment_names = ["exp1", "exp2"]
+    names_ls = [i.stem for i in (training_project_dir / "1_raw_videos").iterdir()]
 
     # BORIS exports: one `{experiment}.tsv` per experiment, holding manual scores.
     boris_dir = Path("/absolute/path/to/boris_tsvs")
@@ -85,17 +85,17 @@ def _():
         bodyparts,
         boris_dir,
         clf_dir,
-        experiment_names,
         individuals,
+        names_ls,
         overwrite,
         training_project_dir,
     )
 
 
 @app.cell
-def _(experiment_names, training_project_dir):
+def _(names_ls, training_project_dir):
     proj = Project(training_project_dir)
-    proj.import_experiments(experiment_names)
+    proj.import_experiments(names_ls)
     proj.experiments
     return (proj,)
 

@@ -175,8 +175,8 @@ class ProductionPointer(BaseModel):
     behaviour_name: str
     model_type: str
     version: str
-    individuals: list[str] = []
-    bodyparts: list[str] = []
+    individuals: list[str]
+    bodyparts: list[str]
     promoted_at: str
 
     @classmethod
