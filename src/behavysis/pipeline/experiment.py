@@ -211,13 +211,14 @@ class Experiment:
             log_file_exists(self.get_fp(FEATURES_EXTRACTED_DIR))
             return
         # Process
-        keypoints_df = read_df(self.get_fp(KEYPOINTS_DIR), KEYPOINTS_SCHEMA)
+        keypoints_df = read_df(self.get_fp(PREPROCESSED_DIR), KEYPOINTS_SCHEMA)
         features_df = extract_features(
             keypoints_df=keypoints_df,
             config=self.read_config(),
             metadata=self.read_metadata(),
         )
         # Write
+        self.get_fp(FEATURES_EXTRACTED_DIR).parent.mkdir(parents=True, exist_ok=True)
         features_df.write_parquet(self.get_fp(FEATURES_EXTRACTED_DIR))
 
     @trace
