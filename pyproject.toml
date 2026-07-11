@@ -45,6 +45,7 @@ dev = [
 [project.scripts]
 behavysis-init = "behavysis.scripts.init:main"
 behavysis-make-project = "behavysis.scripts.make_project:main"
+behavysis-train-behaviour-classifier = "behavysis.scripts.train_behaviour_classifier:main"
 behavysis-make-dlc-builder = "behavysis.scripts.make_dlc_builder:main"
 
 [build-system]
