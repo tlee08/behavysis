@@ -31,6 +31,7 @@ STAGES = {
 
 
 DEFAULT_CONFIG_FP = "default_config.yaml"
+RUN_PIPELINE_FP = "run_pipeline.py"
 
 ANALYSIS_DIR = Path("8_analysis")
 CACHE_DIR = Path.home() / ".behavysis"

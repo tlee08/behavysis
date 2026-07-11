@@ -1,7 +1,9 @@
 """Make a new behavysis project directory."""
 
 import argparse
+import shutil
 import sys
+from importlib.resources import files
 from pathlib import Path
 
 from behavysis.constants import (
@@ -9,10 +11,13 @@ from behavysis.constants import (
     CONFIG_DIR,
     DEFAULT_CONFIG_FP,
     RAW_VIDEO_DIR,
+    RUN_PIPELINE_FP,
     STAGES,
 )
-from behavysis.presets import copy_preset, describe_presets, list_presets
-from behavysis.utils.template_utils import confirm
+from behavysis.presets import PRESET_DESCRIPTIONS
+from behavysis.utils import confirm
+
+_PRESETS_ROOT = Path(str(files("behavysis"))) / "presets"
 
 
 def main() -> None:
@@ -43,53 +48,55 @@ def main() -> None:
         _print_presets()
         sys.exit(0)
 
-    dst = Path(args.project_dir).resolve()
-
+    dst_dir = Path(args.project_dir).resolve()
     # Determine preset
     preset_name = args.preset or _choose_preset()
-    if preset_name is None:
+    if not preset_name:
         sys.exit(0)
-    # Validate (catchs --preset xyz before confirmation prompt)
-    if preset_name not in list_presets():
-        _print_presets()
-        print(f"\nUnknown preset '{preset_name}'. Use --list to see available.")  # noqa: T201
-        sys.exit(1)
     # Confirm create project in the directory
-    if not confirm(f"Create behavysis project in {dst}?"):
+    if not confirm(f"Create behavysis project in {dst_dir}?"):
         sys.exit(0)
 
     # Copy preset
-    copy_preset(preset_name, dst)
+    _copy_preset(preset_name, dst_dir)
     # Make stage folders
     for folder in STAGES:
-        (dst / folder).mkdir(parents=True, exist_ok=True)
+        (dst_dir / folder).mkdir(parents=True, exist_ok=True)
 
-    _print_next_steps(dst, preset_name)
+    _print_next_steps(dst_dir, preset_name)
 
     sys.exit(0)
 
 
+def _copy_preset(name: str, dst_dir: Path) -> None:
+    """Copy a preset folder to *dst*, creating a project directory."""
+    if name not in PRESET_DESCRIPTIONS:
+        print(f"Unknown preset '{name}'.")  # noqa: T201
+        _print_presets()
+        sys.exit(1)
+
+    dst_dir.mkdir(parents=True, exist_ok=True)
+    # Copy run_pipeline.py and default_config.yaml
+    for _i in [RUN_PIPELINE_FP, DEFAULT_CONFIG_FP]:
+        _preset_fp = _PRESETS_ROOT / name / _i
+        _dst_fp = dst_dir / _i
+        if _dst_fp.exists() and not confirm(f"Overwrite {_i}?"):
+            continue
+        shutil.copy2(_preset_fp, _dst_fp)
+
+
 def _print_presets() -> None:
     """Print available presets."""
-    descriptions = describe_presets()
     print("Available presets:")  # noqa: T201
-    for name in list_presets():
-        desc = descriptions.get(name, "")
-        print(f"  {name:<25} {desc}")  # noqa: T201
+    for name, description in PRESET_DESCRIPTIONS.items():
+        print(f"  {name:<25} {description}")  # noqa: T201
 
 
 def _choose_preset() -> str | None:
     """Interactively choose a preset."""
-    names = list_presets()
     _print_presets()
     print()  # noqa: T201
-    while True:
-        raw = input("Choose a preset (or press Enter to cancel): ").strip()
-        if not raw:
-            return None
-        if raw in names:
-            return raw
-        print(f"  Unknown preset '{raw}'. Options: {', '.join(names)}")  # noqa: T201
+    return input("Choose a preset (or press Enter to cancel): ").strip()
 
 
 def _print_next_steps(dst: Path, preset_name: str) -> None:
@@ -98,7 +105,7 @@ def _print_next_steps(dst: Path, preset_name: str) -> None:
     print(  # noqa: T201
         f"\nProject created ({preset_name}):\n"
         f"  {dst / config_name}     ← edit this for your experiment\n"
-        f"  {dst / 'run_pipeline.py'}     ← open in Jupyter/marimo/VS Code\n"
+        f"  {dst / RUN_PIPELINE_FP}     ← open in Jupyter/marimo/VS Code\n"
         f"  {dst / CONFIG_DIR}/  …  {dst / ANALYSIS_COMBINED_DIR}/  ← stage folders\n"
         f"\nNext:\n"
         f"  1. Copy .mp4 video(s) into {dst / RAW_VIDEO_DIR}/\n"

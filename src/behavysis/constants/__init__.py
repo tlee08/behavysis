@@ -60,6 +60,7 @@ from .pipeline import (
     METADATA_DIR,
     PREPROCESSED_DIR,
     RAW_VIDEO_DIR,
+    RUN_PIPELINE_FP,
     STAGES,
 )
 from .plot import PLOT_DPI, PLOT_STYLE
@@ -113,6 +114,7 @@ __all__ = [
     "PROB",
     "PROCESSED",
     "RAW_VIDEO_DIR",
+    "RUN_PIPELINE_FP",
     "SINGLE",
     "STAGES",
     "START",
