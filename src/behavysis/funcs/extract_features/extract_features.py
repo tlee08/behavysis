@@ -305,8 +305,16 @@ def _pivot_to_wide(
     arr_prob : np.ndarray
         (n_frames, n_individuals * n_bodyparts) — likelihoods.
     """
-    n_frames = keypoints_df.select("frame").n_unique()
+    unique_frames = (
+        keypoints_df.select("frame").unique().sort("frame").to_series().to_numpy()
+    )
+    n_frames = unique_frames.shape[0]
     n_bp = len(bodyparts)
+
+    frame_to_pos = {int(frame): pos for pos, frame in enumerate(unique_frames)}
+
+    def _positions(frame_vals: np.ndarray) -> np.ndarray:
+        return np.array([frame_to_pos[int(f)] for f in frame_vals], dtype=np.intp)
 
     arrs: dict[str, np.ndarray] = {}
     for indiv in individuals:
@@ -316,11 +324,11 @@ def _pivot_to_wide(
                 pl.col("individual") == indiv,
                 pl.col("bodypart") == bp,
             ).sort("frame")
-            frames = bp_data.select("frame").to_series().to_numpy()
+            pos = _positions(bp_data.select("frame").to_series().to_numpy())
             x_vals = bp_data.select("x").to_series().to_numpy()
             y_vals = bp_data.select("y").to_series().to_numpy()
-            arr[frames, 2 * bp_i] = x_vals
-            arr[frames, 2 * bp_i + 1] = y_vals
+            arr[pos, 2 * bp_i] = x_vals
+            arr[pos, 2 * bp_i + 1] = y_vals
         arrs[indiv] = _ffill_bfill(arr)
 
     n_prob_cols = len(individuals) * n_bp
@@ -331,10 +339,10 @@ def _pivot_to_wide(
                 pl.col("individual") == indiv,
                 pl.col("bodypart") == bp,
             ).sort("frame")
-            frames = bp_data.select("frame").to_series().to_numpy()
+            pos = _positions(bp_data.select("frame").to_series().to_numpy())
             p_vals = bp_data.select("likelihood").to_series().to_numpy()
             prob_col = ind_i * n_bp + bp_i
-            arr_prob[frames, prob_col] = p_vals
+            arr_prob[pos, prob_col] = p_vals
     arr_prob = _ffill_bfill(arr_prob)
 
     return arrs, arr_prob
