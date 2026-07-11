@@ -122,16 +122,18 @@ COLLATED_BINNED_SCHEMA: SchemaDict = {
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
-def read_df(fp: Path, schema: SchemaDict) -> pl.DataFrame:
+def read_df(fp: Path, schema: SchemaDict | None = None) -> pl.DataFrame:
     """Read a parquet file and validate its schema at the I/O boundary."""
     df = pl.read_parquet(fp)
-    _check_schema(df, schema)
+    if schema is not None:
+        _check_schema(df, schema)
     return df
 
 
-def write_df(df: pl.DataFrame, fp: Path, schema: SchemaDict) -> None:
+def write_df(df: pl.DataFrame, fp: Path, schema: SchemaDict | None = None) -> None:
     """Validate schema and write a parquet file, creating parent directories."""
-    _check_schema(df, schema)
+    if schema is not None:
+        _check_schema(df, schema)
     fp.parent.mkdir(parents=True, exist_ok=True)
     df.write_parquet(fp)
 

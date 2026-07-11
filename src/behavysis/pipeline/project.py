@@ -22,6 +22,7 @@ from behavysis.pipeline import Experiment
 from behavysis.schemas import (
     BINNED_SCHEMA,
     read_df,
+    write_df,
 )
 from behavysis.utils.dask_utils import cluster_process
 from behavysis.utils.misc_utils import pass_exception
@@ -248,7 +249,7 @@ class Project:
                 combined = pl.concat(df_ls)
                 # Write Parquet
                 out_fp = subdir1 / f"all_{subdir2.stem}.{DF_IO_FORMAT}"
-                combined.write_parquet(out_fp)
+                write_df(combined, out_fp)
                 # Also write CSV
                 csv_fp = subdir1 / f"all_{subdir2.stem}.csv"
                 combined.write_csv(csv_fp)
