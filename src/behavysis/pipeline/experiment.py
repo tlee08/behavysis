@@ -116,6 +116,7 @@ class Experiment:
 
     def write_metadata(self, metadata: ExperimentMetadata) -> None:
         """Save the experiment's metadata to disk."""
+        self.get_fp(METADATA_DIR).parent.mkdir(parents=True, exist_ok=True)
         self.get_fp(METADATA_DIR).write_text(metadata.model_dump_json(indent=2))
 
     @trace
@@ -127,6 +128,7 @@ class Experiment:
         # Parsing in the new config to see if it is valid
         ExperimentConfig.read_yaml(default_config_fp)
         # Overwriting the config file with the new config
+        self.get_fp(CONFIG_DIR).parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(default_config_fp, self.get_fp(CONFIG_DIR))
 
     @trace

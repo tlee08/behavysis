@@ -15,7 +15,7 @@ def main() -> None:
     # Running
     for cmd_str in [
         (
-            f"conda env create -f {templates_dir / 'DEEPLABCUT.yaml'} \n "
+            f"conda env create -f {templates_dir / 'dlc' / 'DEEPLABCUT.yaml'} \n "
             # "conda activate DEEPLABCUT \n "
             # "pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu126 \n "
             # 'pip install "git+https://github.com/DeepLabCut/DeepLabCut.git@pytorch_dlc#egg=deeplabcut[gui,modelzoo,wandb]"'

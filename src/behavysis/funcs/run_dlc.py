@@ -81,7 +81,7 @@ def _run_dlc_subproc(
     # Saving the script to a file.
     script_fp = temp_dir / f"dlc_subproc_{gputouse}.py"
     save_template(
-        "dlc_subproc.py",
+        "dlc/dlc_subproc.py",
         script_fp,
         vid_fp_ls=[str(_i) for _i in vid_fp_ls],
         model_fp=dlc_config_fp,

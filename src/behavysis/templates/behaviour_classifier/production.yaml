@@ -1,0 +1,22 @@
+# Deployed-model pointer for a behaviour classifier (edit by hand).
+#
+# Inference reads this file to resolve which trained model to use and the
+# feature contract it expects. Point an experiment's `classify_behaviour`
+# config at this file's path.
+#
+# `model_type`/`version` must match a trained version under
+# `{clf_dir}/{model_type}/versions/{version}/`. `individuals`/`bodyparts`
+# must match the model's training contract (and the experiment's
+# `extract_features` config).
+behaviour_name: attack
+model_type: rf
+version: v001_2025-01-01T000000
+individuals:
+  - mouse1marked
+  - mouse2unmarked
+bodyparts:
+  - Nose
+  - BodyCentre
+  - LeftEar
+  - RightEar
+promoted_at: "2025-01-01T00:00:00Z"

@@ -5,7 +5,7 @@ Module for training, versioning, comparing, and deploying binary behavioural cla
 ## Directory structure
 
 ```
-{my_beheaviour_classifier}/         # e.g. "attack", "huddling"
+{my_behaviour_classifier}/          # arbitrary name; behaviour is set in config.yaml
   training_data/                    # shared pool of labelled data (mirrors project dirs)
   production.yaml                   # {model_type, version} currently deployed
   leaderboard.yaml                  # auto-generated cross-model_type comparison
@@ -14,9 +14,10 @@ Module for training, versioning, comparing, and deploying binary behavioural cla
     active.yaml                     # {version} pointer — best version for this model_type
     versions/
       {version}/                    # e.g. "v003_2025-07-07T120000"
-        model.joblib                # sklearn adapter (estimator + scaler)
+        model.joblib                # sklearn adapter (estimator + scaler + feature mask)
         model.pt                    # torch state_dict
         scaler.joblib               # MinMaxScaler (torch only)
+        feature_mask.npy            # selected feature indices (torch only)
         metadata.yaml               # resolved hyperparams + eval summary
         dataset_manifest.yaml       # dataset hash + split experiment IDs
         evaluation/                 # full eval artifacts (plots, reports)
@@ -42,6 +43,9 @@ Human-authored recipe. Edited by hand before training. Never auto-modified.
 | batch_size        | int       | Training batch size (default 256)                               |
 | epochs            | int       | Training epochs (default 100)                                   |
 | pcutoff           | float     | Probability threshold for binary prediction (default 0.2)       |
+| feature_selection | bool      | Drop uninformative features, fit on train split (default True)  |
+| variance_threshold| float     | Min variance (post-scaling) to keep a feature (default 0.0)     |
+| max_features      | int\|null | Cap to top-k features by RF importance (default null = all)     |
 
 Serialisation: YAML via Pydantic `model_dump` / `model_validate`.
 
@@ -65,6 +69,7 @@ resolved:
 data:
   n_samples: 50000
   n_features: 132
+  n_features_selected: 96
   n_train: 32000
   n_val: 8000
   n_test: 10000
@@ -138,8 +143,11 @@ Ranked by `test_f1_behav` descending.
 The single file inference code reads.
 
 ```yaml
+behaviour_name: attack
 model_type: rf
 version: v003_2025-07-07T120000
+individuals: [mouse1marked, mouse2unmarked]
+bodyparts: [Nose, BodyCentre, LeftEar, RightEar]
 promoted_at: 2025-07-07T13:10:00Z
 ```
 
@@ -149,15 +157,15 @@ Deliberately separate from `leaderboard.yaml` — regenerating the leaderboard n
 
 ### 1. Train a new version
 
-`train(proj_dir, behaviour_name, model_type)`:
+`train(clf_dir, model_type)`:
 
-1. Read `{model_type}/config.yaml` (create default if absent)
-2. Load features from `{proj_dir}/5_features_extracted/`
-3. Load labels from `{proj_dir}/7_scored_behaviour/`
+1. Read `{model_type}/config.yaml` (must exist — authored, never auto-created here)
+2. Load features from `{clf_dir}/training_data/5_features_extracted/`
+3. Load labels from `{clf_dir}/training_data/7_behaviour_scored/`
 4. Align features and labels
-5. Stratified three-way split: test split first, then val split from remainder
+5. Stratified three-way split: test split first (grouped by video), then val split from remainder
 6. Instantiate adapter from `MODEL_REGISTRY[model_type]`
-7. Train on train set, validate on val set
+7. Train on train set (scale → select features on train only → fit), validate on val set
 8. Evaluate on train, val, test
 9. Generate version string: `v{seq}_{YYYY-MM-DD}THHMMSS`
 10. Create `versions/{version}/` directory
@@ -170,23 +178,23 @@ Deliberately separate from `leaderboard.yaml` — regenerating the leaderboard n
 
 ### 2. Train all model types
 
-`train_all_models(proj_dir, behaviour_name, **overrides)`:
+`train_all_models(clf_dir, behaviour_name, individuals, bodyparts)`:
 
 - Loops over all keys in `MODEL_REGISTRY`
-- Creates default config (with overrides) if `config.yaml` missing
+- Creates default `config.yaml` (with the behaviour + feature contract) if missing
 - Calls `train()` for each
 - After all trained, calls `regenerate_leaderboard()`
 
 ### 3. Promote within a model_type
 
-`promote(proj_dir, behaviour_name, model_type, version)`:
+`promote(clf_dir, model_type, version)`:
 
 - Validates that version exists
 - Writes `active.yaml`
 
 ### 4. Promote to best (per model_type)
 
-`promote_to_best(proj_dir, behaviour_name, model_type=None)`:
+`promote_to_best(clf_dir, model_type=None)`:
 
 - For each model_type (or just one), scans all versions, picks best by `test_f1_behav`
 - Calls `promote()` with the winner
@@ -194,7 +202,7 @@ Deliberately separate from `leaderboard.yaml` — regenerating the leaderboard n
 
 ### 5. Regenerate leaderboard
 
-`regenerate_leaderboard(proj_dir, behaviour_name)`:
+`regenerate_leaderboard(clf_dir)`:
 
 - For each model_type with `active.yaml`, reads that version's `metadata.yaml`
 - Ranks by `test_f1_behav` descending
@@ -202,14 +210,15 @@ Deliberately separate from `leaderboard.yaml` — regenerating the leaderboard n
 
 ### 6. Promote to production
 
-`promote_to_production(proj_dir, behaviour_name, model_type, version)`:
+`promote_to_production(clf_dir, model_type, version)`:
 
 - Validates that `{model_type}/versions/{version}/` exists
+- Copies the feature contract (`behaviour_name`, `individuals`, `bodyparts`) from `config.yaml`
 - Writes `production.yaml`
 
 ### 7. Inference
 
-`load(proj_dir, behaviour_name, *, model_type=None, version=None)`:
+`BehaviourClassifier.load(clf_dir, *, model_type=None, version=None)`:
 
 - If `model_type` and `version` are given: loads that specific version
 - If only `model_type` is given: reads `active.yaml`, loads that version
@@ -218,7 +227,7 @@ Deliberately separate from `leaderboard.yaml` — regenerating the leaderboard n
 
 ### 8. Rollback
 
-To roll back: call `promote(proj_dir, behaviour_name, model_type, old_version)` then `promote_to_production(proj_dir, behaviour_name, model_type, old_version)`. All version artifacts remain untouched in `versions/`.
+To roll back: call `promote(clf_dir, model_type, old_version)` then `promote_to_production(clf_dir, model_type, old_version)`. All version artifacts remain untouched in `versions/`.
 
 ## Version string format
 
@@ -226,20 +235,46 @@ To roll back: call `promote(proj_dir, behaviour_name, model_type, old_version)` 
 
 Example: `v003_2025-07-07T120000`
 
-Sequence numbers are per `(behaviour, model_type)` and determined by scanning existing version directories.
+Sequence numbers are per model_type (within a classifier dir) and determined by scanning existing version directories.
 
 ## Framework serialisation
 
 | Framework | model_type examples          | Artifacts                                                          |
 | --------- | ---------------------------- | ------------------------------------------------------------------ |
-| sklearn   | rf, logreg                   | `model.joblib` (joblib dump of SklearnAdapter: estimator + scaler) |
-| torch     | dnn1, dnn2, dnn3, cnn1, cnn2 | `model.pt` (state_dict), `scaler.joblib` (MinMaxScaler)            |
+| sklearn   | rf, logreg                   | `model.joblib` (joblib dump of SklearnAdapter: estimator + scaler + feature mask) |
+| torch     | dnn1, dnn2, dnn3, cnn1, cnn2 | `model.pt` (state_dict), `scaler.joblib` (MinMaxScaler), `feature_mask.npy` |
 
-Torch loading: fresh TorchAdapter from MODEL_REGISTRY → `adapter.load_state(version_dir)` reconstructs model from state_dict + scaler.
+Torch loading: fresh TorchAdapter from MODEL_REGISTRY → `adapter.load_state(version_dir)` reconstructs model from state_dict + scaler + feature mask (the mask length defines `nfeatures`).
 
 ## Data source
 
-Training loads features from `{proj_dir}/5_features_extracted/` and labels from `{proj_dir}/7_scored_behaviour/`. These are the canonical sources. `training_data/` at the behaviour level mirrors these and will be populated in a future iteration.
+Training loads features from `{clf_dir}/training_data/5_features_extracted/` and labels from `{clf_dir}/training_data/7_behaviour_scored/`. A classifier is self-contained: assemble these folders (e.g. copy extracted features from a processed project, convert BORIS exports to scored labels) before training. See the `train_behaviour_classifier` marimo notebook for the full assemble → train → evaluate → promote flow.
+
+## Feature selection
+
+When `feature_selection` is enabled (default), each `fit` scales all columns with a `MinMaxScaler`, then selects features **on the training split only**:
+
+1. `VarianceThreshold(variance_threshold)` drops near-constant columns. Because scaling happens first, the threshold is comparable across features (variance lies in `[0, 0.25]`).
+2. If `max_features` is set, a random forest ranks the survivors and keeps the top-k by importance.
+
+The selected column indices (`feature_mask`) are persisted with the model and applied identically at inference. `metadata.yaml` records both `n_features` (total extracted) and `n_features_selected`.
+
+## Evaluation artifacts
+
+Every trained version writes to `versions/{version}/evaluation/`:
+
+| File | Contents |
+| --- | --- |
+| `{train,val,test}_report.json` | precision / recall / f1 per split |
+| `{train,val,test}_eval.parquet` | per-frame prob / pred / actual |
+| `{split}_confm.png` | confusion matrix |
+| `{split}_pcutoffs.png` | metrics vs probability cutoff — use to choose `pcutoff` |
+| `{split}_logc.png` | predicted-probability distribution |
+| `history.png`, `history.parquet` | train/val loss curve (torch only) |
+| `feature_importance.png` | top features by importance (sklearn) |
+| `feature_report.json` | `n_features_total` vs `n_features_used` after selection |
+
+Inspect these — plus each version's `metadata.yaml` (train/val/test F1) and the `overfit_ratio` in `leaderboard.yaml` — before promoting a model to production.
 
 ## Promotion policy
 
