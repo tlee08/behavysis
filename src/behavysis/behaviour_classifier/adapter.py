@@ -49,7 +49,7 @@ def select_features(
 
     if config.max_features is not None and len(keep) > config.max_features:
         rf = RandomForestClassifier(
-            n_estimators=1000,
+            n_estimators=200,
             max_depth=8,
             random_state=config.seed,
             n_jobs=-1,

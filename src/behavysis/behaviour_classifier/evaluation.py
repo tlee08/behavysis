@@ -250,22 +250,28 @@ def save_feature_report(
     feature_names: list[str],
     importances: np.ndarray | None,
     eval_dir: Path,
+    n_features_total: int | None = None,
 ) -> None:
     """Save feature count and importance summary as JSON.
 
     Parameters
     ----------
     feature_names : list[str]
-        All feature names used by the model.
+        Names of features used by the model (after feature selection).
     importances : np.ndarray | None
         Feature importance values, or None if not available.
     eval_dir : Path
         Directory to save the report.
+    n_features_total : int | None
+        Total number of extracted features before selection. Defaults to the
+        number of used features when not provided.
     """
-    n_total = len(feature_names)
+    n_used = len(feature_names)
     report: dict = {
-        "n_features_total": n_total,
-        "n_features_used": n_total,
+        "n_features_total": (
+            n_features_total if n_features_total is not None else n_used
+        ),
+        "n_features_used": n_used,
     }
 
     if importances is not None:

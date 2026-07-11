@@ -727,6 +727,8 @@ def _run_diagnostics(
         logger.warning("No feature names found for diagnostics.")
         return
 
+    n_features_total = len(feature_names)
+
     importances: np.ndarray | None = None
     if isinstance(adapter, SklearnAdapter):
         if adapter.feature_mask is not None:
@@ -740,7 +742,7 @@ def _run_diagnostics(
 
     if importances is not None:
         save_feature_importance(feature_names, importances, eval_d)
-        save_feature_report(feature_names, importances, eval_d)
+        save_feature_report(feature_names, importances, eval_d, n_features_total)
 
 
 def _three_way_split(
