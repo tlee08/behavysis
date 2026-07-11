@@ -123,6 +123,12 @@ class Project:
             overwrite=overwrite,
         )
 
+    def get_vid_metadata(self) -> None:
+        """Get vid metadata and save."""
+        self._run(
+            Experiment.get_vid_metadata,
+        )
+
     def run_dlc(self, gputouse: int | None = None, *, overwrite: bool) -> None:
         """Run DLC on all experiments with GPU batching."""
         gputouse_ls = get_gpu_ids() if gputouse is None else [gputouse]
