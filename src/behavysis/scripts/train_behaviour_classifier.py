@@ -9,11 +9,13 @@ def main() -> None:
     """Make Behavysis model builder."""
     if not confirm("Create training script in current directory?"):
         return
-    if Path("train_behaviour_model.py").exists() and not confirm(
+    if Path("train_behaviour_classifier.py").exists() and not confirm(
         "Overwrite existing file?",
     ):
         return
-    save_template("train_behaviour_model.py", Path("train_behaviour_model.py"))
+    save_template(
+        "train_behaviour_classifier.py", Path("train_behaviour_classifier.py")
+    )
 
 
 if __name__ == "__main__":
