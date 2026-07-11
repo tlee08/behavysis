@@ -20,7 +20,6 @@ from behavysis.constants import (
 from behavysis.funcs.run_dlc import ma_dlc_run_batch
 from behavysis.pipeline import Experiment
 from behavysis.schemas import (
-    BINNED_SCHEMA,
     read_df,
     write_df,
 )
@@ -235,7 +234,7 @@ class Project:
                     in_fp = subdir2 / f"{exp.name}.{DF_IO_FORMAT}"
                     if in_fp.is_file():
                         # Read
-                        df = read_df(in_fp, BINNED_SCHEMA)
+                        df = read_df(in_fp)
                         # Add experiment column
                         df = df.with_columns(pl.lit(exp.name).alias(EXPERIMENT)).select(
                             pl.col(EXPERIMENT), pl.all().exclude(EXPERIMENT)
