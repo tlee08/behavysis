@@ -20,6 +20,7 @@ from scipy.spatial import ConvexHull
 from behavysis.transforms.keypoint import check_bpts_exist
 
 if TYPE_CHECKING:
+    from behavysis.constants import Array1D, Array2D
     from behavysis.models import ExperimentConfig, ExperimentMetadata
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -56,12 +57,6 @@ ROLL_WINDOW_DIVISORS: list[float] = [
     15.0,
 ]
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# Typing aliases
-# ═══════════════════════════════════════════════════════════════════════════════
-
-type Array1D = np.ndarray[tuple[int], np.dtype[np.float64]]
-type Array2D = np.ndarray[tuple[int, int], np.dtype[np.float64]]
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Vectorized math helpers (generic, reusable)
@@ -251,11 +246,7 @@ def compute_features(
     n_frames = keypoints_df.select("frame").n_unique()
 
     roll_windows: list[int] = sorted(
-        {
-            w
-            for d in ROLL_WINDOW_DIVISORS
-            if (w := max(2, int(fps / d))) <= n_frames / 2
-        }
+        {w for d in ROLL_WINDOW_DIVISORS if (w := max(2, int(fps / d))) <= n_frames / 2}
     )
 
     arrs, arr_prob = _pivot_to_wide(keypoints_df, individuals, bodyparts)

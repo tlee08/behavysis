@@ -1,8 +1,8 @@
 """On-disk path functions for a self-contained behaviour classifier.
 
 A classifier lives entirely inside its own directory (``clf_dir``). The
-directory name is arbitrary — the behaviour it classifies is authored in each
-model_type's ``config.yaml``, not inferred from the path. Training data lives
+directory name is arbitrary — the behaviour it classifies is authored in the
+shared ``contract.yaml``, not inferred from the path. Training data lives
 inside it too, mirroring the inference pipeline's stage folders::
 
     {clf_dir}/                       # arbitrary name (e.g. my_classifier/)
@@ -10,17 +10,18 @@ inside it too, mirroring the inference pipeline's stage folders::
         5_features_extracted/
         7_behaviour_scored/
         ...
+      contract.yaml                  # shared behaviour + feature contract
       production.yaml                # {model_type, version} currently deployed
       leaderboard.yaml               # auto-generated cross-model_type comparison
       {model_type}/                  # e.g. rf/, dnn1/, cnn2/
-        config.yaml                  # human-authored recipe (holds behaviour_name)
+        config.yaml                  # human-authored recipe (hyperparameters)
         active.yaml                  # {version} pointer — best for this model_type
         versions/
           {version}/                 # e.g. v003_2025-07-07T120000
             model.joblib             # sklearn adapter (estimator + scaler)
             model.pt                 # torch state_dict
             scaler.joblib            # MinMaxScaler (torch only)
-            metadata.yaml            # resolved hyperparams + eval summary
+            metadata.yaml            # recipe snapshot + eval summary
             dataset_manifest.yaml    # dataset hash + split experiment IDs
             evaluation/              # full eval artifacts (plots, reports)
 """
@@ -58,6 +59,11 @@ def labels_dir(clf_dir: Path) -> Path:
 def production_fp(clf_dir: Path) -> Path:
     """Path to the deployed-model pointer YAML."""
     return clf_dir / "production.yaml"
+
+
+def contract_fp(clf_dir: Path) -> Path:
+    """Path to the shared classifier contract YAML (behaviour + feature contract)."""
+    return clf_dir / "contract.yaml"
 
 
 def leaderboard_fp(clf_dir: Path) -> Path:

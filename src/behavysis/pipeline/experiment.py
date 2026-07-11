@@ -7,7 +7,8 @@ import cv2
 import numpy as np
 import polars as pl
 
-from behavysis.behaviour_classifier import ProductionPointer
+from behavysis.behaviour_classifier import ClassifierContract
+from behavysis.behaviour_classifier import storage as clf_storage
 from behavysis.constants import (
     ANALYSIS_COMBINED_DIR,
     ANALYSIS_DIR,
@@ -261,8 +262,8 @@ class Experiment:
         config = self.read_config()
         bouts_struct = [
             BoutStruct(
-                behaviour=ProductionPointer.read_yaml(
-                    model_config.clf_fp
+                behaviour=ClassifierContract.read_yaml(
+                    clf_storage.contract_fp(model_config.clf_fp.parent)
                 ).behaviour_name,
                 sub_behaviour=model_config.user_defined,
             )

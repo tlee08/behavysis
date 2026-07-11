@@ -4,7 +4,10 @@ import numpy as np
 import polars as pl
 from loguru import logger
 
-from behavysis.behaviour_classifier import BehaviourClassifier, ProductionPointer
+from behavysis.behaviour_classifier import (
+    BehaviourClassifier,
+    ClassifierContract,
+)
 from behavysis.constants import PRED, PROB
 from behavysis.models import (
     ExperimentConfig,
@@ -31,15 +34,10 @@ def classify_behaviour(
 
     behaviour_df_ls = []
     for model_config in model_config_ls:
-        prod = ProductionPointer.read_yaml(model_config.clf_fp)
-        _validate_feature_contract(feat_cfg, prod)
+        behaviour_model = BehaviourClassifier.load(model_config.clf_fp.parent)
+        _validate_feature_contract(feat_cfg, behaviour_model.contract)
 
-        behaviour_name = prod.behaviour_name
-        behaviour_model = BehaviourClassifier.load(
-            model_config.clf_fp.parent,
-            model_type=prod.model_type,
-            version=prod.version,
-        )
+        behaviour_name = behaviour_model.contract.behaviour_name
         pcutoff = model_config.pcutoff or behaviour_model.config.pcutoff
         min_window_secs = model_config.min_empty_window_secs
         min_window_frames = int(np.round(min_window_secs * metadata.require_fps()))
@@ -64,29 +62,20 @@ def classify_behaviour(
 
 def _validate_feature_contract(
     feat_cfg: ExtractFeaturesConfig,
-    prod: ProductionPointer,
+    contract: ClassifierContract,
 ) -> None:
-    """Validate the experiment's features match the classifier's contract.
-
-    Skipped (with a warning) when the classifier recorded no contract.
-    """
-    if not prod.individuals and not prod.bodyparts:
-        logger.warning(
-            "Classifier '{}' recorded no feature contract; skipping validation.",
-            prod.behaviour_name,
-        )
-        return
-    if set(feat_cfg.individuals) != set(prod.individuals):
+    """Validate the experiment's features match the classifier's contract."""
+    if set(feat_cfg.individuals) != set(contract.individuals):
         msg = (
-            f"Individual mismatch for '{prod.behaviour_name}': "
+            f"Individual mismatch for '{contract.behaviour_name}': "
             f"experiment={sorted(feat_cfg.individuals)}, "
-            f"model={sorted(prod.individuals)}"
+            f"model={sorted(contract.individuals)}"
         )
         raise ValueError(msg)
-    if set(feat_cfg.bodyparts) != set(prod.bodyparts):
+    if set(feat_cfg.bodyparts) != set(contract.bodyparts):
         msg = (
-            f"Bodypart mismatch for '{prod.behaviour_name}': "
+            f"Bodypart mismatch for '{contract.behaviour_name}': "
             f"experiment={sorted(feat_cfg.bodyparts)}, "
-            f"model={sorted(prod.bodyparts)}"
+            f"model={sorted(contract.bodyparts)}"
         )
         raise ValueError(msg)

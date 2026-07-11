@@ -11,6 +11,7 @@ from .behaviour_classifier import (
 )
 from .config import (
     ActivePointer,
+    ClassifierContract,
     DatasetManifest,
     Leaderboard,
     LeaderboardEntry,
@@ -25,6 +26,7 @@ __all__ = [
     "MODEL_REGISTRY",
     "ActivePointer",
     "BehaviourClassifier",
+    "ClassifierContract",
     "DatasetManifest",
     "Leaderboard",
     "LeaderboardEntry",

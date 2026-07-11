@@ -5,12 +5,13 @@ Module for training, versioning, comparing, and deploying binary behavioural cla
 ## Directory structure
 
 ```
-{my_behaviour_classifier}/          # arbitrary name; behaviour is set in config.yaml
+{my_behaviour_classifier}/          # arbitrary name; behaviour is set in contract.yaml
   training_data/                    # shared pool of labelled data (mirrors project dirs)
+  contract.yaml                     # shared behaviour + feature contract (all model_types)
   production.yaml                   # {model_type, version} currently deployed
   leaderboard.yaml                  # auto-generated cross-model_type comparison
   {model_type}/                     # e.g. "rf", "dnn1", "cnn2"
-    config.yaml                     # human-authored training recipe
+    config.yaml                     # human-authored hyperparameter recipe
     active.yaml                     # {version} pointer — best version for this model_type
     versions/
       {version}/                    # e.g. "v003_2025-07-07T120000"
@@ -18,23 +19,32 @@ Module for training, versioning, comparing, and deploying binary behavioural cla
         model.pt                    # torch state_dict
         scaler.joblib               # MinMaxScaler (torch only)
         feature_mask.npy            # selected feature indices (torch only)
-        metadata.yaml               # resolved hyperparams + eval summary
+        metadata.yaml               # recipe snapshot + eval summary
         dataset_manifest.yaml       # dataset hash + split experiment IDs
         evaluation/                 # full eval artifacts (plots, reports)
 ```
 
 ## File-by-file roles
 
+### `contract.yaml` (per classifier)
+
+Human-authored shared contract — the single source of truth for what every
+model_type in the classifier trains on. Edited by hand before training, never
+auto-modified.
+
+| Field          | Type      | Description                                 |
+| -------------- | --------- | ------------------------------------------- |
+| behaviour_name | str       | Behaviour this classifier classifies        |
+| individuals    | list[str] | Animal IDs used in training                 |
+| bodyparts      | list[str] | Bodyparts used for features                 |
+
 ### `config.yaml` (per model_type)
 
-Human-authored recipe. Edited by hand before training. Never auto-modified.
+Human-authored hyperparameter recipe. Edited by hand before training. Never auto-modified.
 
 | Field             | Type      | Description                                                     |
 | ----------------- | --------- | --------------------------------------------------------------- |
 | model_type        | str       | Key in MODEL_REGISTRY (redundant with dir, but self-describing) |
-| behaviour_name    | str       | Behaviour this model classifies                                 |
-| individuals       | list[str] | Animal IDs used in training                                     |
-| bodyparts         | list[str] | Bodyparts used for features                                     |
 | seed              | int       | Random seed (default 42)                                        |
 | oversample_ratio  | float     | Target pos/neg ratio for oversampling (default 0.2)             |
 | undersample_ratio | float     | Target pos/neg ratio for undersampling (default 0.4)            |
@@ -51,27 +61,32 @@ Serialisation: YAML via Pydantic `model_dump` / `model_validate`.
 
 ### `metadata.yaml` (per version)
 
-Machine-written at the end of training. Never hand-edited.
+Machine-written at the end of training. Never hand-edited. `recipe` is a full
+snapshot of the `config.yaml` used for this version.
 
 ```yaml
 version: v003_2025-07-07T120000
 framework: sklearn
 model_type: rf
 created_at: 2025-07-07T12:00:00
-resolved:
+recipe:
+  model_type: rf
   seed: 42
-  batch_size: 256
-  epochs: 100
   oversample_ratio: 0.2
   undersample_ratio: 0.4
   test_split: 0.2
   val_split: 0.2
+  batch_size: 256
+  epochs: 100
+  pcutoff: 0.2
+  feature_selection: true
+  variance_threshold: 0.0
+  max_features: null
 data:
   n_samples: 50000
   n_features: 132
   n_features_selected: 96
   n_train: 32000
-  n_val: 8000
   n_test: 10000
   train_pos_ratio: 0.08
   test_pos_ratio: 0.07
@@ -80,8 +95,6 @@ training:
 evaluation:
   train_accuracy: 0.96
   train_f1_behav: 0.89
-  val_accuracy: 0.94
-  val_f1_behav: 0.87
   test_accuracy: 0.93
   test_f1_behav: 0.86
 ```
@@ -94,10 +107,8 @@ Answers "what exactly did this version see?" Snapshot reference, not a data copy
 version: v003_2025-07-07T120000
 dataset_hash: null # hash of training_data/ state (future)
 train_ids: [exp_001, exp_003, exp_004]
-val_ids: [exp_002]
 test_ids: [exp_005, exp_006]
 n_train: 32000
-n_val: 8000
 n_test: 10000
 ```
 
@@ -138,16 +149,15 @@ Ranked by `test_f1_behav` descending.
 
 `overfit_ratio` = `(train_f1_behav - test_f1_behav)` — smaller is better.
 
-### `production.yaml` (behaviour level)
+### `production.yaml` (classifier level)
 
-The single file inference code reads.
+A pure pointer to the deployed `model_type`. Written only by
+`promote_to_production` — never hand-edited. The deployed version is resolved
+from that model_type's `active.yaml`; the behaviour and feature contract are
+resolved from `contract.yaml`.
 
 ```yaml
-behaviour_name: attack
 model_type: rf
-version: v003_2025-07-07T120000
-individuals: [mouse1marked, mouse2unmarked]
-bodyparts: [Nose, BodyCentre, LeftEar, RightEar]
 promoted_at: 2025-07-07T13:10:00Z
 ```
 
@@ -159,7 +169,7 @@ Deliberately separate from `leaderboard.yaml` — regenerating the leaderboard n
 
 `train(clf_dir, model_type)`:
 
-1. Read `{model_type}/config.yaml` (must exist — authored, never auto-created here)
+1. Read `contract.yaml` (shared) and `{model_type}/config.yaml` (must exist — authored, never auto-created here)
 2. Load features from `{clf_dir}/training_data/5_features_extracted/`
 3. Load labels from `{clf_dir}/training_data/7_behaviour_scored/`
 4. Align features and labels
@@ -180,8 +190,9 @@ Deliberately separate from `leaderboard.yaml` — regenerating the leaderboard n
 
 `train_all_models(clf_dir, behaviour_name, individuals, bodyparts)`:
 
+- Writes the shared `contract.yaml` (behaviour + feature contract) if missing
 - Loops over all keys in `MODEL_REGISTRY`
-- Creates default `config.yaml` (with the behaviour + feature contract) if missing
+- Creates a default `config.yaml` (hyperparameters) per model_type if missing
 - Calls `train()` for each
 - After all trained, calls `regenerate_leaderboard()`
 
@@ -210,11 +221,10 @@ Deliberately separate from `leaderboard.yaml` — regenerating the leaderboard n
 
 ### 6. Promote to production
 
-`promote_to_production(clf_dir, model_type, version)`:
+`promote_to_production(clf_dir, model_type)`:
 
-- Validates that `{model_type}/versions/{version}/` exists
-- Copies the feature contract (`behaviour_name`, `individuals`, `bodyparts`) from `config.yaml`
-- Writes `production.yaml`
+- Validates that the model_type has an `active.yaml`
+- Writes `production.yaml` (a pure `{model_type}` pointer)
 
 ### 7. Inference
 
@@ -222,12 +232,12 @@ Deliberately separate from `leaderboard.yaml` — regenerating the leaderboard n
 
 - If `model_type` and `version` are given: loads that specific version
 - If only `model_type` is given: reads `active.yaml`, loads that version
-- If neither: reads `production.yaml`, loads that version
-- Returns `BehaviourClassifier` with `.config` (TrainingRecipe) and `.predict(features_df)`
+- If neither: reads `production.yaml` → that model_type's `active.yaml` → version
+- Returns `BehaviourClassifier` with `.config` (TrainingRecipe), `.contract` (ClassifierContract), and `.predict(features_df)`
 
 ### 8. Rollback
 
-To roll back: call `promote(clf_dir, model_type, old_version)` then `promote_to_production(clf_dir, model_type, old_version)`. All version artifacts remain untouched in `versions/`.
+To roll back a model_type to an earlier version: call `promote(clf_dir, model_type, old_version)` to repoint its `active.yaml`. If that model_type is in production, `production.yaml` then resolves to `old_version` automatically. All version artifacts remain untouched in `versions/`.
 
 ## Version string format
 
@@ -297,6 +307,7 @@ from behavysis.behaviour_classifier import (
     # Inference
     BehaviourClassifier,
     # Config models
+    ClassifierContract,
     TrainingRecipe,
     VersionMetadata,
     DatasetManifest,

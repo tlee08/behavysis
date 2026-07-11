@@ -1,6 +1,10 @@
 """Model adapters for sklearn and PyTorch classifiers.
 
-SklearnAdapter wraps any sklearn estimator with MinMaxScaler.
+SklearnAdapter wraps any sklearn-compatible estimator class with MinMaxScaler
++ feature selection + optional GridSearchCV. Hyperparameters are resolved from
+the TrainingRecipe at fit time — the registry stores estimator classes, not
+pre-configured instances.
+
 TorchAdapter wraps a TorchModel with MinMaxScaler.
 
 Serialisation:
@@ -19,9 +23,13 @@ import numpy as np
 import pandas as pd
 import torch
 from loguru import logger
+from sklearn.base import BaseEstimator
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_selection import VarianceThreshold
+from sklearn.model_selection import GridSearchCV
 from sklearn.preprocessing import MinMaxScaler
+
+from behavysis.constants import Array1D, Array2D
 
 if TYPE_CHECKING:
     from .config import TrainingRecipe
@@ -29,8 +37,8 @@ if TYPE_CHECKING:
 
 
 def select_features(
-    x: np.ndarray,
-    y: np.ndarray,
+    x: Array2D,
+    y: Array1D,
     config: TrainingRecipe,
 ) -> np.ndarray:
     """Return column indices to keep, fit on training data only.
@@ -51,7 +59,7 @@ def select_features(
         rf = RandomForestClassifier(
             n_estimators=200,
             max_depth=8,
-            random_state=config.seed,
+            random_state=42,
             n_jobs=-1,
         )
         rf.fit(x[:, keep], y)
@@ -65,14 +73,14 @@ class BaseAdapter(ABC):
     """Abstract adapter with fit / predict."""
 
     framework: ClassVar[str]
-    feature_mask: np.ndarray | None
+    feature_mask: Array1D | None
 
     @abstractmethod
     def fit(
         self,
-        x_ls: list[np.ndarray],
-        y_ls: list[np.ndarray],
-        train_idx: list[np.ndarray],
+        x_ls: list[Array2D],
+        y_ls: list[Array1D],
+        train_idx: list[Array1D],
         config: TrainingRecipe,
     ) -> pd.DataFrame:
         """Train on train_idx subsets. Returns per-epoch history (empty for sklearn)."""
@@ -81,8 +89,8 @@ class BaseAdapter(ABC):
     @abstractmethod
     def predict(
         self,
-        x: np.ndarray,
-        index: np.ndarray | None = None,
+        x: Array2D,
+        index: Array1D | None = None,
         batch_size: int = 256,
     ) -> np.ndarray:
         """Return predicted probabilities for indexed rows."""
@@ -95,34 +103,53 @@ class BaseAdapter(ABC):
 
 
 class SklearnAdapter(BaseAdapter):
-    """Adapter for sklearn estimators (RF, LogisticRegression, etc.).
+    """Adapter for sklearn estimators (RF, LogisticRegression, XGBoost, etc.).
+
+    Takes an estimator class at construction. All hyperparameters are resolved
+    from ``TrainingRecipe.hyperparameters`` at ``fit`` time via
+    ``GridSearchCV``.
 
     Serialises as a single model.joblib blob (estimator + scaler).
     """
 
     framework: ClassVar[str] = "sklearn"
 
-    def __init__(self, estimator: object) -> None:
-        self.estimator = estimator
+    def __init__(self, estimator_cls: type) -> None:
+        self.estimator_cls = estimator_cls
+        self.estimator: BaseEstimator | None = None
         self.scaler = MinMaxScaler()
-        self.feature_mask: np.ndarray | None = None
+        self.feature_mask: Array1D | None = None
+
+    @property
+    def resolved_hyperparameters(self) -> dict[str, object] | None:
+        """Return ``best_params_`` from ``GridSearchCV``, or None if not fitted."""
+        if self.estimator is not None and hasattr(self.estimator, "best_params_"):
+            return self.estimator.best_params_
+        return None
 
     def fit(
         self,
-        x_ls: list[np.ndarray],
-        y_ls: list[np.ndarray],
-        train_idx: list[np.ndarray],
+        x_ls: list[Array2D],
+        y_ls: list[Array1D],
+        train_idx: list[Array1D],
         config: TrainingRecipe,
     ) -> pd.DataFrame:
-        x_train = [x[idx] for x, idx in zip(x_ls, train_idx, strict=True)]
-        y_train = [y[idx] for y, idx in zip(y_ls, train_idx, strict=True)]
-        x = np.concatenate(x_train, axis=0)
-        y = np.concatenate(y_train, axis=0)
+        x = np.concatenate(
+            [x[idx] for x, idx in zip(x_ls, train_idx, strict=True)], axis=0
+        )
+        y = np.concatenate(
+            [y[idx] for y, idx in zip(y_ls, train_idx, strict=True)], axis=0
+        )
         x = self.scaler.fit_transform(x)
         self.feature_mask = select_features(x, y, config)
         x = x[:, self.feature_mask]
-        self.estimator.fit(x, y)
-        return pd.DataFrame(columns=["loss", "vloss"])
+
+        base = self.estimator_cls()
+        gs = GridSearchCV(base, config.hyperparameters, scoring="f1", cv=3, n_jobs=-1)
+        gs.fit(x, y)
+        self.estimator = gs
+
+        return pd.DataFrame(columns=pd.Index(["loss", "vloss"]))
 
     def predict(
         self,
@@ -162,26 +189,28 @@ class TorchAdapter(BaseAdapter):
 
     def fit(
         self,
-        x_ls: list[np.ndarray],
-        y_ls: list[np.ndarray],
-        train_idx: list[np.ndarray],
+        x_ls: list[Array2D],
+        y_ls: list[Array1D],
+        train_idx: list[Array1D],
         config: TrainingRecipe,
     ) -> pd.DataFrame:
-        x_train = [x[idx] for x, idx in zip(x_ls, train_idx, strict=True)]
-        y_train = [y[idx] for y, idx in zip(y_ls, train_idx, strict=True)]
-        X = np.concatenate(x_train, axis=0)
-        y = np.concatenate(y_train, axis=0)
+        x = np.concatenate(
+            [x[idx] for x, idx in zip(x_ls, train_idx, strict=True)], axis=0
+        )
+        y = np.concatenate(
+            [y[idx] for y, idx in zip(y_ls, train_idx, strict=True)], axis=0
+        )
 
         self.scaler = MinMaxScaler()
-        X = self.scaler.fit_transform(X)
-        self.feature_mask = select_features(X, y, config)
+        x = self.scaler.fit_transform(x)
+        self.feature_mask = select_features(x, y, config)
         nfeatures = len(self.feature_mask)
 
         self.model = self.model_factory(nfeatures)
         return self.model.fit(
-            [X[:, self.feature_mask]],
+            [x[:, self.feature_mask]],
             [y],
-            [np.arange(X.shape[0])],
+            [np.arange(x.shape[0])],
             batch_size=config.batch_size,
             epochs=config.epochs,
             val_split=config.val_split,
@@ -189,16 +218,16 @@ class TorchAdapter(BaseAdapter):
 
     def predict(
         self,
-        x: np.ndarray,
-        index: np.ndarray | None = None,
+        x: Array2D,
+        index: Array1D | None = None,
         batch_size: int = 256,
     ) -> np.ndarray:
         if self.scaler is None or self.model is None or self.feature_mask is None:
             msg = "Model not fitted. Call fit() or load_state() first."
             raise RuntimeError(msg)
-        X = self.scaler.transform(x)[:, self.feature_mask]
-        idx = index if index is not None else np.arange(X.shape[0])
-        return self.model.predict(X, idx, batch_size=batch_size)
+        x = self.scaler.transform(x)[:, self.feature_mask]
+        idx = index if index is not None else np.arange(x.shape[0])
+        return self.model.predict(x, idx, batch_size=batch_size)
 
     def save(self, version_dir: Path) -> None:
         if self.model is None or self.scaler is None or self.feature_mask is None:

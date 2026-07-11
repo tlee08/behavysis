@@ -30,18 +30,19 @@ def _():
     # Train a behavysis behaviour classifier
 
     A classifier is **self-contained** in its own directory (`clf_dir`). Its
-    name is arbitrary — the behaviour it classifies is declared in each
-    model's `config.yaml`. The layout is:
+    name is arbitrary — the behaviour it classifies is declared in the shared
+    `contract.yaml`. The layout is:
 
     ```
     {clf_dir}/
         training_data/
             5_features_extracted/   # features (from a processed behavysis project)
             7_behaviour_scored/     # labels  (from BORIS, or a scored project)
+        contract.yaml               # shared behaviour + feature contract
         {model_type}/
-            config.yaml             # authored TrainingRecipe (behaviour + contract)
+            config.yaml             # authored TrainingRecipe (hyperparameters)
         leaderboard.yaml            # cross-model comparison
-        production.yaml             # deployed pointer + feature contract
+        production.yaml             # deployed pointer (model_type + version)
     ```
 
     This notebook: **assemble training data → train → compare → promote**.
@@ -62,9 +63,9 @@ def _():
     # The classifier directory (arbitrary name; created if missing).
     clf_dir = Path("/absolute/path/to/behaviour_classifier")
 
-    # The behaviour and the feature contract the model is trained on.
-    # These become the classifier's public contract in `production.yaml` and are
-    # validated against each experiment's `extract_features` config at inference.
+    # The behaviour and the feature contract the classifier is trained on.
+    # These are written once to `contract.yaml` and validated against each
+    # experiment's `extract_features` config at inference.
     # `individuals` and `bodyparts` MUST match the source project's
     # `extract_features` config, or inference features will not align.
     behaviour_name = "attack"
@@ -161,8 +162,9 @@ def _():
     mo.md("""
     ## 3. Train
 
-    `train_all_models` authors a default `TrainingRecipe` (`config.yaml`) for
-    every registered model type that lacks one, then trains them all. To tune
+    `train_all_models` writes the shared `contract.yaml` (behaviour + feature
+    contract) and a default `TrainingRecipe` (`config.yaml`) for every
+    registered model type that lacks one, then trains them all. To tune
     hyperparameters, edit the written `config.yaml` and re-run, or author one
     explicitly and train a single model:
 
@@ -173,9 +175,6 @@ def _():
 
     TrainingRecipe(
         model_type="rf",
-        behaviour_name=behaviour_name,   # required
-        individuals=individuals,          # required feature contract
-        bodyparts=bodyparts,              # required feature contract
         epochs=200,
         pcutoff=0.3,
         # Supervised feature selection (fit on the train split only):
@@ -261,13 +260,14 @@ def _():
     mo.md("""
     ## 5. Promote the best model to production
 
-    Auto-promotes the top-ranked model (highest `test_f1_behav`) to
-    `production.yaml`. The cell warns if the winner looks weak or overfit —
-    review section 4 before relying on it. To override, promote a specific
-    model manually:
+    Auto-promotes the top-ranked model_type (highest `test_f1_behav`) to
+    `production.yaml`. The deployed version is resolved from that model_type's
+    `active.yaml` (kept current by auto-promotion during training). The cell
+    warns if the winner looks weak or overfit — review section 4 before relying
+    on it. To override, promote a specific model_type manually:
 
     ```python
-    promote_to_production(clf_dir, "rf", "v003_2025-07-07T120000")
+    promote_to_production(clf_dir, "rf")
     ```
     """)
     return
@@ -287,14 +287,14 @@ def _(board, clf_dir):
     if best.overfit_ratio is not None and best.overfit_ratio > _max_overfit:
         _warnings.append(f"overfit_ratio={best.overfit_ratio} > {_max_overfit}")
 
-    promote_to_production(clf_dir, best.model_type, best.version)
+    promote_to_production(clf_dir, best.model_type)
 
     _status = (
         "⚠️ PROMOTED WITH WARNINGS: " + "; ".join(_warnings)
         if _warnings
         else "✓ Promoted (passed quality gates)"
     )
-    mo.md(f"**{_status}**\n\n{best.model_type} {best.version} → production.yaml")
+    mo.md(f"**{_status}**\n\n{best.model_type} ({best.version}) → production.yaml")
     return
 
 
@@ -304,9 +304,9 @@ def _():
     ## 6. Use the classifier in a pipeline
 
     Point an experiment's `classify_behaviour` config at the classifier's
-    `production.yaml`. The behaviour name and feature contract are read from
-    there — nothing is duplicated in the experiment config. Set `pcutoff`
-    using `test_pcutoffs.png` from section 4:
+    `production.yaml`. The behaviour name and feature contract are resolved
+    from the classifier's `contract.yaml` — nothing is duplicated in the
+    experiment config. Set `pcutoff` using `test_pcutoffs.png` from section 4:
 
     ```yaml
     classify_behaviour:

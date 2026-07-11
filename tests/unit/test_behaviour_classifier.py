@@ -12,12 +12,7 @@ from behavysis.behaviour_classifier.torch.dataset import WindowDataset
 
 
 def _recipe(**kw) -> TrainingRecipe:
-    base = dict(
-        model_type="logreg",
-        behaviour_name="behav",
-        individuals=["m1"],
-        bodyparts=["nose"],
-    )
+    base = dict(model_type="logreg")
     base.update(kw)
     return TrainingRecipe(**base)
 
@@ -57,7 +52,7 @@ class TestSklearnAdapterMask:
         x = rng.standard_normal((60, 6))
         x[:, 1] = 0.0  # constant column dropped by selection
         y = rng.integers(0, 2, 60)
-        adapter = SklearnAdapter(LogisticRegression(max_iter=200))
+        adapter = SklearnAdapter(LogisticRegression)
         adapter.fit([x], [y], [np.arange(60)], _recipe())
         assert 1 not in adapter.feature_mask
         prob = adapter.predict(x)
@@ -67,12 +62,56 @@ class TestSklearnAdapterMask:
         rng = np.random.default_rng(3)
         x = rng.standard_normal((60, 6))
         y = rng.integers(0, 2, 60)
-        adapter = SklearnAdapter(LogisticRegression(max_iter=200))
+        adapter = SklearnAdapter(LogisticRegression)
         adapter.fit([x], [y], [np.arange(60)], _recipe())
         adapter.save(tmp_path)
         loaded = joblib.load(tmp_path / "model.joblib")
         np.testing.assert_array_equal(loaded.feature_mask, adapter.feature_mask)
         np.testing.assert_allclose(loaded.predict(x), adapter.predict(x))
+
+
+class TestSklearnAdapterGridSearch:
+    """All hyperparameters are lists — single values are single-element lists."""
+
+    def test_grid_search_resolves_params(self) -> None:
+        from sklearn.ensemble import RandomForestClassifier
+
+        rng = np.random.default_rng(5)
+        x = rng.standard_normal((80, 5))
+        y = rng.integers(0, 2, 80)
+        adapter = SklearnAdapter(RandomForestClassifier)
+        recipe = _recipe(
+            hyperparameters={
+                "n_estimators": [10, 20],
+                "max_depth": [4, 8],
+                "random_state": [42],
+            }
+        )
+        adapter.fit([x], [y], [np.arange(80)], recipe)
+
+        assert adapter.resolved_hyperparameters is not None
+        assert "n_estimators" in adapter.resolved_hyperparameters
+        assert isinstance(adapter.resolved_hyperparameters["n_estimators"], int)
+        assert adapter.resolved_hyperparameters["random_state"] == 42
+
+    def test_single_option_lists_still_grid(self) -> None:
+        rng = np.random.default_rng(6)
+        x = rng.standard_normal((40, 3))
+        y = rng.integers(0, 2, 40)
+        adapter = SklearnAdapter(LogisticRegression)
+        recipe = _recipe(
+            hyperparameters={"C": [1.0], "max_iter": [500], "random_state": [99]}
+        )
+        adapter.fit([x], [y], [np.arange(40)], recipe)
+
+        rhp = adapter.resolved_hyperparameters
+        assert rhp is not None
+        assert rhp["C"] == 1.0
+        assert rhp["random_state"] == 99
+        assert hasattr(adapter.estimator, "best_params_")
+        prob = adapter.predict(x)
+        assert prob.shape == (40,)
+
 
 
 class TestTorchAdapterMask:
