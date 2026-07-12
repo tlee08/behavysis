@@ -14,20 +14,10 @@ from typing import TYPE_CHECKING
 import polars as pl
 from loguru import logger
 
-from behavysis.constants import (
-    ACTUAL,
-    BEHAVIOUR,
-    EXPERIMENT,
-    PRED,
-    PROB,
-)
+from behavysis.constants import ACTUAL, BEHAVIOUR, EXPERIMENT, PRED, PROB
 from behavysis.schemas import BEHAVIOUR_PREDICTED_SCHEMA
 
-from .adapter import (
-    MODEL_TYPES_TO_CLASS,
-    MODEL_TYPES_TO_STRING,
-    BaseAdapter,
-)
+from .adapter import MODEL_TYPES_TO_CLASS, MODEL_TYPES_TO_STRING, BaseAdapter
 from .config import ClassifierActive, ClassifierContract, TrainingRecipe
 from .data import load_training_data, stratified_split_by_bout
 from .registry import MODEL_REGISTRY
@@ -115,9 +105,11 @@ def train(
     eval_dir = clf_proj.eval_dir(model_name, iteration)
     eval_dir.mkdir(parents=True, exist_ok=True)
     _eval_split(
-        clf_contract_fp, model_name, iteration, "train", train_df, config.pcutoff
+        eval_dir, adapter, "train", train_df, contract.behaviour_name, config.pcutoff
     )
-    _eval_split(clf_contract_fp, model_name, iteration, "test", test_df, config.pcutoff)
+    _eval_split(
+        eval_dir, adapter, "test", test_df, contract.behaviour_name, config.pcutoff
+    )
 
     logger.info(
         "Training complete: {} {:03d}",
@@ -139,6 +131,26 @@ def train_all_models(clf_contract_fp: Path) -> list[int]:
 # ── inference ────────────────────────────────────────────────────────
 
 
+def predict_df_from_adapter(
+    adapter: BaseAdapter,
+    x_df: pl.DataFrame,
+    behaviour_name: str,
+    pcutoff: float | None = None,
+) -> pl.DataFrame:
+    """Run inference on a wide features DataFrame.
+
+    ``features_df`` has a ``frame`` column plus feature columns.
+    Returns a long-form DataFrame with ``(frame, behaviour, prob, pred)``.
+    """
+    # Run inference
+    prob_df = adapter.predict(x_df)
+    prob_df = prob_df.with_columns(
+        pl.lit(behaviour_name).alias(BEHAVIOUR),
+        (pl.col(PROB) > pcutoff).cast(pl.Int64).alias(PRED),
+    )
+    return pl.DataFrame(prob_df, schema=BEHAVIOUR_PREDICTED_SCHEMA)
+
+
 def predict_df_choose_model(
     clf_contract_fp: Path,
     model_name: str,
@@ -158,14 +170,9 @@ def predict_df_choose_model(
     config = TrainingRecipe.read_yaml(clf_proj.config_fp(model_name, iteration))
     pcutoff = pcutoff or config.pcutoff
     # Load model
-    model = MODEL_TYPES_TO_CLASS[config.model_type].load(model_dir)
+    adapter = MODEL_TYPES_TO_CLASS[config.model_type].load(model_dir)
     # Run inference
-    prob_df = model.predict(x_df)
-    prob_df = prob_df.with_columns(
-        pl.lit(contract.behaviour_name).alias(BEHAVIOUR),
-        (pl.col(PROB) > pcutoff).cast(pl.Int64).alias(PRED),
-    )
-    return pl.DataFrame(prob_df, schema=BEHAVIOUR_PREDICTED_SCHEMA)
+    return predict_df_from_adapter(adapter, x_df, contract.behaviour_name, pcutoff)
 
 
 def predict_df(
@@ -189,21 +196,16 @@ def predict_df(
 
 
 def _eval_split(
-    clf_contract_fp: Path,
-    model_name: str,
-    iteration: int,
+    eval_dir: Path,
+    adapter: BaseAdapter,
     subset_name: str,
     df: pl.DataFrame,
+    behaviour_name: str,
     pcutoff: float | None = None,
 ) -> None:
-    # Configs
-    clf_proj = ClassifierFp(clf_contract_fp.parent)
-    eval_dir = clf_proj.eval_dir(model_name, iteration)
     # Run inference
     x_df = df.drop([EXPERIMENT, ACTUAL])
-    y_df = predict_df_choose_model(
-        clf_contract_fp, model_name, iteration, x_df, pcutoff
-    )
+    y_df = predict_df_from_adapter(adapter, x_df, behaviour_name, pcutoff)
     y_df = y_df.with_columns(
         df[EXPERIMENT].alias(EXPERIMENT),
         df[ACTUAL].alias(ACTUAL),

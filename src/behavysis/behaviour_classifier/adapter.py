@@ -21,6 +21,7 @@ from typing import TYPE_CHECKING, ClassVar, Literal
 import joblib
 import numpy as np
 import pandas as pd
+import polars as pl
 import torch
 from loguru import logger
 from sklearn.model_selection import GridSearchCV
@@ -34,7 +35,6 @@ if TYPE_CHECKING:
     from pathlib import Path
     from typing import Self
 
-    import polars as pl
     from imblearn.pipeline import Pipeline as ImbPipeline
 
     from .config import TrainingRecipe
@@ -84,9 +84,10 @@ class SklearnAdapter(BaseAdapter):
         self.pipeline = pipeline
 
     def fit(self, df: pl.DataFrame, config: TrainingRecipe) -> pd.DataFrame:
-        x = df.drop(_META_COLS).to_numpy()
+        # Prepare
+        x = df.drop(_META_COLS, strict=False).to_numpy()
         y = df[ACTUAL].to_numpy()
-
+        # Train
         self.pipeline = GridSearchCV(
             self.pipeline,
             config.hyperparameters,
@@ -95,13 +96,16 @@ class SklearnAdapter(BaseAdapter):
             n_jobs=1,
             verbose=1,
         ).fit(x, y)
-
+        # Return
         return pd.DataFrame(columns=pd.Index(["loss", "vloss"]))
 
     def predict(self, df: pl.DataFrame) -> pl.DataFrame:
-        x = df.drop(FRAME).to_numpy()
+        # Prepare
+        x = df.drop(_META_COLS, strict=False).to_numpy()
         frame = df.get_column(FRAME)
+        # Predict
         prob = self.pipeline.predict_proba(x)[:, 1]
+        # Return
         return pl.DataFrame(
             {FRAME: frame, PROB: prob}, schema=BEHAVIOUR_PROBABILITY_SCHEMA
         )
@@ -135,15 +139,16 @@ class TorchAdapter(BaseAdapter):
         self.feature_mask: np.ndarray = np.ndarray([])
 
     def fit(self, df: pl.DataFrame, config: TrainingRecipe) -> pd.DataFrame:
-        x = df.drop(_META_COLS).to_numpy()
+        # Prepare
+        x = df.drop(_META_COLS, strict=False).to_numpy()
         y = df[ACTUAL].to_numpy()
-
+        # Preprocess
         x = self.scaler.fit_transform(x)
         self.feature_mask = select_features(
             x, y, config.variance_threshold, config.max_features
         )
         nfeatures = len(self.feature_mask)
-
+        # Train
         return self.model.fit(
             [x[:, self.feature_mask]],
             [y],
@@ -154,13 +159,13 @@ class TorchAdapter(BaseAdapter):
         )
 
     def predict(self, df: pl.DataFrame) -> pl.DataFrame:
-        if self.scaler is None or self.model is None or self.feature_mask is None:
-            msg = "Model not fitted. Call fit() or load_state() first."
-            raise RuntimeError(msg)
-        x = df.drop(FRAME).to_numpy()
+        # Prepare
+        x = df.drop(_META_COLS, strict=False).to_numpy()
+        frame = df.get_column(FRAME)
+        # Predict
         x = self.scaler.transform(x)[:, self.feature_mask]
         prob = self.model.predict(x, None, batch_size=256)
-        frame = df.get_column(FRAME)
+        # Return
         return pl.DataFrame(
             {FRAME: frame, PROB: prob}, schema=BEHAVIOUR_PROBABILITY_SCHEMA
         )
