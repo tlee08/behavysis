@@ -16,22 +16,23 @@ Serialisation:
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, ClassVar, Literal
 
 import joblib
 import numpy as np
 import pandas as pd
 import torch
 from loguru import logger
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.feature_selection import VarianceThreshold
 from sklearn.model_selection import GridSearchCV
 from sklearn.preprocessing import MinMaxScaler
 
-from behavysis.constants import ACTUAL, EXPERIMENT, FRAME, Array1D, Array2D
+from behavysis.behaviour_classifier.torch._helper import select_features
+from behavysis.constants import ACTUAL, EXPERIMENT, FRAME, PROB
+from behavysis.schemas import BEHAVIOUR_PROBABILITY_SCHEMA
 
 if TYPE_CHECKING:
     from pathlib import Path
+    from typing import Self
 
     import polars as pl
     from imblearn.pipeline import Pipeline as ImbPipeline
@@ -40,39 +41,6 @@ if TYPE_CHECKING:
     from .torch.base import TorchModel
 
 _META_COLS = [EXPERIMENT, FRAME, ACTUAL]
-
-
-def select_features(
-    x: Array2D,
-    y: Array1D,
-    config: TrainingRecipe,
-) -> np.ndarray:
-    """Return column indices to keep — used by TorchAdapter.
-
-    Drops low-variance columns, then optionally caps to the top
-    ``max_features`` by random-forest importance. Returns all columns when
-    ``feature_selection`` is disabled.
-    """
-    keep = np.arange(x.shape[1])
-    if not config.feature_selection:
-        return keep
-
-    vt = VarianceThreshold(threshold=config.variance_threshold)
-    vt.fit(x)
-    keep = keep[vt.get_support()]
-
-    if config.max_features is not None and len(keep) > config.max_features:
-        rf = RandomForestClassifier(
-            n_estimators=200,
-            max_depth=8,
-            random_state=42,
-            n_jobs=-1,
-        )
-        rf.fit(x[:, keep], y)
-        top = np.argsort(rf.feature_importances_)[::-1][: config.max_features]
-        keep = np.sort(keep[top])
-
-    return keep
 
 
 class BaseAdapter(ABC):
@@ -88,12 +56,17 @@ class BaseAdapter(ABC):
         """
 
     @abstractmethod
-    def predict(self, x: Array2D) -> np.ndarray:
+    def predict(self, df: pl.DataFrame) -> pl.DataFrame:
         """Return predicted probabilities for the given feature array."""
 
     @abstractmethod
-    def save(self, version_dir: Path) -> None:
-        """Persist model artifacts inside version_dir."""
+    def save(self, dst_dir: Path) -> None:
+        """Persist model artifacts inside dst_dir."""
+
+    @classmethod
+    @abstractmethod
+    def load(cls, src_dir: Path) -> Self:
+        """Load model artifacts."""
 
 
 class SklearnAdapter(BaseAdapter):
@@ -125,13 +98,23 @@ class SklearnAdapter(BaseAdapter):
 
         return pd.DataFrame(columns=pd.Index(["loss", "vloss"]))
 
-    def predict(self, x: np.ndarray) -> np.ndarray:
-        return self.pipeline.predict_proba(x)[:, 1]
+    def predict(self, df: pl.DataFrame) -> pl.DataFrame:
+        x = df.drop(FRAME).to_numpy()
+        frame = df.get_column(FRAME)
+        prob = self.pipeline.predict_proba(x)[:, 1]
+        return pl.DataFrame(
+            {FRAME: frame, PROB: prob}, schema=BEHAVIOUR_PROBABILITY_SCHEMA
+        )
 
-    def save(self, version_dir: Path) -> None:
-        version_dir.mkdir(parents=True, exist_ok=True)
-        joblib.dump(self.pipeline, version_dir / "model.joblib")
-        logger.info("Saved sklearn model to {}", version_dir)
+    def save(self, dst_dir: Path) -> None:
+        dst_dir.mkdir(parents=True, exist_ok=True)
+        joblib.dump(self.pipeline, dst_dir / "model.joblib")
+        logger.info("Saved sklearn model to {}", dst_dir)
+
+    @classmethod
+    def load(cls, src_dir: Path) -> Self:
+        pipeline = joblib.load(src_dir / "model.joblib")
+        return cls(pipeline)
 
 
 class TorchAdapter(BaseAdapter):
@@ -146,22 +129,21 @@ class TorchAdapter(BaseAdapter):
 
     framework: ClassVar[str] = "torch"
 
-    def __init__(self, model_factory) -> None:
-        self.model_factory = model_factory
-        self.model: TorchModel | None = None
-        self.scaler: MinMaxScaler | None = None
-        self.feature_mask: np.ndarray | None = None
+    def __init__(self, model: TorchModel) -> None:
+        self.model: TorchModel = model
+        self.scaler: MinMaxScaler = MinMaxScaler()
+        self.feature_mask: np.ndarray = np.ndarray([])
 
     def fit(self, df: pl.DataFrame, config: TrainingRecipe) -> pd.DataFrame:
         x = df.drop(_META_COLS).to_numpy()
         y = df[ACTUAL].to_numpy()
 
-        self.scaler = MinMaxScaler()
         x = self.scaler.fit_transform(x)
-        self.feature_mask = select_features(x, y, config)
+        self.feature_mask = select_features(
+            x, y, config.variance_threshold, config.max_features
+        )
         nfeatures = len(self.feature_mask)
 
-        self.model = self.model_factory(nfeatures)
         return self.model.fit(
             [x[:, self.feature_mask]],
             [y],
@@ -171,41 +153,57 @@ class TorchAdapter(BaseAdapter):
             val_split=config.val_split,
         )
 
-    def predict(
-        self,
-        x: Array2D,
-    ) -> np.ndarray:
+    def predict(self, df: pl.DataFrame) -> pl.DataFrame:
         if self.scaler is None or self.model is None or self.feature_mask is None:
             msg = "Model not fitted. Call fit() or load_state() first."
             raise RuntimeError(msg)
+        x = df.drop(FRAME).to_numpy()
         x = self.scaler.transform(x)[:, self.feature_mask]
-        return self.model.predict(x, None, batch_size=256)
+        prob = self.model.predict(x, None, batch_size=256)
+        frame = df.get_column(FRAME)
+        return pl.DataFrame(
+            {FRAME: frame, PROB: prob}, schema=BEHAVIOUR_PROBABILITY_SCHEMA
+        )
 
-    def save(self, version_dir: Path) -> None:
+    def save(self, dst_dir: Path) -> None:
         if self.model is None or self.scaler is None or self.feature_mask is None:
             msg = "Cannot save unfitted torch model."
             raise RuntimeError(msg)
-        version_dir.mkdir(parents=True, exist_ok=True)
-        torch.save(self.model.state_dict(), version_dir / "model.pt")
-        joblib.dump(self.scaler, version_dir / "scaler.joblib")
-        np.save(version_dir / "feature_mask.npy", self.feature_mask)
-        logger.info("Saved torch model to {}", version_dir)
+        dst_dir.mkdir(parents=True, exist_ok=True)
+        torch.save(self.model.state_dict(), dst_dir / "model.pt")
+        joblib.dump(self.scaler, dst_dir / "scaler.joblib")
+        np.save(dst_dir / "feature_mask.npy", self.feature_mask)
+        logger.info("Saved torch model to {}", dst_dir)
 
-    def load_state(self, version_dir: Path) -> None:
+    @classmethod
+    def load(cls, src_dir: Path) -> Self:
         """Reconstruct model + scaler + mask from version_dir artifacts.
 
         Requires self.model_factory to be set (from MODEL_REGISTRY
         instantiation before calling this method).
         """
-        self.scaler = joblib.load(version_dir / "scaler.joblib")
-        self.feature_mask = np.load(version_dir / "feature_mask.npy")
-        nfeatures = len(self.feature_mask)
-        self.model = self.model_factory(nfeatures)
-        self.model.load_state_dict(
+        model = model.load_state_dict(
             torch.load(
-                version_dir / "model.pt",
+                src_dir / "model.pt",
                 map_location=torch.device("cpu"),
                 weights_only=True,
             )
         )
-        logger.info("Loaded torch model from {}", version_dir)
+        inst = cls(model)
+        inst.scaler = joblib.load(src_dir / "scaler.joblib")
+        inst.feature_mask = np.load(src_dir / "feature_mask.npy")
+        logger.info("Loaded torch model from {}", src_dir)
+        return inst
+
+
+# ── registry ─────────────────────────────────────────────────────────
+
+type ModelStrOptions = Literal["sklearn", "torch"]
+
+MODEL_TYPES_TO_STRING: dict[type[BaseAdapter], ModelStrOptions] = {
+    SklearnAdapter: "sklearn",
+    TorchAdapter: "torch",
+}
+MODEL_TYPES_TO_CLASS: dict[ModelStrOptions, type[BaseAdapter]] = {
+    v: k for k, v in MODEL_TYPES_TO_STRING.items()
+}

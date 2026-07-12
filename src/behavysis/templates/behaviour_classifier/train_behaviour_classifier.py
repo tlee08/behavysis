@@ -190,14 +190,7 @@ def _(behaviour_name, bodyparts, contract_fp, individuals):
 
 
 @app.cell
-def _(clf_dir, feats_dst, labels_dst):
-    if not any(feats_dst.iterdir()):
-        msg = f"No features in {feats_dst}"
-        raise FileNotFoundError(msg)
-    if not any(labels_dst.iterdir()):
-        msg = f"No labels in {labels_dst}"
-        raise FileNotFoundError(msg)
-
+def _(clf_dir):
     fp = ClassifierFp(clf_dir)
     iterations = train_all_models(fp.contract_fp())
     iterations

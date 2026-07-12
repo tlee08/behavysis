@@ -23,17 +23,11 @@ from sklearn.preprocessing import MinMaxScaler
 from xgboost import XGBClassifier
 
 from .adapter import BaseAdapter, SklearnAdapter
-from .config import TrainingRecipe
-
-ModelFactory = Callable[[], BaseAdapter]
-
-PipelineBuilder = Callable[[TrainingRecipe], ImbPipeline]
-
 
 # ── registry ─────────────────────────────────────────────────────────
 
 
-MODEL_REGISTRY: dict[str, tuple[ModelFactory, dict[str, list[object]]]] = {
+MODEL_REGISTRY: dict[str, tuple[Callable[[], BaseAdapter], dict[str, list[object]]]] = {
     "rf": (
         lambda: SklearnAdapter(
             ImbPipeline(
@@ -43,7 +37,7 @@ MODEL_REGISTRY: dict[str, tuple[ModelFactory, dict[str, list[object]]]] = {
                     ("var_filter", VarianceThreshold()),
                     (
                         "clf",
-                        RandomForestClassifier(random_state=42, verbose=1, n_jobs=-1),
+                        RandomForestClassifier(random_state=42, verbose=1, n_jobs=4),
                     ),
                 ]
             )
@@ -72,7 +66,7 @@ MODEL_REGISTRY: dict[str, tuple[ModelFactory, dict[str, list[object]]]] = {
                                 n_estimators=200,
                                 max_depth=8,
                                 random_state=42,
-                                n_jobs=-1,
+                                n_jobs=4,
                                 verbose=1,
                             ),
                             threshold=-np.inf,

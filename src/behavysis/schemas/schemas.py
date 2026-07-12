@@ -48,6 +48,12 @@ FEATURES_BASE: SchemaDict = {
     FRAME: pl.Int64,
 }
 
+"""One row per (frame, behaviour) raw classifier probabilities."""
+BEHAVIOUR_PROBABILITY_SCHEMA: SchemaDict = {
+    FRAME: pl.Int64,
+    PROB: pl.Float64,
+}
+
 """One row per (frame, behaviour) classifier prediction."""
 BEHAVIOUR_PREDICTED_SCHEMA: SchemaDict = {
     FRAME: pl.Int64,

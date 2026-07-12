@@ -69,22 +69,22 @@ class ClassifierFp:
     def models_dir(self) -> Path:
         return self.root_dir() / CLASSIFIERS
 
-    def model_dir(self, name: str, iteration: int) -> Path:
+    def model_dir(self, model_name: str, iteration: int) -> Path:
         """Directory for a training run: classifiers/{name}-{iteration:03d}."""
-        return self.models_dir() / f"{name}-{iteration:03d}"
+        return self.models_dir() / f"{model_name}-{iteration:03d}"
 
-    def config_fp(self, name: str, iteration: int) -> Path:
-        return self.model_dir(name, iteration) / "config.yaml"
+    def config_fp(self, model_name: str, iteration: int) -> Path:
+        return self.model_dir(model_name, iteration) / "config.yaml"
 
-    def eval_dir(self, name: str, iteration: int) -> Path:
-        return self.model_dir(name, iteration) / "evaluation"
+    def eval_dir(self, model_name: str, iteration: int) -> Path:
+        return self.model_dir(model_name, iteration) / "evaluation"
 
     # ── active model ─────────────────────────────────────────────────----
 
     def active_model_dir(self) -> Path:
         """Directory for a training run: classifiers/{name}-{iteration:03d}."""
         active = ClassifierActive.read_yaml(self.active_fp())
-        return self.model_dir(active.name, active.iteration)
+        return self.model_dir(active.model_name, active.iteration)
 
     def active_config_fp(self) -> Path:
         return self.active_model_dir() / "config.yaml"

@@ -10,6 +10,8 @@ from pydantic import BaseModel
 if TYPE_CHECKING:
     from pathlib import Path
 
+    from behavysis.behaviour_classifier.adapter import ModelStrOptions
+
 
 class YamlModel(BaseModel):
     """Base model with YAML read/write helpers."""
@@ -41,7 +43,7 @@ class ClassifierContract(YamlModel):
 class ClassifierActive(YamlModel):
     """Stores which model to use."""
 
-    name: str
+    model_name: str
     iteration: int
 
 
@@ -53,7 +55,8 @@ class TrainingRecipe(YamlModel):
     All values are grid-searched via ``GridSearchCV`` at fit time.
     """
 
-    name: str  # classifier name, e.g. "rf"
+    model_name: str
+    model_type: ModelStrOptions
     seed: int = 42
     test_split: float = 0.2
     val_cv_folds: int = 3

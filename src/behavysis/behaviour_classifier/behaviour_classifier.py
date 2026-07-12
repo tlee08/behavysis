@@ -11,7 +11,6 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING
 
-import joblib
 import numpy as np
 import polars as pl
 from loguru import logger
@@ -21,13 +20,17 @@ from behavysis.constants import (
     ACTUAL,
     BEHAVIOUR,
     EXPERIMENT,
-    FRAME,
     PRED,
     PROB,
 )
 from behavysis.schemas import BEHAVIOUR_PREDICTED_SCHEMA
 
-from .adapter import BaseAdapter, SklearnAdapter
+from .adapter import (
+    MODEL_TYPES_TO_CLASS,
+    MODEL_TYPES_TO_STRING,
+    BaseAdapter,
+    SklearnAdapter,
+)
 from .config import ClassifierContract, TrainingRecipe
 from .data import load_feature_names, load_training_data, stratified_split_by_bout
 from .evaluation import save_feature_importance, save_feature_report
@@ -71,14 +74,18 @@ def train(
     Returns the iteration number.
     """
     clf_proj = ClassifierFp(clf_contract_fp.parent)
-
-    contract = ClassifierContract.read_yaml(clf_proj.contract_fp())
-
+    contract_fp = clf_proj.contract_fp()
     iteration = _next_iteration(clf_proj.root_dir(), model_name)
-    md = clf_proj.model_dir(model_name, iteration)
-
-    config = TrainingRecipe(name=model_name, hyperparameters=hyperparameters)
-    config.write_yaml(md / "config.yaml")
+    model_dir = clf_proj.model_dir(model_name, iteration)
+    config_fp = clf_proj.config_fp(model_name, iteration)
+    contract = ClassifierContract.read_yaml(contract_fp)
+    adapter = factory()
+    config = TrainingRecipe(
+        model_name=model_name,
+        model_type=MODEL_TYPES_TO_STRING[type(adapter)],
+        hyperparameters=hyperparameters,
+    )
+    config.write_yaml(config_fp)
 
     logger.info(
         "Training {} (iteration={:03d})",
@@ -103,20 +110,19 @@ def train(
     test_df = df.filter(test_mask)
 
     # Train
-    adapter: BaseAdapter = factory()
     adapter.fit(train_df, config)
 
     # Save model
-    adapter.save(md)
+    adapter.save(model_dir)
 
     # Evaluate
-    ed = clf_proj.eval_dir(model_name, iteration)
-    ed.mkdir(parents=True, exist_ok=True)
-    _eval_split(adapter, train_df, config, ed, "train")
-    _eval_split(adapter, test_df, config, ed, "test")
+    eval_dir = clf_proj.eval_dir(model_name, iteration)
+    eval_dir.mkdir(parents=True, exist_ok=True)
+    _eval_split(adapter, train_df, config, eval_dir, "train")
+    _eval_split(adapter, test_df, config, eval_dir, "test")
 
     # Diagnostics
-    _run_diagnostics(adapter, clf_proj.root_dir(), ed)
+    _run_diagnostics(adapter, clf_proj.root_dir(), eval_dir)
 
     logger.info(
         "Training complete: {} {:03d}",
@@ -140,7 +146,7 @@ def train_all_models(clf_contract_fp: Path) -> list[int]:
 
 def predict_df(
     clf_contract_fp: Path,
-    features_df: pl.DataFrame,
+    x_df: pl.DataFrame,
     pcutoff: float | None = None,
 ) -> pl.DataFrame:
     """Run inference on a wide features DataFrame.
@@ -151,20 +157,15 @@ def predict_df(
     clf_proj = ClassifierFp(clf_contract_fp.parent)
     contract = ClassifierContract.read_yaml(clf_proj.contract_fp())
     config = TrainingRecipe.read_yaml(clf_proj.active_config_fp())
-    pipeline = joblib.load(clf_proj.active_model_dir() / "model.joblib")
+    model = MODEL_TYPES_TO_CLASS[config.model_type].load(clf_proj.active_model_dir())
     pcutoff = pcutoff or config.pcutoff
 
-    frames = features_df.get_column(FRAME)
-    prob = pipeline.predict_proba(features_df.drop(FRAME).to_numpy())[:, 1]
-    return pl.DataFrame(
-        {
-            FRAME: frames,
-            BEHAVIOUR: [contract.behaviour_name] * len(frames),
-            PROB: prob,
-            PRED: (prob > pcutoff).astype(int),
-        },
-        schema=BEHAVIOUR_PREDICTED_SCHEMA,
+    prob_df = model.predict(x_df)
+    prob_df = prob_df.with_columns(
+        pl.lit(contract.behaviour_name).alias(BEHAVIOUR),
+        (pl.col(PROB) > pcutoff).cast(pl.Int64).alias(PRED),
     )
+    return pl.DataFrame(prob_df, schema=BEHAVIOUR_PREDICTED_SCHEMA)
 
 
 # ── internal helpers ─────────────────────────────────────────────────
@@ -174,24 +175,22 @@ def _eval_split(
     adapter: BaseAdapter,
     df: pl.DataFrame,
     config: TrainingRecipe,
-    ed: Path,
+    eval_dir: Path,
     name: str,
 ) -> tuple[float | None, float | None]:
-    y_true = df[ACTUAL].to_numpy()
-    x = df.drop([EXPERIMENT, FRAME, ACTUAL]).to_numpy()
-    y_prob = adapter.predict(x)
-    y_pred = (y_prob > config.pcutoff).astype(int)
-
-    # Save raw eval parquet
-    df.select([EXPERIMENT, FRAME]).with_columns(
-        pl.Series("y_true", y_true),
-        pl.Series("y_prob", y_prob),
-        pl.Series("y_pred", y_pred),
-    ).write_parquet(ed / f"{name}_eval.parquet")
+    x_df = df.drop([EXPERIMENT, ACTUAL])
+    y_df = adapter.predict(x_df)
+    y_df = y_df.with_columns(
+        df[EXPERIMENT].alias(EXPERIMENT),
+        df[ACTUAL].alias(ACTUAL),
+        (pl.col(PROB) > config.pcutoff).cast(pl.Int64).alias(PRED),
+    )
+    # Save raw eval df to parquet
+    y_df.write_parquet(eval_dir / f"{name}_eval.parquet")
 
     report = classification_report(
-        y_true,
-        y_pred,
+        y_df[ACTUAL],
+        y_df[PRED],
         target_names=["nil", "behav"],
         output_dict=True,
     )
@@ -201,7 +200,7 @@ def _eval_split(
 def _run_diagnostics(
     adapter: BaseAdapter,
     clf_dir: Path,
-    ed: Path,
+    eval_dir: Path,
 ) -> None:
     clf_proj = ClassifierFp(clf_dir)
     feature_names = load_feature_names(clf_proj.features_dir())
@@ -228,5 +227,5 @@ def _run_diagnostics(
             importances = np.abs(est.coef_).flatten()
 
     if importances is not None:
-        save_feature_importance(feature_names, importances, ed)
-        save_feature_report(feature_names, importances, ed, n_features_total)
+        save_feature_importance(feature_names, importances, eval_dir)
+        save_feature_report(feature_names, importances, eval_dir, n_features_total)
