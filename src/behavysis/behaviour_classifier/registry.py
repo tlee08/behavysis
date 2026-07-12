@@ -63,7 +63,10 @@ MODEL_REGISTRY: dict[str, tuple[ModelFactory, dict[str, list[object]]]] = {
                     ("oversampler", RandomOverSampler()),
                     ("undersampler", RandomUnderSampler()),
                     *_feature_selection_steps(),
-                    ("clf", RandomForestClassifier()),
+                    (
+                        "clf",
+                        RandomForestClassifier(random_state=42, verbose=1, n_jobs=-1),
+                    ),
                 ]
             )
         ),
@@ -74,8 +77,6 @@ MODEL_REGISTRY: dict[str, tuple[ModelFactory, dict[str, list[object]]]] = {
             "clf__n_estimators": [100, 500],
             "clf__max_depth": [4, 8, None],
             "clf__class_weight": ["balanced", None],
-            "clf__random_state": [42],
-            "clf__n_jobs": [-1],
         },
     ),
     "logreg": (
@@ -86,7 +87,7 @@ MODEL_REGISTRY: dict[str, tuple[ModelFactory, dict[str, list[object]]]] = {
                     ("undersampler", RandomUnderSampler()),
                     ("scaler", MinMaxScaler()),
                     *_feature_selection_steps(),
-                    ("clf", LogisticRegression()),
+                    ("clf", LogisticRegression(random_state=42, verbose=1)),
                 ]
             )
         ),
@@ -97,7 +98,6 @@ MODEL_REGISTRY: dict[str, tuple[ModelFactory, dict[str, list[object]]]] = {
             "clf__C": [0.1, 1.0, 10.0],
             "clf__penalty": ["l2", None],
             "clf__max_iter": [1000],
-            "clf__random_state": [42],
         },
     ),
     "xgb": (
@@ -107,7 +107,7 @@ MODEL_REGISTRY: dict[str, tuple[ModelFactory, dict[str, list[object]]]] = {
                     ("oversampler", RandomOverSampler()),
                     ("undersampler", RandomUnderSampler()),
                     *_feature_selection_steps(),
-                    ("clf", XGBClassifier()),
+                    ("clf", XGBClassifier(random_state=42, verbosity=1)),
                 ]
             )
         ),
@@ -118,7 +118,6 @@ MODEL_REGISTRY: dict[str, tuple[ModelFactory, dict[str, list[object]]]] = {
             "clf__n_estimators": [200, 500],
             "clf__max_depth": [4, 8],
             "clf__learning_rate": [0.01, 0.1, 0.3],
-            "clf__random_state": [42],
         },
     ),
 }
