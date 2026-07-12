@@ -47,6 +47,7 @@ def _feature_selection_steps() -> list[tuple[str, object]]:
                     max_depth=8,
                     random_state=42,
                     n_jobs=-1,
+                    verbose=1,
                 ),
                 threshold=-np.inf,
                 max_features=200,
@@ -63,8 +64,8 @@ MODEL_REGISTRY: dict[str, tuple[ModelFactory, dict[str, list[object]]]] = {
         lambda: SklearnAdapter(
             ImbPipeline(
                 [
-                    ("undersampler", RandomUnderSampler),
-                    ("oversampler", RandomOverSampler),
+                    ("undersampler", RandomUnderSampler()),
+                    ("oversampler", RandomOverSampler()),
                     *_feature_selection_steps(),
                     ("clf", RandomForestClassifier()),
                 ]
@@ -85,8 +86,8 @@ MODEL_REGISTRY: dict[str, tuple[ModelFactory, dict[str, list[object]]]] = {
         lambda: SklearnAdapter(
             ImbPipeline(
                 [
-                    ("undersampler", RandomUnderSampler),
-                    ("oversampler", RandomOverSampler),
+                    ("undersampler", RandomUnderSampler()),
+                    ("oversampler", RandomOverSampler()),
                     ("scaler", MinMaxScaler()),
                     *_feature_selection_steps(),
                     ("clf", LogisticRegression()),
@@ -107,8 +108,8 @@ MODEL_REGISTRY: dict[str, tuple[ModelFactory, dict[str, list[object]]]] = {
         lambda: SklearnAdapter(
             ImbPipeline(
                 [
-                    ("undersampler", RandomUnderSampler),
-                    ("oversampler", RandomOverSampler),
+                    ("undersampler", RandomUnderSampler()),
+                    ("oversampler", RandomOverSampler()),
                     *_feature_selection_steps(),
                     ("clf", XGBClassifier()),
                 ]

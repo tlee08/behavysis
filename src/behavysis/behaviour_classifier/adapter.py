@@ -101,13 +101,15 @@ class SklearnAdapter(BaseAdapter):
         x = df.filter(train_mask).drop(_META_COLS).to_numpy()
         y = df.filter(train_mask)[ACTUAL].to_numpy()
 
-        self.pipeline = GridSearchCV(
+        gs = GridSearchCV(
             self.pipeline,
             config.hyperparameters,
             scoring="f1",
             cv=3,
             n_jobs=-1,
         ).fit(x, y)
+
+        self.pipeline = gs
 
         return pd.DataFrame(columns=pd.Index(["loss", "vloss"]))
 
