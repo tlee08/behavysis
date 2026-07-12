@@ -27,7 +27,6 @@ from loguru import logger
 from sklearn.model_selection import GridSearchCV
 from sklearn.preprocessing import MinMaxScaler
 
-from behavysis.behaviour_classifier.data import _bout_cv
 from behavysis.constants import ACTUAL, EXPERIMENT, FRAME, Array2D
 
 if TYPE_CHECKING:
@@ -111,7 +110,8 @@ class SklearnAdapter(BaseAdapter):
             self.pipeline,
             config.hyperparameters,
             scoring="f1",
-            cv=_bout_cv(bout_ids, y, config.val_cv_folds, config.seed),
+            # cv=_bout_cv(bout_ids, y, config.val_cv_folds, config.seed),
+            cv=2,
             n_jobs=1,
             verbose=1,
         ).fit(x, y)
