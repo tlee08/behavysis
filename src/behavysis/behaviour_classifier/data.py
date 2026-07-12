@@ -107,13 +107,6 @@ def stratified_split_by_group(
 ) -> tuple[Array1D, Array1D]:
     """Split into train/test, grouping contiguous label runs together.
 
-    A "bout" is a contiguous sequence of frames within an experiment
-    where ``actual`` stays the same.  All frames of a bout go to the
-    same split, preventing temporal leakage between train and test.
-
-    Uses ``StratifiedGroupKFold`` with ``bout_id`` as the group.
-    Returns flat boolean masks the same length as ``df``.
-
     Group name like: "bout_id", "experiment"
     """
     df = label_bouts(df)

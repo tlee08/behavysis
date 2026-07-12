@@ -116,7 +116,7 @@ MODEL_REGISTRY: dict[str, Callable[[], BaseAdapter]] = {
         RandomizedSearchCV(
             ImbPipeline(
                 [
-                    ("var_filter", VarianceThreshold()),
+                    ("var_filter", VarianceThreshold(threshold=0.0)),
                     (
                         "clf",
                         XGBClassifier(
@@ -139,7 +139,6 @@ MODEL_REGISTRY: dict[str, Callable[[], BaseAdapter]] = {
                 "clf__gamma": [0, 0.5, 2.0],
                 "clf__reg_lambda": [1.0, 3.0, 10.0],
                 "clf__scale_pos_weight": [1, 10, 40],
-                "clf__var_filter__threshold": [0.0],
             },
             n_iter=30,
             scoring="average_precision",

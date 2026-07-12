@@ -1,17 +1,4 @@
-"""Model adapters for sklearn and PyTorch classifiers.
-
-SklearnAdapter receives a ``pipeline_builder(config) -> ImbPipeline``
-from the MODEL_REGISTRY.  At fit time it wraps the pipeline in
-``GridSearchCV``; at predict time it delegates to the fitted pipeline.
-The pipeline definition itself lives entirely in the registry.
-
-TorchAdapter wraps a TorchModel with MinMaxScaler + standalone feature
-selection.
-
-Serialisation:
-- sklearn: model.joblib (joblib dump of pipeline, strip GridSearchCV wrapper)
-- torch:   model.pt (state_dict) + scaler.joblib (MinMaxScaler)
-"""
+"""Model adapters for sklearn and PyTorch classifiers."""
 
 from __future__ import annotations
 
@@ -116,14 +103,7 @@ class SklearnAdapter(BaseAdapter):
 
 
 class TorchAdapter(BaseAdapter):
-    """Adapter for PyTorch models with lazy architecture instantiation.
-
-    model_factory: Callable[[int], TorchModel] — takes nfeatures,
-    returns a fresh architecture. Model created at fit() or load_state()
-    time when nfeatures is known.
-
-    Serialises as model.pt (state_dict) + scaler.joblib.
-    """
+    """Adapter for PyTorch models with lazy architecture instantiation."""
 
     framework: ClassVar[str] = "torch"
 
