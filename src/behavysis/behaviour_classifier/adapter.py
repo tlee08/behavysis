@@ -46,12 +46,7 @@ class BaseAdapter(ABC):
     framework: ClassVar[str]
 
     @abstractmethod
-    def fit(
-        self,
-        df: pl.DataFrame,
-        train_mask: np.ndarray,
-        config: TrainingRecipe,
-    ) -> pd.DataFrame:
+    def fit(self, df: pl.DataFrame, config: TrainingRecipe) -> pd.DataFrame:
         """Train on rows where ``train_mask`` is True.
 
         Returns per-epoch history (empty for sklearn).
@@ -77,10 +72,7 @@ class SklearnAdapter(BaseAdapter):
 
     framework: ClassVar[str] = "sklearn"
 
-    def __init__(
-        self,
-        pipeline: ImbPipeline,
-    ) -> None:
+    def __init__(self, pipeline: ImbPipeline) -> None:
         self.pipeline = pipeline
 
     @property
@@ -95,11 +87,9 @@ class SklearnAdapter(BaseAdapter):
             return self.pipeline.best_params_
         return None
 
-    def fit(
-        self, df: pl.DataFrame, train_mask: np.ndarray, config: TrainingRecipe
-    ) -> pd.DataFrame:
-        x = df.filter(train_mask).drop(_META_COLS).to_numpy()
-        y = df.filter(train_mask)[ACTUAL].to_numpy()
+    def fit(self, df: pl.DataFrame, config: TrainingRecipe) -> pd.DataFrame:
+        x = df.drop(_META_COLS).to_numpy()
+        y = df[ACTUAL].to_numpy()
 
         gs = GridSearchCV(
             self.pipeline,
@@ -141,11 +131,9 @@ class TorchAdapter(BaseAdapter):
         self.scaler: MinMaxScaler | None = None
         self.feature_mask: np.ndarray | None = None
 
-    def fit(
-        self, df: pl.DataFrame, train_mask: np.ndarray, config: TrainingRecipe
-    ) -> pd.DataFrame:
-        x = df.filter(train_mask).drop(_META_COLS).to_numpy()
-        y = df.filter(train_mask)[ACTUAL].to_numpy()
+    def fit(self, df: pl.DataFrame, config: TrainingRecipe) -> pd.DataFrame:
+        x = df.drop(_META_COLS).to_numpy()
+        y = df[ACTUAL].to_numpy()
 
         self.scaler = MinMaxScaler()
         x = self.scaler.fit_transform(x)

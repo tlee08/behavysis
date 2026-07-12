@@ -90,20 +90,37 @@ def load_training_data(
     return pl.concat(pieces, how="diagonal_relaxed")
 
 
-def stratified_split_by_video(
+def _label_bouts(df: pl.DataFrame) -> pl.DataFrame:
+    """Add ``bout_id`` — integer label per contiguous (experiment, actual) run."""
+    return df.with_columns(
+
+            (pl.col(ACTUAL) != pl.col(ACTUAL).shift(1))
+            .or_(pl.col(EXPERIMENT) != pl.col(EXPERIMENT).shift(1))
+            .cast(pl.Int64)
+            .cum_sum()
+            .alias("bout_id")
+
+    )
+
+
+def stratified_split_by_bout(
     df: pl.DataFrame,
     test_size: float,
     random_state: int = 42,
 ) -> tuple[Array1D, Array1D]:
-    """Split into train/test, grouping rows of the same experiment together.
+    """Split into train/test, grouping contiguous label runs together.
 
-    Uses ``StratifiedGroupKFold`` with each experiment as a group.
+    A "bout" is a contiguous sequence of frames within an experiment
+    where ``actual`` stays the same.  All frames of a bout go to the
+    same split, preventing temporal leakage between train and test.
+
+    Uses ``StratifiedGroupKFold`` with ``bout_id`` as the group.
     Returns flat boolean masks the same length as ``df``.
 
     Parameters
     ----------
     df : pl.DataFrame
-        DataFrame from ``load_training_data`` (must have an ``experiment`` column).
+        DataFrame from ``load_training_data``.
     test_size : float
         Fraction of experiments reserved for the test split.
     random_state : int
@@ -116,9 +133,10 @@ def stratified_split_by_video(
     test_mask : Array1D
         Boolean mask, ``True`` for test rows.
     """
-    x = df.drop(_META_COLS).to_numpy()
+    df = _label_bouts(df)
+    x = df.drop([*_META_COLS, "bout_id"]).to_numpy()
     y = df[ACTUAL].to_numpy()
-    groups = df[EXPERIMENT].to_physical().to_numpy()
+    groups = df["bout_id"].to_numpy()
 
     n_splits = max(2, int(1 / test_size))
     sgkf = StratifiedGroupKFold(

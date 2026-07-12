@@ -60,6 +60,28 @@ def _feature_selection_steps() -> list[tuple[str, object]]:
 
 
 MODEL_REGISTRY: dict[str, tuple[ModelFactory, dict[str, list[object]]]] = {
+    "rf_simple": (
+        lambda: SklearnAdapter(
+            ImbPipeline(
+                [
+                    ("undersampler", RandomUnderSampler()),
+                    ("oversampler", RandomOverSampler()),
+                    *_feature_selection_steps(),
+                    ("clf", RandomForestClassifier()),
+                ]
+            )
+        ),
+        {
+            "oversampler__sampling_strategy": [0.2],
+            "undersampler__sampling_strategy": [0.4],
+            "var_filter__threshold": [0.0],
+            "clf__n_estimators": [500],
+            "clf__max_depth": [8],
+            "clf__class_weight": [None],
+            "clf__random_state": [42],
+            "clf__n_jobs": [-1],
+        },
+    ),
     "rf": (
         lambda: SklearnAdapter(
             ImbPipeline(

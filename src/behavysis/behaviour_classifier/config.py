@@ -54,8 +54,6 @@ class TrainingRecipe(YamlModel):
     split_seed: int = 42
     test_split: float = 0.2
     val_split: float = 0.2
-    batch_size: int = 256
-    epochs: int = 100
     pcutoff: float = 0.2
     hyperparameters: dict[str, list[object]] = {}
 

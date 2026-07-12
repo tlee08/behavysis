@@ -45,7 +45,7 @@ from .config import (
     TrainingSummary,
     VersionMetadata,
 )
-from .data import load_feature_names, load_training_data, stratified_split_by_video
+from .data import load_feature_names, load_training_data, stratified_split_by_bout
 from .evaluation import (
     save_evaluation_results,
     save_feature_importance,
@@ -164,14 +164,16 @@ def train(
     )
 
     # 3. Two-way split: test (grouped by experiment), rest is train
-    train_mask, test_mask = stratified_split_by_video(
+    train_mask, test_mask = stratified_split_by_bout(
         df, config.test_split, config.split_seed
     )
+    train_df = df.filter(train_mask)
+    test_df = df.filter(test_mask)
 
     # 4. Train
     start = datetime.now(UTC)
     adapter: BaseAdapter = factory()
-    history = adapter.fit(df, train_mask, config)
+    history = adapter.fit(train_df, config)
     duration = (datetime.now(UTC) - start).total_seconds()
 
     # 5. Generate version & create output dir
@@ -185,8 +187,7 @@ def train(
     # 7. Evaluate both splits
     train_acc, train_f1 = _eval_split(
         adapter,
-        df,
-        train_mask,
+        train_df,
         config,
         contract.behaviour_name,
         ed,
@@ -194,8 +195,7 @@ def train(
     )
     test_acc, test_f1 = _eval_split(
         adapter,
-        df,
-        test_mask,
+        test_df,
         config,
         contract.behaviour_name,
         ed,
@@ -217,10 +217,7 @@ def train(
     else:
         resolved_recipe = config
     data_summary = _make_data_summary(
-        df,
-        train_mask,
-        test_mask,
-        n_features_selected=_n_features_selected(adapter),
+        train_df, test_df, n_features_selected=_n_features_selected(adapter)
     )
     meta = VersionMetadata(
         version=version,
@@ -240,14 +237,14 @@ def train(
     meta.write_yaml(metadata_fp(clf_dir, model_type, version))
 
     # 11. Dataset manifest
-    train_ids = sorted(df.filter(train_mask)[EXPERIMENT].unique().to_list())
-    test_ids = sorted(df.filter(test_mask)[EXPERIMENT].unique().to_list())
+    train_ids = sorted(train_df[EXPERIMENT].unique().to_list())
+    test_ids = sorted(test_df[EXPERIMENT].unique().to_list())
     manifest = DatasetManifest(
         version=version,
         train_ids=train_ids,
         test_ids=test_ids,
-        n_train=int(train_mask.sum()),
-        n_test=int(test_mask.sum()),
+        n_train=int(train_df.shape[0]),
+        n_test=int(test_df.shape[0]),
     )
     manifest.write_yaml(dataset_manifest_fp(clf_dir, model_type, version))
 
@@ -586,15 +583,14 @@ def _n_features_selected(adapter: BaseAdapter) -> int:
 def _eval_split(
     adapter: BaseAdapter,
     df: pl.DataFrame,
-    mask: np.ndarray,
     config: TrainingRecipe,
     behaviour_name: str,
     eval_d: Path,
     name: str,
 ) -> tuple[float | None, float | None]:
     """Evaluate on a data split and save artifacts."""
-    y_true = df.filter(mask)[ACTUAL].to_numpy()
-    x_subset = df.filter(mask).drop([EXPERIMENT, FRAME, ACTUAL]).to_numpy()
+    y_true = df[ACTUAL].to_numpy()
+    x_subset = df.drop([EXPERIMENT, FRAME, ACTUAL]).to_numpy()
     y_prob = adapter.predict(x_subset, config.batch_size)
 
     y_pred = (y_prob > config.pcutoff).astype(int)
@@ -623,20 +619,19 @@ def _eval_split(
 
 
 def _make_data_summary(
-    df: pl.DataFrame,
-    train_mask: np.ndarray,
-    test_mask: np.ndarray,
+    train_df: pl.DataFrame,
+    test_df: pl.DataFrame,
     n_features_selected: int,
 ) -> DataSummary:
-    y_train = df.filter(train_mask)[ACTUAL].to_numpy()
-    y_test = df.filter(test_mask)[ACTUAL].to_numpy()
-    n_features = len(df.columns) - 3  # experiment, frame, actual
+    y_train = train_df[ACTUAL].to_numpy()
+    y_test = test_df[ACTUAL].to_numpy()
+    n_features = train_df.shape[1] - 3  # experiment, frame, actual
     return DataSummary(
-        n_samples=len(df),
+        n_samples=int(train_df.shape[0]) + int(test_df.shape[0]),
         n_features=n_features,
         n_features_selected=n_features_selected,
-        n_train=int(train_mask.sum()),
-        n_test=int(test_mask.sum()),
+        n_train=int(train_df.shape[0]),
+        n_test=int(test_df.shape[0]),
         train_pos_ratio=round(float(np.mean(y_train)), 4),
         test_pos_ratio=round(float(np.mean(y_test)), 4),
     )
