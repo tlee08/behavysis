@@ -72,10 +72,10 @@ MODEL_REGISTRY: dict[str, tuple[ModelFactory, dict[str, list[object]]]] = {
             )
         ),
         {
-            "oversampler__sampling_strategy": [0.1, 0.2, "auto"],
-            "undersampler__sampling_strategy": [0.4, 0.5, "auto"],
+            "oversampler__sampling_strategy": [0.2, "auto"],
+            "undersampler__sampling_strategy": [0.4, "auto"],
             "var_filter__threshold": [0.0],
-            "clf__n_estimators": [100, 200, 500],
+            "clf__n_estimators": [100, 500],
             "clf__max_depth": [4, 8, None],
             "clf__class_weight": ["balanced", None],
             "clf__random_state": [42],
@@ -95,8 +95,8 @@ MODEL_REGISTRY: dict[str, tuple[ModelFactory, dict[str, list[object]]]] = {
             )
         ),
         {
-            "oversampler__sampling_strategy": [0.1, 0.2, "auto"],
-            "undersampler__sampling_strategy": [0.4, 0.5, "auto"],
+            "oversampler__sampling_strategy": [0.2, "auto"],
+            "undersampler__sampling_strategy": [0.4, "auto"],
             "var_filter__threshold": [0.0],
             "clf__C": [0.1, 1.0, 10.0],
             "clf__penalty": ["l2", None],
@@ -116,11 +116,11 @@ MODEL_REGISTRY: dict[str, tuple[ModelFactory, dict[str, list[object]]]] = {
             )
         ),
         {
-            "oversampler__sampling_strategy": [0.1, 0.2, "auto"],
-            "undersampler__sampling_strategy": [0.4, 0.5, "auto"],
+            "oversampler__sampling_strategy": [0.2, "auto"],
+            "undersampler__sampling_strategy": [0.4, "auto"],
             "var_filter__threshold": [0.0],
-            "clf__n_estimators": [100, 200, 500],
-            "clf__max_depth": [4, 6, 8],
+            "clf__n_estimators": [200, 500],
+            "clf__max_depth": [4, 8],
             "clf__learning_rate": [0.01, 0.1, 0.3],
             "clf__random_state": [42],
         },
