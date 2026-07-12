@@ -19,7 +19,7 @@ from behavysis.schemas import BEHAVIOUR_PREDICTED_SCHEMA
 
 from .adapter import MODEL_TYPES_TO_CLASS, MODEL_TYPES_TO_STRING, BaseAdapter
 from .config import ClassifierActive, ClassifierContract, TrainingRecipe
-from .data import load_training_data, stratified_split_by_bout
+from .data import load_training_data, stratified_split_by_group
 from .registry import MODEL_REGISTRY
 from .storage import ClassifierFp
 
@@ -53,7 +53,6 @@ def train(
     clf_contract_fp: Path,
     model_name: str,
     factory: Callable[[], BaseAdapter],
-    hyperparameters: dict[str, list[object]],
 ) -> int:
     """Train a classifier and persist artifacts in a new iteration directory.
 
@@ -67,9 +66,7 @@ def train(
     contract = ClassifierContract.read_yaml(contract_fp)
     adapter = factory()
     config = TrainingRecipe(
-        model_name=model_name,
-        model_type=MODEL_TYPES_TO_STRING[type(adapter)],
-        hyperparameters=hyperparameters,
+        model_name=model_name, model_type=MODEL_TYPES_TO_STRING[type(adapter)]
     )
     config.write_yaml(config_fp)
 
@@ -87,10 +84,8 @@ def train(
     )
 
     # Split into train / test (bout-level grouping)
-    train_mask, test_mask = stratified_split_by_bout(
-        df,
-        config.test_split,
-        config.seed,
+    train_mask, test_mask = stratified_split_by_group(
+        df, config.test_split, EXPERIMENT, config.seed
     )
     train_df = df.filter(train_mask)
     test_df = df.filter(test_mask)
@@ -122,9 +117,8 @@ def train(
 def train_all_models(clf_contract_fp: Path) -> list[int]:
     """Train all model types in the registry, one iteration each."""
     results: list[int] = []
-    for model_name in MODEL_REGISTRY:
-        factory, hyperparameters = MODEL_REGISTRY[model_name]
-        results.append(train(clf_contract_fp, model_name, factory, hyperparameters))
+    for model_name, factory in MODEL_REGISTRY.items():
+        results.append(train(clf_contract_fp, model_name, factory))
     return results
 
 
@@ -201,7 +195,7 @@ def _eval_split(
     subset_name: str,
     df: pl.DataFrame,
     behaviour_name: str,
-    pcutoff: float | None = None,
+    pcutoff: float,
 ) -> None:
     # Run inference
     x_df = df.drop([EXPERIMENT, ACTUAL])

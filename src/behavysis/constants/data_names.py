@@ -37,6 +37,9 @@ TRUE_NEG = 0
 FALSE_POS = -1
 UNSURE = -2
 
+BOUT = "bout"
+BOUT_ID = "bout_id"
+
 START = "start"
 STOP = "stop"
 DUR = "dur"

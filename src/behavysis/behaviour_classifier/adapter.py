@@ -24,18 +24,18 @@ import pandas as pd
 import polars as pl
 import torch
 from loguru import logger
-from sklearn.model_selection import GridSearchCV
 from sklearn.preprocessing import MinMaxScaler
 
+from behavysis.behaviour_classifier.data import label_bouts
 from behavysis.behaviour_classifier.torch._helper import select_features
-from behavysis.constants import ACTUAL, EXPERIMENT, FRAME, PROB
+from behavysis.constants import ACTUAL, BOUT_ID, EXPERIMENT, FRAME, PROB
 from behavysis.schemas import BEHAVIOUR_PROBABILITY_SCHEMA
 
 if TYPE_CHECKING:
     from pathlib import Path
     from typing import Self
 
-    from imblearn.pipeline import Pipeline as ImbPipeline
+    from sklearn.base import BaseEstimator
 
     from .config import TrainingRecipe
     from .torch.base import TorchModel
@@ -70,7 +70,7 @@ class BaseAdapter(ABC):
 
 
 class SklearnAdapter(BaseAdapter):
-    """Thin wrapper around an imblearn Pipeline + GridSearchCV.
+    """Sklearn adapter.
 
     The pipeline is built by calling ``self._builder(config)``
     at fit time — the builder is defined in the MODEL_REGISTRY, keeping
@@ -80,22 +80,16 @@ class SklearnAdapter(BaseAdapter):
 
     framework: ClassVar[str] = "sklearn"
 
-    def __init__(self, pipeline: ImbPipeline) -> None:
-        self.pipeline = pipeline
+    def __init__(self, model: BaseEstimator) -> None:
+        self.model = model
 
     def fit(self, df: pl.DataFrame, config: TrainingRecipe) -> pd.DataFrame:
         # Prepare
         x = df.drop(_META_COLS, strict=False).to_numpy()
         y = df[ACTUAL].to_numpy()
+        groups = label_bouts(df)[BOUT_ID].to_numpy()
         # Train
-        self.pipeline = GridSearchCV(
-            self.pipeline,
-            config.hyperparameters,
-            scoring="f1",
-            cv=config.val_cv_folds,
-            n_jobs=1,
-            verbose=1,
-        ).fit(x, y)
+        self.model.fit(x, y, groups=groups)
         # Return
         return pd.DataFrame(columns=pd.Index(["loss", "vloss"]))
 
@@ -104,7 +98,7 @@ class SklearnAdapter(BaseAdapter):
         x = df.drop(_META_COLS, strict=False).to_numpy()
         frame = df.get_column(FRAME)
         # Predict
-        prob = self.pipeline.predict_proba(x)[:, 1]
+        prob = self.model.predict_proba(x)[:, 1]
         # Return
         return pl.DataFrame(
             {FRAME: frame, PROB: prob}, schema=BEHAVIOUR_PROBABILITY_SCHEMA
@@ -112,7 +106,7 @@ class SklearnAdapter(BaseAdapter):
 
     def save(self, dst_dir: Path) -> None:
         dst_dir.mkdir(parents=True, exist_ok=True)
-        joblib.dump(self.pipeline, dst_dir / "model.joblib")
+        joblib.dump(self.model, dst_dir / "model.joblib")
         logger.info("Saved sklearn model to {}", dst_dir)
 
     @classmethod

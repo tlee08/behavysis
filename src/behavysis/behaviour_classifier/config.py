@@ -57,12 +57,4 @@ class TrainingRecipe(YamlModel):
     model_type: ModelStrOptions
     seed: int = 42
     test_split: float = 0.2
-    val_cv_folds: int = 3
     pcutoff: float = 0.2
-    feature_selection: bool = True  # only used by TorchAdapter
-    variance_threshold: float = 0.0  # only used by TorchAdapter
-    max_features: int | None = None  # only used by TorchAdapter
-    batch_size: int = 256  # only used by TorchAdapter
-    epochs: int = 100  # only used by TorchAdapter
-    val_split: float = 0.2  # only used by TorchAdapter
-    hyperparameters: dict[str, list[object]] = {}

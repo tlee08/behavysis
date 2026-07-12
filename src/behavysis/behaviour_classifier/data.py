@@ -7,11 +7,12 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import polars as pl
-from sklearn.model_selection import PredefinedSplit, StratifiedGroupKFold
+from sklearn.model_selection import StratifiedGroupKFold
 
 from behavysis.constants import (
     ACTUAL,
     BEHAVIOUR,
+    BOUT_ID,
     EXPERIMENT,
     FALSE_POS,
     FRAME,
@@ -21,9 +22,6 @@ from behavysis.constants import (
 
 if TYPE_CHECKING:
     from pathlib import Path
-
-
-_META_COLS = [EXPERIMENT, FRAME, ACTUAL]
 
 
 def load_feature_names(x_dir: Path) -> list[str]:
@@ -90,41 +88,21 @@ def load_training_data(
     return pl.concat(pieces, how="diagonal_relaxed")
 
 
-def _label_bouts(df: pl.DataFrame) -> pl.DataFrame:
+def label_bouts(df: pl.DataFrame) -> pl.DataFrame:
     """Add ``bout_id`` — integer label per contiguous (experiment, actual) run."""
     return df.with_columns(
         (pl.col(ACTUAL) != pl.col(ACTUAL).shift(1))
         .or_(pl.col(EXPERIMENT) != pl.col(EXPERIMENT).shift(1))
         .cast(pl.Int64)
         .cum_sum()
-        .alias("bout_id")
+        .alias(BOUT_ID)
     )
 
 
-def _bout_cv(
-    bout_ids: Array1D, y: Array1D, n_splits: int, seed: int
-) -> PredefinedSplit:
-    """Assign each bout to one CV fold, stratified by bout label."""
-    unique_bouts, first_indices = np.unique(bout_ids, return_index=True)
-    bout_labels = y[first_indices]
-
-    rng = np.random.default_rng(seed)
-    bout_folds = np.full(len(unique_bouts), -1, dtype=int)
-
-    for label in np.unique(bout_labels):
-        mask = bout_labels == label
-        indices = np.where(mask)[0]
-        rng.shuffle(indices)
-        bout_folds[indices] = np.arange(len(indices)) % n_splits
-
-    fold_lookup = dict(zip(unique_bouts, bout_folds, strict=True))
-    row_folds = np.array([fold_lookup[bid] for bid in bout_ids])
-    return PredefinedSplit(row_folds)
-
-
-def stratified_split_by_bout(
+def stratified_split_by_group(
     df: pl.DataFrame,
     test_size: float,
+    group_name: str,
     random_state: int = 42,
 ) -> tuple[Array1D, Array1D]:
     """Split into train/test, grouping contiguous label runs together.
@@ -136,26 +114,12 @@ def stratified_split_by_bout(
     Uses ``StratifiedGroupKFold`` with ``bout_id`` as the group.
     Returns flat boolean masks the same length as ``df``.
 
-    Parameters
-    ----------
-    df : pl.DataFrame
-        DataFrame from ``load_training_data``.
-    test_size : float
-        Fraction of experiments reserved for the test split.
-    random_state : int
-        Seed for reproducible splits.
-
-    Returns:
-    -------
-    train_mask : Array1D
-        Boolean mask, ``True`` for training rows.
-    test_mask : Array1D
-        Boolean mask, ``True`` for test rows.
+    Group name like: "bout_id", "experiment"
     """
-    df = _label_bouts(df)
-    x = df.drop([*_META_COLS, "bout_id"]).to_numpy()
+    df = label_bouts(df)
+    x = df.drop([EXPERIMENT, FRAME, ACTUAL, BOUT_ID]).to_numpy()
     y = df[ACTUAL].to_numpy()
-    groups = df["bout_id"].to_numpy()
+    groups = df[group_name].to_numpy()
 
     n_splits = max(2, int(1 / test_size))
     sgkf = StratifiedGroupKFold(
