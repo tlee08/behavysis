@@ -61,7 +61,7 @@ def _next_iteration(clf_dir: Path, model_name: str) -> int:
 
 
 def train(
-    clf_dir: Path,
+    clf_contract_fp: Path,
     model_name: str,
     factory: Callable[[], BaseAdapter],
     hyperparameters: dict[str, list[object]],
@@ -70,11 +70,11 @@ def train(
 
     Returns the iteration number.
     """
-    clf_proj = ClassifierFp(clf_dir)
+    clf_proj = ClassifierFp(clf_contract_fp.parent)
 
     contract = ClassifierContract.read_yaml(clf_proj.contract_fp())
 
-    iteration = _next_iteration(clf_dir, model_name)
+    iteration = _next_iteration(clf_proj.root_dir(), model_name)
     md = clf_proj.model_dir(model_name, iteration)
 
     config = TrainingRecipe(name=model_name, hyperparameters=hyperparameters)
@@ -116,7 +116,7 @@ def train(
     _eval_split(adapter, test_df, config, ed, "test")
 
     # Diagnostics
-    _run_diagnostics(adapter, clf_dir, ed)
+    _run_diagnostics(adapter, clf_proj.root_dir(), ed)
 
     logger.info(
         "Training complete: {} {:03d}",
@@ -139,7 +139,7 @@ def train_all_models(clf_contract_fp: Path) -> list[int]:
 
 
 def predict_df(
-    clf_dir: Path,
+    clf_contract_fp: Path,
     features_df: pl.DataFrame,
     pcutoff: float | None = None,
 ) -> pl.DataFrame:
@@ -148,7 +148,7 @@ def predict_df(
     ``features_df`` has a ``frame`` column plus feature columns.
     Returns a long-form DataFrame with ``(frame, behaviour, prob, pred)``.
     """
-    clf_proj = ClassifierFp(clf_dir)
+    clf_proj = ClassifierFp(clf_contract_fp.parent)
     contract = ClassifierContract.read_yaml(clf_proj.contract_fp())
     config = TrainingRecipe.read_yaml(clf_proj.active_config_fp())
     pipeline = joblib.load(clf_proj.active_model_dir() / "model.joblib")

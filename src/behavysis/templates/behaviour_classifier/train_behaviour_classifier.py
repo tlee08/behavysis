@@ -11,10 +11,11 @@ with app.setup:
 
     from behavysis import Project
     from behavysis.behaviour_classifier import (
+        ClassifierActive,
         ClassifierContract,
         train_all_models,
     )
-    from behavysis.behaviour_classifier import storage as clf_storage
+    from behavysis.behaviour_classifier.storage import ClassifierFp
     from behavysis.constants import FEATURES_EXTRACTED_DIR
     from behavysis.transforms import boris_to_behaviour
     from behavysis.utils import configure_logger
@@ -33,24 +34,23 @@ def _():
 
     ```
     {clf_dir}/
+        contract.yaml               # shared behaviour + feature contract
+        active.yaml                 # {name: rf, iteration: 3} — which model to use
         training_data/
             5_features_extracted/   # features (from a processed behavysis project)
             7_behaviour_scored/     # labels  (from BORIS, or a scored project)
-        contract.yaml               # shared behaviour + feature contract
         classifiers/
-            rf/
-                001/
-                    config.yaml     # TrainingRecipe (hyperparameters)
-                    model.joblib    # fitted sklearn Pipeline
-                    evaluation/     # plots, eval parquets
-                002/
-                    ...
-            logreg/
-                001/
-                    ...
+            rf-001/
+                config.yaml         # TrainingRecipe (hyperparameters)
+                model.joblib        # fitted sklearn Pipeline
+                evaluation/         # plots, eval parquets
+            rf-002/
+                ...
+            logreg-001/
+                ...
     ```
 
-    This notebook: **assemble training data → train → inspect**.
+    This notebook: **assemble training data → train → inspect → set active**.
     """)
     return
 
@@ -119,7 +119,8 @@ def _():
 
 @app.cell
 def _(clf_dir, overwrite, proj):
-    feats_dst = clf_storage.features_dir(clf_dir)
+    fp = ClassifierFp(clf_dir)
+    feats_dst = fp.features_dir()
     feats_dst.mkdir(parents=True, exist_ok=True)
     for _exp in proj.experiments:
         _src = _exp.get_fp(FEATURES_EXTRACTED_DIR)
@@ -140,7 +141,7 @@ def _():
     using the experiment's metadata (fps, start/stop frame) to align frames.
 
     *(Alternatively, if the source project is already scored, copy its
-    `7_behaviour_scored/*.parquet` into `clf_storage.labels_dir(clf_dir)`
+    `7_behaviour_scored/*.parquet` into `ClassifierFp(clf_dir).labels_dir()`
     instead of running this cell.)*
     """)
     return
@@ -148,7 +149,8 @@ def _():
 
 @app.cell
 def _(behaviour_name, boris_dir, clf_dir, overwrite, proj):
-    labels_dst = clf_storage.labels_dir(clf_dir)
+    fp = ClassifierFp(clf_dir)
+    labels_dst = fp.labels_dir()
     labels_dst.mkdir(parents=True, exist_ok=True)
     for _exp in proj.experiments:
         boris_to_behaviour(
@@ -177,7 +179,8 @@ def _():
 
 @app.cell
 def _(clf_dir, behaviour_name, individuals, bodyparts):
-    cofp = clf_storage.contract_fp(clf_dir)
+    fp = ClassifierFp(clf_dir)
+    cofp = fp.contract_fp()
     if not cofp.exists():
         ClassifierContract(
             behaviour_name=behaviour_name,
@@ -196,7 +199,8 @@ def _(behaviour_name, bodyparts, clf_dir, feats_dst, individuals, labels_dst):
         msg = f"No labels in {labels_dst}"
         raise FileNotFoundError(msg)
 
-    iterations = train_all_models(clf_dir)
+    fp = ClassifierFp(clf_dir)
+    iterations = train_all_models(fp.contract_fp())
     iterations
     return (iterations,)
 
@@ -224,18 +228,45 @@ def _():
 @app.cell
 def _():
     mo.md("""
-    ## 5. Use the classifier in a pipeline
+    ## 5. Set the active model
 
-    Point an experiment's `classify_behaviour` config at the trained iteration.
-    The behaviour name and feature contract are in the classifier's `contract.yaml`:
+    Write ``active.yaml`` to point to the best iteration.  This is the model
+    used by ``predict_df`` at inference time:
+
+    ```python
+    ClassifierActive(name="rf", iteration=3).write_yaml(
+        ClassifierFp(clf_dir).active_fp()
+    )
+    ```
+
+    Or edit `active.yaml` by hand:
+
+    ```yaml
+    name: rf
+    iteration: 3
+    ```
+    """)
+    return
+
+
+@app.cell
+def _():
+    mo.md("""
+    ## 6. Use the classifier in a pipeline
+
+    Point an experiment's `classify_behaviour` config at the classifier root
+    (where `active.yaml` and `contract.yaml` live):
 
     ```yaml
     classify_behaviour:
-      - clf_fp: /absolute/path/to/behaviour_classifier/classifiers/rf/001
+      - clf_fp: /absolute/path/to/behaviour_classifier
         pcutoff: 0.5
         min_empty_window_secs: 0.2
         user_defined: []
     ```
+
+    The behaviour name, feature contract, and active model are all resolved
+    automatically from the classifier directory.
     """)
     return
 
