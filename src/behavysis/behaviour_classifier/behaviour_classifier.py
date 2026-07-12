@@ -69,6 +69,7 @@ from .storage import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
     from pathlib import Path
 
 # ── version string generation ────────────────────────────────────────
@@ -99,10 +100,12 @@ def set_contract(
     behaviour_name: str,
     individuals: list[str],
     bodyparts: list[str],
+    *,
+    overwrite: bool = False,
 ) -> None:
     """Set model's contract.yaml."""
     cofp = contract_fp(clf_dir)
-    if not cofp.exists():
+    if not cofp.exists() or overwrite:
         ClassifierContract(
             behaviour_name=behaviour_name,
             individuals=individuals,
@@ -113,7 +116,14 @@ def set_contract(
 # ── training ─────────────────────────────────────────────────────────
 
 
-def train(clf_dir: Path, model_type: str) -> str:
+def train(
+    clf_dir: Path,
+    model_type: str,
+    factory: Callable[[], BaseAdapter],
+    hyperparameters: dict[str, list[object]] | None = None,
+    *,
+    overwrite: bool = False,
+) -> str:
     """Train a classifier and persist all versioned artifacts.
 
     ``clf_dir`` is the self-contained classifier directory (its name is
@@ -129,17 +139,15 @@ def train(clf_dir: Path, model_type: str) -> str:
     Returns the version string.
     """
     clf_dir = clf_dir.resolve()
-
-    # 1. Load the shared contract and the authored recipe
-    contract = _read_contract(clf_dir)
+    # 0. update the model's configs
     cfp = config_fp(clf_dir, model_type)
-    if not cfp.exists():
-        msg = (
-            f"No config.yaml for '{model_type}' in {clf_dir}. "
-            "Author a TrainingRecipe first (via train_all_models or "
-            "TrainingRecipe(...).write_yaml(config_fp(clf_dir, model_type)))."
-        )
-        raise FileNotFoundError(msg)
+    if hyperparameters and (not cfp.exists() or overwrite):
+        TrainingRecipe(
+            model_type=model_type,
+            hyperparameters=hyperparameters,
+        ).write_yaml(cfp)
+    # 1. Load the shared contract and the authored recipe
+    contract = ClassifierContract.read_yaml(contract_fp(clf_dir))
     config = TrainingRecipe.read_yaml(cfp)
 
     logger.info(
@@ -162,7 +170,6 @@ def train(clf_dir: Path, model_type: str) -> str:
 
     # 4. Train
     start = datetime.now(UTC)
-    factory, _ = MODEL_REGISTRY[model_type]
     adapter: BaseAdapter = factory()
     history = adapter.fit(df, train_mask, config)
     duration = (datetime.now(UTC) - start).total_seconds()
@@ -213,7 +220,7 @@ def train(clf_dir: Path, model_type: str) -> str:
         df,
         train_mask,
         test_mask,
-        n_features_selected=adapter.feature_mask.shape[0],
+        n_features_selected=_n_features_selected(adapter),
     )
     meta = VersionMetadata(
         version=version,
@@ -266,15 +273,8 @@ def train_all_models(clf_dir: Path) -> list[str]:
     control.
     """
     results: list[str] = []
-    for mt in MODEL_REGISTRY:
-        cfp = config_fp(clf_dir, mt)
-        if not cfp.exists():
-            _, defaults = MODEL_REGISTRY[mt]
-            TrainingRecipe(
-                model_type=mt,
-                hyperparameters=dict(defaults),
-            ).write_yaml(cfp)
-        results.append(train(clf_dir, mt))
+    for model_type, (factory, hyperparameters) in MODEL_REGISTRY.items():
+        results.append(train(clf_dir, model_type, factory, hyperparameters))
 
     _ = regenerate_leaderboard(clf_dir)
     return results
@@ -403,19 +403,6 @@ def _behaviour_name(clf_dir: Path) -> str:
     return ""
 
 
-def _read_contract(clf_dir: Path) -> ClassifierContract:
-    """Read the shared classifier contract, raising if absent."""
-    cofp = contract_fp(clf_dir)
-    if not cofp.exists():
-        msg = (
-            f"No contract.yaml in {clf_dir}. Author a ClassifierContract first "
-            "(via train_all_models or "
-            "ClassifierContract(...).write_yaml(contract_fp(clf_dir)))."
-        )
-        raise FileNotFoundError(msg)
-    return ClassifierContract.read_yaml(cofp)
-
-
 # ── production ───────────────────────────────────────────────────────
 
 
@@ -504,7 +491,7 @@ class BehaviourClassifier:
             msg = f"Missing config.yaml for {model_type} in {clf_dir}."
             raise FileNotFoundError(msg)
         config = TrainingRecipe.read_yaml(cfp)
-        contract = _read_contract(clf_dir)
+        contract = ClassifierContract.read_yaml(contract_fp(clf_dir))
 
         adapter = cls._load_adapter(clf_dir, model_type, version)
         return cls(config, contract, adapter)
@@ -550,10 +537,8 @@ class BehaviourClassifier:
         adapter: BaseAdapter = factory()
 
         if isinstance(adapter, SklearnAdapter):
-            loaded = joblib.load(vd / "model.joblib")
-            if isinstance(loaded, BaseAdapter):
-                return loaded
-            return adapter  # fallback, shouldn't happen
+            adapter.pipe_ = joblib.load(vd / "model.joblib")
+            return adapter
 
         if isinstance(adapter, TorchAdapter):
             adapter.load_state(vd)
@@ -572,10 +557,7 @@ class BehaviourClassifier:
         """
         frames = features_df.get_column(FRAME)
         x = features_df.drop(FRAME).to_numpy()
-        y_prob = self.adapter.predict(
-            x,
-            self.config.batch_size,
-        )
+        y_prob = self.adapter.predict(x)
         y_pred = (y_prob > self.config.pcutoff).astype(int)
         return pl.DataFrame(
             {
@@ -589,6 +571,16 @@ class BehaviourClassifier:
 
 
 # ── internal helpers ─────────────────────────────────────────────────
+
+
+def _n_features_selected(adapter: BaseAdapter) -> int:
+    """Number of features after selection, read from the fitted pipeline."""
+    named = adapter.pipe.named_steps
+    if "selector" in named:
+        return int(named["selector"].get_support().sum())
+    if "var_filter" in named:
+        return int(named["var_filter"].get_support().sum())
+    return adapter.pipe.n_features_in_
 
 
 def _eval_split(
@@ -678,14 +670,19 @@ def _run_diagnostics(
 
     importances: np.ndarray | None = None
     if isinstance(adapter, SklearnAdapter):
-        if adapter.feature_mask is not None:
-            feature_names = [feature_names[i] for i in adapter.feature_mask]
+        named = adapter.pipe.named_steps
+        mask = np.arange(len(feature_names))
+        if "selector" in named:
+            mask = mask[named["selector"].get_support()]
+        elif "var_filter" in named:
+            mask = mask[named["var_filter"].get_support()]
+        feature_names = [feature_names[i] for i in mask]
         importances = np.zeros(len(feature_names), dtype=np.float64)
-        est = adapter.estimator
+        est = named["clf"]
         if hasattr(est, "feature_importances_"):
             importances = est.feature_importances_
         elif hasattr(est, "coef_"):
-            importances = np.abs(est.coef_).flatten()  # type: ignore[assignment]
+            importances = np.abs(est.coef_).flatten()
 
     if importances is not None:
         save_feature_importance(feature_names, importances, eval_d)

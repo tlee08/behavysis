@@ -51,17 +51,12 @@ class TrainingRecipe(YamlModel):
     """
 
     model_type: str
-    oversample_ratio: float = 0.2
-    undersample_ratio: float = 0.4
     split_seed: int = 42
     test_split: float = 0.2
     val_split: float = 0.2
     batch_size: int = 256
     epochs: int = 100
     pcutoff: float = 0.2
-    feature_selection: bool = True
-    variance_threshold: float = 0.0
-    max_features: int | None = None
     hyperparameters: dict[str, list[object]] = {}
 
 

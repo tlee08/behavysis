@@ -61,17 +61,29 @@ class TestFeatureSelection:
 
 
 class TestSklearnAdapterMask:
-    """Feature mask flows through fit/predict and joblib round-trip."""
+    """Pipeline flows through fit/predict and joblib round-trip."""
+
+    @staticmethod
+    def _pipeline(config):
+        from imblearn.pipeline import Pipeline as ImbPipeline
+        from sklearn.feature_selection import VarianceThreshold
+
+        steps = []
+        if config.feature_selection:
+            steps.append(("var_filter", VarianceThreshold()))
+        steps.append(("clf", LogisticRegression()))
+        return ImbPipeline(steps)
 
     def test_fit_predict_shapes(self) -> None:
         rng = np.random.default_rng(2)
         x = rng.standard_normal((60, 6))
-        x[:, 1] = 0.0  # constant column dropped by selection
+        x[:, 1] = 0.0  # constant column dropped by variance filter
         y = rng.integers(0, 2, 60)
-        adapter = SklearnAdapter(LogisticRegression)
+        adapter = SklearnAdapter(self._pipeline)
         df = _df(x, y)
         adapter.fit(df, _mask(df), _recipe())
-        assert 1 not in adapter.feature_mask
+        support = adapter.pipe.named_steps["var_filter"].get_support()
+        assert not support[1]  # constant column dropped
         prob = adapter.predict(x)
         assert prob.shape == (60,)
 
@@ -79,17 +91,31 @@ class TestSklearnAdapterMask:
         rng = np.random.default_rng(3)
         x = rng.standard_normal((60, 6))
         y = rng.integers(0, 2, 60)
-        adapter = SklearnAdapter(LogisticRegression)
+        adapter = SklearnAdapter(self._pipeline)
         df = _df(x, y)
         adapter.fit(df, _mask(df), _recipe())
         adapter.save(tmp_path)
         loaded = joblib.load(tmp_path / "model.joblib")
-        np.testing.assert_array_equal(loaded.feature_mask, adapter.feature_mask)
-        np.testing.assert_allclose(loaded.predict(x), adapter.predict(x))
+        np.testing.assert_allclose(
+            loaded.predict_proba(x)[:, 1],
+            adapter.predict(x),
+        )
 
 
 class TestSklearnAdapterGridSearch:
     """All hyperparameters are lists — single values are single-element lists."""
+
+    @staticmethod
+    def _pipeline(config):
+        from imblearn.pipeline import Pipeline as ImbPipeline
+        from sklearn.ensemble import RandomForestClassifier as RFC
+
+        return ImbPipeline([("clf", RFC())])
+
+    @staticmethod
+    def _logreg_pipeline(config):
+        from imblearn.pipeline import Pipeline as ImbPipeline
+        return ImbPipeline([("clf", LogisticRegression())])
 
     def test_grid_search_resolves_params(self) -> None:
         from sklearn.ensemble import RandomForestClassifier
@@ -97,38 +123,44 @@ class TestSklearnAdapterGridSearch:
         rng = np.random.default_rng(5)
         x = rng.standard_normal((80, 5))
         y = rng.integers(0, 2, 80)
-        adapter = SklearnAdapter(RandomForestClassifier)
+        adapter = SklearnAdapter(self._pipeline)
         recipe = _recipe(
+            feature_selection=False,
             hyperparameters={
-                "n_estimators": [10, 20],
-                "max_depth": [4, 8],
-                "random_state": [42],
-            }
+                "clf__n_estimators": [10, 20],
+                "clf__max_depth": [4, 8],
+                "clf__random_state": [42],
+            },
         )
         df = _df(x, y)
         adapter.fit(df, _mask(df), recipe)
 
         assert adapter.resolved_hyperparameters is not None
-        assert "n_estimators" in adapter.resolved_hyperparameters
-        assert isinstance(adapter.resolved_hyperparameters["n_estimators"], int)
-        assert adapter.resolved_hyperparameters["random_state"] == 42
+        assert "clf__n_estimators" in adapter.resolved_hyperparameters
+        assert isinstance(adapter.resolved_hyperparameters["clf__n_estimators"], int)
+        assert adapter.resolved_hyperparameters["clf__random_state"] == 42
 
     def test_single_option_lists_still_grid(self) -> None:
         rng = np.random.default_rng(6)
         x = rng.standard_normal((40, 3))
         y = rng.integers(0, 2, 40)
-        adapter = SklearnAdapter(LogisticRegression)
+        adapter = SklearnAdapter(self._logreg_pipeline)
         recipe = _recipe(
-            hyperparameters={"C": [1.0], "max_iter": [500], "random_state": [99]}
+            feature_selection=False,
+            hyperparameters={
+                "clf__C": [1.0],
+                "clf__max_iter": [500],
+                "clf__random_state": [99],
+            },
         )
         df = _df(x, y)
         adapter.fit(df, _mask(df), recipe)
 
         rhp = adapter.resolved_hyperparameters
         assert rhp is not None
-        assert rhp["C"] == 1.0
-        assert rhp["random_state"] == 99
-        assert hasattr(adapter.estimator, "best_params_")
+        assert rhp["clf__C"] == 1.0
+        assert rhp["clf__random_state"] == 99
+        assert hasattr(adapter.pipe_, "best_params_")
         prob = adapter.predict(x)
         assert prob.shape == (40,)
 

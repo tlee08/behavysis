@@ -1,14 +1,15 @@
 """Model adapters for sklearn and PyTorch classifiers.
 
-SklearnAdapter wraps any sklearn-compatible estimator class with MinMaxScaler
-+ feature selection + optional GridSearchCV. Hyperparameters are resolved from
-the TrainingRecipe at fit time — the registry stores estimator classes, not
-pre-configured instances.
+SklearnAdapter receives a ``pipeline_builder(config) -> ImbPipeline``
+from the MODEL_REGISTRY.  At fit time it wraps the pipeline in
+``GridSearchCV``; at predict time it delegates to the fitted pipeline.
+The pipeline definition itself lives entirely in the registry.
 
-TorchAdapter wraps a TorchModel with MinMaxScaler.
+TorchAdapter wraps a TorchModel with MinMaxScaler + standalone feature
+selection.
 
 Serialisation:
-- sklearn: model.joblib (joblib dump of entire adapter)
+- sklearn: model.joblib (joblib dump of pipeline, strip GridSearchCV wrapper)
 - torch:   model.pt (state_dict) + scaler.joblib (MinMaxScaler)
 """
 
@@ -22,18 +23,16 @@ import numpy as np
 import pandas as pd
 import torch
 from loguru import logger
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.feature_selection import VarianceThreshold
 from sklearn.model_selection import GridSearchCV
 from sklearn.preprocessing import MinMaxScaler
 
-from behavysis.constants import ACTUAL, EXPERIMENT, FRAME, Array1D, Array2D
+from behavysis.constants import ACTUAL, EXPERIMENT, FRAME, Array2D
 
 if TYPE_CHECKING:
     from pathlib import Path
 
     import polars as pl
-    from sklearn.base import BaseEstimator
+    from imblearn.pipeline import Pipeline as ImbPipeline
 
     from .config import TrainingRecipe
     from .torch.base import TorchModel
@@ -41,44 +40,10 @@ if TYPE_CHECKING:
 _META_COLS = [EXPERIMENT, FRAME, ACTUAL]
 
 
-def select_features(
-    x: Array2D,
-    y: Array1D,
-    config: TrainingRecipe,
-) -> np.ndarray:
-    """Return column indices to keep, fit on training data only.
-
-    Drops low-variance columns, then optionally caps to the top
-    ``max_features`` by random-forest importance. Returns all columns when
-    ``feature_selection`` is disabled.
-    """
-    keep = np.arange(x.shape[1])
-    if not config.feature_selection:
-        return keep
-
-    vt = VarianceThreshold(threshold=config.variance_threshold)
-    vt.fit(x)
-    keep = keep[vt.get_support()]
-
-    if config.max_features is not None and len(keep) > config.max_features:
-        rf = RandomForestClassifier(
-            n_estimators=200,
-            max_depth=8,
-            random_state=42,
-            n_jobs=-1,
-        )
-        rf.fit(x[:, keep], y)
-        top = np.argsort(rf.feature_importances_)[::-1][: config.max_features]
-        keep = np.sort(keep[top])
-
-    return keep
-
-
 class BaseAdapter(ABC):
     """Abstract adapter with fit / predict."""
 
     framework: ClassVar[str]
-    feature_mask: Array1D | None
 
     @abstractmethod
     def fit(
@@ -91,80 +56,67 @@ class BaseAdapter(ABC):
 
         Returns per-epoch history (empty for sklearn).
         """
-        ...
 
     @abstractmethod
-    def predict(
-        self,
-        x: Array2D,
-        batch_size: int = 256,
-    ) -> np.ndarray:
+    def predict(self, x: Array2D) -> np.ndarray:
         """Return predicted probabilities for the given feature array."""
-        ...
 
     @abstractmethod
     def save(self, version_dir: Path) -> None:
         """Persist model artifacts inside version_dir."""
-        ...
 
 
 class SklearnAdapter(BaseAdapter):
-    """Adapter for sklearn estimators (RF, LogisticRegression, XGBoost, etc.).
+    """Thin wrapper around an imblearn Pipeline + GridSearchCV.
 
-    Takes an estimator class at construction. All hyperparameters are resolved
-    from ``TrainingRecipe.hyperparameters`` at ``fit`` time via
-    ``GridSearchCV``.
-
-    Serialises as a single model.joblib blob (estimator + scaler).
+    The pipeline is built by calling ``self.pipeline_builder(config)``
+    at fit time — the builder is defined in the MODEL_REGISTRY, keeping
+    all pipeline logic in one place.  GridSearchCV is then fitted and
+    the adapter delegates predict / feature access to the pipeline.
     """
 
     framework: ClassVar[str] = "sklearn"
 
-    def __init__(self, estimator_cls: type) -> None:
-        self.estimator_cls = estimator_cls
-        self.estimator: BaseEstimator | None = None
-        self.scaler = MinMaxScaler()
-        self.feature_mask: Array1D | None = None
+    def __init__(
+        self,
+        pipeline: ImbPipeline,
+    ) -> None:
+        self.pipeline = pipeline
+
+    @property
+    def pipe(self) -> ImbPipeline:
+        """The fitted Pipeline, unwrapped from GridSearchCV if needed."""
+        return getattr(self.pipeline, "best_estimator_", self.pipeline)
 
     @property
     def resolved_hyperparameters(self) -> dict[str, object] | None:
         """Return ``best_params_`` from ``GridSearchCV``, or None if not fitted."""
-        if self.estimator is not None and hasattr(self.estimator, "best_params_"):
-            return self.estimator.best_params_
+        if hasattr(self.pipeline, "best_params_"):
+            return self.pipeline.best_params_
         return None
 
     def fit(
-        self,
-        df: pl.DataFrame,
-        train_mask: np.ndarray,
-        config: TrainingRecipe,
+        self, df: pl.DataFrame, train_mask: np.ndarray, config: TrainingRecipe
     ) -> pd.DataFrame:
         x = df.filter(train_mask).drop(_META_COLS).to_numpy()
         y = df.filter(train_mask)[ACTUAL].to_numpy()
-        x = self.scaler.fit_transform(x)
-        self.feature_mask = select_features(x, y, config)
-        x = x[:, self.feature_mask]
 
-        base = self.estimator_cls()
-        gs = GridSearchCV(base, config.hyperparameters, scoring="f1", cv=3, n_jobs=-1)
-        gs.fit(x, y)
-        self.estimator = gs
+        self.pipeline = GridSearchCV(
+            self.pipeline,
+            config.hyperparameters,
+            scoring="f1",
+            cv=3,
+            n_jobs=-1,
+        ).fit(x, y)
 
         return pd.DataFrame(columns=pd.Index(["loss", "vloss"]))
 
-    def predict(
-        self,
-        x: np.ndarray,
-        batch_size: int = 256,
-    ) -> np.ndarray:
-        _ = batch_size
-        x = self.scaler.transform(x)
-        x = x[:, self.feature_mask]
-        return self.estimator.predict_proba(x)[:, 1]
+    def predict(self, x: np.ndarray) -> np.ndarray:
+        return self.pipeline.predict_proba(x)[:, 1]
 
     def save(self, version_dir: Path) -> None:
         version_dir.mkdir(parents=True, exist_ok=True)
-        joblib.dump(self, version_dir / "model.joblib")
+        joblib.dump(self.pipe, version_dir / "model.joblib")
         logger.info("Saved sklearn model to {}", version_dir)
 
 
@@ -187,10 +139,7 @@ class TorchAdapter(BaseAdapter):
         self.feature_mask: np.ndarray | None = None
 
     def fit(
-        self,
-        df: pl.DataFrame,
-        train_mask: np.ndarray,
-        config: TrainingRecipe,
+        self, df: pl.DataFrame, train_mask: np.ndarray, config: TrainingRecipe
     ) -> pd.DataFrame:
         x = df.filter(train_mask).drop(_META_COLS).to_numpy()
         y = df.filter(train_mask)[ACTUAL].to_numpy()
@@ -213,13 +162,12 @@ class TorchAdapter(BaseAdapter):
     def predict(
         self,
         x: Array2D,
-        batch_size: int = 256,
     ) -> np.ndarray:
         if self.scaler is None or self.model is None or self.feature_mask is None:
             msg = "Model not fitted. Call fit() or load_state() first."
             raise RuntimeError(msg)
         x = self.scaler.transform(x)[:, self.feature_mask]
-        return self.model.predict(x, None, batch_size=batch_size)
+        return self.model.predict(x, None, batch_size=256)
 
     def save(self, version_dir: Path) -> None:
         if self.model is None or self.scaler is None or self.feature_mask is None:
