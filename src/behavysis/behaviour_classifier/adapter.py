@@ -26,6 +26,7 @@ from loguru import logger
 from sklearn.model_selection import GridSearchCV
 from sklearn.preprocessing import MinMaxScaler
 
+from behavysis.behaviour_classifier.data import _bout_cv
 from behavysis.constants import ACTUAL, EXPERIMENT, FRAME, Array2D
 
 if TYPE_CHECKING:
@@ -91,11 +92,25 @@ class SklearnAdapter(BaseAdapter):
         x = df.drop(_META_COLS).to_numpy()
         y = df[ACTUAL].to_numpy()
 
+        # Label bouts on train subset
+        bout_ids = (
+            df.with_columns(
+                (pl.col(ACTUAL) != pl.col(ACTUAL).shift(1))
+                .or_(pl.col(EXPERIMENT) != pl.col(EXPERIMENT).shift(1))
+                .cast(pl.Int64)
+                .cum_sum()
+                .alias("_bout_id")
+            )
+            .select("_bout_id")
+            .to_numpy()
+            .ravel()
+        )
+
         gs = GridSearchCV(
             self.pipeline,
             config.hyperparameters,
             scoring="f1",
-            cv=3,
+            cv=_bout_cv(bout_ids, y, config.val_cv_folds, config.seed),
             n_jobs=1,
             verbose=1,
         ).fit(x, y)

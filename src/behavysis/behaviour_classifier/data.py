@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import polars as pl
-from sklearn.model_selection import StratifiedGroupKFold
+from sklearn.model_selection import PredefinedSplit, StratifiedGroupKFold
 
 from behavysis.constants import (
     ACTUAL,
@@ -93,14 +93,37 @@ def load_training_data(
 def _label_bouts(df: pl.DataFrame) -> pl.DataFrame:
     """Add ``bout_id`` — integer label per contiguous (experiment, actual) run."""
     return df.with_columns(
-
-            (pl.col(ACTUAL) != pl.col(ACTUAL).shift(1))
-            .or_(pl.col(EXPERIMENT) != pl.col(EXPERIMENT).shift(1))
-            .cast(pl.Int64)
-            .cum_sum()
-            .alias("bout_id")
-
+        (pl.col(ACTUAL) != pl.col(ACTUAL).shift(1))
+        .or_(pl.col(EXPERIMENT) != pl.col(EXPERIMENT).shift(1))
+        .cast(pl.Int64)
+        .cum_sum()
+        .alias("bout_id")
     )
+
+
+def _bout_cv(
+    bout_ids: np.ndarray, y: np.ndarray, n_splits: int, seed: int
+) -> PredefinedSplit:
+    """Assign each bout to one CV fold, stratified by bout label."""
+    unique_bouts = np.unique(bout_ids)
+    # Get each bout's label (all frames in a bout share the same actual)
+    bout_labels = np.array([y[bout_ids == bid][0] for bid in unique_bouts])
+
+    rng = np.random.default_rng(seed)
+    folds = np.full(len(unique_bouts), -1, dtype=int)
+
+    # Stratified: round-robin per class
+    for label in np.unique(bout_labels):
+        label_bouts = unique_bouts[bout_labels == label]
+        rng.shuffle(label_bouts)
+        for i, bid in enumerate(label_bouts):
+            folds[np.where(unique_bouts == bid)[0][0]] = i % n_splits
+
+    # Map bout-level folds to row-level
+    row_folds = np.array(
+        [folds[np.where(unique_bouts == bid)[0][0]] for bid in bout_ids]
+    )
+    return PredefinedSplit(row_folds)
 
 
 def stratified_split_by_bout(

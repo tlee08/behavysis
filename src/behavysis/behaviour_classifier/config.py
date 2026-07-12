@@ -51,9 +51,9 @@ class TrainingRecipe(YamlModel):
     """
 
     model_type: str
-    split_seed: int = 42
+    seed: int = 42
     test_split: float = 0.2
-    val_split: float = 0.2
+    val_cv_folds: int = 3
     pcutoff: float = 0.2
     hyperparameters: dict[str, list[object]] = {}
 

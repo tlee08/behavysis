@@ -64,8 +64,8 @@ MODEL_REGISTRY: dict[str, tuple[ModelFactory, dict[str, list[object]]]] = {
         lambda: SklearnAdapter(
             ImbPipeline(
                 [
-                    ("undersampler", RandomUnderSampler()),
                     ("oversampler", RandomOverSampler()),
+                    ("undersampler", RandomUnderSampler()),
                     *_feature_selection_steps(),
                     ("clf", RandomForestClassifier()),
                 ]
@@ -86,8 +86,8 @@ MODEL_REGISTRY: dict[str, tuple[ModelFactory, dict[str, list[object]]]] = {
         lambda: SklearnAdapter(
             ImbPipeline(
                 [
-                    ("undersampler", RandomUnderSampler()),
                     ("oversampler", RandomOverSampler()),
+                    ("undersampler", RandomUnderSampler()),
                     *_feature_selection_steps(),
                     ("clf", RandomForestClassifier()),
                 ]
@@ -108,8 +108,8 @@ MODEL_REGISTRY: dict[str, tuple[ModelFactory, dict[str, list[object]]]] = {
         lambda: SklearnAdapter(
             ImbPipeline(
                 [
-                    ("undersampler", RandomUnderSampler()),
                     ("oversampler", RandomOverSampler()),
+                    ("undersampler", RandomUnderSampler()),
                     ("scaler", MinMaxScaler()),
                     *_feature_selection_steps(),
                     ("clf", LogisticRegression()),
@@ -130,8 +130,8 @@ MODEL_REGISTRY: dict[str, tuple[ModelFactory, dict[str, list[object]]]] = {
         lambda: SklearnAdapter(
             ImbPipeline(
                 [
-                    ("undersampler", RandomUnderSampler()),
                     ("oversampler", RandomOverSampler()),
+                    ("undersampler", RandomUnderSampler()),
                     *_feature_selection_steps(),
                     ("clf", XGBClassifier()),
                 ]

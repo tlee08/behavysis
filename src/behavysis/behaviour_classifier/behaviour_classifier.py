@@ -164,9 +164,7 @@ def train(
     )
 
     # 3. Two-way split: test (grouped by experiment), rest is train
-    train_mask, test_mask = stratified_split_by_bout(
-        df, config.test_split, config.split_seed
-    )
+    train_mask, test_mask = stratified_split_by_bout(df, config.test_split, config.seed)
     train_df = df.filter(train_mask)
     test_df = df.filter(test_mask)
 
