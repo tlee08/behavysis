@@ -12,11 +12,12 @@ are passed straight through to ``GridSearchCV``.
 
 from collections.abc import Callable
 
+import numpy as np
 from imblearn.over_sampling import RandomOverSampler
 from imblearn.pipeline import Pipeline as ImbPipeline
 from imblearn.under_sampling import RandomUnderSampler
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.feature_selection import VarianceThreshold
+from sklearn.feature_selection import SelectFromModel, VarianceThreshold
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import MinMaxScaler
 from xgboost import XGBClassifier
@@ -29,29 +30,6 @@ ModelFactory = Callable[[], BaseAdapter]
 PipelineBuilder = Callable[[TrainingRecipe], ImbPipeline]
 
 
-# ── shared feature-selection helper ──────────────────────────────────
-
-
-def _feature_selection_steps() -> list[tuple[str, object]]:
-    return [
-        ("var_filter", VarianceThreshold()),
-        # (
-        #     "selector",
-        #     SelectFromModel(
-        #         RandomForestClassifier(
-        #             n_estimators=200,
-        #             max_depth=8,
-        #             random_state=42,
-        #             n_jobs=-1,
-        #             verbose=1,
-        #         ),
-        #         threshold=-np.inf,
-        #         max_features=200,
-        #     ),
-        # ),
-    ]
-
-
 # ── registry ─────────────────────────────────────────────────────────
 
 
@@ -60,9 +38,9 @@ MODEL_REGISTRY: dict[str, tuple[ModelFactory, dict[str, list[object]]]] = {
         lambda: SklearnAdapter(
             ImbPipeline(
                 [
-                    ("oversampler", RandomOverSampler()),
                     ("undersampler", RandomUnderSampler()),
-                    *_feature_selection_steps(),
+                    ("oversampler", RandomOverSampler()),
+                    ("var_filter", VarianceThreshold()),
                     (
                         "clf",
                         RandomForestClassifier(random_state=42, verbose=1, n_jobs=-1),
@@ -71,11 +49,11 @@ MODEL_REGISTRY: dict[str, tuple[ModelFactory, dict[str, list[object]]]] = {
             )
         ),
         {
-            "oversampler__sampling_strategy": [0.2, "auto"],
-            "undersampler__sampling_strategy": [0.4, "auto"],
+            "undersampler__sampling_strategy": [0.2],
+            "oversampler__sampling_strategy": [0.4],
             "var_filter__threshold": [0.0],
-            "clf__n_estimators": [100, 500],
-            "clf__max_depth": [4, 8, None],
+            "clf__n_estimators": [200, 500],
+            "clf__max_depth": [4, 8, 16],
             "clf__class_weight": ["balanced", None],
         },
     ),
@@ -83,17 +61,31 @@ MODEL_REGISTRY: dict[str, tuple[ModelFactory, dict[str, list[object]]]] = {
         lambda: SklearnAdapter(
             ImbPipeline(
                 [
-                    ("oversampler", RandomOverSampler()),
                     ("undersampler", RandomUnderSampler()),
+                    ("oversampler", RandomOverSampler()),
                     ("scaler", MinMaxScaler()),
-                    *_feature_selection_steps(),
+                    ("var_filter", VarianceThreshold()),
+                    (
+                        "selector",
+                        SelectFromModel(
+                            RandomForestClassifier(
+                                n_estimators=200,
+                                max_depth=8,
+                                random_state=42,
+                                n_jobs=-1,
+                                verbose=1,
+                            ),
+                            threshold=-np.inf,
+                            max_features=200,
+                        ),
+                    ),
                     ("clf", LogisticRegression(random_state=42, verbose=1)),
                 ]
             )
         ),
         {
-            "oversampler__sampling_strategy": [0.2, "auto"],
-            "undersampler__sampling_strategy": [0.4, "auto"],
+            "undersampler__sampling_strategy": [0.2],
+            "oversampler__sampling_strategy": [0.4],
             "var_filter__threshold": [0.0],
             "clf__C": [0.1, 1.0, 10.0],
             "clf__penalty": ["l2", None],
@@ -104,19 +96,19 @@ MODEL_REGISTRY: dict[str, tuple[ModelFactory, dict[str, list[object]]]] = {
         lambda: SklearnAdapter(
             ImbPipeline(
                 [
-                    ("oversampler", RandomOverSampler()),
                     ("undersampler", RandomUnderSampler()),
-                    *_feature_selection_steps(),
+                    ("oversampler", RandomOverSampler()),
+                    ("var_filter", VarianceThreshold()),
                     ("clf", XGBClassifier(random_state=42, verbosity=1)),
                 ]
             )
         ),
         {
-            "oversampler__sampling_strategy": [0.2, "auto"],
-            "undersampler__sampling_strategy": [0.4, "auto"],
+            "undersampler__sampling_strategy": [0.2],
+            "oversampler__sampling_strategy": [0.4],
             "var_filter__threshold": [0.0],
             "clf__n_estimators": [200, 500],
-            "clf__max_depth": [4, 8],
+            "clf__max_depth": [4, 8, 16],
             "clf__learning_rate": [0.01, 0.1, 0.3],
         },
     ),

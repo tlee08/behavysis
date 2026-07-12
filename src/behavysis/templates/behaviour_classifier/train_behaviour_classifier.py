@@ -10,11 +10,7 @@ with app.setup:
     import marimo as mo
 
     from behavysis import Project
-    from behavysis.behaviour_classifier import (
-        ClassifierActive,
-        ClassifierContract,
-        train_all_models,
-    )
+    from behavysis.behaviour_classifier import ClassifierContract, train_all_models
     from behavysis.behaviour_classifier.storage import ClassifierFp
     from behavysis.constants import FEATURES_EXTRACTED_DIR
     from behavysis.transforms import boris_to_behaviour
@@ -99,6 +95,15 @@ def _():
 
 
 @app.cell
+def _(clf_dir):
+    clf_proj = ClassifierFp(clf_dir)
+    feats_dir = clf_proj.features_dir()
+    labels_dir = clf_proj.labels_dir()
+    contract_fp = clf_proj.contract_fp()
+    return contract_fp, feats_dir, labels_dir
+
+
+@app.cell
 def _(names_ls, training_project_dir):
     proj = Project(training_project_dir)
     proj.import_experiments(names_ls)
@@ -118,17 +123,15 @@ def _():
 
 
 @app.cell
-def _(clf_dir, overwrite, proj):
-    fp = ClassifierFp(clf_dir)
-    feats_dst = fp.features_dir()
-    feats_dst.mkdir(parents=True, exist_ok=True)
+def _(feats_dir, overwrite, proj):
+    feats_dir.mkdir(parents=True, exist_ok=True)
     for _exp in proj.experiments:
         _src = _exp.get_fp(FEATURES_EXTRACTED_DIR)
-        _dst = feats_dst / _src.name
+        _dst = feats_dir / _src.name
         if overwrite or not _dst.exists():
             shutil.copyfile(_src, _dst)
-    sorted(p.name for p in feats_dst.iterdir())
-    return (feats_dst,)
+    sorted(p.name for p in feats_dir.iterdir())
+    return
 
 
 @app.cell
@@ -148,20 +151,18 @@ def _():
 
 
 @app.cell
-def _(behaviour_name, boris_dir, clf_dir, overwrite, proj):
-    fp = ClassifierFp(clf_dir)
-    labels_dst = fp.labels_dir()
-    labels_dst.mkdir(parents=True, exist_ok=True)
+def _(behaviour_name, boris_dir, labels_dir, overwrite, proj):
+    labels_dir.mkdir(parents=True, exist_ok=True)
     for _exp in proj.experiments:
         boris_to_behaviour(
             src_fp=boris_dir / f"{_exp.name}.tsv",
-            dst_fp=labels_dst / f"{_exp.name}.parquet",
+            dst_fp=labels_dir / f"{_exp.name}.parquet",
             metadata=_exp.read_metadata(),
             behaviour_ls=[behaviour_name],
             overwrite=overwrite,
         )
-    sorted(p.name for p in labels_dst.iterdir())
-    return (labels_dst,)
+    sorted(p.name for p in labels_dir.iterdir())
+    return
 
 
 @app.cell
@@ -178,20 +179,18 @@ def _():
 
 
 @app.cell
-def _(clf_dir, behaviour_name, individuals, bodyparts):
-    fp = ClassifierFp(clf_dir)
-    cofp = fp.contract_fp()
-    if not cofp.exists():
+def _(behaviour_name, bodyparts, contract_fp, individuals):
+    if not contract_fp.exists():
         ClassifierContract(
             behaviour_name=behaviour_name,
             individuals=individuals,
             bodyparts=bodyparts,
-        ).write_yaml(cofp)
+        ).write_yaml(contract_fp)
     return
 
 
 @app.cell
-def _(behaviour_name, bodyparts, clf_dir, feats_dst, individuals, labels_dst):
+def _(clf_dir, feats_dst, labels_dst):
     if not any(feats_dst.iterdir()):
         msg = f"No features in {feats_dst}"
         raise FileNotFoundError(msg)
@@ -202,7 +201,7 @@ def _(behaviour_name, bodyparts, clf_dir, feats_dst, individuals, labels_dst):
     fp = ClassifierFp(clf_dir)
     iterations = train_all_models(fp.contract_fp())
     iterations
-    return (iterations,)
+    return
 
 
 @app.cell
