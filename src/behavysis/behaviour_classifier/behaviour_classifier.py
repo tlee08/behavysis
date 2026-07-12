@@ -11,10 +11,8 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING
 
-import numpy as np
 import polars as pl
 from loguru import logger
-from sklearn.metrics import classification_report
 
 from behavysis.constants import (
     ACTUAL,
@@ -29,11 +27,9 @@ from .adapter import (
     MODEL_TYPES_TO_CLASS,
     MODEL_TYPES_TO_STRING,
     BaseAdapter,
-    SklearnAdapter,
 )
-from .config import ClassifierContract, TrainingRecipe
-from .data import load_feature_names, load_training_data, stratified_split_by_bout
-from .evaluation import save_feature_importance, save_feature_report
+from .config import ClassifierActive, ClassifierContract, TrainingRecipe
+from .data import load_training_data, stratified_split_by_bout
 from .registry import MODEL_REGISTRY
 from .storage import ClassifierFp
 
@@ -118,11 +114,10 @@ def train(
     # Evaluate
     eval_dir = clf_proj.eval_dir(model_name, iteration)
     eval_dir.mkdir(parents=True, exist_ok=True)
-    _eval_split(adapter, train_df, config, eval_dir, "train")
-    _eval_split(adapter, test_df, config, eval_dir, "test")
-
-    # Diagnostics
-    _run_diagnostics(adapter, clf_proj.root_dir(), eval_dir)
+    _eval_split(
+        clf_contract_fp, model_name, iteration, "train", train_df, config.pcutoff
+    )
+    _eval_split(clf_contract_fp, model_name, iteration, "test", test_df, config.pcutoff)
 
     logger.info(
         "Training complete: {} {:03d}",
@@ -144,6 +139,35 @@ def train_all_models(clf_contract_fp: Path) -> list[int]:
 # ── inference ────────────────────────────────────────────────────────
 
 
+def predict_df_choose_model(
+    clf_contract_fp: Path,
+    model_name: str,
+    iteration: int,
+    x_df: pl.DataFrame,
+    pcutoff: float | None = None,
+) -> pl.DataFrame:
+    """Run inference on a wide features DataFrame.
+
+    ``features_df`` has a ``frame`` column plus feature columns.
+    Returns a long-form DataFrame with ``(frame, behaviour, prob, pred)``.
+    """
+    # Configs
+    clf_proj = ClassifierFp(clf_contract_fp.parent)
+    model_dir = clf_proj.model_dir(model_name, iteration)
+    contract = ClassifierContract.read_yaml(clf_proj.contract_fp())
+    config = TrainingRecipe.read_yaml(clf_proj.config_fp(model_name, iteration))
+    pcutoff = pcutoff or config.pcutoff
+    # Load model
+    model = MODEL_TYPES_TO_CLASS[config.model_type].load(model_dir)
+    # Run inference
+    prob_df = model.predict(x_df)
+    prob_df = prob_df.with_columns(
+        pl.lit(contract.behaviour_name).alias(BEHAVIOUR),
+        (pl.col(PROB) > pcutoff).cast(pl.Int64).alias(PRED),
+    )
+    return pl.DataFrame(prob_df, schema=BEHAVIOUR_PREDICTED_SCHEMA)
+
+
 def predict_df(
     clf_contract_fp: Path,
     x_df: pl.DataFrame,
@@ -155,77 +179,34 @@ def predict_df(
     Returns a long-form DataFrame with ``(frame, behaviour, prob, pred)``.
     """
     clf_proj = ClassifierFp(clf_contract_fp.parent)
-    contract = ClassifierContract.read_yaml(clf_proj.contract_fp())
-    config = TrainingRecipe.read_yaml(clf_proj.active_config_fp())
-    model = MODEL_TYPES_TO_CLASS[config.model_type].load(clf_proj.active_model_dir())
-    pcutoff = pcutoff or config.pcutoff
-
-    prob_df = model.predict(x_df)
-    prob_df = prob_df.with_columns(
-        pl.lit(contract.behaviour_name).alias(BEHAVIOUR),
-        (pl.col(PROB) > pcutoff).cast(pl.Int64).alias(PRED),
+    active = ClassifierActive.read_yaml(clf_proj.active_fp())
+    return predict_df_choose_model(
+        clf_contract_fp, active.model_name, active.iteration, x_df, pcutoff
     )
-    return pl.DataFrame(prob_df, schema=BEHAVIOUR_PREDICTED_SCHEMA)
 
 
 # ── internal helpers ─────────────────────────────────────────────────
 
 
 def _eval_split(
-    adapter: BaseAdapter,
+    clf_contract_fp: Path,
+    model_name: str,
+    iteration: int,
+    subset_name: str,
     df: pl.DataFrame,
-    config: TrainingRecipe,
-    eval_dir: Path,
-    name: str,
-) -> tuple[float | None, float | None]:
+    pcutoff: float | None = None,
+) -> None:
+    # Configs
+    clf_proj = ClassifierFp(clf_contract_fp.parent)
+    eval_dir = clf_proj.eval_dir(model_name, iteration)
+    # Run inference
     x_df = df.drop([EXPERIMENT, ACTUAL])
-    y_df = adapter.predict(x_df)
+    y_df = predict_df_choose_model(
+        clf_contract_fp, model_name, iteration, x_df, pcutoff
+    )
     y_df = y_df.with_columns(
         df[EXPERIMENT].alias(EXPERIMENT),
         df[ACTUAL].alias(ACTUAL),
-        (pl.col(PROB) > config.pcutoff).cast(pl.Int64).alias(PRED),
     )
     # Save raw eval df to parquet
-    y_df.write_parquet(eval_dir / f"{name}_eval.parquet")
-
-    report = classification_report(
-        y_df[ACTUAL],
-        y_df[PRED],
-        target_names=["nil", "behav"],
-        output_dict=True,
-    )
-    return report.get("accuracy"), report["behav"]["f1-score"]
-
-
-def _run_diagnostics(
-    adapter: BaseAdapter,
-    clf_dir: Path,
-    eval_dir: Path,
-) -> None:
-    clf_proj = ClassifierFp(clf_dir)
-    feature_names = load_feature_names(clf_proj.features_dir())
-    if not feature_names:
-        logger.warning("No feature names found for diagnostics.")
-        return
-
-    n_features_total = len(feature_names)
-
-    importances: np.ndarray | None = None
-    if isinstance(adapter, SklearnAdapter):
-        named = adapter.pipeline.named_steps
-        mask = np.arange(len(feature_names))
-        if "selector" in named:
-            mask = mask[named["selector"].get_support()]
-        elif "var_filter" in named:
-            mask = mask[named["var_filter"].get_support()]
-        feature_names = [feature_names[i] for i in mask]
-        importances = np.zeros(len(feature_names), dtype=np.float64)
-        est = named["clf"]
-        if hasattr(est, "feature_importances_"):
-            importances = est.feature_importances_
-        elif hasattr(est, "coef_"):
-            importances = np.abs(est.coef_).flatten()
-
-    if importances is not None:
-        save_feature_importance(feature_names, importances, eval_dir)
-        save_feature_report(feature_names, importances, eval_dir, n_features_total)
+    y_df.write_parquet(eval_dir / f"{subset_name}_eval.parquet")

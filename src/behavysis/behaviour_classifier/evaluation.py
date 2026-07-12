@@ -9,41 +9,11 @@ import pandas as pd
 import seaborn as sns
 from loguru import logger
 from matplotlib.figure import Figure
-from sklearn.metrics import classification_report, confusion_matrix
+from sklearn.metrics import classification_report
 
 NIL = "nil"
 BEHAV = "behav"
 LABELS = [NIL, BEHAV]
-
-
-def eval_report(y_true: np.ndarray, y_pred: np.ndarray) -> dict:
-    """Generate classification report with precision, recall, f1-score."""
-    labels = LABELS
-    return classification_report(
-        y_true=y_true,
-        y_pred=y_pred,
-        target_names=labels,
-        output_dict=True,
-    )
-
-
-def eval_conf_matr(y_true: np.ndarray, y_pred: np.ndarray) -> Figure:
-    """Generate confusion matrix heatmap."""
-    labels = LABELS
-    fig, ax = plt.subplots(figsize=(7, 7))
-    sns.heatmap(
-        confusion_matrix(y_true, y_pred),
-        annot=True,
-        fmt="d",
-        cmap="viridis",
-        cbar=False,
-        xticklabels=labels,
-        yticklabels=labels,
-        ax=ax,
-    )
-    ax.set_xlabel("Predicted")
-    ax.set_ylabel("True")
-    return fig
 
 
 def eval_metrics_pcutoffs(y_true: np.ndarray, y_prob: np.ndarray) -> Figure:
