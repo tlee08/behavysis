@@ -6,6 +6,7 @@ from .behaviour_classifier import (
     promote_to_best,
     promote_to_production,
     regenerate_leaderboard,
+    set_contract,
     train,
     train_all_models,
 )
@@ -39,6 +40,7 @@ __all__ = [
     "promote_to_best",
     "promote_to_production",
     "regenerate_leaderboard",
+    "set_contract",
     "stratified_split_by_video",
     "train",
     "train_all_models",

@@ -6,34 +6,37 @@ shared ``contract.yaml``, not inferred from the path. Training data lives
 inside it too, mirroring the inference pipeline's stage folders::
 
     {clf_dir}/                       # arbitrary name (e.g. my_classifier/)
-      training_data/                 # inference-pipeline files used for training
-        5_features_extracted/
-        7_behaviour_scored/
-        ...
-      contract.yaml                  # shared behaviour + feature contract
-      production.yaml                # {model_type, version} currently deployed
-      leaderboard.yaml               # auto-generated cross-model_type comparison
-      {model_type}/                  # e.g. rf/, dnn1/, cnn2/
-        config.yaml                  # human-authored recipe (hyperparameters)
-        active.yaml                  # {version} pointer — best for this model_type
-        versions/
-          {version}/                 # e.g. v003_2025-07-07T120000
-            model.joblib             # sklearn adapter (estimator + scaler)
-            model.pt                 # torch state_dict
-            scaler.joblib            # MinMaxScaler (torch only)
-            metadata.yaml            # recipe snapshot + eval summary
-            dataset_manifest.yaml    # dataset hash + split experiment IDs
-            evaluation/              # full eval artifacts (plots, reports)
+        training_data/                 # inference-pipeline files used for training
+            5_features_extracted/
+            7_behaviour_scored/
+            ...
+        contract.yaml                  # shared behaviour + feature contract
+        production.yaml                # {model_type, version} currently deployed
+        leaderboard.yaml               # auto-generated cross-model_type comparison
+        classifiers
+            {model_type}/                  # e.g. rf/, dnn1/, cnn2/
+                config.yaml                  # human-authored recipe (hyperparameters)
+                active.yaml                  # {version} — best for this model_type
+                versions/
+                {version}/                 # e.g. v003_2025-07-07T120000
+                    model.joblib             # sklearn adapter (estimator + scaler)
+                    model.pt                 # torch state_dict
+                    scaler.joblib            # MinMaxScaler (torch only)
+                    metadata.yaml            # recipe snapshot + eval summary
+                    dataset_manifest.yaml    # dataset hash + split experiment IDs
+                evaluation/              # full eval artifacts (plots, reports)
 """
 
 from __future__ import annotations
 
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 from behavysis.constants import BEHAVIOUR_SCORED_DIR, FEATURES_EXTRACTED_DIR
 
 TRAINING_DATA = "training_data"
 
+if TYPE_CHECKING:
+    from pathlib import Path
 
 # ── training data (inference-pipeline files) ─────────────────────────
 
@@ -76,7 +79,7 @@ def leaderboard_fp(clf_dir: Path) -> Path:
 
 def model_type_dir(clf_dir: Path, model_type: str) -> Path:
     """Top-level directory for a single model_type."""
-    return clf_dir / model_type
+    return clf_dir / "classifiers" / model_type
 
 
 def config_fp(clf_dir: Path, model_type: str) -> Path:

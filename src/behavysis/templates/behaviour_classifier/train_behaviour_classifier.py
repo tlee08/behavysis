@@ -15,6 +15,7 @@ with app.setup:
         promote_to_production,
         regenerate_leaderboard,
         train_all_models,
+        set_contract,
     )
     from behavysis.behaviour_classifier import storage as clf_storage
     from behavysis.constants import FEATURES_EXTRACTED_DIR
@@ -166,27 +167,13 @@ def _():
     contract) and a default `TrainingRecipe` (`config.yaml`) for every
     registered model type that lacks one, then trains them all. To tune
     hyperparameters, edit the written `config.yaml` and re-run, or author one
-    explicitly and train a single model:
-
-    ```python
-    from behavysis.behaviour_classifier import train
-    from behavysis.behaviour_classifier.config import TrainingRecipe
-    from behavysis.behaviour_classifier.storage import config_fp
-
-    TrainingRecipe(
-        model_type="rf",
-        epochs=200,
-        pcutoff=0.3,
-        # Supervised feature selection (fit on the train split only):
-        feature_selection=True,           # drop uninformative columns
-        variance_threshold=0.0,           # raise to prune near-constant features
-        max_features=None,                # cap to top-k by RF importance (None = all)
-    ).write_yaml(config_fp(clf_dir, "rf"))
-    train(clf_dir, "rf")
-    ```
+    explicitly and train a single model.
     """)
     return
 
+@app.cell
+def _(clf_dir, behaviour_name, individuals, bodyparts):
+    set_contract(clf_dir, behaviour_name, individuals, bodyparts)
 
 @app.cell
 def _(behaviour_name, bodyparts, clf_dir, feats_dst, individuals, labels_dst):
@@ -197,7 +184,7 @@ def _(behaviour_name, bodyparts, clf_dir, feats_dst, individuals, labels_dst):
         msg = f"No labels in {labels_dst}"
         raise FileNotFoundError(msg)
 
-    versions = train_all_models(clf_dir, behaviour_name, individuals, bodyparts)
+    versions = train_all_models(clf_dir)
     versions
     return (versions,)
 

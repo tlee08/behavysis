@@ -91,6 +91,25 @@ def _next_version(clf_dir: Path, model_type: str) -> str:
     return f"v{seq:03d}_{ts}"
 
 
+# ── initialise ───────────────────────────────────────────────────────
+
+
+def set_contract(
+    clf_dir: Path,
+    behaviour_name: str,
+    individuals: list[str],
+    bodyparts: list[str],
+) -> None:
+    """Set model's contract.yaml."""
+    cofp = contract_fp(clf_dir)
+    if not cofp.exists():
+        ClassifierContract(
+            behaviour_name=behaviour_name,
+            individuals=individuals,
+            bodyparts=bodyparts,
+        ).write_yaml(cofp)
+
+
 # ── training ─────────────────────────────────────────────────────────
 
 
@@ -237,12 +256,7 @@ def train(clf_dir: Path, model_type: str) -> str:
     return version
 
 
-def train_all_models(
-    clf_dir: Path,
-    behaviour_name: str,
-    individuals: list[str],
-    bodyparts: list[str],
-) -> list[str]:
+def train_all_models(clf_dir: Path) -> list[str]:
     """Author the shared contract + a default recipe per model_type, then train.
 
     ``behaviour_name`` and the feature contract (``individuals``/``bodyparts``)
@@ -251,16 +265,6 @@ def train_all_models(
     existing files are left untouched. Edit them and re-run ``train`` for finer
     control.
     """
-    clf_dir = clf_dir.resolve()
-
-    cofp = contract_fp(clf_dir)
-    if not cofp.exists():
-        ClassifierContract(
-            behaviour_name=behaviour_name,
-            individuals=individuals,
-            bodyparts=bodyparts,
-        ).write_yaml(cofp)
-
     results: list[str] = []
     for mt in MODEL_REGISTRY:
         cfp = config_fp(clf_dir, mt)
