@@ -383,21 +383,15 @@ def regenerate_leaderboard(clf_dir: Path) -> Leaderboard:
     )
 
     board = Leaderboard(
-        behaviour_name=_behaviour_name(clf_dir),
+        behaviour_name=ClassifierContract.read_yaml(
+            contract_fp(clf_dir)
+        ).behaviour_name,
         generated_at=datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
         rankings=rankings,
     )
     board.write_yaml(leaderboard_fp(clf_dir))
     logger.info("Regenerated leaderboard for {}", clf_dir.name)
     return board
-
-
-def _behaviour_name(clf_dir: Path) -> str:
-    """Return the behaviour name from the shared contract, or empty if absent."""
-    cofp = contract_fp(clf_dir)
-    if cofp.exists():
-        return ClassifierContract.read_yaml(cofp).behaviour_name
-    return ""
 
 
 # ── production ───────────────────────────────────────────────────────
