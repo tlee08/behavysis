@@ -21,6 +21,7 @@ from typing import TYPE_CHECKING, ClassVar
 import joblib
 import numpy as np
 import pandas as pd
+import polars as pl
 import torch
 from loguru import logger
 from sklearn.model_selection import GridSearchCV
