@@ -76,18 +76,6 @@ class SklearnAdapter(BaseAdapter):
     def __init__(self, pipeline: ImbPipeline) -> None:
         self.pipeline = pipeline
 
-    @property
-    def pipe(self) -> ImbPipeline:
-        """The fitted Pipeline, unwrapped from GridSearchCV if needed."""
-        return getattr(self.pipeline, "best_estimator_", self.pipeline)
-
-    @property
-    def resolved_hyperparameters(self) -> dict[str, object] | None:
-        """Return ``best_params_`` from ``GridSearchCV``, or None if not fitted."""
-        if hasattr(self.pipeline, "best_params_"):
-            return self.pipeline.best_params_
-        return None
-
     def fit(self, df: pl.DataFrame, config: TrainingRecipe) -> pd.DataFrame:
         x = df.drop(_META_COLS).to_numpy()
         y = df[ACTUAL].to_numpy()
@@ -106,7 +94,7 @@ class SklearnAdapter(BaseAdapter):
             .ravel()
         )
 
-        gs = GridSearchCV(
+        self.pipeline = GridSearchCV(
             self.pipeline,
             config.hyperparameters,
             scoring="f1",
@@ -116,8 +104,6 @@ class SklearnAdapter(BaseAdapter):
             verbose=1,
         ).fit(x, y)
 
-        self.pipeline = gs
-
         return pd.DataFrame(columns=pd.Index(["loss", "vloss"]))
 
     def predict(self, x: np.ndarray) -> np.ndarray:
@@ -125,7 +111,7 @@ class SklearnAdapter(BaseAdapter):
 
     def save(self, version_dir: Path) -> None:
         version_dir.mkdir(parents=True, exist_ok=True)
-        joblib.dump(self.pipe, version_dir / "model.joblib")
+        joblib.dump(self.pipeline, version_dir / "model.joblib")
         logger.info("Saved sklearn model to {}", version_dir)
 
 

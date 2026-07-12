@@ -102,27 +102,23 @@ def _label_bouts(df: pl.DataFrame) -> pl.DataFrame:
 
 
 def _bout_cv(
-    bout_ids: np.ndarray, y: np.ndarray, n_splits: int, seed: int
+    bout_ids: Array1D, y: Array1D, n_splits: int, seed: int
 ) -> PredefinedSplit:
     """Assign each bout to one CV fold, stratified by bout label."""
-    unique_bouts = np.unique(bout_ids)
-    # Get each bout's label (all frames in a bout share the same actual)
-    bout_labels = np.array([y[bout_ids == bid][0] for bid in unique_bouts])
+    unique_bouts, first_indices = np.unique(bout_ids, return_index=True)
+    bout_labels = y[first_indices]
 
     rng = np.random.default_rng(seed)
-    folds = np.full(len(unique_bouts), -1, dtype=int)
+    bout_folds = np.full(len(unique_bouts), -1, dtype=int)
 
-    # Stratified: round-robin per class
     for label in np.unique(bout_labels):
-        label_bouts = unique_bouts[bout_labels == label]
-        rng.shuffle(label_bouts)
-        for i, bid in enumerate(label_bouts):
-            folds[np.where(unique_bouts == bid)[0][0]] = i % n_splits
+        mask = bout_labels == label
+        indices = np.where(mask)[0]
+        rng.shuffle(indices)
+        bout_folds[indices] = np.arange(len(indices)) % n_splits
 
-    # Map bout-level folds to row-level
-    row_folds = np.array(
-        [folds[np.where(unique_bouts == bid)[0][0]] for bid in bout_ids]
-    )
+    fold_lookup = dict(zip(unique_bouts, bout_folds, strict=True))
+    row_folds = np.array([fold_lookup[bid] for bid in bout_ids])
     return PredefinedSplit(row_folds)
 
 

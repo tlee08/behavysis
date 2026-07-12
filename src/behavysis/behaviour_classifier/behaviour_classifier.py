@@ -208,15 +208,8 @@ def train(
     _run_diagnostics(adapter, clf_dir, ed)
 
     # 10. Metadata (resolve hyperparameters from grid search if used)
-    if isinstance(adapter, SklearnAdapter):
-        resolved_recipe = config.model_copy(
-            update={"hyperparameters": adapter.resolved_hyperparameters}
-        )
-    else:
-        resolved_recipe = config
-    data_summary = _make_data_summary(
-        train_df, test_df, n_features_selected=_n_features_selected(adapter)
-    )
+    resolved_recipe = config
+    data_summary = _make_data_summary(train_df, test_df)
     meta = VersionMetadata(
         version=version,
         framework=adapter.framework,
@@ -526,7 +519,7 @@ class BehaviourClassifier:
         adapter: BaseAdapter = factory()
 
         if isinstance(adapter, SklearnAdapter):
-            adapter.pipe_ = joblib.load(vd / "model.joblib")
+            adapter.pipeline = joblib.load(vd / "model.joblib")
             return adapter
 
         if isinstance(adapter, TorchAdapter):
@@ -564,12 +557,12 @@ class BehaviourClassifier:
 
 def _n_features_selected(adapter: BaseAdapter) -> int:
     """Number of features after selection, read from the fitted pipeline."""
-    named = adapter.pipe.named_steps
+    named = adapter.pipeline.named_steps
     if "selector" in named:
         return int(named["selector"].get_support().sum())
     if "var_filter" in named:
         return int(named["var_filter"].get_support().sum())
-    return adapter.pipe.n_features_in_
+    return adapter.pipeline.n_features_in_
 
 
 def _eval_split(
@@ -583,7 +576,7 @@ def _eval_split(
     """Evaluate on a data split and save artifacts."""
     y_true = df[ACTUAL].to_numpy()
     x_subset = df.drop([EXPERIMENT, FRAME, ACTUAL]).to_numpy()
-    y_prob = adapter.predict(x_subset, config.batch_size)
+    y_prob = adapter.predict(x_subset)
 
     y_pred = (y_prob > config.pcutoff).astype(int)
 
@@ -610,18 +603,13 @@ def _eval_split(
     return accuracy, f1_behav
 
 
-def _make_data_summary(
-    train_df: pl.DataFrame,
-    test_df: pl.DataFrame,
-    n_features_selected: int,
-) -> DataSummary:
+def _make_data_summary(train_df: pl.DataFrame, test_df: pl.DataFrame) -> DataSummary:
     y_train = train_df[ACTUAL].to_numpy()
     y_test = test_df[ACTUAL].to_numpy()
     n_features = train_df.shape[1] - 3  # experiment, frame, actual
     return DataSummary(
         n_samples=int(train_df.shape[0]) + int(test_df.shape[0]),
         n_features=n_features,
-        n_features_selected=n_features_selected,
         n_train=int(train_df.shape[0]),
         n_test=int(test_df.shape[0]),
         train_pos_ratio=round(float(np.mean(y_train)), 4),

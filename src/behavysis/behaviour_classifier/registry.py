@@ -12,12 +12,11 @@ are passed straight through to ``GridSearchCV``.
 
 from collections.abc import Callable
 
-import numpy as np
 from imblearn.over_sampling import RandomOverSampler
 from imblearn.pipeline import Pipeline as ImbPipeline
 from imblearn.under_sampling import RandomUnderSampler
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.feature_selection import SelectFromModel, VarianceThreshold
+from sklearn.feature_selection import VarianceThreshold
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import MinMaxScaler
 from xgboost import XGBClassifier
@@ -39,20 +38,20 @@ def _feature_selection_steps() -> list[tuple[str, object]]:
             "var_filter",
             VarianceThreshold(),
         ),
-        (
-            "selector",
-            SelectFromModel(
-                RandomForestClassifier(
-                    n_estimators=200,
-                    max_depth=8,
-                    random_state=42,
-                    n_jobs=-1,
-                    verbose=1,
-                ),
-                threshold=-np.inf,
-                max_features=200,
-            ),
-        ),
+        # (
+        #     "selector",
+        #     SelectFromModel(
+        #         RandomForestClassifier(
+        #             n_estimators=200,
+        #             max_depth=8,
+        #             random_state=42,
+        #             n_jobs=-1,
+        #             verbose=1,
+        #         ),
+        #         threshold=-np.inf,
+        #         max_features=200,
+        #     ),
+        # ),
     ]
 
 

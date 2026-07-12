@@ -63,7 +63,6 @@ class DataSummary(BaseModel):
 
     n_samples: int
     n_features: int
-    n_features_selected: int
     n_train: int
     n_test: int
     train_pos_ratio: float

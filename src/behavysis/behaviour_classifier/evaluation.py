@@ -78,27 +78,15 @@ def eval_metrics_pcutoffs(y_true: np.ndarray, y_prob: np.ndarray) -> Figure:
     return fig
 
 
-def eval_logc(y_true: np.ndarray, y_prob: np.ndarray) -> Figure:
-    """Plot logistic curve of predicted probabilities vs true labels.
-
-    Parameters
-    ----------
-    y_true : np.ndarray
-        True labels.
-    y_prob : np.ndarray
-        Predicted probabilities.
-
-    Returns:
-    -------
-    Figure
-        Matplotlib figure with logistic curve.
-    """
+def eval_logc(y_true: np.ndarray, y_prob: np.ndarray, pcutoff: float) -> Figure:
+    """Plot logistic curve of predicted probabilities vs true labels."""
+    rng = np.random.default_rng()
     y_eval = pd.DataFrame(
         {
             "y_true": y_true,
             "y_prob": y_prob,
-            "y_pred": y_prob > 0.4,
-            "y_true_jitter": y_true + (0.2 * (np.random.rand(len(y_prob)) - 0.5)),
+            "y_pred": y_prob > pcutoff,
+            "y_true_jitter": y_true + (0.2 * (rng.random(len(y_prob)) - 0.5)),
         },
     )
     fig, ax = plt.subplots(figsize=(10, 7))
@@ -145,32 +133,7 @@ def save_evaluation_results(
     name: str,
     index_ls: list[np.ndarray],
 ) -> tuple[pd.DataFrame, dict, Figure, Figure, Figure]:
-    """Generate and save evaluation results.
-
-    Parameters
-    ----------
-    y_true : np.ndarray
-        True labels.
-    y_prob : np.ndarray
-        Predicted probabilities.
-    y_pred : np.ndarray
-        Predicted labels.
-    behaviour_name : str
-        Name of the behaviour.
-    pcutoff : float
-        Probability cutoff used.
-    eval_dir : Path
-        Directory for evaluation outputs.
-    name : str
-        Name for output files (e.g., "train", "test").
-    index_ls : list[np.ndarray]
-        List of index arrays for each dataframe.
-
-    Returns:
-    -------
-    tuple
-        (eval_df, report_dict, conf_matr_fig, pcutoffs_fig, logc_fig)
-    """
+    """Generate and save evaluation results."""
     # Build evaluation dataframe
     index = pd.Index(np.arange(np.concatenate(index_ls).shape[0]), name="frame")
     columns = pd.MultiIndex.from_tuples(
@@ -187,7 +150,7 @@ def save_evaluation_results(
     report_dict = eval_report(y_true, y_pred)
     conf_matr_fig = eval_conf_matr(y_true, y_pred)
     pcutoffs_fig = eval_metrics_pcutoffs(y_true, y_prob)
-    logc_fig = eval_logc(y_true, y_prob)
+    logc_fig = eval_logc(y_true, y_prob, pcutoff)
 
     # Save outputs
     eval_dir.mkdir(parents=True, exist_ok=True)
@@ -211,19 +174,7 @@ def save_feature_importance(
     *,
     top_n: int = 30,
 ) -> None:
-    """Save feature importance bar chart.
-
-    Parameters
-    ----------
-    feature_names : list[str]
-        Names of features in the same order as importances.
-    importances : np.ndarray
-        Feature importance values (must be non-negative).
-    eval_dir : Path
-        Directory to save the plot.
-    top_n : int
-        Number of top features to show.
-    """
+    """Save feature importance bar chart."""
     n = min(top_n, len(importances))
     if n == 0:
         return
@@ -252,20 +203,7 @@ def save_feature_report(
     eval_dir: Path,
     n_features_total: int | None = None,
 ) -> None:
-    """Save feature count and importance summary as JSON.
-
-    Parameters
-    ----------
-    feature_names : list[str]
-        Names of features used by the model (after feature selection).
-    importances : np.ndarray | None
-        Feature importance values, or None if not available.
-    eval_dir : Path
-        Directory to save the report.
-    n_features_total : int | None
-        Total number of extracted features before selection. Defaults to the
-        number of used features when not provided.
-    """
+    """Save feature count and importance summary as JSON."""
     n_used = len(feature_names)
     report: dict = {
         "n_features_total": (
