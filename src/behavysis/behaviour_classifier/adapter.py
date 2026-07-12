@@ -119,7 +119,7 @@ class SklearnAdapter(BaseAdapter):
             config.hyperparameters,
             scoring="f1",
             cv=config.val_cv_folds,
-            n_jobs=-1,
+            n_jobs=1,
         ).fit(x, y)
 
         return pd.DataFrame(columns=pd.Index(["loss", "vloss"]))
