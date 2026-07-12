@@ -2,6 +2,7 @@
 
 import joblib
 import numpy as np
+import polars as pl
 import torch
 from sklearn.linear_model import LogisticRegression
 
@@ -15,6 +16,21 @@ def _recipe(**kw) -> TrainingRecipe:
     base = dict(model_type="logreg")
     base.update(kw)
     return TrainingRecipe(**base)
+
+
+def _df(x: np.ndarray, y: np.ndarray, name: str = "test") -> pl.DataFrame:
+    """Build a training DataFrame from numpy arrays."""
+    cols = [f"feat_{i}" for i in range(x.shape[1])]
+    return pl.DataFrame(x, schema=cols).with_columns(
+        pl.lit(name).alias("experiment"),
+        pl.int_range(x.shape[0]).alias("frame"),
+        pl.Series("actual", y),
+    )
+
+
+def _mask(df: pl.DataFrame) -> np.ndarray:
+    """Full train mask (all rows in training)."""
+    return np.ones(len(df), dtype=bool)
 
 
 class TestFeatureSelection:
@@ -53,7 +69,8 @@ class TestSklearnAdapterMask:
         x[:, 1] = 0.0  # constant column dropped by selection
         y = rng.integers(0, 2, 60)
         adapter = SklearnAdapter(LogisticRegression)
-        adapter.fit([x], [y], [np.arange(60)], _recipe())
+        df = _df(x, y)
+        adapter.fit(df, _mask(df), _recipe())
         assert 1 not in adapter.feature_mask
         prob = adapter.predict(x)
         assert prob.shape == (60,)
@@ -63,7 +80,8 @@ class TestSklearnAdapterMask:
         x = rng.standard_normal((60, 6))
         y = rng.integers(0, 2, 60)
         adapter = SklearnAdapter(LogisticRegression)
-        adapter.fit([x], [y], [np.arange(60)], _recipe())
+        df = _df(x, y)
+        adapter.fit(df, _mask(df), _recipe())
         adapter.save(tmp_path)
         loaded = joblib.load(tmp_path / "model.joblib")
         np.testing.assert_array_equal(loaded.feature_mask, adapter.feature_mask)
@@ -87,7 +105,8 @@ class TestSklearnAdapterGridSearch:
                 "random_state": [42],
             }
         )
-        adapter.fit([x], [y], [np.arange(80)], recipe)
+        df = _df(x, y)
+        adapter.fit(df, _mask(df), recipe)
 
         assert adapter.resolved_hyperparameters is not None
         assert "n_estimators" in adapter.resolved_hyperparameters
@@ -102,7 +121,8 @@ class TestSklearnAdapterGridSearch:
         recipe = _recipe(
             hyperparameters={"C": [1.0], "max_iter": [500], "random_state": [99]}
         )
-        adapter.fit([x], [y], [np.arange(40)], recipe)
+        df = _df(x, y)
+        adapter.fit(df, _mask(df), recipe)
 
         rhp = adapter.resolved_hyperparameters
         assert rhp is not None
@@ -126,7 +146,8 @@ class TestTorchAdapterMask:
         x[:, 3] = 0.0  # constant → dropped
         y = rng.integers(0, 2, 60).astype(np.float32)
         adapter = TorchAdapter(lambda nf: DNN1(nf, window_frames=0))
-        adapter.fit([x], [y], [np.arange(60)], _recipe(epochs=1, batch_size=16))
+        df = _df(x, y)
+        adapter.fit(df, _mask(df), _recipe(epochs=1, batch_size=16))
         assert 3 not in adapter.feature_mask
         adapter.save(tmp_path)
 

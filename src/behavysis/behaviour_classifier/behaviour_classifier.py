@@ -22,7 +22,9 @@ from loguru import logger
 from sklearn.metrics import classification_report
 
 from behavysis.constants import (
+    ACTUAL,
     BEHAVIOUR,
+    EXPERIMENT,
     FRAME,
     PRED,
     PROB,
@@ -43,13 +45,7 @@ from .config import (
     TrainingSummary,
     VersionMetadata,
 )
-from .data import (
-    align_features_labels,
-    load_feature_names,
-    load_features,
-    load_labels,
-    stratified_split_by_video,
-)
+from .data import load_feature_names, load_training_data, stratified_split_by_video
 from .evaluation import (
     save_evaluation_results,
     save_feature_importance,
@@ -134,28 +130,22 @@ def train(clf_dir: Path, model_type: str) -> str:
     )
 
     # 2. Load and align data
-    x_ls, x_names = load_features(features_dir(clf_dir))
-    y_ls, y_names = load_labels(labels_dir(clf_dir), contract.behaviour_name)
-    x_ls, y_ls, exp_names = align_features_labels(
-        x_ls,
-        y_ls,
-        x_names,
-        y_names,
+    df = load_training_data(
+        features_dir(clf_dir),
+        labels_dir(clf_dir),
+        contract.behaviour_name,
     )
 
-    # 3. Two-way split: test (grouped by video), rest is train
-    train_idx, test_idx = _two_way_split(
-        x_ls,
-        y_ls,
-        config.test_split,
-        config.split_seed,
+    # 3. Two-way split: test (grouped by experiment), rest is train
+    train_mask, test_mask = stratified_split_by_video(
+        df, config.test_split, config.split_seed
     )
 
     # 4. Train
     start = datetime.now(UTC)
     factory, _ = MODEL_REGISTRY[model_type]
     adapter: BaseAdapter = factory()
-    history = adapter.fit(x_ls, y_ls, train_idx, config)
+    history = adapter.fit(df, train_mask, config)
     duration = (datetime.now(UTC) - start).total_seconds()
 
     # 5. Generate version & create output dir
@@ -169,9 +159,8 @@ def train(clf_dir: Path, model_type: str) -> str:
     # 7. Evaluate both splits
     train_acc, train_f1 = _eval_split(
         adapter,
-        x_ls,
-        y_ls,
-        train_idx,
+        df,
+        train_mask,
         config,
         contract.behaviour_name,
         ed,
@@ -179,9 +168,8 @@ def train(clf_dir: Path, model_type: str) -> str:
     )
     test_acc, test_f1 = _eval_split(
         adapter,
-        x_ls,
-        y_ls,
-        test_idx,
+        df,
+        test_mask,
         config,
         contract.behaviour_name,
         ed,
@@ -203,10 +191,9 @@ def train(clf_dir: Path, model_type: str) -> str:
     else:
         resolved_recipe = config
     data_summary = _make_data_summary(
-        x_ls,
-        y_ls,
-        train_idx,
-        test_idx,
+        df,
+        train_mask,
+        test_mask,
         n_features_selected=adapter.feature_mask.shape[0],
     )
     meta = VersionMetadata(
@@ -227,14 +214,14 @@ def train(clf_dir: Path, model_type: str) -> str:
     meta.write_yaml(metadata_fp(clf_dir, model_type, version))
 
     # 11. Dataset manifest
-    train_ids = [exp_names[i] for i in range(len(exp_names)) if len(train_idx[i]) > 0]
-    test_ids = [exp_names[i] for i in range(len(exp_names)) if len(test_idx[i]) > 0]
+    train_ids = sorted(df.filter(train_mask)[EXPERIMENT].unique().to_list())
+    test_ids = sorted(df.filter(test_mask)[EXPERIMENT].unique().to_list())
     manifest = DatasetManifest(
         version=version,
         train_ids=train_ids,
         test_ids=test_ids,
-        n_train=sum(len(idx) for idx in train_idx),
-        n_test=sum(len(idx) for idx in test_idx),
+        n_train=int(train_mask.sum()),
+        n_test=int(test_mask.sum()),
     )
     manifest.write_yaml(dataset_manifest_fp(clf_dir, model_type, version))
 
@@ -583,7 +570,6 @@ class BehaviourClassifier:
         x = features_df.drop(FRAME).to_numpy()
         y_prob = self.adapter.predict(
             x,
-            np.arange(x.shape[0]),
             self.config.batch_size,
         )
         y_pred = (y_prob > self.config.pcutoff).astype(int)
@@ -603,23 +589,18 @@ class BehaviourClassifier:
 
 def _eval_split(
     adapter: BaseAdapter,
-    x_ls: list[np.ndarray],
-    y_ls: list[np.ndarray],
-    index_ls: list[np.ndarray],
+    df: pl.DataFrame,
+    mask: np.ndarray,
     config: TrainingRecipe,
     behaviour_name: str,
     eval_d: Path,
     name: str,
 ) -> tuple[float | None, float | None]:
     """Evaluate on a data split and save artifacts."""
-    y_true_ls = [y[idx] for y, idx in zip(y_ls, index_ls, strict=True)]
-    y_prob_ls = [
-        adapter.predict(x, idx, config.batch_size)
-        for x, idx in zip(x_ls, index_ls, strict=True)
-    ]
+    y_true = df.filter(mask)[ACTUAL].to_numpy()
+    x_subset = df.filter(mask).drop([EXPERIMENT, FRAME, ACTUAL]).to_numpy()
+    y_prob = adapter.predict(x_subset, config.batch_size)
 
-    y_true = np.concatenate(y_true_ls)
-    y_prob = np.concatenate(y_prob_ls)
     y_pred = (y_prob > config.pcutoff).astype(int)
 
     report = classification_report(
@@ -639,27 +620,27 @@ def _eval_split(
         config.pcutoff,
         eval_d,
         name,
-        index_ls,
+        [np.arange(len(y_true))],
     )
 
     return accuracy, f1_behav
 
 
 def _make_data_summary(
-    x_ls: list[np.ndarray],
-    y_ls: list[np.ndarray],
-    train_idx: list[np.ndarray],
-    test_idx: list[np.ndarray],
+    df: pl.DataFrame,
+    train_mask: np.ndarray,
+    test_mask: np.ndarray,
     n_features_selected: int,
 ) -> DataSummary:
-    y_train = np.concatenate([y[idx] for y, idx in zip(y_ls, train_idx, strict=True)])
-    y_test = np.concatenate([y[idx] for y, idx in zip(y_ls, test_idx, strict=True)])
+    y_train = df.filter(train_mask)[ACTUAL].to_numpy()
+    y_test = df.filter(test_mask)[ACTUAL].to_numpy()
+    n_features = len(df.columns) - 3  # experiment, frame, actual
     return DataSummary(
-        n_samples=sum(x.shape[0] for x in x_ls),
-        n_features=x_ls[0].shape[1] if x_ls else 0,
+        n_samples=len(df),
+        n_features=n_features,
         n_features_selected=n_features_selected,
-        n_train=sum(len(idx) for idx in train_idx),
-        n_test=sum(len(idx) for idx in test_idx),
+        n_train=int(train_mask.sum()),
+        n_test=int(test_mask.sum()),
         train_pos_ratio=round(float(np.mean(y_train)), 4),
         test_pos_ratio=round(float(np.mean(y_test)), 4),
     )
@@ -705,13 +686,3 @@ def _run_diagnostics(
     if importances is not None:
         save_feature_importance(feature_names, importances, eval_d)
         save_feature_report(feature_names, importances, eval_d, n_features_total)
-
-
-def _two_way_split(
-    x_ls: list[np.ndarray],
-    y_ls: list[np.ndarray],
-    test_size: float,
-    seed: int,
-) -> tuple[list[np.ndarray], list[np.ndarray]]:
-    """Split into train/test, respecting video groups for test."""
-    return stratified_split_by_video(x_ls, y_ls, test_size, seed)

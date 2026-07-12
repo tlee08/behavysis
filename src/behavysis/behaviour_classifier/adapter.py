@@ -15,7 +15,6 @@ Serialisation:
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar
 
 import joblib
@@ -23,17 +22,23 @@ import numpy as np
 import pandas as pd
 import torch
 from loguru import logger
-from sklearn.base import BaseEstimator
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_selection import VarianceThreshold
 from sklearn.model_selection import GridSearchCV
 from sklearn.preprocessing import MinMaxScaler
 
-from behavysis.constants import Array1D, Array2D
+from behavysis.constants import ACTUAL, EXPERIMENT, FRAME, Array1D, Array2D
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
+    import polars as pl
+    from sklearn.base import BaseEstimator
+
     from .config import TrainingRecipe
     from .torch.base import TorchModel
+
+_META_COLS = [EXPERIMENT, FRAME, ACTUAL]
 
 
 def select_features(
@@ -78,22 +83,23 @@ class BaseAdapter(ABC):
     @abstractmethod
     def fit(
         self,
-        x_ls: list[Array2D],
-        y_ls: list[Array1D],
-        train_idx: list[Array1D],
+        df: pl.DataFrame,
+        train_mask: np.ndarray,
         config: TrainingRecipe,
     ) -> pd.DataFrame:
-        """Train on train_idx subsets. Returns per-epoch history (empty for sklearn)."""
+        """Train on rows where ``train_mask`` is True.
+
+        Returns per-epoch history (empty for sklearn).
+        """
         ...
 
     @abstractmethod
     def predict(
         self,
         x: Array2D,
-        index: Array1D | None = None,
         batch_size: int = 256,
     ) -> np.ndarray:
-        """Return predicted probabilities for indexed rows."""
+        """Return predicted probabilities for the given feature array."""
         ...
 
     @abstractmethod
@@ -129,17 +135,12 @@ class SklearnAdapter(BaseAdapter):
 
     def fit(
         self,
-        x_ls: list[Array2D],
-        y_ls: list[Array1D],
-        train_idx: list[Array1D],
+        df: pl.DataFrame,
+        train_mask: np.ndarray,
         config: TrainingRecipe,
     ) -> pd.DataFrame:
-        x = np.concatenate(
-            [x[idx] for x, idx in zip(x_ls, train_idx, strict=True)], axis=0
-        )
-        y = np.concatenate(
-            [y[idx] for y, idx in zip(y_ls, train_idx, strict=True)], axis=0
-        )
+        x = df.filter(train_mask).drop(_META_COLS).to_numpy()
+        y = df.filter(train_mask)[ACTUAL].to_numpy()
         x = self.scaler.fit_transform(x)
         self.feature_mask = select_features(x, y, config)
         x = x[:, self.feature_mask]
@@ -154,12 +155,10 @@ class SklearnAdapter(BaseAdapter):
     def predict(
         self,
         x: np.ndarray,
-        index: np.ndarray | None = None,
         batch_size: int = 256,
     ) -> np.ndarray:
         _ = batch_size
-        idx = index if index is not None else np.arange(x.shape[0])
-        x = self.scaler.transform(x[idx])
+        x = self.scaler.transform(x)
         x = x[:, self.feature_mask]
         return self.estimator.predict_proba(x)[:, 1]
 
@@ -189,17 +188,12 @@ class TorchAdapter(BaseAdapter):
 
     def fit(
         self,
-        x_ls: list[Array2D],
-        y_ls: list[Array1D],
-        train_idx: list[Array1D],
+        df: pl.DataFrame,
+        train_mask: np.ndarray,
         config: TrainingRecipe,
     ) -> pd.DataFrame:
-        x = np.concatenate(
-            [x[idx] for x, idx in zip(x_ls, train_idx, strict=True)], axis=0
-        )
-        y = np.concatenate(
-            [y[idx] for y, idx in zip(y_ls, train_idx, strict=True)], axis=0
-        )
+        x = df.filter(train_mask).drop(_META_COLS).to_numpy()
+        y = df.filter(train_mask)[ACTUAL].to_numpy()
 
         self.scaler = MinMaxScaler()
         x = self.scaler.fit_transform(x)
@@ -219,15 +213,13 @@ class TorchAdapter(BaseAdapter):
     def predict(
         self,
         x: Array2D,
-        index: Array1D | None = None,
         batch_size: int = 256,
     ) -> np.ndarray:
         if self.scaler is None or self.model is None or self.feature_mask is None:
             msg = "Model not fitted. Call fit() or load_state() first."
             raise RuntimeError(msg)
         x = self.scaler.transform(x)[:, self.feature_mask]
-        idx = index if index is not None else np.arange(x.shape[0])
-        return self.model.predict(x, idx, batch_size=batch_size)
+        return self.model.predict(x, None, batch_size=batch_size)
 
     def save(self, version_dir: Path) -> None:
         if self.model is None or self.scaler is None or self.feature_mask is None:

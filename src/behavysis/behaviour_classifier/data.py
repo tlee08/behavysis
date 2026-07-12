@@ -3,29 +3,27 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import numpy as np
 import polars as pl
 from sklearn.model_selection import StratifiedGroupKFold
 
-from behavysis.constants import FALSE_POS, UNSURE
-from behavysis.utils.io_utils import read_files_parallel
+from behavysis.constants import (
+    ACTUAL,
+    BEHAVIOUR,
+    EXPERIMENT,
+    FALSE_POS,
+    FRAME,
+    UNSURE,
+    Array1D,
+)
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
-def load_features(x_dir: Path) -> tuple[list[np.ndarray], list[str]]:
-    """Load feature files as numpy arrays.
-
-    Returns:
-        (x_ls, names_ls) — per-experiment arrays and experiment names.
-    """
-    fp_ls = sorted(x_dir.iterdir())
-    names = [fp.stem for fp in fp_ls]
-
-    def _read(fp: Path) -> np.ndarray:
-        return pl.read_parquet(fp).to_pandas().set_index("frame").to_numpy()
-
-    x_ls = read_files_parallel(fp_ls, _read)
-    return x_ls, names
+_META_COLS = [EXPERIMENT, FRAME, ACTUAL]
 
 
 def load_feature_names(x_dir: Path) -> list[str]:
@@ -36,98 +34,100 @@ def load_feature_names(x_dir: Path) -> list[str]:
     fp_ls = sorted(x_dir.iterdir())
     if not fp_ls:
         return []
-    df = pl.read_parquet(fp_ls[0])
-    return [c for c in df.columns if c != "frame"]
+    return [c for c in pl.read_parquet(fp_ls[0]).columns if c != FRAME]
 
 
-def load_labels(
+def load_training_data(
+    x_dir: Path,
     y_dir: Path,
     behaviour_name: str,
-) -> tuple[list[np.ndarray], list[str]]:
-    """Load scored behaviour labels as per-experiment numpy arrays.
+) -> pl.DataFrame:
+    """Load features and scored labels, aligned by frame per experiment.
+
+    Each experiment's features parquet is inner-joined with its scored
+    labels parquet on ``frame``, guaranteeing row-for-row alignment.
+    The result is a single DataFrame with columns:
+
+    - ``experiment`` — experiment name (from parquet filename stem)
+    - ``frame`` — frame number
+    - ``actual`` — label (unsure replaced with false positive)
+    - one column per feature (Float64)
+
+    Parameters
+    ----------
+    x_dir : Path
+        Directory of feature parquet files (``5_features_extracted/``).
+    y_dir : Path
+        Directory of scored behaviour parquet files (``7_behaviour_scored/``).
+    behaviour_name : str
+        Target behaviour to extract as the ``actual`` column.
 
     Returns:
-        (y_ls, names_ls) — aligned with features.
+    -------
+    pl.DataFrame
+        Aligned training data with metadata + feature columns.
     """
-    fp_ls = sorted(y_dir.iterdir())
-    names = [fp.stem for fp in fp_ls]
+    x_fps = {fp.stem: fp for fp in sorted(x_dir.iterdir())}
+    y_fps = {fp.stem: fp for fp in sorted(y_dir.iterdir())}
+    common = sorted(set(x_fps) & set(y_fps))
 
-    def _read(fp: Path) -> np.ndarray:
-        df_pl = pl.read_parquet(fp)
-        df_pd = df_pl.to_pandas()
-        id_vars = ["frame", "behaviour"]
-        value_vars = [c for c in df_pd.columns if c not in id_vars]
-        melted = df_pd.melt(
-            id_vars=id_vars,
-            value_vars=value_vars,
-            var_name="outcome",
-            value_name="value",
+    pieces: list[pl.DataFrame] = []
+    for name in common:
+        x_df = pl.read_parquet(x_fps[name])
+
+        y_df = (
+            pl.read_parquet(y_fps[name])
+            .filter(pl.col(BEHAVIOUR) == behaviour_name)
+            .select(FRAME, pl.col(ACTUAL).replace({UNSURE: FALSE_POS}).alias(ACTUAL))
         )
-        pivoted = melted.pivot_table(
-            index="frame",
-            columns=["behaviour", "outcome"],
-            values="value",
-        )
-        pivoted.columns = pivoted.columns.map(
-            lambda x: f"{x[0]}__{x[1]}" if x[1] != "actual" else x[0],
-        )
-        y = pivoted[behaviour_name].replace(UNSURE, FALSE_POS).to_numpy()
-        return y.reshape(-1)
 
-    y_ls = read_files_parallel(fp_ls, _read)
-    return y_ls, names
+        aligned = x_df.join(y_df, on=FRAME, how="inner")
+        if aligned.height == 0:
+            continue
 
+        pieces.append(aligned.with_columns(pl.lit(name).alias(EXPERIMENT)))
 
-def align_features_labels(
-    x_ls: list[np.ndarray],
-    y_ls: list[np.ndarray],
-    x_names: list[str],
-    y_names: list[str],
-) -> tuple[list[np.ndarray], list[np.ndarray], list[str]]:
-    """Align x and y arrays by finding common experiment names.
-
-    Returns filtered (x_ls, y_ls, names).
-    """
-    common = sorted(set(x_names) & set(y_names))
-    x_idx = [x_names.index(n) for n in common]
-    y_idx = [y_names.index(n) for n in common]
-    return [x_ls[i] for i in x_idx], [y_ls[i] for i in y_idx], common
+    return pl.concat(pieces, how="diagonal_relaxed")
 
 
 def stratified_split_by_video(
-    x_ls: list[np.ndarray],
-    y_ls: list[np.ndarray],
+    df: pl.DataFrame,
     test_size: float,
     random_state: int = 42,
-) -> tuple[list[np.ndarray], list[np.ndarray]]:
-    """Split per-video arrays into train/test indices, stratified by label.
+) -> tuple[Array1D, Array1D]:
+    """Split into train/test, grouping rows of the same experiment together.
 
-    Uses StratifiedGroupKFold with each video as a group.
+    Uses ``StratifiedGroupKFold`` with each experiment as a group.
+    Returns flat boolean masks the same length as ``df``.
+
+    Parameters
+    ----------
+    df : pl.DataFrame
+        DataFrame from ``load_training_data`` (must have an ``experiment`` column).
+    test_size : float
+        Fraction of experiments reserved for the test split.
+    random_state : int
+        Seed for reproducible splits.
 
     Returns:
-        (train_idx_per_vid, test_idx_per_vid) — each list of np.ndarray row indices.
+    -------
+    train_mask : Array1D
+        Boolean mask, ``True`` for training rows.
+    test_mask : Array1D
+        Boolean mask, ``True`` for test rows.
     """
-    groups = np.concatenate([np.full(len(x), i) for i, x in enumerate(x_ls)])
-    X = np.concatenate(x_ls, axis=0)
-    y = np.concatenate(y_ls, axis=0)
+    x = df.drop(_META_COLS).to_numpy()
+    y = df[ACTUAL].to_numpy()
+    groups = df[EXPERIMENT].to_physical().to_numpy()
 
     n_splits = max(2, int(1 / test_size))
     sgkf = StratifiedGroupKFold(
         n_splits=n_splits, shuffle=True, random_state=random_state
     )
-    train_idx, test_idx = next(sgkf.split(X, y, groups))
+    train_idx, test_idx = next(sgkf.split(x, y, groups))
 
-    offsets = np.cumsum([0] + [x.shape[0] for x in x_ls[:-1]])
-    train_per_vid = [
-        train_idx[
-            (train_idx >= offsets[i]) & (train_idx < offsets[i] + x_ls[i].shape[0])
-        ]
-        - offsets[i]
-        for i in range(len(x_ls))
-    ]
-    test_per_vid = [
-        test_idx[(test_idx >= offsets[i]) & (test_idx < offsets[i] + x_ls[i].shape[0])]
-        - offsets[i]
-        for i in range(len(x_ls))
-    ]
-    return train_per_vid, test_per_vid
+    train_mask = np.zeros(len(df), dtype=bool)
+    test_mask = np.zeros(len(df), dtype=bool)
+    train_mask[train_idx] = True
+    test_mask[test_idx] = True
+    return train_mask, test_mask

@@ -19,7 +19,7 @@ from .config import (
     TrainingRecipe,
     VersionMetadata,
 )
-from .data import load_feature_names, load_features, load_labels
+from .data import load_feature_names, load_training_data, stratified_split_by_video
 from .registry import MODEL_REGISTRY
 
 __all__ = [
@@ -34,12 +34,12 @@ __all__ = [
     "TrainingRecipe",
     "VersionMetadata",
     "load_feature_names",
-    "load_features",
-    "load_labels",
+    "load_training_data",
     "promote",
     "promote_to_best",
     "promote_to_production",
     "regenerate_leaderboard",
+    "stratified_split_by_video",
     "train",
     "train_all_models",
 ]

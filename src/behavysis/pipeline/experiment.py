@@ -40,7 +40,6 @@ from behavysis.funcs import (
 from behavysis.models import BoutStruct, ExperimentConfig, ExperimentMetadata
 from behavysis.schemas import (
     BEHAVIOUR_PREDICTED_SCHEMA,
-    BEHAVIOUR_SCORED_BASE,
     KEYPOINTS_SCHEMA,
     read_df,
     write_df,
@@ -289,10 +288,7 @@ class Experiment:
     @trace
     def analyse_behaviour(self) -> None:
         """Analyse scored behaviours."""
-        behaviour_df = read_df(
-            self.get_fp(BEHAVIOUR_SCORED_DIR),
-            BEHAVIOUR_SCORED_BASE,
-        )
+        behaviour_df = read_df(self.get_fp(BEHAVIOUR_SCORED_DIR))
         dst_dir = self.root_dir / ANALYSIS_DIR / "analyse_behaviour"
         for result in analyse_behaviour(
             behaviour_df,
