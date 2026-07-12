@@ -106,7 +106,8 @@ class SklearnAdapter(BaseAdapter):
             config.hyperparameters,
             scoring="f1",
             cv=3,
-            n_jobs=-1,
+            n_jobs=1,
+            verbose=1,
         ).fit(x, y)
 
         self.pipeline = gs
