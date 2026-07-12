@@ -11,8 +11,6 @@ from loguru import logger
 from matplotlib.figure import Figure
 from sklearn.metrics import classification_report, confusion_matrix
 
-from behavysis.constants import ACTUAL, PRED, PROB
-
 NIL = "nil"
 BEHAV = "behav"
 LABELS = [NIL, BEHAV]
@@ -104,67 +102,6 @@ def eval_logc(y_true: np.ndarray, y_prob: np.ndarray, pcutoff: float) -> Figure:
     ratios = np.vectorize(lambda i: np.mean(i > y_eval["y_prob"]))(pcutoffs)
     sns.lineplot(x=pcutoffs, y=ratios, ax=ax)
     return fig
-
-
-def save_training_history(history: pd.DataFrame, eval_dir: Path) -> None:
-    """Save training history dataframe and plot.
-
-    Parameters
-    ----------
-    history : pd.DataFrame
-        Training history with loss values.
-    eval_dir : Path
-        Directory for evaluation outputs.
-    """
-    history.to_parquet(eval_dir / "history.parquet")
-    fig, ax = plt.subplots(figsize=(10, 7))
-    sns.lineplot(data=history, ax=ax)
-    fig.savefig(eval_dir / "history.png")
-    plt.close(fig)
-
-
-def save_evaluation_results(
-    y_true: np.ndarray,
-    y_prob: np.ndarray,
-    y_pred: np.ndarray,
-    behaviour_name: str,
-    pcutoff: float,
-    eval_dir: Path,
-    name: str,
-    index_ls: list[np.ndarray],
-) -> tuple[pd.DataFrame, dict, Figure, Figure, Figure]:
-    """Generate and save evaluation results."""
-    # Build evaluation dataframe
-    index = pd.Index(np.arange(np.concatenate(index_ls).shape[0]), name="frame")
-    columns = pd.MultiIndex.from_tuples(
-        [(behaviour_name, PROB), (behaviour_name, PRED), (behaviour_name, ACTUAL)],
-        names=["behaviour", "outcomes"],
-    )
-    eval_df = pd.DataFrame(
-        np.column_stack([y_prob, y_pred, y_true]),
-        index=index,
-        columns=columns,
-    )
-
-    # Generate reports
-    report_dict = eval_report(y_true, y_pred)
-    conf_matr_fig = eval_conf_matr(y_true, y_pred)
-    pcutoffs_fig = eval_metrics_pcutoffs(y_true, y_prob)
-    logc_fig = eval_logc(y_true, y_prob, pcutoff)
-
-    # Save outputs
-    eval_dir.mkdir(parents=True, exist_ok=True)
-    eval_df.to_parquet(eval_dir / f"{name}_eval.parquet")
-    (eval_dir / f"{name}_report.json").write_text(json.dumps(report_dict, indent=2))
-    conf_matr_fig.savefig(eval_dir / f"{name}_confm.png")
-    pcutoffs_fig.savefig(eval_dir / f"{name}_pcutoffs.png")
-    logc_fig.savefig(eval_dir / f"{name}_logc.png")
-
-    plt.close(conf_matr_fig)
-    plt.close(pcutoffs_fig)
-    plt.close(logc_fig)
-
-    return eval_df, report_dict, conf_matr_fig, pcutoffs_fig, logc_fig
 
 
 def save_feature_importance(

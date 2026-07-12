@@ -5,10 +5,11 @@ import polars as pl
 from loguru import logger
 
 from behavysis.behaviour_classifier import (
-    BehaviourClassifier,
     ClassifierContract,
+    predict_df,
 )
-from behavysis.constants import PRED, PROB
+from behavysis.behaviour_classifier.storage import ClassifierFp
+from behavysis.constants import PRED
 from behavysis.models import (
     ExperimentConfig,
     ExperimentMetadata,
@@ -34,25 +35,27 @@ def classify_behaviour(
 
     behaviour_df_ls = []
     for model_config in model_config_ls:
-        behaviour_model = BehaviourClassifier.load(model_config.clf_fp.parent)
-        _validate_feature_contract(feat_cfg, behaviour_model.contract)
+        clf_proj = ClassifierFp(model_config.clf_fp)
+        contract = ClassifierContract.read_yaml(clf_proj.contract_fp())
+        _validate_feature_contract(feat_cfg, contract)
 
-        behaviour_name = behaviour_model.contract.behaviour_name
-        pcutoff = model_config.pcutoff or behaviour_model.config.pcutoff
         min_window_secs = model_config.min_empty_window_secs
         min_window_frames = int(np.round(min_window_secs * metadata.require_fps()))
 
-        behaviour_df_i = behaviour_model.predict(features_df)
-
-        df_pl = behaviour_df_i.with_columns(
-            (pl.col(PROB) > pcutoff).cast(pl.Int64).alias(PRED),
-        )
-        df_pl = df_pl.with_columns(
-            merge_bouts(df_pl.select(PRED).to_series(), min_window_frames).alias(PRED),
+        behaviour_df_i = predict_df(
+            model_config.clf_fp,
+            features_df,
+            pcutoff=model_config.pcutoff,
         )
 
-        behaviour_df_ls.append(df_pl)
-        logger.info("Completed {} classification.", behaviour_name)
+        behaviour_df_i = behaviour_df_i.with_columns(
+            merge_bouts(
+                behaviour_df_i.select(PRED).to_series(), min_window_frames
+            ).alias(PRED),
+        )
+
+        behaviour_df_ls.append(behaviour_df_i)
+        logger.info("Completed {} classification.", contract.behaviour_name)
 
     if len(behaviour_df_ls) == 0:
         return pl.DataFrame(schema=BEHAVIOUR_PREDICTED_SCHEMA)

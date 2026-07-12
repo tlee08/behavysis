@@ -11,11 +11,8 @@ with app.setup:
 
     from behavysis import Project
     from behavysis.behaviour_classifier import (
-        VersionMetadata,
-        promote_to_production,
-        regenerate_leaderboard,
+        ClassifierContract,
         train_all_models,
-        set_contract,
     )
     from behavysis.behaviour_classifier import storage as clf_storage
     from behavysis.constants import FEATURES_EXTRACTED_DIR
@@ -40,13 +37,20 @@ def _():
             5_features_extracted/   # features (from a processed behavysis project)
             7_behaviour_scored/     # labels  (from BORIS, or a scored project)
         contract.yaml               # shared behaviour + feature contract
-        {model_type}/
-            config.yaml             # authored TrainingRecipe (hyperparameters)
-        leaderboard.yaml            # cross-model comparison
-        production.yaml             # deployed pointer (model_type + version)
+        classifiers/
+            rf/
+                001/
+                    config.yaml     # TrainingRecipe (hyperparameters)
+                    model.joblib    # fitted sklearn Pipeline
+                    evaluation/     # plots, eval parquets
+                002/
+                    ...
+            logreg/
+                001/
+                    ...
     ```
 
-    This notebook: **assemble training data → train → compare → promote**.
+    This notebook: **assemble training data → train → inspect**.
     """)
     return
 
@@ -161,19 +165,27 @@ def _(behaviour_name, boris_dir, clf_dir, overwrite, proj):
 @app.cell
 def _():
     mo.md("""
-    ## 3. Train
+    ## 3. Write contract and train
 
-    `train_all_models` writes the shared `contract.yaml` (behaviour + feature
-    contract) and a default `TrainingRecipe` (`config.yaml`) for every
-    registered model type that lacks one, then trains them all. To tune
-    hyperparameters, edit the written `config.yaml` and re-run, or author one
-    explicitly and train a single model.
+    `train_all_models` writes the shared `contract.yaml` if missing, then
+    trains every registered model type in a new iteration. Each iteration
+    gets a numbered directory with its own `config.yaml`, `model.joblib`,
+    and `evaluation/` folder.
     """)
     return
 
+
 @app.cell
 def _(clf_dir, behaviour_name, individuals, bodyparts):
-    set_contract(clf_dir, behaviour_name, individuals, bodyparts)
+    cofp = clf_storage.contract_fp(clf_dir)
+    if not cofp.exists():
+        ClassifierContract(
+            behaviour_name=behaviour_name,
+            individuals=individuals,
+            bodyparts=bodyparts,
+        ).write_yaml(cofp)
+    return
+
 
 @app.cell
 def _(behaviour_name, bodyparts, clf_dir, feats_dst, individuals, labels_dst):
@@ -184,120 +196,42 @@ def _(behaviour_name, bodyparts, clf_dir, feats_dst, individuals, labels_dst):
         msg = f"No labels in {labels_dst}"
         raise FileNotFoundError(msg)
 
-    versions = train_all_models(clf_dir)
-    versions
-    return (versions,)
+    iterations = train_all_models(clf_dir)
+    iterations
+    return (iterations,)
 
 
 @app.cell
 def _():
     mo.md("""
-    ## 4. Evaluate
+    ## 4. Inspect evaluation artifacts
 
-    Training writes rich per-version artifacts to each version's
-    `evaluation/` folder — inspect these before trusting a model:
+    Each iteration's `evaluation/` folder contains:
 
     | File | What it tells you |
     | --- | --- |
-    | `{train,val,test}_report.json` | precision / recall / f1 per split |
-    | `test_confm.png` | confusion matrix on the held-out test set |
-    | `test_pcutoffs.png` | metrics vs probability cutoff — use to pick `pcutoff` |
-    | `test_logc.png` | predicted-probability distribution |
-    | `feature_importance.png` | top features by importance (sklearn) |
-    | `feature_report.json` | `n_features_total` vs used after selection |
-    | `history.png` | train/val loss curve (torch only) |
+    | `train_eval.parquet` | Raw eval: experiment, frame, y_true, y_prob, y_pred |
+    | `test_eval.parquet` | Same for the held-out test split |
+    | `feature_importance.png` | Top features by importance |
+    | `feature_report.json` | Feature counts before/after selection |
 
-    The cell below rebuilds the leaderboard and prints, per model, the
-    test F1, accuracy, and `overfit_ratio` (train F1 − test F1; smaller is
-    better) alongside the path to each model's evaluation artifacts.
+    Iterations are numbered — pick the best one by inspecting test_eval.parquet
+    metrics, or add your own analysis over the raw eval data.
     """)
-    return
-
-
-@app.cell
-def _(clf_dir, versions):
-    _ = versions  # rebuild after training
-    board = regenerate_leaderboard(clf_dir)
-
-    _rows = []
-    for _entry in board.rankings:
-        _version = _entry.version
-        _eval_dir = clf_storage.eval_dir(clf_dir, _entry.model_type, _version)
-        _meta = VersionMetadata.read_yaml(
-            clf_storage.metadata_fp(clf_dir, _entry.model_type, _version)
-        )
-        _rows.append(
-            {
-                "model_type": _entry.model_type,
-                "version": _version,
-                "test_f1": _entry.test_f1_behav,
-                "test_acc": _entry.test_accuracy,
-                "overfit_ratio": _entry.overfit_ratio,
-                "n_features": _meta.data.n_features,
-                "n_features_selected": _meta.data.n_features_selected,
-                "evaluation_dir": str(_eval_dir),
-            }
-        )
-    _rows
-    return (board,)
-
-
-@app.cell
-def _():
-    mo.md("""
-    ## 5. Promote the best model to production
-
-    Auto-promotes the top-ranked model_type (highest `test_f1_behav`) to
-    `production.yaml`. The deployed version is resolved from that model_type's
-    `active.yaml` (kept current by auto-promotion during training). The cell
-    warns if the winner looks weak or overfit — review section 4 before relying
-    on it. To override, promote a specific model_type manually:
-
-    ```python
-    promote_to_production(clf_dir, "rf")
-    ```
-    """)
-    return
-
-
-@app.cell
-def _(board, clf_dir):
-    # Tune these gates to your behaviour and dataset.
-    _min_test_f1 = 0.7
-    _max_overfit = 0.15
-
-    best = board.rankings[0]
-
-    _warnings = []
-    if best.test_f1_behav is None or best.test_f1_behav < _min_test_f1:
-        _warnings.append(f"test_f1={best.test_f1_behav} < {_min_test_f1}")
-    if best.overfit_ratio is not None and best.overfit_ratio > _max_overfit:
-        _warnings.append(f"overfit_ratio={best.overfit_ratio} > {_max_overfit}")
-
-    promote_to_production(clf_dir, best.model_type)
-
-    _status = (
-        "⚠️ PROMOTED WITH WARNINGS: " + "; ".join(_warnings)
-        if _warnings
-        else "✓ Promoted (passed quality gates)"
-    )
-    mo.md(f"**{_status}**\n\n{best.model_type} ({best.version}) → production.yaml")
     return
 
 
 @app.cell
 def _():
     mo.md("""
-    ## 6. Use the classifier in a pipeline
+    ## 5. Use the classifier in a pipeline
 
-    Point an experiment's `classify_behaviour` config at the classifier's
-    `production.yaml`. The behaviour name and feature contract are resolved
-    from the classifier's `contract.yaml` — nothing is duplicated in the
-    experiment config. Set `pcutoff` using `test_pcutoffs.png` from section 4:
+    Point an experiment's `classify_behaviour` config at the trained iteration.
+    The behaviour name and feature contract are in the classifier's `contract.yaml`:
 
     ```yaml
     classify_behaviour:
-      - clf_fp: /absolute/path/to/behaviour_classifier/production.yaml
+      - clf_fp: /absolute/path/to/behaviour_classifier/classifiers/rf/001
         pcutoff: 0.5
         min_empty_window_secs: 0.2
         user_defined: []

@@ -1,4 +1,4 @@
-"""YAML-serialised Pydantic models for classifier configuration and metadata."""
+"""YAML-serialised Pydantic models for classifier configuration."""
 
 from __future__ import annotations
 
@@ -38,112 +38,30 @@ class ClassifierContract(YamlModel):
     bodyparts: list[str]
 
 
-class TrainingRecipe(YamlModel):
-    """Human-authored training recipe (config.yaml per model_type).
+class ClassifierActive(YamlModel):
+    """Stores which model to use."""
 
-    Declares the hyperparameters for a single model_type. The behaviour and
-    feature contract live in the shared ``contract.yaml`` (``ClassifierContract``).
-    Authored before training and never auto-modified.
+    name: str
+    iteration: int
+
+
+class TrainingRecipe(YamlModel):
+    """Human-authored training recipe (config.yaml per iteration).
 
     Model-specific hyperparameters live in ``hyperparameters``. Every value
     must be a list — even single-option entries (e.g. ``random_state: [42]``).
     All values are grid-searched via ``GridSearchCV`` at fit time.
     """
 
-    model_type: str
+    name: str  # classifier name, e.g. "rf"
     seed: int = 42
     test_split: float = 0.2
     val_cv_folds: int = 3
     pcutoff: float = 0.2
+    feature_selection: bool = True  # only used by TorchAdapter
+    variance_threshold: float = 0.0  # only used by TorchAdapter
+    max_features: int | None = None  # only used by TorchAdapter
+    batch_size: int = 256  # only used by TorchAdapter
+    epochs: int = 100  # only used by TorchAdapter
+    val_split: float = 0.2  # only used by TorchAdapter
     hyperparameters: dict[str, list[object]] = {}
-
-
-class DataSummary(BaseModel):
-    """Dataset shape and class balance for a trained version."""
-
-    n_samples: int
-    n_features: int
-    n_train: int
-    n_test: int
-    train_pos_ratio: float
-    test_pos_ratio: float
-
-
-class TrainingSummary(BaseModel):
-    """Training run summary for a trained version."""
-
-    duration_seconds: float | None = None
-
-
-class EvalSummary(BaseModel):
-    """Evaluation metrics per split for a trained version."""
-
-    train_accuracy: float | None = None
-    train_f1_behav: float | None = None
-    val_accuracy: float | None = None
-    val_f1_behav: float | None = None
-    test_accuracy: float | None = None
-    test_f1_behav: float | None = None
-
-
-class VersionMetadata(YamlModel):
-    """Machine-written metadata after training (metadata.yaml per version)."""
-
-    version: str
-    framework: str  # "sklearn" or "torch"
-    model_type: str
-    created_at: str
-    recipe: TrainingRecipe
-    data: DataSummary
-    training: TrainingSummary = TrainingSummary()
-    evaluation: EvalSummary = EvalSummary()
-
-
-class DatasetManifest(YamlModel):
-    """Snapshot of what a version trained on (dataset_manifest.yaml)."""
-
-    version: str
-    dataset_hash: str | None = None
-    train_ids: list[str] = []
-    test_ids: list[str] = []
-    n_train: int = 0
-    n_test: int = 0
-
-
-class ActivePointer(YamlModel):
-    """Pointer to trusted version within a model_type (active.yaml)."""
-
-    version: str
-    promoted_at: str
-
-
-class LeaderboardEntry(BaseModel):
-    """A single model_type's ranking in the leaderboard."""
-
-    model_type: str
-    version: str
-    test_f1_behav: float | None = None
-    test_accuracy: float | None = None
-    train_f1_behav: float | None = None
-    overfit_ratio: float | None = None
-
-
-class Leaderboard(YamlModel):
-    """Cross-model_type comparison (leaderboard.yaml per behaviour)."""
-
-    behaviour_name: str
-    generated_at: str
-    rankings: list[LeaderboardEntry] = []
-
-
-class ProductionPointer(YamlModel):
-    """Deployed model pointer (production.yaml per classifier).
-
-    Records which ``model_type`` is deployed. Written only by
-    ``promote_to_production`` — not hand-edited. The version is resolved from
-    that model_type's ``active.yaml``; the behaviour and feature contract are
-    resolved from the classifier's ``contract.yaml``.
-    """
-
-    model_type: str
-    promoted_at: str

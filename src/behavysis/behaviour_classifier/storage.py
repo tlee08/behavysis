@@ -1,125 +1,93 @@
 """On-disk path functions for a self-contained behaviour classifier.
 
-A classifier lives entirely inside its own directory (``clf_dir``). The
-directory name is arbitrary — the behaviour it classifies is authored in the
-shared ``contract.yaml``, not inferred from the path. Training data lives
-inside it too, mirroring the inference pipeline's stage folders::
+A classifier lives entirely inside its own directory (``clf_dir``).
+Training data lives inside it, mirroring the inference pipeline's stage
+folders.  Each training run produces a flat numbered model directory::
 
-    {clf_dir}/                       # arbitrary name (e.g. my_classifier/)
-        training_data/                 # inference-pipeline files used for training
+    {clf_dir}/
+        contract.yaml                  # shared behaviour + feature contract
+        active.yaml                    # model to use
+        training_data/
             5_features_extracted/
             7_behaviour_scored/
-            ...
-        contract.yaml                  # shared behaviour + feature contract
-        production.yaml                # {model_type, version} currently deployed
-        leaderboard.yaml               # auto-generated cross-model_type comparison
-        classifiers
-            {model_type}/                  # e.g. rf/, dnn1/, cnn2/
-                config.yaml                  # human-authored recipe (hyperparameters)
-                active.yaml                  # {version} — best for this model_type
-                versions/
-                {version}/                 # e.g. v003_2025-07-07T120000
-                    model.joblib             # sklearn adapter (estimator + scaler)
-                    model.pt                 # torch state_dict
-                    scaler.joblib            # MinMaxScaler (torch only)
-                    metadata.yaml            # recipe snapshot + eval summary
-                    dataset_manifest.yaml    # dataset hash + split experiment IDs
-                evaluation/              # full eval artifacts (plots, reports)
+        classifiers/
+            rf-001/
+                config.yaml            # human-authored recipe
+                model.joblib           # fitted sklearn Pipeline
+                evaluation/            # plots, parquet eval data
+            rf-002/
+                ...
+            logreg-001/
+                ...
 """
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from behavysis.behaviour_classifier.config import ClassifierActive
 from behavysis.constants import BEHAVIOUR_SCORED_DIR, FEATURES_EXTRACTED_DIR
 
+CLASSIFIERS = "classifiers"
 TRAINING_DATA = "training_data"
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-# ── training data (inference-pipeline files) ─────────────────────────
 
+class ClassifierFp:
+    def __init__(self, root_dir: Path):
+        self._root_dir = root_dir.resolve()
 
-def training_data_dir(clf_dir: Path) -> Path:
-    """Directory holding the inference-pipeline files used for training."""
-    return clf_dir / TRAINING_DATA
+    # ── root ────────────────────────────────────────────────────---------
 
+    def root_dir(self) -> Path:
+        return self._root_dir
 
-def features_dir(clf_dir: Path) -> Path:
-    """Directory of extracted-feature parquet files for training."""
-    return training_data_dir(clf_dir) / FEATURES_EXTRACTED_DIR
+    # ── root level ─────────────────────────────────────────────────------
 
+    def contract_fp(self) -> Path:
+        """Shared behaviour + feature contract."""
+        return self.root_dir() / "contract.yaml"
 
-def labels_dir(clf_dir: Path) -> Path:
-    """Directory of scored-behaviour parquet files for training."""
-    return training_data_dir(clf_dir) / BEHAVIOUR_SCORED_DIR
+    def active_fp(self) -> Path:
+        """Stores which model to use."""
+        return self.root_dir() / "active.yaml"
 
+    # ── training data ────────────────────────────────────────────────────
 
-# ── classifier level ─────────────────────────────────────────────────
+    def training_data_dir(self) -> Path:
+        return self.root_dir() / TRAINING_DATA
 
+    def features_dir(self) -> Path:
+        return self.training_data_dir() / FEATURES_EXTRACTED_DIR
 
-def production_fp(clf_dir: Path) -> Path:
-    """Path to the deployed-model pointer YAML."""
-    return clf_dir / "production.yaml"
+    def labels_dir(self) -> Path:
+        return self.training_data_dir() / BEHAVIOUR_SCORED_DIR
 
+    # ── model level ─────────────────────────────────────────────────-----
+    def models_dir(self) -> Path:
+        return self.root_dir() / CLASSIFIERS
 
-def contract_fp(clf_dir: Path) -> Path:
-    """Path to the shared classifier contract YAML (behaviour + feature contract)."""
-    return clf_dir / "contract.yaml"
+    def model_dir(self, name: str, iteration: int) -> Path:
+        """Directory for a training run: classifiers/{name}-{iteration:03d}."""
+        return self.models_dir() / f"{name}-{iteration:03d}"
 
+    def config_fp(self, name: str, iteration: int) -> Path:
+        return self.model_dir(name, iteration) / "config.yaml"
 
-def leaderboard_fp(clf_dir: Path) -> Path:
-    """Path to the cross-model_type leaderboard YAML."""
-    return clf_dir / "leaderboard.yaml"
+    def eval_dir(self, name: str, iteration: int) -> Path:
+        return self.model_dir(name, iteration) / "evaluation"
 
+    # ── active model ─────────────────────────────────────────────────----
 
-# ── model_type level ─────────────────────────────────────────────────
+    def active_model_dir(self) -> Path:
+        """Directory for a training run: classifiers/{name}-{iteration:03d}."""
+        active = ClassifierActive.read_yaml(self.active_fp())
+        return self.model_dir(active.name, active.iteration)
 
+    def active_config_fp(self) -> Path:
+        return self.active_model_dir() / "config.yaml"
 
-def model_type_dir(clf_dir: Path, model_type: str) -> Path:
-    """Top-level directory for a single model_type."""
-    return clf_dir / "classifiers" / model_type
-
-
-def config_fp(clf_dir: Path, model_type: str) -> Path:
-    """Path to a model_type's human-authored training recipe YAML."""
-    return model_type_dir(clf_dir, model_type) / "config.yaml"
-
-
-def active_fp(clf_dir: Path, model_type: str) -> Path:
-    """Path to a model_type's active-version pointer YAML."""
-    return model_type_dir(clf_dir, model_type) / "active.yaml"
-
-
-# ── version level ────────────────────────────────────────────────────
-
-
-def versions_dir(clf_dir: Path, model_type: str) -> Path:
-    """Directory containing all versions of a model_type."""
-    return model_type_dir(clf_dir, model_type) / "versions"
-
-
-def version_dir(clf_dir: Path, model_type: str, version: str) -> Path:
-    """Directory for a single trained version's artifacts."""
-    return versions_dir(clf_dir, model_type) / version
-
-
-def metadata_fp(clf_dir: Path, model_type: str, version: str) -> Path:
-    """Path to a version's metadata YAML."""
-    return version_dir(clf_dir, model_type, version) / "metadata.yaml"
-
-
-def dataset_manifest_fp(clf_dir: Path, model_type: str, version: str) -> Path:
-    """Path to a version's dataset manifest YAML."""
-    return version_dir(clf_dir, model_type, version) / "dataset_manifest.yaml"
-
-
-def model_fp(clf_dir: Path, model_type: str, version: str) -> Path:
-    """Return the version directory; the adapter decides which files to write."""
-    return version_dir(clf_dir, model_type, version)
-
-
-def eval_dir(clf_dir: Path, model_type: str, version: str) -> Path:
-    """Directory for a version's evaluation artifacts (plots, reports)."""
-    return version_dir(clf_dir, model_type, version) / "evaluation"
+    def active_eval_dir(self) -> Path:
+        return self.active_model_dir() / "evaluation"

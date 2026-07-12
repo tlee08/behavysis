@@ -4,16 +4,20 @@ import joblib
 import numpy as np
 import polars as pl
 import torch
+from imblearn.pipeline import Pipeline as ImbPipeline
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.feature_selection import VarianceThreshold
 from sklearn.linear_model import LogisticRegression
 
-from behavysis.behaviour_classifier.adapter import SklearnAdapter, select_features
+from behavysis.behaviour_classifier.adapter import SklearnAdapter, TorchAdapter, select_features
 from behavysis.behaviour_classifier.config import TrainingRecipe
+from behavysis.behaviour_classifier.torch.architectures import DNN1
 from behavysis.behaviour_classifier.torch.base import TorchModel
 from behavysis.behaviour_classifier.torch.dataset import WindowDataset
 
 
 def _recipe(**kw) -> TrainingRecipe:
-    base = dict(model_type="logreg")
+    base = dict(name="test")
     base.update(kw)
     return TrainingRecipe(**base)
 
@@ -28,18 +32,13 @@ def _df(x: np.ndarray, y: np.ndarray, name: str = "test") -> pl.DataFrame:
     )
 
 
-def _mask(df: pl.DataFrame) -> np.ndarray:
-    """Full train mask (all rows in training)."""
-    return np.ones(len(df), dtype=bool)
-
-
 class TestFeatureSelection:
     """Tests for supervised feature selection."""
 
     def test_drops_constant_columns(self) -> None:
         rng = np.random.default_rng(0)
         x = rng.standard_normal((50, 4))
-        x[:, 2] = 1.0  # constant → zero variance
+        x[:, 2] = 1.0
         y = rng.integers(0, 2, 50)
         keep = select_features(x, y, _recipe())
         assert 2 not in keep
@@ -60,30 +59,21 @@ class TestFeatureSelection:
         assert list(keep) == sorted(keep)
 
 
-class TestSklearnAdapterMask:
+class TestSklearnAdapter:
     """Pipeline flows through fit/predict and joblib round-trip."""
-
-    @staticmethod
-    def _pipeline(config):
-        from imblearn.pipeline import Pipeline as ImbPipeline
-        from sklearn.feature_selection import VarianceThreshold
-
-        steps = []
-        if config.feature_selection:
-            steps.append(("var_filter", VarianceThreshold()))
-        steps.append(("clf", LogisticRegression()))
-        return ImbPipeline(steps)
 
     def test_fit_predict_shapes(self) -> None:
         rng = np.random.default_rng(2)
         x = rng.standard_normal((60, 6))
-        x[:, 1] = 0.0  # constant column dropped by variance filter
+        x[:, 1] = 0.0
         y = rng.integers(0, 2, 60)
-        adapter = SklearnAdapter(self._pipeline)
-        df = _df(x, y)
-        adapter.fit(df, _mask(df), _recipe())
-        support = adapter.pipe.named_steps["var_filter"].get_support()
-        assert not support[1]  # constant column dropped
+        adapter = SklearnAdapter(ImbPipeline([
+            ("var_filter", VarianceThreshold()),
+            ("clf", LogisticRegression()),
+        ]))
+        adapter.fit(_df(x, y), _recipe())
+        support = adapter.pipeline.best_estimator_.named_steps["var_filter"].get_support()
+        assert not support[1]
         prob = adapter.predict(x)
         assert prob.shape == (60,)
 
@@ -91,9 +81,10 @@ class TestSklearnAdapterMask:
         rng = np.random.default_rng(3)
         x = rng.standard_normal((60, 6))
         y = rng.integers(0, 2, 60)
-        adapter = SklearnAdapter(self._pipeline)
-        df = _df(x, y)
-        adapter.fit(df, _mask(df), _recipe())
+        adapter = SklearnAdapter(ImbPipeline([
+            ("clf", LogisticRegression()),
+        ]))
+        adapter.fit(_df(x, y), _recipe())
         adapter.save(tmp_path)
         loaded = joblib.load(tmp_path / "model.joblib")
         np.testing.assert_allclose(
@@ -105,82 +96,57 @@ class TestSklearnAdapterMask:
 class TestSklearnAdapterGridSearch:
     """All hyperparameters are lists — single values are single-element lists."""
 
-    @staticmethod
-    def _pipeline(config):
-        from imblearn.pipeline import Pipeline as ImbPipeline
-        from sklearn.ensemble import RandomForestClassifier as RFC
-
-        return ImbPipeline([("clf", RFC())])
-
-    @staticmethod
-    def _logreg_pipeline(config):
-        from imblearn.pipeline import Pipeline as ImbPipeline
-        return ImbPipeline([("clf", LogisticRegression())])
-
     def test_grid_search_resolves_params(self) -> None:
-        from sklearn.ensemble import RandomForestClassifier
-
         rng = np.random.default_rng(5)
         x = rng.standard_normal((80, 5))
         y = rng.integers(0, 2, 80)
-        adapter = SklearnAdapter(self._pipeline)
+        adapter = SklearnAdapter(ImbPipeline([
+            ("clf", RandomForestClassifier(random_state=42)),
+        ]))
         recipe = _recipe(
-            feature_selection=False,
             hyperparameters={
                 "clf__n_estimators": [10, 20],
                 "clf__max_depth": [4, 8],
-                "clf__random_state": [42],
             },
         )
-        df = _df(x, y)
-        adapter.fit(df, _mask(df), recipe)
+        adapter.fit(_df(x, y), recipe)
 
-        assert adapter.resolved_hyperparameters is not None
-        assert "clf__n_estimators" in adapter.resolved_hyperparameters
-        assert isinstance(adapter.resolved_hyperparameters["clf__n_estimators"], int)
-        assert adapter.resolved_hyperparameters["clf__random_state"] == 42
+        rhp = adapter.pipeline.best_params_
+        assert "clf__n_estimators" in rhp
+        assert isinstance(rhp["clf__n_estimators"], int)
 
     def test_single_option_lists_still_grid(self) -> None:
         rng = np.random.default_rng(6)
         x = rng.standard_normal((40, 3))
         y = rng.integers(0, 2, 40)
-        adapter = SklearnAdapter(self._logreg_pipeline)
+        adapter = SklearnAdapter(ImbPipeline([
+            ("clf", LogisticRegression()),
+        ]))
         recipe = _recipe(
-            feature_selection=False,
             hyperparameters={
                 "clf__C": [1.0],
                 "clf__max_iter": [500],
                 "clf__random_state": [99],
             },
         )
-        df = _df(x, y)
-        adapter.fit(df, _mask(df), recipe)
-
-        rhp = adapter.resolved_hyperparameters
-        assert rhp is not None
-        assert rhp["clf__C"] == 1.0
-        assert rhp["clf__random_state"] == 99
-        assert hasattr(adapter.pipe_, "best_params_")
+        adapter.fit(_df(x, y), recipe)
         prob = adapter.predict(x)
         assert prob.shape == (40,)
 
 
-
-class TestTorchAdapterMask:
-    """Torch adapter save/load reconstructs nfeatures from the mask."""
+class TestTorchAdapter:
+    """Torch adapter save/load round-trip."""
 
     def test_save_load_roundtrip(self, tmp_path) -> None:
-        from behavysis.behaviour_classifier.adapter import TorchAdapter
-        from behavysis.behaviour_classifier.torch.architectures import DNN1
-
         rng = np.random.default_rng(4)
         x = rng.standard_normal((60, 8)).astype(np.float32)
-        x[:, 3] = 0.0  # constant → dropped
+        x[:, 3] = 0.0
         y = rng.integers(0, 2, 60).astype(np.float32)
         adapter = TorchAdapter(lambda nf: DNN1(nf, window_frames=0))
-        df = _df(x, y)
-        adapter.fit(df, _mask(df), _recipe(epochs=1, batch_size=16))
-        assert 3 not in adapter.feature_mask
+        adapter.fit(
+            _df(x, y),
+            _recipe(epochs=1, batch_size=16, feature_selection=False),
+        )
         adapter.save(tmp_path)
 
         reloaded = TorchAdapter(lambda nf: DNN1(nf, window_frames=0))
@@ -190,7 +156,6 @@ class TestTorchAdapterMask:
 
 
 def make_x_y_arrays(nrows: int, ncols: int) -> tuple[np.ndarray, np.ndarray]:
-    """Generate random feature and label arrays."""
     x = np.random.randn(nrows, ncols).astype(np.float32)
     y = np.random.randint(0, 2, size=(nrows,)).astype(np.float32)
     return x, y
@@ -200,14 +165,9 @@ class TestWindowDataset:
     """Tests for WindowDataset (sliding windows, no memoization)."""
 
     def test_training_dataloader(self) -> None:
-        """WindowDataset should produce correct windowed samples."""
-        nrows = 100
-        ncols = 500
-        nind = 10
-        window_frames = 5
-
+        nrows, ncols, window_frames = 100, 500, 5
         x, y = make_x_y_arrays(nrows, ncols)
-        index = np.random.choice(nrows, nind, replace=False)
+        index = np.random.choice(nrows, 10, replace=False)
 
         ds = WindowDataset(
             x_ls=[x],
@@ -216,21 +176,16 @@ class TestWindowDataset:
             window_frames=window_frames,
         )
 
-        assert len(ds) == nind
+        assert len(ds) == 10
         sample_x, _sample_y = ds[0]
         assert sample_x.shape == (ncols, 2 * window_frames + 1)
         assert sample_x.dtype == torch.float32
 
     def test_inference_dataloader(self) -> None:
-        """WindowDataset works for inference with dummy labels."""
-        nrows = 100
-        ncols = 500
-        window_frames = 5
-        nind = 10
-
+        nrows, ncols, window_frames = 100, 500, 5
         x, _ = make_x_y_arrays(nrows, ncols)
         y = np.zeros(nrows, dtype=np.float32)
-        index = np.random.choice(nrows, nind, replace=False)
+        index = np.random.choice(nrows, 10, replace=False)
 
         ds = WindowDataset(
             x_ls=[x],
@@ -239,16 +194,13 @@ class TestWindowDataset:
             window_frames=window_frames,
         )
 
-        assert len(ds) == nind
+        assert len(ds) == 10
         sample_x, sample_y = ds[0]
         assert sample_x.shape == (ncols, 2 * window_frames + 1)
         assert sample_y.shape == (1,)
 
     def test_zero_window(self) -> None:
-        """WindowDataset with window_frames=0 returns 1-frame windows."""
-        nrows = 10
-        ncols = 500
-
+        nrows, ncols = 10, 500
         x, y = make_x_y_arrays(nrows, ncols)
         index = np.arange(nrows)
 
@@ -268,9 +220,7 @@ class TestTorchModel:
     """Tests for TorchModel base class."""
 
     def test_model_initialization(self) -> None:
-        """Model should initialize with correct dimensions."""
-        nfeatures = 100
-        window_frames = 10
+        nfeatures, window_frames = 100, 10
 
         class DummyModel(TorchModel):
             def __init__(self, nf, wf):
@@ -293,8 +243,6 @@ class TestTorchModel:
         assert model.window_frames == window_frames
 
     def test_device_property_cpu(self) -> None:
-        """Device property should work correctly for CPU."""
-
         class DummyModel(TorchModel):
             def __init__(self, nfeatures, window_frames):
                 super().__init__(nfeatures, window_frames)

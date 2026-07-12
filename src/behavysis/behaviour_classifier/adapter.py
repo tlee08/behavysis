@@ -21,13 +21,14 @@ from typing import TYPE_CHECKING, ClassVar
 import joblib
 import numpy as np
 import pandas as pd
-import polars as pl
 import torch
 from loguru import logger
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.feature_selection import VarianceThreshold
 from sklearn.model_selection import GridSearchCV
 from sklearn.preprocessing import MinMaxScaler
 
-from behavysis.constants import ACTUAL, EXPERIMENT, FRAME, Array2D
+from behavysis.constants import ACTUAL, EXPERIMENT, FRAME, Array1D, Array2D
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -39,6 +40,39 @@ if TYPE_CHECKING:
     from .torch.base import TorchModel
 
 _META_COLS = [EXPERIMENT, FRAME, ACTUAL]
+
+
+def select_features(
+    x: Array2D,
+    y: Array1D,
+    config: TrainingRecipe,
+) -> np.ndarray:
+    """Return column indices to keep — used by TorchAdapter.
+
+    Drops low-variance columns, then optionally caps to the top
+    ``max_features`` by random-forest importance. Returns all columns when
+    ``feature_selection`` is disabled.
+    """
+    keep = np.arange(x.shape[1])
+    if not config.feature_selection:
+        return keep
+
+    vt = VarianceThreshold(threshold=config.variance_threshold)
+    vt.fit(x)
+    keep = keep[vt.get_support()]
+
+    if config.max_features is not None and len(keep) > config.max_features:
+        rf = RandomForestClassifier(
+            n_estimators=200,
+            max_depth=8,
+            random_state=42,
+            n_jobs=-1,
+        )
+        rf.fit(x[:, keep], y)
+        top = np.argsort(rf.feature_importances_)[::-1][: config.max_features]
+        keep = np.sort(keep[top])
+
+    return keep
 
 
 class BaseAdapter(ABC):
@@ -65,7 +99,7 @@ class BaseAdapter(ABC):
 class SklearnAdapter(BaseAdapter):
     """Thin wrapper around an imblearn Pipeline + GridSearchCV.
 
-    The pipeline is built by calling ``self.pipeline_builder(config)``
+    The pipeline is built by calling ``self._builder(config)``
     at fit time — the builder is defined in the MODEL_REGISTRY, keeping
     all pipeline logic in one place.  GridSearchCV is then fitted and
     the adapter delegates predict / feature access to the pipeline.
@@ -80,28 +114,12 @@ class SklearnAdapter(BaseAdapter):
         x = df.drop(_META_COLS).to_numpy()
         y = df[ACTUAL].to_numpy()
 
-        # Label bouts on train subset
-        bout_ids = (
-            df.with_columns(
-                (pl.col(ACTUAL) != pl.col(ACTUAL).shift(1))
-                .or_(pl.col(EXPERIMENT) != pl.col(EXPERIMENT).shift(1))
-                .cast(pl.Int64)
-                .cum_sum()
-                .alias("_bout_id")
-            )
-            .select("_bout_id")
-            .to_numpy()
-            .ravel()
-        )
-
         self.pipeline = GridSearchCV(
             self.pipeline,
             config.hyperparameters,
             scoring="f1",
-            # cv=_bout_cv(bout_ids, y, config.val_cv_folds, config.seed),
-            cv=2,
-            n_jobs=1,
-            verbose=1,
+            cv=config.val_cv_folds,
+            n_jobs=-1,
         ).fit(x, y)
 
         return pd.DataFrame(columns=pd.Index(["loss", "vloss"]))

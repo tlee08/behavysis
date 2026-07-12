@@ -1,46 +1,17 @@
-"""Behavysis behavioural classifier — training, versioning, promotion, inference."""
+"""Behavysis behavioural classifier — training and inference."""
 
-from .behaviour_classifier import (
-    BehaviourClassifier,
-    promote,
-    promote_to_best,
-    promote_to_production,
-    regenerate_leaderboard,
-    set_contract,
-    train,
-    train_all_models,
-)
-from .config import (
-    ActivePointer,
-    ClassifierContract,
-    DatasetManifest,
-    Leaderboard,
-    LeaderboardEntry,
-    ProductionPointer,
-    TrainingRecipe,
-    VersionMetadata,
-)
+from .behaviour_classifier import predict_df, train, train_all_models
+from .config import ClassifierContract, TrainingRecipe
 from .data import load_feature_names, load_training_data, stratified_split_by_bout
 from .registry import MODEL_REGISTRY
 
 __all__ = [
     "MODEL_REGISTRY",
-    "ActivePointer",
-    "BehaviourClassifier",
     "ClassifierContract",
-    "DatasetManifest",
-    "Leaderboard",
-    "LeaderboardEntry",
-    "ProductionPointer",
     "TrainingRecipe",
-    "VersionMetadata",
     "load_feature_names",
     "load_training_data",
-    "promote",
-    "promote_to_best",
-    "promote_to_production",
-    "regenerate_leaderboard",
-    "set_contract",
+    "predict_df",
     "stratified_split_by_bout",
     "train",
     "train_all_models",
