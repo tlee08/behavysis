@@ -135,7 +135,7 @@ def predict_df_from_adapter(
     adapter: BaseAdapter,
     x_df: pl.DataFrame,
     behaviour_name: str,
-    pcutoff: float | None = None,
+    pcutoff: float,
 ) -> pl.DataFrame:
     """Run inference on a wide features DataFrame.
 
