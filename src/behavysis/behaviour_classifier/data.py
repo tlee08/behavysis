@@ -109,8 +109,7 @@ def stratified_split_by_group(
 
     Group name like: "bout_id", "experiment"
     """
-    df = label_bouts(df)
-    x = df.drop([EXPERIMENT, FRAME, ACTUAL, BOUT_ID]).to_numpy()
+    idx = np.arange(len(df))
     y = df[ACTUAL].to_numpy()
     groups = df[group_name].to_numpy()
 
@@ -118,10 +117,5 @@ def stratified_split_by_group(
     sgkf = StratifiedGroupKFold(
         n_splits=n_splits, shuffle=True, random_state=random_state
     )
-    train_idx, test_idx = next(sgkf.split(x, y, groups))
-
-    train_mask = np.zeros(len(df), dtype=bool)
-    test_mask = np.zeros(len(df), dtype=bool)
-    train_mask[train_idx] = True
-    test_mask[test_idx] = True
-    return train_mask, test_mask
+    train_idx, test_idx = next(sgkf.split(idx, y, groups))
+    return train_idx, test_idx

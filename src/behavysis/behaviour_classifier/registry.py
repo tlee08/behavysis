@@ -13,6 +13,8 @@ from sklearn.model_selection import RandomizedSearchCV, StratifiedGroupKFold
 from sklearn.preprocessing import MinMaxScaler
 from xgboost import XGBClassifier
 
+from behavysis.utils import get_gpu_device
+
 from .adapter import BaseAdapter, SklearnAdapter
 
 # ── registry ─────────────────────────────────────────────────────────
@@ -133,11 +135,27 @@ MODEL_REGISTRY: dict[str, Callable[[], BaseAdapter]] = {
                 [
                     ("var_filter", VarianceThreshold(threshold=0.0)),
                     (
+                        "selector",
+                        SelectFromModel(
+                            XGBClassifier(
+                                tree_method="hist",
+                                device=get_gpu_device(),
+                                n_estimators=100,
+                                max_depth=4,
+                                n_jobs=-1,
+                                random_state=42,
+                            ),
+                            threshold=-np.inf,
+                            max_features=300,
+                        ),
+                    ),
+                    (
                         "clf",
                         XGBClassifier(
                             tree_method="hist",
+                            device=get_gpu_device(),
                             eval_metric="aucpr",
-                            n_jobs=4,
+                            n_jobs=-1,
                             random_state=42,
                             verbosity=1,
                         ),
@@ -163,3 +181,9 @@ MODEL_REGISTRY: dict[str, Callable[[], BaseAdapter]] = {
         ),
     ),
 }
+
+# ── registry ─────────────────────────────────────────────────────────
+
+
+# Models trained by ``train_all_models``. Others remain callable manually.
+ROUTINE_MODELS = ["xgb_v2"]

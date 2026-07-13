@@ -4,7 +4,6 @@ from pathlib import Path
 
 DF_IO_FORMAT = "parquet"
 
-
 CONFIG_DIR = "0_config"
 METADATA_DIR = "0_metadata"
 RAW_VIDEO_DIR = "1_raw_videos"
@@ -28,7 +27,6 @@ STAGES = {
     BEHAVIOUR_SCORED_DIR: DF_IO_FORMAT,
     ANALYSIS_COMBINED_DIR: DF_IO_FORMAT,
 }
-
 
 DEFAULT_CONFIG_FP = "default_config.yaml"
 RUN_PIPELINE_FP = "run_pipeline.py"

@@ -74,7 +74,7 @@ def binary_report(y_true: np.ndarray, y_prob: np.ndarray) -> dict:
     tn = int(np.sum((y_true == 0) & (y_pred == 0)))
 
     return {
-        "n": int(len(y_true)),
+        "n": len(y_true),
         "n_positive": int(np.sum(y_true == 1)),
         "roc_auc": roc_auc,
         "gini": 2.0 * roc_auc - 1.0,
@@ -94,19 +94,19 @@ def binary_report(y_true: np.ndarray, y_prob: np.ndarray) -> dict:
 def _roc_points(y_true: np.ndarray, y_prob: np.ndarray, split: str) -> pl.DataFrame:
     """ROC curve points (fpr, tpr) as a long-form DataFrame."""
     fpr, tpr, _ = roc_curve(y_true, y_prob)
-    return pl.DataFrame({"x": fpr, "y": tpr, SPLIT: split})
+    return pl.DataFrame({"fpr": fpr, "tpr": tpr, SPLIT: split})
 
 
 def _pr_points(y_true: np.ndarray, y_prob: np.ndarray, split: str) -> pl.DataFrame:
     """Precision-recall curve points (recall, precision) as long-form."""
     precision, recall, _ = precision_recall_curve(y_true, y_prob)
-    return pl.DataFrame({"x": recall, "y": precision, SPLIT: split})
+    return pl.DataFrame({"recall": recall, "precision": precision, SPLIT: split})
 
 
 def _curve_chart(
     points: pl.DataFrame,
-    x_title: str,
-    y_title: str,
+    x_column: str,
+    y_column: str,
     title: str,
     baseline: alt.Chart | None,
 ) -> alt.Chart:
@@ -115,8 +115,8 @@ def _curve_chart(
         alt.Chart(points)
         .mark_line()
         .encode(
-            x=alt.X("x:Q", title=x_title, scale=alt.Scale(domain=[0, 1])),
-            y=alt.Y("y:Q", title=y_title, scale=alt.Scale(domain=[0, 1])),
+            x=alt.X(f"{x_column}:Q", scale=alt.Scale(domain=[0, 1])),
+            y=alt.Y(f"{y_column}:Q", scale=alt.Scale(domain=[0, 1])),
             color=alt.Color(f"{SPLIT}:N", title="split"),
         )
         .properties(title=title, width=400, height=400)
@@ -144,8 +144,7 @@ def save_eval_report(
     eval_dir.mkdir(parents=True, exist_ok=True)
 
     report: dict[str, dict] = {
-        name: binary_report(y_true, y_prob)
-        for name, (y_true, y_prob) in splits.items()
+        name: binary_report(y_true, y_prob) for name, (y_true, y_prob) in splits.items()
     }
     if cv_summary is not None:
         report["val"] = cv_summary
@@ -154,20 +153,16 @@ def save_eval_report(
     roc_pts = pl.concat(
         [_roc_points(yt, yp, name) for name, (yt, yp) in splits.items()]
     )
-    pr_pts = pl.concat(
-        [_pr_points(yt, yp, name) for name, (yt, yp) in splits.items()]
-    )
+    pr_pts = pl.concat([_pr_points(yt, yp, name) for name, (yt, yp) in splits.items()])
 
     diagonal = (
         alt.Chart(pl.DataFrame({"x": [0.0, 1.0], "y": [0.0, 1.0]}))
         .mark_line(strokeDash=[4, 4], color="grey")
         .encode(x="x:Q", y="y:Q")
     )
-    roc_chart = _curve_chart(
-        roc_pts, "False positive rate", "True positive rate", "ROC curve", diagonal
-    )
+    roc_chart = _curve_chart(roc_pts, "fpr", "tpr", "ROC curve", diagonal)
     pr_chart = _curve_chart(
-        pr_pts, "Recall", "Precision", "Precision-Recall curve", None
+        pr_pts, "recall", "precision", "Precision-Recall curve", None
     )
 
     roc_chart.save(eval_dir / "roc.png")

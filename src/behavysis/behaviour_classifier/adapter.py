@@ -11,11 +11,22 @@ import pandas as pd
 import polars as pl
 import torch
 from loguru import logger
+from sklearn.base import clone
+from sklearn.model_selection import train_test_split
+from sklearn.model_selection._search import BaseSearchCV
 from sklearn.preprocessing import MinMaxScaler
 
 from behavysis.behaviour_classifier.data import label_bouts
 from behavysis.behaviour_classifier.torch._helper import select_features
-from behavysis.constants import ACTUAL, BOUT_ID, EXPERIMENT, FRAME, PROB
+from behavysis.constants import (
+    ACTUAL,
+    BOUT_ID,
+    EXPERIMENT,
+    FRAME,
+    PROB,
+    Array1D,
+    Array2D,
+)
 from behavysis.schemas import BEHAVIOUR_PROBABILITY_SCHEMA
 
 if TYPE_CHECKING:
@@ -27,7 +38,8 @@ if TYPE_CHECKING:
     from .config import TrainingRecipe
     from .torch.base import TorchModel
 
-_META_COLS = [EXPERIMENT, FRAME, ACTUAL]
+_META_COLS = [EXPERIMENT, FRAME, ACTUAL, BOUT_ID]
+SEARCH_ROWS = 100_000
 
 
 class BaseAdapter(ABC):
@@ -71,25 +83,48 @@ class SklearnAdapter(BaseAdapter):
 
     framework: ClassVar[str] = "sklearn"
 
-    def __init__(self, model: BaseEstimator) -> None:
-        self.model = model
+    def __init__(self, search: BaseSearchCV) -> None:
+        self.search = search
+        self.model: BaseEstimator | None = None
+
+    def _features(self, df: pl.DataFrame) -> Array2D:
+        return df.drop(_META_COLS, strict=False).to_numpy().astype(np.float32)
+
+    def _labels(self, df: pl.DataFrame) -> Array1D:
+        return df[ACTUAL].to_numpy()
 
     def fit(self, df: pl.DataFrame, config: TrainingRecipe) -> pd.DataFrame:
-        # Prepare
-        x = df.drop(_META_COLS, strict=False).to_numpy()
-        y = df[ACTUAL].to_numpy()
-        groups = label_bouts(df)[BOUT_ID].to_numpy()
-        # Train
-        self.model.fit(x, y, groups=groups)
-        # Return
+        # 1. Compute bout_id once, on the full ordered frame (correct boundaries).
+        df = label_bouts(df)
+        # 2. Row-level, prevalence-preserving downsample for the search.
+        if len(df) > SEARCH_ROWS:
+            idx = np.arange(len(df))
+            sub_idx, _ = train_test_split(
+                idx,
+                train_size=SEARCH_ROWS,
+                stratify=self._labels(df),
+                random_state=config.seed,
+            )
+            df_sub = df[sub_idx]
+        else:
+            df_sub = df
+        # 3. Grouped CV on surviving rows → no train/val leakage.
+        self.search.refit = False
+        self.search.fit(
+            self._features(df_sub),
+            self._labels(df_sub),
+            groups=df_sub[BOUT_ID].to_numpy(),
+        )
+        # 4. Refit best pipeline on the FULL data (bout_id dropped by _features).
+        self.model = clone(self.search.estimator).set_params(**self.search.best_params_)
+        self.model.fit(self._features(df), self._labels(df))
         return pd.DataFrame(columns=pd.Index(["loss", "vloss"]))
 
     def predict(self, df: pl.DataFrame) -> pl.DataFrame:
         # Prepare
-        x = df.drop(_META_COLS, strict=False).to_numpy()
         frame = df.get_column(FRAME)
         # Predict
-        prob = self.model.predict_proba(x)[:, 1]
+        prob = self.model.predict_proba(self._features(df))[:, 1]
         # Return
         return pl.DataFrame(
             {FRAME: frame, PROB: prob}, schema=BEHAVIOUR_PROBABILITY_SCHEMA
@@ -102,15 +137,16 @@ class SklearnAdapter(BaseAdapter):
 
     @classmethod
     def load(cls, src_dir: Path) -> Self:
-        pipeline = joblib.load(src_dir / "model.joblib")
-        return cls(pipeline)
+        inst = cls()
+        inst.model = joblib.load(src_dir / "model.joblib")
+        return inst
 
     def cv_summary(self) -> dict | None:
-        """Return the RandomizedSearchCV best score, if fitted."""
-        best_score = getattr(self.model, "best_score_", None)
+        """Return the search best score (computed on the subsample)."""
+        best_score = getattr(self.search, "best_score_", None)
         if best_score is None:
             return None
-        return {"cv_average_precision": float(best_score)}
+        return {"cv_average_precision_subsampled": float(best_score)}
 
 
 class TorchAdapter(BaseAdapter):

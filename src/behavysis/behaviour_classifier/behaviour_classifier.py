@@ -11,7 +11,6 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING
 
-import numpy as np
 import polars as pl
 from loguru import logger
 
@@ -20,14 +19,16 @@ from behavysis.schemas import BEHAVIOUR_PREDICTED_SCHEMA
 
 from .adapter import MODEL_TYPES_TO_CLASS, MODEL_TYPES_TO_STRING, BaseAdapter
 from .config import ClassifierActive, ClassifierContract, TrainingRecipe
-from .data import load_training_data, stratified_split_by_group
+from .data import label_bouts, load_training_data, stratified_split_by_group
 from .evaluation import save_eval_report
-from .registry import MODEL_REGISTRY
+from .registry import MODEL_REGISTRY, ROUTINE_MODELS
 from .storage import ClassifierFp
 
 if TYPE_CHECKING:
     from collections.abc import Callable
     from pathlib import Path
+
+    import numpy as np
 
 
 # ── iteration numbering ───────────────────────────────────────────────
@@ -84,13 +85,15 @@ def train(
         clf_proj.labels_dir(),
         contract.behaviour_name,
     )
+    # Add bout_ids
+    df = label_bouts(df)
 
     # Split into train / test (bout-level grouping)
-    train_mask, test_mask = stratified_split_by_group(
+    train_idx, test_idx = stratified_split_by_group(
         df, config.test_split, EXPERIMENT, config.seed
     )
-    train_df = df.filter(train_mask)
-    test_df = df.filter(test_mask)
+    train_df = df[train_idx]
+    test_df = df[test_idx]
 
     # Train
     adapter.fit(train_df, config)
@@ -122,9 +125,10 @@ def train(
 
 
 def train_all_models(clf_contract_fp: Path) -> list[int]:
-    """Train all model types in the registry, one iteration each."""
+    """Train the routine model set, one iteration each."""
     results: list[int] = []
-    for model_name, factory in MODEL_REGISTRY.items():
+    for model_name in ROUTINE_MODELS:
+        factory = MODEL_REGISTRY[model_name]
         results.append(train(clf_contract_fp, model_name, factory))
     return results
 

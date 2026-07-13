@@ -19,13 +19,8 @@ from behavysis.constants import (
 )
 from behavysis.funcs.run_dlc import ma_dlc_run_batch
 from behavysis.pipeline import Experiment
-from behavysis.schemas import (
-    read_df,
-    write_df,
-)
-from behavysis.utils.dask_utils import cluster_process
-from behavysis.utils.misc_utils import pass_exception
-from behavysis.utils.multiproc_utils import get_gpu_ids
+from behavysis.schemas import read_df, write_df
+from behavysis.utils import cluster_process, get_gpu_device_ids, pass_exception
 
 
 class Project:
@@ -131,7 +126,7 @@ class Project:
 
     def run_dlc(self, gputouse: int | None = None, *, overwrite: bool) -> None:
         """Run DLC on all experiments with GPU batching."""
-        gputouse_ls = get_gpu_ids() if gputouse is None else [gputouse]
+        gputouse_ls = get_gpu_device_ids() if gputouse is None else [gputouse]
         nprocs = len(gputouse_ls)
         # Get list of experiment to run
         # Consider overwrite flag and if keypoints dfs exist
