@@ -68,6 +68,7 @@ def train(
     config = TrainingRecipe(
         behaviour_name=contract.behaviour_name,
         model_name=model_name,
+        iteration=iteration,
         model_type=MODEL_TYPES_TO_STRING[type(adapter)],
     )
     config.write_yaml(config_fp)
