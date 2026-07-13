@@ -215,8 +215,8 @@ def save_eval_report(
         pr_pts, "recall", "precision", "Precision-Recall curve", None
     )
 
-    prob_histogram.save(eval_dir / "hist.png")
-    bout_hist.save(eval_dir / "hist.png")
+    prob_histogram.save(eval_dir / "prob_hist.png")
+    bout_hist.save(eval_dir / "bout_hist.png")
     roc_chart.save(eval_dir / "roc.png")
     pr_chart.save(eval_dir / "pr.png")
     logger.info("Saved eval report and ROC/PR charts to {}", eval_dir)

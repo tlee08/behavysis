@@ -64,22 +64,6 @@ def vect2bouts(vect: pl.Series, offset: int = 0) -> pl.DataFrame:
     )
 
 
-def merge_bouts(vect: pl.Series, min_window_frames: int) -> pl.Series:
-    """Merge behaviour bouts that are close together.
-
-    If the gap between two bouts is less than ``min_window_frames``, merge them.
-    """
-    if vect.is_empty():
-        return vect
-    nonbouts_df = vect2bouts(vect != TRUE_POS)
-    arr = vect.to_numpy().copy()
-    for nonbout_row in nonbouts_df.iter_rows(named=True):
-        if nonbout_row[DUR] < min_window_frames:
-            arr[nonbout_row[START] : nonbout_row[STOP] + 1] = TRUE_POS
-
-    return pl.Series(arr)
-
-
 def predicted_to_scored(
     df: pl.DataFrame,
     bouts_struct: list[BoutStruct],

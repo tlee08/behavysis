@@ -11,10 +11,9 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING
 
-import polars as pl
 from loguru import logger
 
-from behavysis.constants import ACTUAL, BEHAVIOUR, EXPERIMENT, FRAME, PRED, PROB
+from behavysis.constants import ACTUAL, EXPERIMENT
 
 from .adapter import MODEL_TYPES_TO_CLASS, MODEL_TYPES_TO_STRING, BaseAdapter
 from .config import ClassifierActive, ClassifierContract, TrainingRecipe
@@ -26,6 +25,8 @@ from .storage import ClassifierFp
 if TYPE_CHECKING:
     from collections.abc import Callable
     from pathlib import Path
+
+    import polars as pl
 
 
 # ── iteration numbering ───────────────────────────────────────────────
@@ -94,7 +95,7 @@ def train(
     adapter.fit(train_df)
 
     # Save model
-    adapter.save(model_dir)
+    adapter.save()
 
     # Evaluate
     # Predictions
@@ -144,10 +145,10 @@ def predict_df_choose_model(
     """
     # Configs
     clf_proj = ClassifierFp(clf_contract_fp.parent)
-    model_dir = clf_proj.model_dir(model_name, iteration)
-    config = TrainingRecipe.read_yaml(clf_proj.config_fp(model_name, iteration))
+    config_fp = clf_proj.config_fp(model_name, iteration)
+    config = TrainingRecipe.read_yaml(config_fp)
     # Load model
-    adapter = MODEL_TYPES_TO_CLASS[config.model_type].load(model_dir)
+    adapter = MODEL_TYPES_TO_CLASS[config.model_type].load(config_fp)
     # Run inference
     return adapter.predict(x_df)
 
@@ -175,13 +176,4 @@ def _eval_split(adapter: BaseAdapter, df: pl.DataFrame) -> pl.DataFrame:
     # Run inference
     x_df = df.drop([EXPERIMENT, ACTUAL])
     eval_df = adapter.predict(x_df)
-    return pl.DataFrame(
-        {
-            EXPERIMENT: df[EXPERIMENT],
-            FRAME: df[FRAME],
-            BEHAVIOUR: eval_df[BEHAVIOUR],
-            PROB: eval_df[PROB],
-            PRED: eval_df[PRED],
-            ACTUAL: df[ACTUAL],
-        },
-    )
+    return eval_df.with_columns(df[EXPERIMENT], df[ACTUAL])

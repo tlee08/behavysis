@@ -14,7 +14,6 @@ from .behaviour import (
     frames2bouts,
     get_bouts_struct,
     import_boris_tsv,
-    merge_bouts,
     predicted_to_scored,
     vect2bouts,
 )
@@ -31,7 +30,6 @@ __all__ = [
     "get_indivs_bpts",
     "import_boris_tsv",
     "make_binned",
-    "merge_bouts",
     "predicted_to_scored",
     "summary_binned",
     "summary_binned_behaviour",

@@ -54,11 +54,14 @@ class TrainingRecipe(YamlModel):
     """
 
     behaviour_name: str
+
     model_name: str
     model_type: ModelStrOptions
+
     seed: int = 42
     test_split: float = 0.2
     val_split: float = 0.2
+    downsample_n: int = 100_000
+
     target_recall: float = 0.95
     pcutoff: float = 0.2
-    downsample_n: int = 100_000

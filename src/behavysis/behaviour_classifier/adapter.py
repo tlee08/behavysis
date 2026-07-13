@@ -77,12 +77,12 @@ class BaseAdapter(ABC):
         """Return predicted probabilities for the given feature array."""
 
     @abstractmethod
-    def save(self, model_dir: Path) -> None:
+    def save(self) -> None:
         """Persist model artifacts inside dst_dir."""
 
     @classmethod
     @abstractmethod
-    def load(cls, model_dir: Path) -> Self:
+    def load(cls, config_fp: Path) -> Self:
         """Load model artifacts."""
 
     def cv_summary(self) -> dict | None:
@@ -139,7 +139,7 @@ class SklearnAdapter(BaseAdapter):
         )
         train_df = df[train_idx]
         val_df = df[val_idx]
-        # 5. Refit best pipeline on the train_df
+        # 5. Refit best pipeline on train_df
         self.model = clone(self.search.estimator).set_params(**self.search.best_params_)
         self.model.fit(self._features(train_df), self._labels(train_df))
         # 6. Find best pcutoff with val_df and update config with best pcutoff value
@@ -150,7 +150,6 @@ class SklearnAdapter(BaseAdapter):
             if np.any(recall[:-1] >= config.target_recall)
             else 0.001
         )
-        config.pcutoff = 0.01
         self._write_config(config)
         # Return
         return pd.DataFrame(columns=pd.Index(["loss", "vloss"]))
@@ -177,19 +176,19 @@ class SklearnAdapter(BaseAdapter):
             schema=BEHAVIOUR_PREDICTED_SCHEMA,
         )
 
-    def save(self, model_dir: Path) -> None:
+    def save(self) -> None:
         """Save."""
-        model_dir.mkdir(parents=True, exist_ok=True)
+        model_dir = self.config_fp.parent
         joblib.dump(self.search, model_dir / "search.joblib")
+        joblib.dump(self.model, model_dir / "model.joblib")
         logger.info("Saved sklearn model to {}", model_dir)
 
     @classmethod
-    def load(cls, model_dir: Path) -> Self:
+    def load(cls, config_fp: Path) -> Self:
         """Load."""
-        search = joblib.load(model_dir / "search.joblib")
-        config_fp = model_dir / "config.yaml"
-        inst = cls(search, config_fp)
-        inst.model = clone(inst.search.estimator).set_params(**inst.search.best_params_)
+        model_dir = config_fp.parent
+        inst = cls(joblib.load(model_dir / "search.joblib"), model_dir / "config.yaml")
+        inst.model = joblib.load(model_dir / "model.joblib")
         return inst
 
     def cv_summary(self) -> dict | None:
@@ -254,24 +253,26 @@ class TorchAdapter(BaseAdapter):
             schema=BEHAVIOUR_PREDICTED_SCHEMA,
         )
 
-    def save(self, model_dir: Path) -> None:
+    def save(self) -> None:
         """Save."""
         if self.model is None or self.scaler is None or self.feature_mask is None:
             msg = "Cannot save unfitted torch model."
             raise RuntimeError(msg)
-        model_dir.mkdir(parents=True, exist_ok=True)
+
+        model_dir = self.config_fp.parent
         torch.save(self.model.state_dict(), model_dir / "model.pt")
         joblib.dump(self.scaler, model_dir / "scaler.joblib")
         np.save(model_dir / "feature_mask.npy", self.feature_mask)
         logger.info("Saved torch model to {}", model_dir)
 
     @classmethod
-    def load(cls, model_dir: Path) -> Self:
+    def load(cls, config_fp: Path) -> Self:
         """Reconstruct model + scaler + mask from version_dir artifacts.
 
         Requires self.model_factory to be set (from MODEL_REGISTRY
         instantiation before calling this method).
         """
+        model_dir = config_fp.parent
         model = model.load_state_dict(
             torch.load(
                 model_dir / "model.pt",
