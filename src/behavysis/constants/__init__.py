@@ -66,7 +66,7 @@ from .pipeline import (
     STAGES,
 )
 from .plot import PLOT_DPI, PLOT_STYLE
-from .types import Array1D, Array2D
+from .types import Array1D, Array2D, ModelStrOptions
 
 __all__ = [
     "ACTUAL",
@@ -131,6 +131,7 @@ __all__ = [
     "VALUE",
     "Array1D",
     "Array2D",
+    "ModelStrOptions",
     "X",
     "Y",
 ]

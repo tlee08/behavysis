@@ -8,7 +8,7 @@ from typing import Self
 import yaml
 from pydantic import BaseModel
 
-from .adapter import ModelStrOptions  # noqa: TC001
+from behavysis.constants import ModelStrOptions  # noqa: TC001
 
 
 class YamlModel(BaseModel):

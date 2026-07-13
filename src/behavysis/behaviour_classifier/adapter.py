@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, ClassVar, Literal
+from typing import TYPE_CHECKING, ClassVar
 
 import joblib
 import numpy as np
@@ -26,6 +26,7 @@ from behavysis.constants import (
     PROB,
     Array1D,
     Array2D,
+    ModelStrOptions,
 )
 from behavysis.schemas import BEHAVIOUR_PREDICTED_SCHEMA
 
@@ -289,7 +290,6 @@ class TorchAdapter(BaseAdapter):
 
 # ── registry ─────────────────────────────────────────────────────────
 
-type ModelStrOptions = Literal["sklearn", "torch"]
 
 MODEL_TYPES_TO_STRING: dict[type[BaseAdapter], ModelStrOptions] = {
     SklearnAdapter: "sklearn",
