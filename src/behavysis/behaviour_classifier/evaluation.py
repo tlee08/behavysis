@@ -7,6 +7,7 @@ import altair as alt
 import matplotlib.pyplot as plt
 import numpy as np
 import polars as pl
+import yaml
 from loguru import logger
 from sklearn.metrics import (
     average_precision_score,
@@ -17,7 +18,7 @@ from sklearn.metrics import (
 )
 
 from behavysis.behaviour_classifier.data import agg_eval_df_by_bouts
-from behavysis.constants import ACTUAL, PROB
+from behavysis.constants import ACTUAL, PRED, PROB
 
 NIL = "nil"
 BEHAV = "behav"
@@ -26,7 +27,7 @@ LABELS = [NIL, BEHAV]
 SPLIT = "split"
 
 
-def binary_report(y_true: np.ndarray, y_prob: np.ndarray) -> dict:
+def binary_report(y_true: np.ndarray, y_prob: np.ndarray, y_pred: np.ndarray) -> dict:
     """Summarise binary-classification performance for one split."""
     y_true = np.asarray(y_true).astype(int)
     y_prob = np.asarray(y_prob, dtype=np.float64)
@@ -37,12 +38,6 @@ def binary_report(y_true: np.ndarray, y_prob: np.ndarray) -> dict:
     roc_auc = float(roc_auc_score(y_true, y_prob))
     pr_auc = float(average_precision_score(y_true, y_prob))
 
-    fpr, tpr, thresholds = roc_curve(y_true, y_prob)
-    youden = tpr - fpr
-    best = int(np.argmax(youden))
-    ideal_threshold = float(thresholds[best])
-
-    y_pred = (y_prob >= ideal_threshold).astype(int)
     report = classification_report(
         y_true,
         y_pred,
@@ -62,7 +57,6 @@ def binary_report(y_true: np.ndarray, y_prob: np.ndarray) -> dict:
         "roc_auc": roc_auc,
         "gini": 2.0 * roc_auc - 1.0,
         "pr_auc": pr_auc,
-        "ideal_threshold": ideal_threshold,
         "precision": report[BEHAV]["precision"],
         "recall": report[BEHAV]["recall"],
         "f1": report[BEHAV]["f1-score"],
@@ -114,7 +108,7 @@ def _curve_chart(
             y=alt.Y(f"{y_column}:Q", scale=alt.Scale(domain=[0, 1])),
             color=alt.Color(f"{SPLIT}:N", title="split"),
         )
-        .properties(title=title, width=400, height=400)
+        .properties(title=title, width=400, height=400, config={"axis": {"grid": True}})
     )
 
 
@@ -140,21 +134,24 @@ def save_eval_report(
     eval_dir: Path,
 ) -> dict[str, object]:
     """Write ROC/PR charts and a JSON metric report for the given splits."""
+    # Make eval dir
     eval_dir.mkdir(parents=True, exist_ok=True)
-    # Construct report
-    report: dict[str, dict] = {
-        _name: binary_report(_df[ACTUAL].to_numpy(), _df[PROB].to_numpy())
-        for _name, (_df) in splits.items()
-    }
-    (eval_dir / "eval_report.json").write_text(json.dumps(report, indent=2))
     # Construct bouts splits eval (bouts equivalent of splits)
     bouts_splits = {_name: agg_eval_df_by_bouts(_df) for _name, _df in splits.items()}
     # Prepare to store eval results
+    res_report: dict[str, dict] = {}
     res_df: dict[str, pl.DataFrame] = {}
     res_chart: dict[str, alt.Chart] = {}
     # For both frames and bouts evals
     for _splits_name, _split_data in {"frames": splits, "bouts": bouts_splits}.items():
-        # Construct data
+        # Make report
+        res_report[f"{_splits_name}_report"] = {
+            _name: binary_report(
+                _df[ACTUAL].to_numpy(), _df[PROB].to_numpy(), _df[PRED].to_numpy()
+            )
+            for _name, (_df) in splits.items()
+        }
+        # Make eval dataframes
         res_df[f"{_splits_name}_eval_df"] = pl.concat(
             _df.with_columns(pl.lit(_name).alias(SPLIT))
             for _name, _df in _split_data.items()
@@ -191,14 +188,13 @@ def save_eval_report(
         res_chart[f"{_splits_name}_pr_chart"] = _curve_chart(
             res_df[f"{_splits_name}_pr_df"], "recall", "precision", "PR curve"
         )
-    # Save (only charts)
+    # Save. Only report and charts, not df
+    for _name, _report in res_report.items():
+        (eval_dir / f"{_name}.json").write_text(yaml.dump(_report))
     for _name, _chart in res_chart.items():
         _chart.save(eval_dir / f"{_name}.png")
-        _chart.save(eval_dir / f"{_name}.png")
-        _chart.save(eval_dir / f"{_name}.png")
-        _chart.save(eval_dir / f"{_name}.png")
     # Return
-    return {**res_df, **res_chart}
+    return {**res_report, **res_df, **res_chart}
 
 
 def save_feature_importance(

@@ -145,7 +145,9 @@ class SklearnAdapter(BaseAdapter):
         self.model.fit(self._features(train_df), self._labels(train_df))
         # 6. Find best pcutoff with val_df and update config with best pcutoff value
         # Use per-bouts eval instead of per-frames eval
-        y_df = self.predict(val_df).with_columns(val_df[ACTUAL], val_df[BOUT_ID])
+        y_df = self.predict(val_df).with_columns(
+            val_df[EXPERIMENT], val_df[ACTUAL], val_df[BOUT_ID]
+        )
         y_bouts_df = agg_eval_df_by_bouts(y_df)
         _, recall, thresholds = precision_recall_curve(
             y_bouts_df[ACTUAL], y_bouts_df[PROB], drop_intermediate=True

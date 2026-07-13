@@ -12,7 +12,7 @@ from sklearn.feature_selection import SelectFromModel, VarianceThreshold
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import (
     GridSearchCV,
-    RandomizedSearchCV,
+    HalvingRandomSearchCV,
     StratifiedGroupKFold,
 )
 from sklearn.pipeline import Pipeline
@@ -45,7 +45,7 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
         config_fp,
     ),
     "rf": lambda config_fp: SklearnAdapter(
-        RandomizedSearchCV(
+        HalvingRandomSearchCV(
             ImbPipeline(
                 [
                     ("undersampler", RandomUnderSampler()),
@@ -65,7 +65,6 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
                 "clf__max_depth": [4, 8, 16],
                 "clf__class_weight": ["balanced", None],
             },
-            n_iter=10,
             scoring="average_precision",
             cv=StratifiedGroupKFold(n_splits=3, shuffle=True, random_state=42),
             n_jobs=1,
@@ -74,7 +73,7 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
         config_fp,
     ),
     "logreg": lambda config_fp: SklearnAdapter(
-        RandomizedSearchCV(
+        HalvingRandomSearchCV(
             ImbPipeline(
                 [
                     ("undersampler", RandomUnderSampler()),
@@ -106,7 +105,6 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
                 "clf__penalty": ["l2", None],
                 "clf__max_iter": [1000],
             },
-            n_iter=6,
             scoring="average_precision",
             cv=StratifiedGroupKFold(n_splits=3, shuffle=True, random_state=42),
             n_jobs=1,
@@ -115,7 +113,7 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
         config_fp,
     ),
     "xgb": lambda config_fp: SklearnAdapter(
-        RandomizedSearchCV(
+        HalvingRandomSearchCV(
             ImbPipeline(
                 [
                     ("undersampler", RandomUnderSampler()),
@@ -147,7 +145,6 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
                 "clf__reg_lambda": [1.0, 3.0, 10.0],
                 "clf__scale_pos_weight": [1, 10, 40],
             },
-            n_iter=10,
             scoring="average_precision",
             cv=StratifiedGroupKFold(n_splits=3, shuffle=True, random_state=42),
             n_jobs=1,
@@ -156,7 +153,7 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
         config_fp,
     ),
     "xgb_v2": lambda config_fp: SklearnAdapter(
-        RandomizedSearchCV(
+        HalvingRandomSearchCV(
             Pipeline(
                 [
                     ("var_filter", VarianceThreshold(threshold=0.0)),
@@ -198,9 +195,9 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
                 "clf__colsample_bytree": [0.3, 0.5, 0.7],
                 "clf__gamma": [0, 0.5, 2.0],
                 "clf__reg_lambda": [1.0, 3.0, 10.0],
-                "clf__scale_pos_weight": [1, 10, 40],
+                "clf__scale_pos_weight": [5, 10, 20, 40, 60],
+                "clf__max_delta_step": [0, 1, 3, 10],
             },
-            n_iter=60,
             scoring="average_precision",
             cv=StratifiedGroupKFold(n_splits=3, shuffle=True, random_state=42),
             n_jobs=1,
