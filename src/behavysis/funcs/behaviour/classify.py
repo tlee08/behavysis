@@ -4,17 +4,10 @@ import numpy as np
 import polars as pl
 from loguru import logger
 
-from behavysis.behaviour_classifier import (
-    ClassifierContract,
-    predict_df,
-)
+from behavysis.behaviour_classifier import ClassifierContract, predict_df
 from behavysis.behaviour_classifier.storage import ClassifierFp
 from behavysis.constants import PRED
-from behavysis.models import (
-    ExperimentConfig,
-    ExperimentMetadata,
-    ExtractFeaturesConfig,
-)
+from behavysis.models import ExperimentConfig, ExperimentMetadata, ExtractFeaturesConfig
 from behavysis.schemas import BEHAVIOUR_PREDICTED_SCHEMA
 from behavysis.transforms.behaviour import merge_bouts
 
@@ -42,11 +35,7 @@ def classify_behaviour(
         min_window_secs = model_config.min_empty_window_secs
         min_window_frames = int(np.round(min_window_secs * metadata.require_fps()))
 
-        behaviour_df_i = predict_df(
-            model_config.clf_fp,
-            features_df,
-            pcutoff=model_config.pcutoff,
-        )
+        behaviour_df_i = predict_df(model_config.clf_fp, features_df)
 
         behaviour_df_i = behaviour_df_i.with_columns(
             merge_bouts(

@@ -19,8 +19,9 @@ from sklearn.metrics import (
     roc_curve,
 )
 
-from behavysis.behaviour_classifier.data import label_bouts
 from behavysis.constants import ACTUAL, BOUT_ID, EXPERIMENT, FRAME, PROB
+
+from .data import label_bouts
 
 NIL = "nil"
 BEHAV = "behav"

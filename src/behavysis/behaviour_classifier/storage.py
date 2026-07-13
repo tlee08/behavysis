@@ -25,8 +25,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from behavysis.behaviour_classifier.config import ClassifierActive
 from behavysis.constants import BEHAVIOUR_SCORED_DIR, FEATURES_EXTRACTED_DIR
+
+from .config import ClassifierActive
 
 CLASSIFIERS = "classifiers"
 TRAINING_DATA = "training_data"

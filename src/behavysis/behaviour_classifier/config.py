@@ -10,7 +10,7 @@ from pydantic import BaseModel
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from behavysis.behaviour_classifier.adapter import ModelStrOptions
+    from .adapter import ModelStrOptions
 
 
 class YamlModel(BaseModel):

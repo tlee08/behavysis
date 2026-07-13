@@ -16,9 +16,6 @@ from sklearn.metrics import precision_recall_curve
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
 
-from behavysis.behaviour_classifier import stratified_split_by_group
-from behavysis.behaviour_classifier.data import label_bouts
-from behavysis.behaviour_classifier.torch._helper import select_features
 from behavysis.constants import (
     ACTUAL,
     BEHAVIOUR,
@@ -33,6 +30,8 @@ from behavysis.constants import (
 from behavysis.schemas import BEHAVIOUR_PREDICTED_SCHEMA
 
 from .config import TrainingRecipe
+from .data import label_bouts, stratified_split_by_group
+from .torch._helper import select_features
 
 if TYPE_CHECKING:
     from pathlib import Path

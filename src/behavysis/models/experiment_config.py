@@ -93,7 +93,6 @@ class ClassifyBehaviourConfig(BaseModel):
     """ClassifyBehaviourConfig."""
 
     clf_fp: Path = Path("path") / "to" / "model" / "contract.yaml"
-    pcutoff: PositiveFloat | None = None
     min_empty_window_secs: PositiveFloat = 0.2
     user_defined: list[str] = []
 
