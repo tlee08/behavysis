@@ -85,9 +85,10 @@ def _pr_points(y_true: np.ndarray, y_prob: np.ndarray, split: str) -> pl.DataFra
     """Precision-recall curve points (recall, precision) as long-form."""
     precision, recall, _ = precision_recall_curve(y_true, y_prob)
     return (
-        pl.DataFrame({"recall": recall, "precision": precision, SPLIT: split})
+        pl.DataFrame({"recall": recall, "precision": precision})
         .group_by("recall")
         .mean()
+        .with_columns(pl.lit(split).alias(SPLIT))
     )
 
 
