@@ -18,8 +18,6 @@ from sklearn.metrics import (
 
 from behavysis.constants import ACTUAL, BOUT_ID, EXPERIMENT, FRAME, PROB
 
-from .data import label_bouts
-
 NIL = "nil"
 BEHAV = "behav"
 LABELS = [NIL, BEHAV]
@@ -158,7 +156,7 @@ def save_eval_report(
     )
 
     eval_bout_df = pl.concat(
-        label_bouts(_df.sort([pl.col(EXPERIMENT), pl.col(FRAME)]))
+        _df.sort([pl.col(EXPERIMENT), pl.col(FRAME)])
         .group_by(BOUT_ID)
         .agg(
             pl.col(ACTUAL).max(),
