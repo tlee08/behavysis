@@ -175,4 +175,4 @@ def _eval_split(adapter: BaseAdapter, df: pl.DataFrame) -> pl.DataFrame:
     # Run inference
     x_df = df.drop([EXPERIMENT, ACTUAL])
     eval_df = adapter.predict(x_df)
-    return label_bouts(eval_df.with_columns(df[EXPERIMENT], df[ACTUAL]))
+    return eval_df.with_columns(df[EXPERIMENT], df[ACTUAL])
