@@ -111,7 +111,7 @@ def _hist_chart(eval_df: pl.DataFrame, x_column: str, title: str) -> alt.Chart:
         alt.Chart(eval_df)
         .mark_bar(opacity=0.3, binSpacing=0)
         .encode(
-            alt.X(f"{x_column}:Q", scale=alt.Scale(domain=[0, 1])).bin(maxbins=100),
+            alt.X(f"{x_column}:Q", scale=alt.Scale(domain=[0, 1])).bin(maxbins=50),
             alt.Y(aggregate="count"),
             alt.Column(f"{ACTUAL}:N"),
             alt.Row(f"{SPLIT}:N"),
