@@ -42,6 +42,7 @@ Documentation = "https://tlee08.github.io/behavysis"
 dev = [
     "mkdocs-material>=9.7.5",
     "mkdocstrings-python>=2.0.3",
+    "pyclean>=3.7.0",
     "pymdown-extensions>=10.21",
     "pytest>=9.0.2",
     "ruff>=0.15.6",

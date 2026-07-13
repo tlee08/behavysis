@@ -18,6 +18,7 @@ from behavysis.constants import (
     FRAME,
     PRED,
     PROB,
+    TRUE_NEG,
     UNSURE,
     Array1D,
 )
@@ -78,7 +79,10 @@ def load_training_data(
         y_df = (
             pl.read_parquet(y_fps[name])
             .filter(pl.col(BEHAVIOUR) == behaviour_name)
-            .select(FRAME, pl.col(ACTUAL).replace({UNSURE: FALSE_POS}).alias(ACTUAL))
+            .select(
+                FRAME,
+                pl.col(ACTUAL).replace([FALSE_POS, UNSURE], [TRUE_NEG, TRUE_NEG]),
+            )
         )
 
         aligned = x_df.join(y_df, on=FRAME, how="inner")
