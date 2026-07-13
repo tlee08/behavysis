@@ -174,7 +174,7 @@ MODEL_REGISTRY: dict[str, Callable[[], BaseAdapter]] = {
                 "clf__reg_lambda": [1.0, 3.0, 10.0],
                 "clf__scale_pos_weight": [1, 10, 40],
             },
-            n_iter=30,
+            n_iter=60,
             scoring="average_precision",
             cv=StratifiedGroupKFold(n_splits=3, shuffle=True, random_state=42),
             n_jobs=1,

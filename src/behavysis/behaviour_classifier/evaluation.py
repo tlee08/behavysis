@@ -126,6 +126,21 @@ def _curve_chart(
     return line + baseline if baseline is not None else line
 
 
+def _actual_vs_prob_hist(eval_df: pl.DataFrame):
+    return (
+        alt.Chart(eval_df)
+        .mark_bar(opacity=0.3, binSpacing=0)
+        .encode(
+            alt.X(f"{PROB}:Q", scale=alt.Scale(domain=[0, 1])).bin(maxbins=100),
+            alt.Y("count()").stack(None),  # noqa: PD013
+            alt.Column(f"{ACTUAL}:N"),
+            alt.Row(f"{SPLIT}:N"),
+        )
+        .properties(height=290, width=250, config={"axis": {"grid": True}})
+        .resolve_scale(y="independent")
+    )
+
+
 def save_eval_report(
     splits: dict[str, pl.DataFrame],
     eval_dir: Path,
@@ -134,9 +149,13 @@ def save_eval_report(
     """Write ROC/PR charts and a JSON metric report for the given splits."""
     eval_dir.mkdir(parents=True, exist_ok=True)
 
+    eval_full_df = pl.concat(
+        _df.with_columns(pl.lit(name).alias(SPLIT)) for name, _df in splits.items()
+    )
+
     report: dict[str, dict] = {
-        name: binary_report(eval_df[ACTUAL].to_numpy(), eval_df[PROB].to_numpy())
-        for name, (eval_df) in splits.items()
+        name: binary_report(_df[ACTUAL].to_numpy(), _df[PROB].to_numpy())
+        for name, (_df) in splits.items()
     }
     if cv_summary is not None:
         report["val"] = cv_summary
@@ -144,17 +163,18 @@ def save_eval_report(
 
     roc_pts = pl.concat(
         [
-            _roc_points(eval_df[ACTUAL].to_numpy(), eval_df[PROB].to_numpy(), name)
-            for name, eval_df in splits.items()
+            _roc_points(_df[ACTUAL].to_numpy(), _df[PROB].to_numpy(), name)
+            for name, _df in splits.items()
         ]
     )
     pr_pts = pl.concat(
         [
-            _pr_points(eval_df[ACTUAL].to_numpy(), eval_df[PROB].to_numpy(), name)
-            for name, eval_df in splits.items()
+            _pr_points(_df[ACTUAL].to_numpy(), _df[PROB].to_numpy(), name)
+            for name, _df in splits.items()
         ]
     )
 
+    pred_histogram = _actual_vs_prob_hist(eval_full_df)
     diagonal = (
         alt.Chart(pl.DataFrame({"x": [0.0, 1.0], "y": [0.0, 1.0]}))
         .mark_line(strokeDash=[4, 4], color="grey")
@@ -165,6 +185,7 @@ def save_eval_report(
         pr_pts, "recall", "precision", "Precision-Recall curve", None
     )
 
+    pred_histogram.save(eval_dir / "hist.png")
     roc_chart.save(eval_dir / "roc.png")
     pr_chart.save(eval_dir / "pr.png")
     logger.info("Saved eval report and ROC/PR charts to {}", eval_dir)
