@@ -1,6 +1,7 @@
 """Model registry: name → adapter factory."""
 
 from collections.abc import Callable
+from pathlib import Path
 
 import numpy as np
 from imblearn.over_sampling import RandomOverSampler
@@ -9,8 +10,14 @@ from imblearn.under_sampling import RandomUnderSampler
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_selection import SelectFromModel, VarianceThreshold
 from sklearn.linear_model import LogisticRegression
-from sklearn.model_selection import RandomizedSearchCV, StratifiedGroupKFold
+from sklearn.model_selection import (
+    GridSearchCV,
+    RandomizedSearchCV,
+    StratifiedGroupKFold,
+)
+from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import MinMaxScaler
+from sklearn.tree import DecisionTreeClassifier
 from xgboost import XGBClassifier
 
 from behavysis.utils import get_gpu_device
@@ -20,8 +27,24 @@ from .adapter import BaseAdapter, SklearnAdapter
 # ── registry ─────────────────────────────────────────────────────────
 
 
-MODEL_REGISTRY: dict[str, Callable[[], BaseAdapter]] = {
-    "rf": lambda: SklearnAdapter(
+MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
+    "baseline": lambda config_fp: SklearnAdapter(
+        GridSearchCV(
+            Pipeline(
+                [
+                    ("clf", DecisionTreeClassifier(random_state=42)),
+                ],
+            ),
+            {
+                "model__max_depth": [3],
+            },
+            cv=2,  # minimum sensible CV
+            n_jobs=1,  # easier to debug
+            verbose=2,
+        ),
+        config_fp,
+    ),
+    "rf": lambda config_fp: SklearnAdapter(
         RandomizedSearchCV(
             ImbPipeline(
                 [
@@ -47,9 +70,10 @@ MODEL_REGISTRY: dict[str, Callable[[], BaseAdapter]] = {
             cv=StratifiedGroupKFold(n_splits=3, shuffle=True, random_state=42),
             n_jobs=1,
             verbose=1,
-        )
+        ),
+        config_fp,
     ),
-    "logreg": lambda: SklearnAdapter(
+    "logreg": lambda config_fp: SklearnAdapter(
         RandomizedSearchCV(
             ImbPipeline(
                 [
@@ -88,8 +112,9 @@ MODEL_REGISTRY: dict[str, Callable[[], BaseAdapter]] = {
             n_jobs=1,
             verbose=1,
         ),
+        config_fp,
     ),
-    "xgb": lambda: SklearnAdapter(
+    "xgb": lambda config_fp: SklearnAdapter(
         RandomizedSearchCV(
             ImbPipeline(
                 [
@@ -128,10 +153,11 @@ MODEL_REGISTRY: dict[str, Callable[[], BaseAdapter]] = {
             n_jobs=1,
             verbose=1,
         ),
+        config_fp,
     ),
-    "xgb_v2": lambda: SklearnAdapter(
+    "xgb_v2": lambda config_fp: SklearnAdapter(
         RandomizedSearchCV(
-            ImbPipeline(
+            Pipeline(
                 [
                     ("var_filter", VarianceThreshold(threshold=0.0)),
                     (
@@ -180,6 +206,7 @@ MODEL_REGISTRY: dict[str, Callable[[], BaseAdapter]] = {
             n_jobs=1,
             verbose=1,
         ),
+        config_fp,
     ),
 }
 

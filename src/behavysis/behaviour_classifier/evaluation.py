@@ -19,7 +19,8 @@ from sklearn.metrics import (
     roc_curve,
 )
 
-from behavysis.constants import ACTUAL, PROB
+from behavysis.behaviour_classifier.data import label_bouts
+from behavysis.constants import ACTUAL, BOUT_ID, EXPERIMENT, FRAME, PROB
 
 NIL = "nil"
 BEHAV = "behav"
@@ -126,7 +127,7 @@ def _curve_chart(
     return line + baseline if baseline is not None else line
 
 
-def _actual_vs_prob_hist(eval_df: pl.DataFrame):
+def _actual_vs_prob_hist(eval_df: pl.DataFrame) -> alt.Chart:
     return (
         alt.Chart(eval_df)
         .mark_bar(opacity=0.3, binSpacing=0)
@@ -141,6 +142,18 @@ def _actual_vs_prob_hist(eval_df: pl.DataFrame):
     )
 
 
+def _bout_prob_agg_hist(eval_bouts_df: pl.DataFrame) -> alt.Chart:
+    return (
+        alt.Chart(eval_bouts_df)
+        .mark_bar()
+        .encode(
+            alt.X(field="prob_max", type="quantitative", bin=alt.Bin(maxbins=100)),
+            alt.Y(aggregate="count", type="quantitative"),
+        )
+        .properties(height=290, width="container", config={"axis": {"grid": False}})
+    )
+
+
 def save_eval_report(
     splits: dict[str, pl.DataFrame],
     eval_dir: Path,
@@ -151,6 +164,21 @@ def save_eval_report(
 
     eval_full_df = pl.concat(
         _df.with_columns(pl.lit(name).alias(SPLIT)) for name, _df in splits.items()
+    )
+
+    eval_bout_df = pl.concat(
+        label_bouts(_df.sort([pl.col(EXPERIMENT), pl.col(FRAME)]))
+        .group_by(BOUT_ID)
+        .agg(
+            pl.col(ACTUAL).max(),
+            pl.col(PROB).max().alias("prob_max"),
+            pl.col(PROB).mean().alias("prob_mean"),
+        )
+        .filter(pl.col(ACTUAL) == 1)
+        .sort(BOUT_ID)
+        .with_row_index("index")
+        .with_columns(pl.lit(name).alias(SPLIT))
+        for name, _df in splits.items()
     )
 
     report: dict[str, dict] = {
@@ -174,7 +202,8 @@ def save_eval_report(
         ]
     )
 
-    pred_histogram = _actual_vs_prob_hist(eval_full_df)
+    prob_histogram = _actual_vs_prob_hist(eval_full_df)
+    bout_hist = _bout_prob_agg_hist(eval_bout_df)
     diagonal = (
         alt.Chart(pl.DataFrame({"x": [0.0, 1.0], "y": [0.0, 1.0]}))
         .mark_line(strokeDash=[4, 4], color="grey")
@@ -185,7 +214,8 @@ def save_eval_report(
         pr_pts, "recall", "precision", "Precision-Recall curve", None
     )
 
-    pred_histogram.save(eval_dir / "hist.png")
+    prob_histogram.save(eval_dir / "hist.png")
+    bout_hist.save(eval_dir / "hist.png")
     roc_chart.save(eval_dir / "roc.png")
     pr_chart.save(eval_dir / "pr.png")
     logger.info("Saved eval report and ROC/PR charts to {}", eval_dir)
