@@ -84,7 +84,11 @@ def _roc_points(y_true: np.ndarray, y_prob: np.ndarray, split: str) -> pl.DataFr
 def _pr_points(y_true: np.ndarray, y_prob: np.ndarray, split: str) -> pl.DataFrame:
     """Precision-recall curve points (recall, precision) as long-form."""
     precision, recall, _ = precision_recall_curve(y_true, y_prob)
-    return pl.DataFrame({"recall": recall, "precision": precision, SPLIT: split})
+    return (
+        pl.DataFrame({"recall": recall, "precision": precision, SPLIT: split})
+        .group_by("recall")
+        .mean()
+    )
 
 
 def _curve_chart(
@@ -99,7 +103,7 @@ def _curve_chart(
         .mark_line()
         .encode(
             x=alt.X(f"{x_column}:Q", scale=alt.Scale(domain=[0, 1])),
-            y=alt.Y(f"{y_column}:Q", aggregate="mean", scale=alt.Scale(domain=[0, 1])),
+            y=alt.Y(f"{y_column}:Q", scale=alt.Scale(domain=[0, 1])),
             color=alt.Color(f"{SPLIT}:N", title="split"),
         )
         .properties(title=title, width=400, height=400)
