@@ -106,31 +106,19 @@ def _curve_chart(
     )
 
 
-def _actual_vs_prob_hist(eval_df: pl.DataFrame) -> alt.Chart:
+def _hist_chart(eval_df: pl.DataFrame, x_column: str, title: str) -> alt.Chart:
     return (
         alt.Chart(eval_df)
         .mark_bar(opacity=0.3, binSpacing=0)
         .encode(
-            alt.X(f"{PROB}:Q", scale=alt.Scale(domain=[0, 1])).bin(maxbins=100),
-            alt.Y("count()").stack(None),
+            alt.X(f"{x_column}:Q", scale=alt.Scale(domain=[0, 1])).bin(maxbins=100),
+            alt.Y(aggregate="count"),
             alt.Column(f"{ACTUAL}:N"),
             alt.Row(f"{SPLIT}:N"),
         )
-        .properties(height=290, width=250, config={"axis": {"grid": False}})
-        .resolve_scale(y="independent")
-    )
-
-
-def _bout_prob_agg_hist(eval_bouts_df: pl.DataFrame) -> alt.Chart:
-    return (
-        alt.Chart(eval_bouts_df)
-        .mark_bar(opacity=0.3, binSpacing=0)
-        .encode(
-            alt.X(field="prob_max", type="quantitative", bin=alt.Bin(maxbins=100)),
-            alt.Y(aggregate="count", type="quantitative"),
-            alt.Row(f"{SPLIT}:N"),
+        .properties(
+            title=title, height=290, width=250, config={"axis": {"grid": False}}
         )
-        .properties(height=290, width=250, config={"axis": {"grid": False}})
         .resolve_scale(y="independent")
     )
 
@@ -181,12 +169,14 @@ def save_eval_report(
         ]
     )
     # Make plots
-    prob_hist_chart = _actual_vs_prob_hist(eval_full_df)
-    bout_hist_chart = _bout_prob_agg_hist(eval_bout_df)
     diagonal = (
         alt.Chart(pl.DataFrame({"x": [0.0, 1.0], "y": [0.0, 1.0]}))
         .mark_line(strokeDash=[4, 4], color="grey")
         .encode(x="x:Q", y="y:Q")
+    )
+    prob_hist_chart = _hist_chart(eval_full_df, PROB, "Prob histogram")
+    bout_hist_chart = _hist_chart(
+        eval_bout_df, "prob_max", "Max prob per-bout histogram"
     )
     roc_chart = _curve_chart(roc_df, "fpr", "tpr", "ROC curve") + diagonal
     pr_chart = _curve_chart(pr_df, "recall", "precision", "Precision-Recall curve")
