@@ -2,15 +2,13 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Self
+from pathlib import Path  # noqa: TC003
+from typing import Self
 
 import yaml
 from pydantic import BaseModel
 
-if TYPE_CHECKING:
-    from pathlib import Path
-
-    from .adapter import ModelStrOptions
+from .adapter import ModelStrOptions  # noqa: TC001
 
 
 class YamlModel(BaseModel):
