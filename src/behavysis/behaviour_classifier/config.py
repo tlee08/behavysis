@@ -58,3 +58,4 @@ class TrainingRecipe(YamlModel):
     seed: int = 42
     test_split: float = 0.2
     pcutoff: float = 0.2
+    downsample_n: int = 100_000

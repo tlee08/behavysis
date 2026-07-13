@@ -39,7 +39,6 @@ if TYPE_CHECKING:
     from .torch.base import TorchModel
 
 _META_COLS = [EXPERIMENT, FRAME, ACTUAL, BOUT_ID]
-SEARCH_ROWS = 100_000
 
 
 class BaseAdapter(ABC):
@@ -97,23 +96,23 @@ class SklearnAdapter(BaseAdapter):
         # 1. Compute bout_id once, on the full ordered frame (correct boundaries).
         df = label_bouts(df)
         # 2. Row-level, prevalence-preserving downsample for the search.
-        if len(df) > SEARCH_ROWS:
+        if len(df) > config.downsample_n:
             idx = np.arange(len(df))
             sub_idx, _ = train_test_split(
                 idx,
-                train_size=SEARCH_ROWS,
+                train_size=config.downsample_n,
                 stratify=self._labels(df),
                 random_state=config.seed,
             )
-            df_sub = df[sub_idx]
+            sub_df = df[sub_idx]
         else:
-            df_sub = df
+            sub_df = df
         # 3. Grouped CV on surviving rows → no train/val leakage.
         self.search.refit = False
         self.search.fit(
-            self._features(df_sub),
-            self._labels(df_sub),
-            groups=df_sub[BOUT_ID].to_numpy(),
+            self._features(sub_df),
+            self._labels(sub_df),
+            groups=sub_df[BOUT_ID].to_numpy(),
         )
         # 4. Refit best pipeline on the FULL data (bout_id dropped by _features).
         self.model = clone(self.search.estimator).set_params(**self.search.best_params_)
@@ -132,13 +131,14 @@ class SklearnAdapter(BaseAdapter):
 
     def save(self, dst_dir: Path) -> None:
         dst_dir.mkdir(parents=True, exist_ok=True)
-        joblib.dump(self.model, dst_dir / "model.joblib")
+        joblib.dump(self.search, dst_dir / "search.joblib")
         logger.info("Saved sklearn model to {}", dst_dir)
 
     @classmethod
     def load(cls, src_dir: Path) -> Self:
-        inst = cls()
-        inst.model = joblib.load(src_dir / "model.joblib")
+        search = joblib.load(src_dir / "model.joblib")
+        inst = cls(search)
+        inst.model = clone(inst.search.estimator).set_params(**inst.search.best_params_)
         return inst
 
     def cv_summary(self) -> dict | None:
