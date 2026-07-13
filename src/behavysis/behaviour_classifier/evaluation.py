@@ -181,9 +181,8 @@ def save_eval_report(
         res_chart[f"{_splits_name}_hist_chart"] = _hist_chart(
             res_df[f"{_splits_name}_eval_df"], PROB, f"Prob Histogram {_splits_name}"
         )
-        res_chart[f"{_splits_name}_roc_chart"] = (
-            _curve_chart(res_df[f"{_splits_name}_roc_df"], "fpr", "tpr", "ROC curve")
-            + diagonal
+        res_chart[f"{_splits_name}_roc_chart"] = diagonal + _curve_chart(
+            res_df[f"{_splits_name}_roc_df"], "fpr", "tpr", "ROC curve"
         )
         res_chart[f"{_splits_name}_pr_chart"] = _curve_chart(
             res_df[f"{_splits_name}_pr_df"], "recall", "precision", "PR curve"
