@@ -37,12 +37,16 @@ if TYPE_CHECKING:
 
 
 class ClassifierFp:
-    def __init__(self, root_dir: Path):
+    """ClassifierFp."""
+
+    def __init__(self, root_dir: Path) -> None:
+        """__init__."""
         self._root_dir = root_dir.resolve()
 
     # ── root ────────────────────────────────────────────────────---------
 
     def root_dir(self) -> Path:
+        """root_dir."""
         return self._root_dir
 
     # ── root level ─────────────────────────────────────────────────------
@@ -58,16 +62,20 @@ class ClassifierFp:
     # ── training data ────────────────────────────────────────────────────
 
     def training_data_dir(self) -> Path:
+        """training_data_dir."""
         return self.root_dir() / TRAINING_DATA
 
     def features_dir(self) -> Path:
+        """features_dir."""
         return self.training_data_dir() / FEATURES_EXTRACTED_DIR
 
     def labels_dir(self) -> Path:
+        """labels_dir."""
         return self.training_data_dir() / BEHAVIOUR_SCORED_DIR
 
     # ── model level ─────────────────────────────────────────────────-----
     def models_dir(self) -> Path:
+        """models_dir."""
         return self.root_dir() / CLASSIFIERS
 
     def model_dir(self, model_name: str, iteration: int) -> Path:
@@ -75,9 +83,11 @@ class ClassifierFp:
         return self.models_dir() / f"{model_name}-{iteration:03d}"
 
     def config_fp(self, model_name: str, iteration: int) -> Path:
+        """config_fp."""
         return self.model_dir(model_name, iteration) / "config.yaml"
 
     def eval_dir(self, model_name: str, iteration: int) -> Path:
+        """eval_dir."""
         return self.model_dir(model_name, iteration) / "evaluation"
 
     # ── active model ─────────────────────────────────────────────────----
@@ -88,7 +98,9 @@ class ClassifierFp:
         return self.model_dir(active.model_name, active.iteration)
 
     def active_config_fp(self) -> Path:
+        """active_config_fp."""
         return self.active_model_dir() / "config.yaml"
 
     def active_eval_dir(self) -> Path:
+        """active_eval_dir."""
         return self.active_model_dir() / "evaluation"
