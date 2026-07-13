@@ -16,9 +16,8 @@ from sklearn.metrics import (
     roc_curve,
 )
 
-from behavysis.constants import ACTUAL, BOUT_ID, EXPERIMENT, FRAME, PRED, PROB
-
-from .data import label_bouts
+from behavysis.behaviour_classifier.data import agg_eval_df_by_bouts
+from behavysis.constants import ACTUAL, PROB
 
 NIL = "nil"
 BEHAV = "behav"
@@ -139,82 +138,67 @@ def _hist_chart(eval_df: pl.DataFrame, x_column: str, title: str) -> alt.Chart:
 def save_eval_report(
     splits: dict[str, pl.DataFrame],
     eval_dir: Path,
-) -> dict[str, dict | pl.DataFrame | alt.Chart]:
+) -> dict[str, object]:
     """Write ROC/PR charts and a JSON metric report for the given splits."""
+    eval_dir.mkdir(parents=True, exist_ok=True)
     # Construct report
     report: dict[str, dict] = {
-        name: binary_report(_df[ACTUAL].to_numpy(), _df[PROB].to_numpy())
-        for name, (_df) in splits.items()
+        _name: binary_report(_df[ACTUAL].to_numpy(), _df[PROB].to_numpy())
+        for _name, (_df) in splits.items()
     }
-
-    # Construct data for plots
-    eval_frames_df = pl.concat(
-        _df.with_columns(pl.lit(name).alias(SPLIT)) for name, _df in splits.items()
-    )
-
-    eval_bout_df = pl.concat(
-        label_bouts(_df.sort([pl.col(EXPERIMENT), pl.col(FRAME)]))
-        .group_by(BOUT_ID)
-        .agg(
-            pl.col(ACTUAL).max(),
-            pl.col(PROB).max().alias("prob_max"),
-            pl.col(PROB).mean().alias("prob_mean"),
-            pl.col(PRED).max().alias("pred_max"),
-        )
-        .sort(BOUT_ID)
-        .with_columns(pl.lit(name).alias(SPLIT))
-        for name, _df in splits.items()
-    )
-    roc_df = pl.concat(
-        [
-            _roc_df(_df[ACTUAL].to_numpy(), _df[PROB].to_numpy()).with_columns(
-                pl.lit(name).alias(SPLIT)
-            )
-            for name, _df in splits.items()
-        ]
-    )
-    pr_df = pl.concat(
-        [
-            _pr_df(_df[ACTUAL].to_numpy(), _df[PROB].to_numpy()).with_columns(
-                pl.lit(name).alias(SPLIT)
-            )
-            for name, _df in splits.items()
-        ]
-    )
-    # Make plots
-    diagonal = (
-        alt.Chart(pl.DataFrame({"x": [0.0, 1.0], "y": [0.0, 1.0]}))
-        .mark_line(strokeDash=[4, 4], color="grey")
-        .encode(x="x:Q", y="y:Q")
-    )
-    prob_hist_chart = _hist_chart(eval_frames_df, PROB, "Prob histogram")
-    bout_hist_chart = _hist_chart(
-        eval_bout_df, "prob_max", "Max prob per-bout histogram"
-    )
-    roc_chart = _curve_chart(roc_df, "fpr", "tpr", "ROC curve") + diagonal
-    pr_chart = _curve_chart(pr_df, "recall", "precision", "Precision-Recall curve")
-    # Save
-    eval_dir.mkdir(parents=True, exist_ok=True)
     (eval_dir / "eval_report.json").write_text(json.dumps(report, indent=2))
-    prob_hist_chart.save(eval_dir / "prob_hist.png")
-    bout_hist_chart.save(eval_dir / "bout_hist.png")
-    roc_chart.save(eval_dir / "roc.png")
-    pr_chart.save(eval_dir / "pr.png")
+    # Construct bouts splits eval (bouts equivalent of splits)
+    bouts_splits = {_name: agg_eval_df_by_bouts(_df) for _name, _df in splits.items()}
+    # Prepare to store eval results
+    res_df: dict[str, pl.DataFrame] = {}
+    res_chart: dict[str, alt.Chart] = {}
+    # For both frames and bouts evals
+    for _splits_name, _split_data in {"frames": splits, "bouts": bouts_splits}.items():
+        # Construct data
+        res_df[f"{_splits_name}_eval_df"] = pl.concat(
+            _df.with_columns(pl.lit(_name).alias(SPLIT))
+            for _name, _df in _split_data.items()
+        )
+        res_df[f"{_splits_name}_roc_df"] = pl.concat(
+            [
+                _roc_df(_df[ACTUAL].to_numpy(), _df[PROB].to_numpy()).with_columns(
+                    pl.lit(_name).alias(SPLIT)
+                )
+                for _name, _df in _split_data.items()
+            ]
+        )
+        res_df[f"{_splits_name}_pr_df"] = pl.concat(
+            [
+                _pr_df(_df[ACTUAL].to_numpy(), _df[PROB].to_numpy()).with_columns(
+                    pl.lit(_name).alias(SPLIT)
+                )
+                for _name, _df in _split_data.items()
+            ]
+        )
+        # Make plots
+        diagonal = (
+            alt.Chart(pl.DataFrame({"x": [0.0, 1.0], "y": [0.0, 1.0]}))
+            .mark_line(strokeDash=[4, 4], color="grey")
+            .encode(x="x:Q", y="y:Q")
+        )
+        res_chart[f"{_splits_name}_hist_chart"] = _hist_chart(
+            res_df[f"{_splits_name}_eval_df"], PROB, f"Prob Histogram {_splits_name}"
+        )
+        res_chart[f"{_splits_name}_roc_chart"] = (
+            _curve_chart(res_df[f"{_splits_name}_roc_df"], "fpr", "tpr", "ROC curve")
+            + diagonal
+        )
+        res_chart[f"{_splits_name}_pr_chart"] = _curve_chart(
+            res_df[f"{_splits_name}_pr_df"], "recall", "precision", "PR curve"
+        )
+    # Save (only charts)
+    for _name, _chart in res_chart.items():
+        _chart.save(eval_dir / f"{_name}.png")
+        _chart.save(eval_dir / f"{_name}.png")
+        _chart.save(eval_dir / f"{_name}.png")
+        _chart.save(eval_dir / f"{_name}.png")
     # Return
-    return {
-        # Report
-        "report": report,
-        # Data
-        "eval_frames_df": eval_frames_df,
-        "eval_bout_df": eval_bout_df,
-        "roc_df": roc_df,
-        "pr_df": pr_df,
-        # Graphs
-        "prob_hist_chart": prob_hist_chart,
-        "bout_hist_chart": bout_hist_chart,
-        "roc_chart": roc_chart,
-        "pr_chart": pr_chart,
-    }
+    return {**res_df, **res_chart}
 
 
 def save_feature_importance(

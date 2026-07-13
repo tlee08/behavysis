@@ -31,7 +31,7 @@ from behavysis.constants import (
 from behavysis.schemas import BEHAVIOUR_PREDICTED_SCHEMA
 
 from .config import TrainingRecipe
-from .data import label_bouts, stratified_split_by_group
+from .data import agg_eval_df_by_bouts, label_bouts, stratified_split_by_group
 from .torch._helper import select_features
 
 if TYPE_CHECKING:
@@ -144,9 +144,11 @@ class SklearnAdapter(BaseAdapter):
         self.model = clone(self.search.estimator).set_params(**self.search.best_params_)
         self.model.fit(self._features(train_df), self._labels(train_df))
         # 6. Find best pcutoff with val_df and update config with best pcutoff value
+        # Use per-bouts eval instead of per-frames eval
         y_df = self.predict(val_df).with_columns(val_df[ACTUAL], val_df[BOUT_ID])
+        y_bouts_df = agg_eval_df_by_bouts(y_df)
         _, recall, thresholds = precision_recall_curve(
-            y_df[ACTUAL], y_df[PROB], drop_intermediate=True
+            y_bouts_df[ACTUAL], y_bouts_df[PROB], drop_intermediate=True
         )
         config.pcutoff = float(
             thresholds[(recall[:-1] >= config.target_recall)][-1]

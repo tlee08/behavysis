@@ -16,6 +16,8 @@ from behavysis.constants import (
     EXPERIMENT,
     FALSE_POS,
     FRAME,
+    PRED,
+    PROB,
     UNSURE,
     Array1D,
 )
@@ -120,3 +122,17 @@ def stratified_split_by_group(
     )
     train_idx, test_idx = next(sgkf.split(idx, y, groups))
     return train_idx, test_idx
+
+
+def agg_eval_df_by_bouts(df: pl.DataFrame) -> pl.DataFrame:
+    """Aggregate an eval_df by bouts."""
+    return (
+        label_bouts(df.sort([pl.col(EXPERIMENT), pl.col(FRAME)]))
+        .group_by(BOUT_ID)
+        .agg(
+            pl.col(ACTUAL).max(),
+            pl.col(PROB).max(),
+            pl.col(PRED).max(),
+        )
+        .sort(BOUT_ID)
+    )
