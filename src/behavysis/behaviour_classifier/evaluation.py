@@ -6,11 +6,8 @@ from pathlib import Path
 import altair as alt
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
 import polars as pl
-import seaborn as sns
 from loguru import logger
-from matplotlib.figure import Figure
 from sklearn.metrics import (
     average_precision_score,
     classification_report,
@@ -31,24 +28,7 @@ SPLIT = "split"
 
 
 def binary_report(y_true: np.ndarray, y_prob: np.ndarray) -> dict:
-    """Summarise binary-classification performance for one split.
-
-    Reports threshold-independent metrics (ROC AUC, Gini, PR AUC) plus the
-    Youden-optimal threshold and the classification metrics achieved at it.
-
-    Parameters
-    ----------
-    y_true : np.ndarray
-        Ground-truth binary labels (1 = behaviour).
-    y_prob : np.ndarray
-        Predicted probabilities for the positive class.
-
-    Returns:
-    -------
-    dict
-        Metric summary, or an empty dict if only one class is present
-        (ROC/PR AUC are undefined in that case).
-    """
+    """Summarise binary-classification performance for one split."""
     y_true = np.asarray(y_true).astype(int)
     y_prob = np.asarray(y_prob, dtype=np.float64)
     if len(np.unique(y_true)) < 2:  # noqa: PLR2004
@@ -112,10 +92,9 @@ def _curve_chart(
     x_column: str,
     y_column: str,
     title: str,
-    baseline: alt.Chart | None,
 ) -> alt.Chart:
     """Build an overlaid line chart (one line per split) with a baseline."""
-    line = (
+    return (
         alt.Chart(points)
         .mark_line()
         .encode(
@@ -125,7 +104,6 @@ def _curve_chart(
         )
         .properties(title=title, width=400, height=400)
     )
-    return line + baseline if baseline is not None else line
 
 
 def _actual_vs_prob_hist(eval_df: pl.DataFrame) -> alt.Chart:
@@ -134,7 +112,7 @@ def _actual_vs_prob_hist(eval_df: pl.DataFrame) -> alt.Chart:
         .mark_bar(opacity=0.3, binSpacing=0)
         .encode(
             alt.X(f"{PROB}:Q", scale=alt.Scale(domain=[0, 1])).bin(maxbins=100),
-            alt.Y("count()").stack(None),  # noqa: PD013
+            alt.Y("count()").stack(None),
             alt.Column(f"{ACTUAL}:N"),
             alt.Row(f"{SPLIT}:N"),
         )
@@ -190,103 +168,50 @@ def save_eval_report(
         .with_columns(pl.lit(name).alias(SPLIT))
         for name, _df in splits.items()
     )
-    roc_pts = pl.concat(
+    roc_df = pl.concat(
         [
             _roc_points(_df[ACTUAL].to_numpy(), _df[PROB].to_numpy(), name)
             for name, _df in splits.items()
         ]
     )
-    pr_pts = pl.concat(
+    pr_df = pl.concat(
         [
             _pr_points(_df[ACTUAL].to_numpy(), _df[PROB].to_numpy(), name)
             for name, _df in splits.items()
         ]
     )
     # Make plots
-    prob_histogram = _actual_vs_prob_hist(eval_full_df)
-    bout_hist = _bout_prob_agg_hist(eval_bout_df)
+    prob_hist_chart = _actual_vs_prob_hist(eval_full_df)
+    bout_hist_chart = _bout_prob_agg_hist(eval_bout_df)
     diagonal = (
         alt.Chart(pl.DataFrame({"x": [0.0, 1.0], "y": [0.0, 1.0]}))
         .mark_line(strokeDash=[4, 4], color="grey")
         .encode(x="x:Q", y="y:Q")
     )
-    roc_chart = _curve_chart(roc_pts, "fpr", "tpr", "ROC curve", diagonal)
-    pr_chart = _curve_chart(
-        pr_pts, "recall", "precision", "Precision-Recall curve", None
-    )
+    roc_chart = _curve_chart(roc_df, "fpr", "tpr", "ROC curve") + diagonal
+    pr_chart = _curve_chart(pr_df, "recall", "precision", "Precision-Recall curve")
     # Save
     eval_dir.mkdir(parents=True, exist_ok=True)
     (eval_dir / "eval_report.json").write_text(json.dumps(report, indent=2))
-    prob_histogram.save(eval_dir / "prob_hist.png")
-    bout_hist.save(eval_dir / "bout_hist.png")
+    prob_hist_chart.save(eval_dir / "prob_hist.png")
+    bout_hist_chart.save(eval_dir / "bout_hist.png")
     roc_chart.save(eval_dir / "roc.png")
     pr_chart.save(eval_dir / "pr.png")
     # Return
     return {
+        # Report
         "report": report,
-        "prob_histogram": prob_histogram,
-        "bout_hist": bout_hist,
+        # Data
+        "eval_full_df": eval_full_df,
+        "eval_bout_df": eval_bout_df,
+        "roc_df": roc_df,
+        "pr_df": pr_df,
+        # Graphs
+        "prob_hist_chart": prob_hist_chart,
+        "bout_hist_chart": bout_hist_chart,
         "roc_chart": roc_chart,
         "pr_chart": pr_chart,
     }
-
-
-def eval_metrics_pcutoffs(y_true: np.ndarray, y_prob: np.ndarray) -> Figure:
-    """Plot precision, recall, f1, and accuracy across probability cutoffs."""
-    labels = LABELS
-    pcutoffs = np.linspace(0, 1, 101)
-    precisions = np.zeros(pcutoffs.shape[0])
-    recalls = np.zeros(pcutoffs.shape[0])
-    f1 = np.zeros(pcutoffs.shape[0])
-    accuracies = np.zeros(pcutoffs.shape[0])
-
-    for i, pcutoff in enumerate(pcutoffs):
-        y_pred = y_prob > pcutoff
-        report = classification_report(
-            y_true,
-            y_pred,
-            target_names=labels,
-            output_dict=True,
-        )
-        precisions[i] = report[BEHAV]["precision"]
-        recalls[i] = report[BEHAV]["recall"]
-        f1[i] = report[BEHAV]["f1-score"]
-        accuracies[i] = report["accuracy"]
-
-    fig, ax = plt.subplots(figsize=(10, 7))
-    sns.lineplot(x=pcutoffs, y=precisions, label="precision", ax=ax)
-    sns.lineplot(x=pcutoffs, y=recalls, label="recall", ax=ax)
-    sns.lineplot(x=pcutoffs, y=f1, label="f1", ax=ax)
-    sns.lineplot(x=pcutoffs, y=accuracies, label="accuracy", ax=ax)
-    return fig
-
-
-def eval_logc(y_true: np.ndarray, y_prob: np.ndarray, pcutoff: float) -> Figure:
-    """Plot logistic curve of predicted probabilities vs true labels."""
-    rng = np.random.default_rng()
-    y_eval = pd.DataFrame(
-        {
-            "y_true": y_true,
-            "y_prob": y_prob,
-            "y_pred": y_prob > pcutoff,
-            "y_true_jitter": y_true + (0.2 * (rng.random(len(y_prob)) - 0.5)),
-        },
-    )
-    fig, ax = plt.subplots(figsize=(10, 7))
-    sns.scatterplot(
-        data=y_eval,
-        x="y_prob",
-        y="y_true_jitter",
-        marker=".",
-        s=10,
-        linewidth=0,
-        alpha=0.2,
-        ax=ax,
-    )
-    pcutoffs = np.linspace(0, 1, 101)
-    ratios = np.vectorize(lambda i: np.mean(i > y_eval["y_prob"]))(pcutoffs)
-    sns.lineplot(x=pcutoffs, y=ratios, ax=ax)
-    return fig
 
 
 def save_feature_importance(
