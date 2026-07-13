@@ -16,7 +16,7 @@ from sklearn.metrics import (
     roc_curve,
 )
 
-from behavysis.constants import ACTUAL, BOUT_ID, EXPERIMENT, FRAME, PROB
+from behavysis.constants import ACTUAL, BOUT_ID, EXPERIMENT, FRAME, PRED, PROB
 
 from .data import label_bouts
 
@@ -75,15 +75,13 @@ def binary_report(y_true: np.ndarray, y_prob: np.ndarray) -> dict:
     }
 
 
-def _roc_points(y_true: np.ndarray, y_prob: np.ndarray, split: str) -> pl.DataFrame:
+def _roc_df(y_true: np.ndarray, y_prob: np.ndarray) -> pl.DataFrame:
     """ROC curve points (fpr, tpr) as a long-form DataFrame."""
     fpr, tpr, _ = roc_curve(y_true, y_prob)
-    return pl.DataFrame({"fpr": fpr, "tpr": tpr}).with_columns(
-        pl.lit(split).alias(SPLIT)
-    )
+    return pl.DataFrame({"fpr": fpr, "tpr": tpr}).sort("fpr")
 
 
-def _pr_points(y_true: np.ndarray, y_prob: np.ndarray, split: str) -> pl.DataFrame:
+def _pr_df(y_true: np.ndarray, y_prob: np.ndarray) -> pl.DataFrame:
     """Precision-recall curve points (recall, precision) as long-form."""
     precision, recall, thresholds = precision_recall_curve(
         y_true, y_prob, drop_intermediate=True
@@ -98,7 +96,7 @@ def _pr_points(y_true: np.ndarray, y_prob: np.ndarray, split: str) -> pl.DataFra
         )
         .group_by("recall")
         .mean()
-        .with_columns(pl.lit(split).alias(SPLIT))
+        .sort("recall")
     )
 
 
@@ -141,7 +139,6 @@ def _hist_chart(eval_df: pl.DataFrame, x_column: str, title: str) -> alt.Chart:
 def save_eval_report(
     splits: dict[str, pl.DataFrame],
     eval_dir: Path,
-    cv_summary: dict | None = None,
 ) -> dict[str, dict | pl.DataFrame | alt.Chart]:
     """Write ROC/PR charts and a JSON metric report for the given splits."""
     # Construct report
@@ -149,11 +146,9 @@ def save_eval_report(
         name: binary_report(_df[ACTUAL].to_numpy(), _df[PROB].to_numpy())
         for name, (_df) in splits.items()
     }
-    if cv_summary is not None:
-        report["val"] = cv_summary
 
     # Construct data for plots
-    eval_full_df = pl.concat(
+    eval_frames_df = pl.concat(
         _df.with_columns(pl.lit(name).alias(SPLIT)) for name, _df in splits.items()
     )
 
@@ -164,22 +159,25 @@ def save_eval_report(
             pl.col(ACTUAL).max(),
             pl.col(PROB).max().alias("prob_max"),
             pl.col(PROB).mean().alias("prob_mean"),
+            pl.col(PRED).max().alias("pred_max"),
         )
-        .filter(pl.col(ACTUAL) == 1)
         .sort(BOUT_ID)
-        .with_row_index("index")
         .with_columns(pl.lit(name).alias(SPLIT))
         for name, _df in splits.items()
     )
     roc_df = pl.concat(
         [
-            _roc_points(_df[ACTUAL].to_numpy(), _df[PROB].to_numpy(), name)
+            _roc_df(_df[ACTUAL].to_numpy(), _df[PROB].to_numpy()).with_columns(
+                pl.lit(name).alias(SPLIT)
+            )
             for name, _df in splits.items()
         ]
     )
     pr_df = pl.concat(
         [
-            _pr_points(_df[ACTUAL].to_numpy(), _df[PROB].to_numpy(), name)
+            _pr_df(_df[ACTUAL].to_numpy(), _df[PROB].to_numpy()).with_columns(
+                pl.lit(name).alias(SPLIT)
+            )
             for name, _df in splits.items()
         ]
     )
@@ -189,7 +187,7 @@ def save_eval_report(
         .mark_line(strokeDash=[4, 4], color="grey")
         .encode(x="x:Q", y="y:Q")
     )
-    prob_hist_chart = _hist_chart(eval_full_df, PROB, "Prob histogram")
+    prob_hist_chart = _hist_chart(eval_frames_df, PROB, "Prob histogram")
     bout_hist_chart = _hist_chart(
         eval_bout_df, "prob_max", "Max prob per-bout histogram"
     )
@@ -207,7 +205,7 @@ def save_eval_report(
         # Report
         "report": report,
         # Data
-        "eval_full_df": eval_full_df,
+        "eval_frames_df": eval_frames_df,
         "eval_bout_df": eval_bout_df,
         "roc_df": roc_df,
         "pr_df": pr_df,

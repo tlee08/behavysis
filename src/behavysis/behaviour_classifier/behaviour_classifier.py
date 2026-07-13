@@ -105,11 +105,7 @@ def train(
     eval_test_df = _eval_split(adapter, test_df)
     eval_test_df.write_parquet(eval_dir / "test_eval.parquet")
     # Further evaluation
-    save_eval_report(
-        {"train": eval_train_df, "test": eval_test_df},
-        eval_dir,
-        adapter.cv_summary(),
-    )
+    save_eval_report({"train": eval_train_df, "test": eval_test_df}, eval_dir)
 
     logger.info(
         "Training complete: {} {:03d}",

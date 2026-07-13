@@ -63,5 +63,5 @@ class TrainingRecipe(YamlModel):
     val_split: float = 0.2
     downsample_n: int = 100_000
 
-    target_recall: float = 0.95
+    target_recall: float = 0.98
     pcutoff: float = 0.2
