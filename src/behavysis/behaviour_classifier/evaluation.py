@@ -83,11 +83,13 @@ def _roc_points(y_true: np.ndarray, y_prob: np.ndarray, split: str) -> pl.DataFr
 
 def _pr_points(y_true: np.ndarray, y_prob: np.ndarray, split: str) -> pl.DataFrame:
     """Precision-recall curve points (recall, precision) as long-form."""
-    precision, recall, _ = precision_recall_curve(y_true, y_prob)
+    precision, recall, _ = precision_recall_curve(
+        y_true, y_prob, drop_intermediate=True
+    )
     return (
         pl.DataFrame({"recall": recall, "precision": precision})
-        .group_by("recall")
-        .mean()
+        # .group_by("recall")
+        # .mean()
         .with_columns(pl.lit(split).alias(SPLIT))
     )
 
