@@ -62,7 +62,6 @@ def train(
     clf_proj = ClassifierFp(clf_contract_fp.parent)
     contract_fp = clf_proj.contract_fp()
     iteration = _next_iteration(clf_proj.root_dir(), model_name)
-    model_dir = clf_proj.model_dir(model_name, iteration)
     config_fp = clf_proj.config_fp(model_name, iteration)
     contract = ClassifierContract.read_yaml(contract_fp)
     adapter = factory(config_fp)

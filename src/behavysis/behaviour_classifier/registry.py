@@ -36,7 +36,7 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
                 ],
             ),
             {
-                "clf__max_depth": [3],
+                "clf__max_depth": [1],
             },
             cv=2,  # minimum sensible CV
             n_jobs=1,  # easier to debug

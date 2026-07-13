@@ -146,7 +146,7 @@ class SklearnAdapter(BaseAdapter):
         # 6. Find best pcutoff with val_df and update config with best pcutoff value
         y_df = self.predict(val_df).with_columns(val_df[ACTUAL], val_df[BOUT_ID])
         _, recall, thresholds = precision_recall_curve(y_df[ACTUAL], y_df[PROB])
-        config.pcutoff = (
+        config.pcutoff = float(
             thresholds[(recall[:-1] >= config.target_recall)][-1]
             if np.any(recall[:-1] >= config.target_recall)
             else 0.001
