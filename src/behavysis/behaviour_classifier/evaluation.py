@@ -150,6 +150,7 @@ def _bout_prob_agg_hist(eval_bouts_df: pl.DataFrame) -> alt.Chart:
         .encode(
             alt.X(field="prob_max", type="quantitative", bin=alt.Bin(maxbins=100)),
             alt.Y(aggregate="count", type="quantitative"),
+            alt.Row(f"{SPLIT}:N"),
         )
         .properties(height=290, width="container", config={"axis": {"grid": False}})
     )
@@ -159,10 +160,17 @@ def save_eval_report(
     splits: dict[str, pl.DataFrame],
     eval_dir: Path,
     cv_summary: dict | None = None,
-) -> None:
+) -> dict[str, dict | pl.DataFrame | alt.Chart]:
     """Write ROC/PR charts and a JSON metric report for the given splits."""
-    eval_dir.mkdir(parents=True, exist_ok=True)
+    # Construct report
+    report: dict[str, dict] = {
+        name: binary_report(_df[ACTUAL].to_numpy(), _df[PROB].to_numpy())
+        for name, (_df) in splits.items()
+    }
+    if cv_summary is not None:
+        report["val"] = cv_summary
 
+    # Construct data for plots
     eval_full_df = pl.concat(
         _df.with_columns(pl.lit(name).alias(SPLIT)) for name, _df in splits.items()
     )
@@ -181,15 +189,6 @@ def save_eval_report(
         .with_columns(pl.lit(name).alias(SPLIT))
         for name, _df in splits.items()
     )
-
-    report: dict[str, dict] = {
-        name: binary_report(_df[ACTUAL].to_numpy(), _df[PROB].to_numpy())
-        for name, (_df) in splits.items()
-    }
-    if cv_summary is not None:
-        report["val"] = cv_summary
-    (eval_dir / "eval_report.json").write_text(json.dumps(report, indent=2))
-
     roc_pts = pl.concat(
         [
             _roc_points(_df[ACTUAL].to_numpy(), _df[PROB].to_numpy(), name)
@@ -202,7 +201,7 @@ def save_eval_report(
             for name, _df in splits.items()
         ]
     )
-
+    # Make plots
     prob_histogram = _actual_vs_prob_hist(eval_full_df)
     bout_hist = _bout_prob_agg_hist(eval_bout_df)
     diagonal = (
@@ -214,12 +213,21 @@ def save_eval_report(
     pr_chart = _curve_chart(
         pr_pts, "recall", "precision", "Precision-Recall curve", None
     )
-
+    # Save
+    eval_dir.mkdir(parents=True, exist_ok=True)
+    (eval_dir / "eval_report.json").write_text(json.dumps(report, indent=2))
     prob_histogram.save(eval_dir / "prob_hist.png")
     bout_hist.save(eval_dir / "bout_hist.png")
     roc_chart.save(eval_dir / "roc.png")
     pr_chart.save(eval_dir / "pr.png")
-    logger.info("Saved eval report and ROC/PR charts to {}", eval_dir)
+    # Return
+    return {
+        "report": report,
+        "prob_histogram": prob_histogram,
+        "bout_hist": bout_hist,
+        "roc_chart": roc_chart,
+        "pr_chart": pr_chart,
+    }
 
 
 def eval_metrics_pcutoffs(y_true: np.ndarray, y_prob: np.ndarray) -> Figure:

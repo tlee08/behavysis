@@ -56,7 +56,7 @@ An animal behaviour video-analysis pipeline: raw footage → formatted video →
 
 ### Core domain: `Experiment` and `Project`
 
-`behavysis.pipeline.experiment.Experiment` — a single experimental run (one video). Stages are numbered folders (`1_raw_vid/`, `2_formatted_vid/`, … `9_analysis_combined/`). Each stage reads the previous stage's output, writes its own.
+`behavysis.pipeline.experiment.Experiment` — a single experimental run (one video). Stages are numbered folders (`1_raw_videos/`, `2_formatted_videos/`, … `9_analysis_combined/`). Each stage reads the previous stage's output, writes its own.
 
 `behavysis.pipeline.project.Project` — a directory of experiments. Orchestrates batch operations.
 
