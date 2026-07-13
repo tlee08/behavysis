@@ -98,9 +98,10 @@ def _curve_chart(
     x_column: str,
     y_column: str,
     title: str,
+    layer: alt.Chart | None = None,
 ) -> alt.Chart:
     """Build an overlaid line chart (one line per split) with a baseline."""
-    return (
+    chart = (
         alt.Chart(points)
         .mark_line()
         .encode(
@@ -108,7 +109,11 @@ def _curve_chart(
             y=alt.Y(f"{y_column}:Q", scale=alt.Scale(domain=[0, 1])),
             color=alt.Color(f"{SPLIT}:N", title="split"),
         )
-        .properties(title=title, width=400, height=400, config={"axis": {"grid": True}})
+    )
+    if layer:
+        chart = chart + layer
+    return chart.properties(
+        title=title, width=400, height=400, config={"axis": {"grid": True}}
     )
 
 
@@ -181,8 +186,8 @@ def save_eval_report(
         res_chart[f"{_splits_name}_hist_chart"] = _hist_chart(
             res_df[f"{_splits_name}_eval_df"], PROB, f"Prob Histogram {_splits_name}"
         )
-        res_chart[f"{_splits_name}_roc_chart"] = diagonal + _curve_chart(
-            res_df[f"{_splits_name}_roc_df"], "fpr", "tpr", "ROC curve"
+        res_chart[f"{_splits_name}_roc_chart"] = _curve_chart(
+            res_df[f"{_splits_name}_roc_df"], "fpr", "tpr", "ROC curve", diagonal
         )
         res_chart[f"{_splits_name}_pr_chart"] = _curve_chart(
             res_df[f"{_splits_name}_pr_df"], "recall", "precision", "PR curve"
