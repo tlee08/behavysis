@@ -11,6 +11,7 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING
 
+import numpy as np
 import polars as pl
 from loguru import logger
 
@@ -20,6 +21,7 @@ from behavysis.schemas import BEHAVIOUR_PREDICTED_SCHEMA
 from .adapter import MODEL_TYPES_TO_CLASS, MODEL_TYPES_TO_STRING, BaseAdapter
 from .config import ClassifierActive, ClassifierContract, TrainingRecipe
 from .data import load_training_data, stratified_split_by_group
+from .evaluation import save_eval_report
 from .registry import MODEL_REGISTRY
 from .storage import ClassifierFp
 
@@ -99,11 +101,16 @@ def train(
     # Evaluate
     eval_dir = clf_proj.eval_dir(model_name, iteration)
     eval_dir.mkdir(parents=True, exist_ok=True)
-    _eval_split(
+    train_true, train_prob = _eval_split(
         eval_dir, adapter, "train", train_df, contract.behaviour_name, config.pcutoff
     )
-    _eval_split(
+    test_true, test_prob = _eval_split(
         eval_dir, adapter, "test", test_df, contract.behaviour_name, config.pcutoff
+    )
+    save_eval_report(
+        {"train": (train_true, train_prob), "test": (test_true, test_prob)},
+        eval_dir,
+        adapter.cv_summary(),
     )
 
     logger.info(
@@ -196,7 +203,7 @@ def _eval_split(
     df: pl.DataFrame,
     behaviour_name: str,
     pcutoff: float,
-) -> None:
+) -> tuple[np.ndarray, np.ndarray]:
     # Run inference
     x_df = df.drop([EXPERIMENT, ACTUAL])
     y_df = predict_df_from_adapter(adapter, x_df, behaviour_name, pcutoff)
@@ -206,3 +213,4 @@ def _eval_split(
     )
     # Save raw eval df to parquet
     y_df.write_parquet(eval_dir / f"{subset_name}_eval.parquet")
+    return df[ACTUAL].to_numpy(), y_df[PROB].to_numpy()

@@ -55,6 +55,10 @@ class BaseAdapter(ABC):
     def load(cls, src_dir: Path) -> Self:
         """Load model artifacts."""
 
+    def cv_summary(self) -> dict | None:
+        """Return cross-validation summary, or None if unavailable."""
+        return None
+
 
 class SklearnAdapter(BaseAdapter):
     """Sklearn adapter.
@@ -100,6 +104,13 @@ class SklearnAdapter(BaseAdapter):
     def load(cls, src_dir: Path) -> Self:
         pipeline = joblib.load(src_dir / "model.joblib")
         return cls(pipeline)
+
+    def cv_summary(self) -> dict | None:
+        """Return the RandomizedSearchCV best score, if fitted."""
+        best_score = getattr(self.model, "best_score_", None)
+        if best_score is None:
+            return None
+        return {"cv_average_precision": float(best_score)}
 
 
 class TorchAdapter(BaseAdapter):

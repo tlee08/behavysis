@@ -3,17 +3,176 @@
 import json
 from pathlib import Path
 
+import altair as alt
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import polars as pl
 import seaborn as sns
 from loguru import logger
 from matplotlib.figure import Figure
-from sklearn.metrics import classification_report
+from sklearn.metrics import (
+    average_precision_score,
+    classification_report,
+    precision_recall_curve,
+    roc_auc_score,
+    roc_curve,
+)
 
 NIL = "nil"
 BEHAV = "behav"
 LABELS = [NIL, BEHAV]
+
+SPLIT = "split"
+
+
+def binary_report(y_true: np.ndarray, y_prob: np.ndarray) -> dict:
+    """Summarise binary-classification performance for one split.
+
+    Reports threshold-independent metrics (ROC AUC, Gini, PR AUC) plus the
+    Youden-optimal threshold and the classification metrics achieved at it.
+
+    Parameters
+    ----------
+    y_true : np.ndarray
+        Ground-truth binary labels (1 = behaviour).
+    y_prob : np.ndarray
+        Predicted probabilities for the positive class.
+
+    Returns:
+    -------
+    dict
+        Metric summary, or an empty dict if only one class is present
+        (ROC/PR AUC are undefined in that case).
+    """
+    y_true = np.asarray(y_true).astype(int)
+    y_prob = np.asarray(y_prob, dtype=np.float64)
+    if len(np.unique(y_true)) < 2:  # noqa: PLR2004
+        logger.warning("Only one class present; ROC/PR metrics undefined.")
+        return {}
+
+    roc_auc = float(roc_auc_score(y_true, y_prob))
+    pr_auc = float(average_precision_score(y_true, y_prob))
+
+    fpr, tpr, thresholds = roc_curve(y_true, y_prob)
+    youden = tpr - fpr
+    best = int(np.argmax(youden))
+    ideal_threshold = float(thresholds[best])
+
+    y_pred = (y_prob >= ideal_threshold).astype(int)
+    report = classification_report(
+        y_true,
+        y_pred,
+        labels=[0, 1],
+        target_names=LABELS,
+        output_dict=True,
+        zero_division=0,
+    )
+    tp = int(np.sum((y_true == 1) & (y_pred == 1)))
+    fp = int(np.sum((y_true == 0) & (y_pred == 1)))
+    fn = int(np.sum((y_true == 1) & (y_pred == 0)))
+    tn = int(np.sum((y_true == 0) & (y_pred == 0)))
+
+    return {
+        "n": int(len(y_true)),
+        "n_positive": int(np.sum(y_true == 1)),
+        "roc_auc": roc_auc,
+        "gini": 2.0 * roc_auc - 1.0,
+        "pr_auc": pr_auc,
+        "ideal_threshold": ideal_threshold,
+        "precision": report[BEHAV]["precision"],
+        "recall": report[BEHAV]["recall"],
+        "f1": report[BEHAV]["f1-score"],
+        "accuracy": report["accuracy"],
+        "tp": tp,
+        "fp": fp,
+        "fn": fn,
+        "tn": tn,
+    }
+
+
+def _roc_points(y_true: np.ndarray, y_prob: np.ndarray, split: str) -> pl.DataFrame:
+    """ROC curve points (fpr, tpr) as a long-form DataFrame."""
+    fpr, tpr, _ = roc_curve(y_true, y_prob)
+    return pl.DataFrame({"x": fpr, "y": tpr, SPLIT: split})
+
+
+def _pr_points(y_true: np.ndarray, y_prob: np.ndarray, split: str) -> pl.DataFrame:
+    """Precision-recall curve points (recall, precision) as long-form."""
+    precision, recall, _ = precision_recall_curve(y_true, y_prob)
+    return pl.DataFrame({"x": recall, "y": precision, SPLIT: split})
+
+
+def _curve_chart(
+    points: pl.DataFrame,
+    x_title: str,
+    y_title: str,
+    title: str,
+    baseline: alt.Chart | None,
+) -> alt.Chart:
+    """Build an overlaid line chart (one line per split) with a baseline."""
+    line = (
+        alt.Chart(points)
+        .mark_line()
+        .encode(
+            x=alt.X("x:Q", title=x_title, scale=alt.Scale(domain=[0, 1])),
+            y=alt.Y("y:Q", title=y_title, scale=alt.Scale(domain=[0, 1])),
+            color=alt.Color(f"{SPLIT}:N", title="split"),
+        )
+        .properties(title=title, width=400, height=400)
+    )
+    return line + baseline if baseline is not None else line
+
+
+def save_eval_report(
+    splits: dict[str, tuple[np.ndarray, np.ndarray]],
+    eval_dir: Path,
+    cv_summary: dict | None = None,
+) -> None:
+    """Write ROC/PR charts and a JSON metric report for the given splits.
+
+    Parameters
+    ----------
+    splits : dict[str, tuple[np.ndarray, np.ndarray]]
+        Mapping of split name (e.g. ``"train"``, ``"test"``) to
+        ``(y_true, y_prob)`` arrays.
+    eval_dir : Path
+        Directory to write ``eval_report.json``, ``roc.png``, ``pr.png``.
+    cv_summary : dict | None
+        Optional cross-validation summary, stored under the ``"val"`` key.
+    """
+    eval_dir.mkdir(parents=True, exist_ok=True)
+
+    report: dict[str, dict] = {
+        name: binary_report(y_true, y_prob)
+        for name, (y_true, y_prob) in splits.items()
+    }
+    if cv_summary is not None:
+        report["val"] = cv_summary
+    (eval_dir / "eval_report.json").write_text(json.dumps(report, indent=2))
+
+    roc_pts = pl.concat(
+        [_roc_points(yt, yp, name) for name, (yt, yp) in splits.items()]
+    )
+    pr_pts = pl.concat(
+        [_pr_points(yt, yp, name) for name, (yt, yp) in splits.items()]
+    )
+
+    diagonal = (
+        alt.Chart(pl.DataFrame({"x": [0.0, 1.0], "y": [0.0, 1.0]}))
+        .mark_line(strokeDash=[4, 4], color="grey")
+        .encode(x="x:Q", y="y:Q")
+    )
+    roc_chart = _curve_chart(
+        roc_pts, "False positive rate", "True positive rate", "ROC curve", diagonal
+    )
+    pr_chart = _curve_chart(
+        pr_pts, "Recall", "Precision", "Precision-Recall curve", None
+    )
+
+    roc_chart.save(eval_dir / "roc.png")
+    pr_chart.save(eval_dir / "pr.png")
+    logger.info("Saved eval report and ROC/PR charts to {}", eval_dir)
 
 
 def eval_metrics_pcutoffs(y_true: np.ndarray, y_prob: np.ndarray) -> Figure:
