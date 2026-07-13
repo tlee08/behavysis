@@ -99,7 +99,7 @@ def _curve_chart(
         .mark_line()
         .encode(
             x=alt.X(f"{x_column}:Q", scale=alt.Scale(domain=[0, 1])),
-            y=alt.Y(f"{y_column}:Q", scale=alt.Scale(domain=[0, 1])),
+            y=alt.Y(f"{y_column}:Q", aggregate="mean", scale=alt.Scale(domain=[0, 1])),
             color=alt.Color(f"{SPLIT}:N", title="split"),
         )
         .properties(title=title, width=400, height=400)
