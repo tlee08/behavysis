@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING
 import polars as pl
 from loguru import logger
 
-from behavysis.constants import ACTUAL, BEHAVIOUR, EXPERIMENT, PRED, PROB
+from behavysis.constants import ACTUAL, BEHAVIOUR, EXPERIMENT, FRAME, PRED, PROB
 from behavysis.schemas import BEHAVIOUR_PREDICTED_SCHEMA
 
 from .adapter import MODEL_TYPES_TO_CLASS, MODEL_TYPES_TO_STRING, BaseAdapter
@@ -155,7 +155,15 @@ def predict_df_from_adapter(
         pl.lit(behaviour_name).alias(BEHAVIOUR),
         (pl.col(PROB) > pcutoff).cast(pl.Int64).alias(PRED),
     )
-    return pl.DataFrame(prob_df, schema=BEHAVIOUR_PREDICTED_SCHEMA)
+    return pl.DataFrame(
+        {
+            FRAME: prob_df[FRAME],
+            BEHAVIOUR: pl.lit(behaviour_name),
+            PROB: prob_df[PROB],
+            PRED: (prob_df[PROB] > pcutoff).cast(pl.Int64),
+        },
+        schema=BEHAVIOUR_PREDICTED_SCHEMA,
+    )
 
 
 def predict_df_choose_model(
@@ -211,8 +219,14 @@ def _eval_split(
 ) -> pl.DataFrame:
     # Run inference
     x_df = df.drop([EXPERIMENT, ACTUAL])
-    y_df = predict_df_from_adapter(adapter, x_df, behaviour_name, pcutoff)
-    return y_df.with_columns(
-        df[EXPERIMENT].alias(EXPERIMENT),
-        df[ACTUAL].alias(ACTUAL),
+    eval_df = predict_df_from_adapter(adapter, x_df, behaviour_name, pcutoff)
+    return pl.DataFrame(
+        {
+            EXPERIMENT: df[EXPERIMENT],
+            FRAME: df[FRAME],
+            BEHAVIOUR: eval_df[BEHAVIOUR],
+            PROB: eval_df[PROB],
+            PRED: eval_df[PRED],
+            ACTUAL: df[ACTUAL],
+        },
     )

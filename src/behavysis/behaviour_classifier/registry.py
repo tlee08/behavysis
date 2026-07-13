@@ -144,7 +144,7 @@ MODEL_REGISTRY: dict[str, Callable[[], BaseAdapter]] = {
                                 max_depth=4,
                                 n_jobs=-1,
                                 random_state=42,
-                                verbose=1,
+                                verbosity=1,
                             ),
                             threshold=-np.inf,
                             max_features=300,
@@ -158,7 +158,7 @@ MODEL_REGISTRY: dict[str, Callable[[], BaseAdapter]] = {
                             eval_metric="aucpr",
                             n_jobs=-1,
                             random_state=42,
-                            verbose=1,
+                            verbosity=1,
                         ),
                     ),
                 ]

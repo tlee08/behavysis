@@ -129,7 +129,8 @@ class SklearnAdapter(BaseAdapter):
         prob = self.model.predict_proba(self._features(df))[:, 1]
         # Return
         return pl.DataFrame(
-            {FRAME: frame, PROB: prob}, schema=BEHAVIOUR_PROBABILITY_SCHEMA
+            {FRAME: frame, PROB: prob},
+            schema=BEHAVIOUR_PROBABILITY_SCHEMA,
         )
 
     def save(self, dst_dir: Path) -> None:
