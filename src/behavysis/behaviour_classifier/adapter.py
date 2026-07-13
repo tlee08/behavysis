@@ -170,7 +170,7 @@ class SklearnAdapter(BaseAdapter):
         return pl.DataFrame(
             {
                 FRAME: frame,
-                BEHAVIOUR: pl.lit(config.behaviour_name),
+                BEHAVIOUR: config.behaviour_name,
                 PROB: prob,
                 PRED: prob > config.pcutoff,
             },
@@ -247,7 +247,7 @@ class TorchAdapter(BaseAdapter):
         return pl.DataFrame(
             {
                 FRAME: frame,
-                BEHAVIOUR: pl.lit(config.behaviour_name),
+                BEHAVIOUR: config.behaviour_name,
                 PROB: prob,
                 PRED: prob > config.pcutoff,
             },
