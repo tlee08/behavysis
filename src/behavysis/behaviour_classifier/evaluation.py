@@ -138,7 +138,7 @@ def _actual_vs_prob_hist(eval_df: pl.DataFrame) -> alt.Chart:
             alt.Column(f"{ACTUAL}:N"),
             alt.Row(f"{SPLIT}:N"),
         )
-        .properties(height=290, width=250, config={"axis": {"grid": True}})
+        .properties(height=290, width=250, config={"axis": {"grid": False}})
         .resolve_scale(y="independent")
     )
 
@@ -146,13 +146,14 @@ def _actual_vs_prob_hist(eval_df: pl.DataFrame) -> alt.Chart:
 def _bout_prob_agg_hist(eval_bouts_df: pl.DataFrame) -> alt.Chart:
     return (
         alt.Chart(eval_bouts_df)
-        .mark_bar()
+        .mark_bar(opacity=0.3, binSpacing=0)
         .encode(
             alt.X(field="prob_max", type="quantitative", bin=alt.Bin(maxbins=100)),
             alt.Y(aggregate="count", type="quantitative"),
             alt.Row(f"{SPLIT}:N"),
         )
-        .properties(height=290, width="container", config={"axis": {"grid": False}})
+        .properties(height=290, width=250, config={"axis": {"grid": False}})
+        .resolve_scale(y="independent")
     )
 
 
