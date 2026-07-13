@@ -178,7 +178,7 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
                 ]
             ),
             {
-                "clf__n_estimators": [400, 800],
+                "clf__n_estimators": [400, 800, 1200],
                 "clf__learning_rate": [0.02, 0.1],
                 "clf__max_depth": [3, 4, 6],
                 "clf__min_child_weight": [1, 10, 30, 50],
