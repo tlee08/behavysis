@@ -316,6 +316,7 @@ def save_feature_report(
     n_features_total: int | None = None,
 ) -> None:
     """Save feature count and importance summary as JSON."""
+    low_importance_threshold = 0.001
     n_used = len(feature_names)
     report: dict = {
         "n_features_total": (
@@ -327,7 +328,7 @@ def save_feature_report(
     if importances is not None:
         non_zero = int(np.sum(importances > 0))
         report["n_features_non_zero_importance"] = non_zero
-        n_low = int(np.sum(importances < 0.001))
+        n_low = int(np.sum(importances < low_importance_threshold))
         report["n_features_low_importance_lte_0.001"] = n_low
 
     eval_dir.mkdir(parents=True, exist_ok=True)

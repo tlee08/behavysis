@@ -12,8 +12,8 @@ import polars as pl
 import torch
 from loguru import logger
 from sklearn.base import clone
+from sklearn.metrics import precision_recall_curve
 from sklearn.model_selection import train_test_split
-from sklearn.model_selection._search import BaseSearchCV
 from sklearn.preprocessing import MinMaxScaler
 
 from behavysis.behaviour_classifier import stratified_split_by_group
@@ -30,7 +30,7 @@ from behavysis.constants import (
     Array1D,
     Array2D,
 )
-from behavysis.schemas import BEHAVIOUR_PREDICTED_SCHEMA, BEHAVIOUR_PROBABILITY_SCHEMA
+from behavysis.schemas import BEHAVIOUR_PREDICTED_SCHEMA
 
 from .config import TrainingRecipe
 
@@ -39,6 +39,7 @@ if TYPE_CHECKING:
     from typing import Self
 
     from sklearn.base import BaseEstimator
+    from sklearn.model_selection._search import BaseSearchCV
 
     from .torch.base import TorchModel
 
@@ -102,11 +103,13 @@ class SklearnAdapter(BaseAdapter):
     framework: ClassVar[str] = "sklearn"
 
     def __init__(self, search: BaseSearchCV, config_fp: Path) -> None:
+        """Init."""
         self.search = search
         self.config_fp = config_fp
         self.model: BaseEstimator | None = None
 
     def fit(self, df: pl.DataFrame) -> pd.DataFrame:
+        """Fit."""
         # 0. Read config
         config = self._read_config()
         # Hyperparameter selection stage
@@ -142,13 +145,19 @@ class SklearnAdapter(BaseAdapter):
         self.model.fit(self._features(train_df), self._labels(train_df))
         # 6. Find best pcutoff with val_df and update config with best pcutoff value
         y_df = self.predict(val_df).with_columns(val_df[ACTUAL], val_df[BOUT_ID])
-        # TODO
+        _, recall, thresholds = precision_recall_curve(y_df[ACTUAL], y_df[PROB])
+        config.pcutoff = (
+            thresholds[(recall[:-1] >= config.target_recall)][-1]
+            if np.any(recall[:-1] >= config.target_recall)
+            else 0.001
+        )
         config.pcutoff = 0.01
         self._write_config(config)
         # Return
         return pd.DataFrame(columns=pd.Index(["loss", "vloss"]))
 
     def predict(self, df: pl.DataFrame) -> pl.DataFrame:
+        """Predict."""
         if self.model is None:
             msg = "model not yet trained."
             raise ValueError(msg)
@@ -170,12 +179,14 @@ class SklearnAdapter(BaseAdapter):
         )
 
     def save(self, model_dir: Path) -> None:
+        """Save."""
         model_dir.mkdir(parents=True, exist_ok=True)
         joblib.dump(self.search, model_dir / "search.joblib")
         logger.info("Saved sklearn model to {}", model_dir)
 
     @classmethod
     def load(cls, model_dir: Path) -> Self:
+        """Load."""
         search = joblib.load(model_dir / "search.joblib")
         config_fp = model_dir / "config.yaml"
         inst = cls(search, config_fp)
@@ -195,12 +206,16 @@ class TorchAdapter(BaseAdapter):
 
     framework: ClassVar[str] = "torch"
 
-    def __init__(self, model: TorchModel) -> None:
+    def __init__(self, model: TorchModel, config_fp: Path) -> None:
+        """Init."""
         self.model: TorchModel = model
+        self.config_fp = config_fp
         self.scaler: MinMaxScaler = MinMaxScaler()
         self.feature_mask: np.ndarray = np.ndarray([])
 
     def fit(self, df: pl.DataFrame) -> pd.DataFrame:
+        """Fit."""
+        config = self._read_config()
         # Prepare
         x = df.drop(_META_COLS, strict=False).to_numpy()
         y = df[ACTUAL].to_numpy()
@@ -221,18 +236,27 @@ class TorchAdapter(BaseAdapter):
         )
 
     def predict(self, df: pl.DataFrame) -> pl.DataFrame:
+        """Predict."""
+        config = self._read_config()
         # Prepare
         x = df.drop(_META_COLS, strict=False).to_numpy()
         frame = df.get_column(FRAME)
         # Predict
         x = self.scaler.transform(x)[:, self.feature_mask]
         prob = self.model.predict(x, None, batch_size=256)
-        # Return
+        # Construct df and return
         return pl.DataFrame(
-            {FRAME: frame, PROB: prob}, schema=BEHAVIOUR_PROBABILITY_SCHEMA
+            {
+                FRAME: frame,
+                BEHAVIOUR: pl.lit(config.behaviour_name),
+                PROB: prob,
+                PRED: prob > config.pcutoff,
+            },
+            schema=BEHAVIOUR_PREDICTED_SCHEMA,
         )
 
     def save(self, model_dir: Path) -> None:
+        """Save."""
         if self.model is None or self.scaler is None or self.feature_mask is None:
             msg = "Cannot save unfitted torch model."
             raise RuntimeError(msg)
