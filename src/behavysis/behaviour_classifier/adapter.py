@@ -86,10 +86,6 @@ class BaseAdapter(ABC):
     def load(cls, config_fp: Path) -> Self:
         """Load model artifacts."""
 
-    def cv_summary(self) -> dict | None:
-        """Return cross-validation summary, or None if unavailable."""
-        return None
-
 
 class SklearnAdapter(BaseAdapter):
     """Sklearn adapter.
@@ -197,13 +193,6 @@ class SklearnAdapter(BaseAdapter):
         inst = cls(joblib.load(model_dir / "search.joblib"), model_dir / "config.yaml")
         inst.model = joblib.load(model_dir / "model.joblib")
         return inst
-
-    def cv_summary(self) -> dict | None:
-        """Return the search best score (computed on the subsample)."""
-        best_score = getattr(self.search, "best_score_", None)
-        if best_score is None:
-            return None
-        return {"cv_average_precision_subsampled": float(best_score)}
 
 
 class TorchAdapter(BaseAdapter):

@@ -148,25 +148,25 @@ def save_eval_report(
     res_df: dict[str, pl.DataFrame] = {}
     res_chart: dict[str, alt.Chart] = {}
     # For both frames and bouts evals
-    for _splits_name, _split_data in {"frames": splits, "bouts": bouts_splits}.items():
+    for _splits_name, _splits_data in {"frames": splits, "bouts": bouts_splits}.items():
         # Make report
         res_report[f"{_splits_name}_report"] = {
             _name: binary_report(
                 _df[ACTUAL].to_numpy(), _df[PROB].to_numpy(), _df[PRED].to_numpy()
             )
-            for _name, (_df) in splits.items()
+            for _name, (_df) in _splits_data.items()
         }
         # Make eval dataframes
         res_df[f"{_splits_name}_eval_df"] = pl.concat(
             _df.with_columns(pl.lit(_name).alias(SPLIT))
-            for _name, _df in _split_data.items()
+            for _name, _df in _splits_data.items()
         )
         res_df[f"{_splits_name}_roc_df"] = pl.concat(
             [
                 _roc_df(_df[ACTUAL].to_numpy(), _df[PROB].to_numpy()).with_columns(
                     pl.lit(_name).alias(SPLIT)
                 )
-                for _name, _df in _split_data.items()
+                for _name, _df in _splits_data.items()
             ]
         )
         res_df[f"{_splits_name}_pr_df"] = pl.concat(
@@ -174,7 +174,7 @@ def save_eval_report(
                 _pr_df(_df[ACTUAL].to_numpy(), _df[PROB].to_numpy()).with_columns(
                     pl.lit(_name).alias(SPLIT)
                 )
-                for _name, _df in _split_data.items()
+                for _name, _df in _splits_data.items()
             ]
         )
         # Make plots

@@ -16,7 +16,6 @@ from sklearn.model_selection import (
     StratifiedGroupKFold,
 )
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import MinMaxScaler
 from sklearn.tree import DecisionTreeClassifier
 from xgboost import XGBClassifier
 
@@ -38,18 +37,16 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
             {
                 "clf__max_depth": [1],
             },
-            cv=2,  # minimum sensible CV
-            n_jobs=1,  # easier to debug
+            cv=2,
+            n_jobs=1,
             verbose=3,
         ),
         config_fp,
     ),
     "rf": lambda config_fp: SklearnAdapter(
         HalvingRandomSearchCV(
-            ImbPipeline(
+            Pipeline(
                 [
-                    ("undersampler", RandomUnderSampler()),
-                    ("oversampler", RandomOverSampler()),
                     ("var_filter", VarianceThreshold()),
                     (
                         "clf",
@@ -58,8 +55,6 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
                 ]
             ),
             {
-                "undersampler__sampling_strategy": [0.2],
-                "oversampler__sampling_strategy": [0.4],
                 "var_filter__threshold": [0.0],
                 "clf__n_estimators": [200, 500],
                 "clf__max_depth": [4, 8, 16],
@@ -67,6 +62,7 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
             },
             scoring="average_precision",
             cv=StratifiedGroupKFold(n_splits=3, shuffle=True, random_state=42),
+            random_state=42,
             n_jobs=1,
             verbose=3,
         ),
@@ -76,9 +72,8 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
         HalvingRandomSearchCV(
             ImbPipeline(
                 [
-                    ("undersampler", RandomUnderSampler()),
-                    ("oversampler", RandomOverSampler()),
-                    ("scaler", MinMaxScaler()),
+                    ("undersampler", RandomUnderSampler(sampling_strategy=0.2)),
+                    ("oversampler", RandomOverSampler(sampling_strategy=0.4)),
                     ("var_filter", VarianceThreshold()),
                     (
                         "selector",
@@ -98,8 +93,6 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
                 ]
             ),
             {
-                "undersampler__sampling_strategy": [0.2],
-                "oversampler__sampling_strategy": [0.4],
                 "var_filter__threshold": [0.0],
                 "clf__C": [0.1, 1.0, 10.0],
                 "clf__penalty": ["l2", None],
@@ -107,6 +100,7 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
             },
             scoring="average_precision",
             cv=StratifiedGroupKFold(n_splits=3, shuffle=True, random_state=42),
+            random_state=42,
             n_jobs=1,
             verbose=3,
         ),
@@ -114,10 +108,8 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
     ),
     "xgb": lambda config_fp: SklearnAdapter(
         HalvingRandomSearchCV(
-            ImbPipeline(
+            Pipeline(
                 [
-                    ("undersampler", RandomUnderSampler()),
-                    ("oversampler", RandomOverSampler()),
                     ("var_filter", VarianceThreshold()),
                     (
                         "clf",
@@ -132,8 +124,6 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
                 ]
             ),
             {
-                "undersampler__sampling_strategy": [0.2],
-                "oversampler__sampling_strategy": [0.4],
                 "var_filter__threshold": [0.0],
                 "clf__max_depth": [3, 4, 6],
                 "clf__learning_rate": [0.02, 0.1],
@@ -147,6 +137,7 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
             },
             scoring="average_precision",
             cv=StratifiedGroupKFold(n_splits=3, shuffle=True, random_state=42),
+            random_state=42,
             n_jobs=1,
             verbose=3,
         ),
@@ -200,6 +191,7 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
             },
             scoring="average_precision",
             cv=StratifiedGroupKFold(n_splits=3, shuffle=True, random_state=42),
+            random_state=42,
             n_jobs=1,
             verbose=3,
         ),
