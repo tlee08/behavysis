@@ -78,18 +78,26 @@ def binary_report(y_true: np.ndarray, y_prob: np.ndarray) -> dict:
 def _roc_points(y_true: np.ndarray, y_prob: np.ndarray, split: str) -> pl.DataFrame:
     """ROC curve points (fpr, tpr) as a long-form DataFrame."""
     fpr, tpr, _ = roc_curve(y_true, y_prob)
-    return pl.DataFrame({"fpr": fpr, "tpr": tpr, SPLIT: split})
+    return pl.DataFrame({"fpr": fpr, "tpr": tpr}).with_columns(
+        pl.lit(split).alias(SPLIT)
+    )
 
 
 def _pr_points(y_true: np.ndarray, y_prob: np.ndarray, split: str) -> pl.DataFrame:
     """Precision-recall curve points (recall, precision) as long-form."""
-    precision, recall, _ = precision_recall_curve(
+    precision, recall, thresholds = precision_recall_curve(
         y_true, y_prob, drop_intermediate=True
     )
     return (
-        pl.DataFrame({"recall": recall, "precision": precision})
-        # .group_by("recall")
-        # .mean()
+        pl.DataFrame(
+            {
+                "recall": recall[:-1],
+                "precision": precision[:-1],
+                "thresholds": thresholds,
+            }
+        )
+        .group_by("recall")
+        .mean()
         .with_columns(pl.lit(split).alias(SPLIT))
     )
 
