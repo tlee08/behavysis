@@ -2,13 +2,15 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Self
+from typing import TYPE_CHECKING, Self
 
 import yaml
 from pydantic import BaseModel
 
-from behavysis.behaviour_classifier.adapter import ModelStrOptions
+if TYPE_CHECKING:
+    from pathlib import Path
+
+    from behavysis.behaviour_classifier.adapter import ModelStrOptions
 
 
 class YamlModel(BaseModel):
