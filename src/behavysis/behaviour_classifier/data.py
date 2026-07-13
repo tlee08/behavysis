@@ -95,6 +95,7 @@ def label_bouts(df: pl.DataFrame) -> pl.DataFrame:
         .or_(pl.col(EXPERIMENT) != pl.col(EXPERIMENT).shift(1))
         .cast(pl.Int64)
         .cum_sum()
+        .forward_fill()
         .alias(BOUT_ID)
     )
 
