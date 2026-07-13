@@ -120,6 +120,9 @@ class SklearnAdapter(BaseAdapter):
         return pd.DataFrame(columns=pd.Index(["loss", "vloss"]))
 
     def predict(self, df: pl.DataFrame) -> pl.DataFrame:
+        if self.model is None:
+            msg = "model not yet trained."
+            raise ValueError(msg)
         # Prepare
         frame = df.get_column(FRAME)
         # Predict
@@ -136,7 +139,7 @@ class SklearnAdapter(BaseAdapter):
 
     @classmethod
     def load(cls, src_dir: Path) -> Self:
-        search = joblib.load(src_dir / "model.joblib")
+        search = joblib.load(src_dir / "search.joblib")
         inst = cls(search)
         inst.model = clone(inst.search.estimator).set_params(**inst.search.best_params_)
         return inst

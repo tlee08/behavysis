@@ -28,8 +28,6 @@ if TYPE_CHECKING:
     from collections.abc import Callable
     from pathlib import Path
 
-    import numpy as np
-
 
 # ── iteration numbering ───────────────────────────────────────────────
 
@@ -102,16 +100,20 @@ def train(
     adapter.save(model_dir)
 
     # Evaluate
+    # Predictions
     eval_dir = clf_proj.eval_dir(model_name, iteration)
     eval_dir.mkdir(parents=True, exist_ok=True)
-    train_true, train_prob = _eval_split(
-        eval_dir, adapter, "train", train_df, contract.behaviour_name, config.pcutoff
+    eval_train_df = _eval_split(
+        eval_dir, adapter, train_df, contract.behaviour_name, config.pcutoff
     )
-    test_true, test_prob = _eval_split(
-        eval_dir, adapter, "test", test_df, contract.behaviour_name, config.pcutoff
+    eval_train_df.write_parquet(eval_dir / "train_eval.parquet")
+    eval_test_df = _eval_split(
+        eval_dir, adapter, test_df, contract.behaviour_name, config.pcutoff
     )
+    eval_test_df.write_parquet(eval_dir / "test_eval.parquet")
+    # Further evaluation
     save_eval_report(
-        {"train": (train_true, train_prob), "test": (test_true, test_prob)},
+        {"train": eval_train_df, "test": eval_test_df},
         eval_dir,
         adapter.cv_summary(),
     )
@@ -203,18 +205,14 @@ def predict_df(
 def _eval_split(
     eval_dir: Path,
     adapter: BaseAdapter,
-    subset_name: str,
     df: pl.DataFrame,
     behaviour_name: str,
     pcutoff: float,
-) -> tuple[np.ndarray, np.ndarray]:
+) -> pl.DataFrame:
     # Run inference
     x_df = df.drop([EXPERIMENT, ACTUAL])
     y_df = predict_df_from_adapter(adapter, x_df, behaviour_name, pcutoff)
-    y_df = y_df.with_columns(
+    return y_df.with_columns(
         df[EXPERIMENT].alias(EXPERIMENT),
         df[ACTUAL].alias(ACTUAL),
     )
-    # Save raw eval df to parquet
-    y_df.write_parquet(eval_dir / f"{subset_name}_eval.parquet")
-    return df[ACTUAL].to_numpy(), y_df[PROB].to_numpy()

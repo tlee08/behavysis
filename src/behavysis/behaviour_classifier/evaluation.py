@@ -19,6 +19,8 @@ from sklearn.metrics import (
     roc_curve,
 )
 
+from behavysis.constants import ACTUAL, PROB
+
 NIL = "nil"
 BEHAV = "behav"
 LABELS = [NIL, BEHAV]
@@ -125,35 +127,33 @@ def _curve_chart(
 
 
 def save_eval_report(
-    splits: dict[str, tuple[np.ndarray, np.ndarray]],
+    splits: dict[str, pl.DataFrame],
     eval_dir: Path,
     cv_summary: dict | None = None,
 ) -> None:
-    """Write ROC/PR charts and a JSON metric report for the given splits.
-
-    Parameters
-    ----------
-    splits : dict[str, tuple[np.ndarray, np.ndarray]]
-        Mapping of split name (e.g. ``"train"``, ``"test"``) to
-        ``(y_true, y_prob)`` arrays.
-    eval_dir : Path
-        Directory to write ``eval_report.json``, ``roc.png``, ``pr.png``.
-    cv_summary : dict | None
-        Optional cross-validation summary, stored under the ``"val"`` key.
-    """
+    """Write ROC/PR charts and a JSON metric report for the given splits."""
     eval_dir.mkdir(parents=True, exist_ok=True)
 
     report: dict[str, dict] = {
-        name: binary_report(y_true, y_prob) for name, (y_true, y_prob) in splits.items()
+        name: binary_report(eval_df[ACTUAL].to_numpy(), eval_df[PROB].to_numpy())
+        for name, (eval_df) in splits.items()
     }
     if cv_summary is not None:
         report["val"] = cv_summary
     (eval_dir / "eval_report.json").write_text(json.dumps(report, indent=2))
 
     roc_pts = pl.concat(
-        [_roc_points(yt, yp, name) for name, (yt, yp) in splits.items()]
+        [
+            _roc_points(eval_df[ACTUAL].to_numpy(), eval_df[PROB].to_numpy(), name)
+            for name, eval_df in splits.items()
+        ]
     )
-    pr_pts = pl.concat([_pr_points(yt, yp, name) for name, (yt, yp) in splits.items()])
+    pr_pts = pl.concat(
+        [
+            _pr_points(eval_df[ACTUAL].to_numpy(), eval_df[PROB].to_numpy(), name)
+            for name, eval_df in splits.items()
+        ]
+    )
 
     diagonal = (
         alt.Chart(pl.DataFrame({"x": [0.0, 1.0], "y": [0.0, 1.0]}))
