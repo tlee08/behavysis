@@ -33,7 +33,7 @@ def _():
     # Behavysis — Open Field (Single Mouse)
 
     **First Steps**
-    
+
     * Change `config_fp` below to either
     "default_config_linux.yaml" or "default_config_windows.yaml"
     depending on the machine.
@@ -78,9 +78,12 @@ def _(overwrite, proj):
     proj.format_video(overwrite=overwrite)
     return
 
+
 @app.cell
-def _(overwrite, proj):
+def _(proj):
     proj.get_video_metadata()
+    return
+
 
 @app.cell
 def _(overwrite, proj):
@@ -115,6 +118,8 @@ def _(proj):
     proj.analyse(
         funcs=(speed, distance, in_roi),
     )
+    return
+
 
 @app.cell
 def _(proj):

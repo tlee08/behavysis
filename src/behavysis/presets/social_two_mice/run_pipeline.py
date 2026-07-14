@@ -32,12 +32,13 @@ def _():
     # Behavysis — Social Interaction (Two Mice)
 
     **First Steps**
-    
+
     * Change `config_fp` below to either
     "default_config_linux.yaml" or "default_config_windows.yaml"
     depending on the machine.
     * Add you videos to the `1_raw_videos` folder.
     """)
+    return
 
 
 @app.cell
@@ -61,19 +62,26 @@ def _(names_ls, nprocs, proj_dir):
 @app.cell
 def _(config_fp, proj):
     proj.update_config(default_config_fp=config_fp)
+    return
 
 
 @app.cell
 def _(overwrite, proj):
     proj.format_video(overwrite=overwrite)
+    return
+
 
 @app.cell
-def _(overwrite, proj):
+def _(proj):
     proj.get_video_metadata()
+    return
+
 
 @app.cell
 def _(overwrite, proj):
     proj.run_dlc(gputouse=None, overwrite=overwrite)
+    return
+
 
 @app.cell
 def _(proj):
@@ -85,6 +93,7 @@ def _(proj):
             px_per_mm,
         ),
     )
+    return
 
 
 @app.cell
@@ -93,47 +102,63 @@ def _(overwrite, proj):
         funcs=(start_stop_trim, interpolate),
         overwrite=overwrite,
     )
+    return
+
 
 @app.cell
 def _(overwrite, proj):
     proj.extract_features(
         overwrite=overwrite,
     )
+    return
+
 
 @app.cell
 def _(overwrite, proj):
     proj.classify_behaviour(
         overwrite=overwrite,
     )
+    return
+
 
 @app.cell
 def _(overwrite, proj):
     proj.export_behaviour(
         overwrite=overwrite,
     )
+    return
+
 
 @app.cell(hide_code=True)
 def _():
-    mo.md(r"""## Manually check behaviour labels
+    mo.md(r"""
+    ## Manually check behaviour labels
 
-Run `behavysis-viewer-app` to verify and correct automated classifications
-before proceeding to behaviour analysis.
-""")
+    Run `behavysis-viewer-app` to verify and correct automated classifications
+    before proceeding to behaviour analysis.
+    """)
+    return
+
 
 @app.cell
 def _(proj):
     proj.analyse_behaviour()
+    return
+
 
 @app.cell
 def _(proj):
     proj.analyse(
         funcs=(speed, distance, in_roi, social_distance),
     )
+    return
+
 
 @app.cell
 def _(proj):
     proj.combine_analysis()
     proj.collate_analysis()
+    return
 
 
 if __name__ == "__main__":
