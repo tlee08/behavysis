@@ -21,7 +21,7 @@ from xgboost import XGBClassifier
 
 from behavysis.utils import get_gpu_device
 
-from .adapter import BaseAdapter, SklearnAdapter
+from .adapter import BaseAdapter, SklearnAdapter, XgboostAdapter
 
 # ── registry ─────────────────────────────────────────────────────────
 
@@ -108,7 +108,7 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
         ),
         config_fp,
     ),
-    "xgb": lambda config_fp: SklearnAdapter(
+    "xgb": lambda config_fp: XgboostAdapter(
         RandomizedSearchCV(
             Pipeline(
                 [
@@ -146,7 +146,7 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
         ),
         config_fp,
     ),
-    "xgb_v2": lambda config_fp: SklearnAdapter(
+    "xgb_v2": lambda config_fp: XgboostAdapter(
         RandomizedSearchCV(
             Pipeline(
                 [
@@ -192,7 +192,7 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
                 "clf__scale_pos_weight": [5, 10, 20, 40, 60],
                 "clf__max_delta_step": [0, 1, 3, 10],
             },
-            n_iter=60,
+            n_iter=2,
             scoring="average_precision",
             cv=StratifiedGroupKFold(n_splits=3, shuffle=True, random_state=42),
             random_state=42,

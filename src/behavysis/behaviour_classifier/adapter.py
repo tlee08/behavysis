@@ -10,7 +10,6 @@ import numpy as np
 import pandas as pd
 import polars as pl
 import torch
-from loguru import logger
 from sklearn.base import clone
 from sklearn.metrics import precision_recall_curve
 from sklearn.model_selection import train_test_split
@@ -31,6 +30,7 @@ from behavysis.constants import (
     ModelStrOptions,
 )
 from behavysis.schemas import BEHAVIOUR_PREDICTED_SCHEMA
+from behavysis.utils import get_gpu_device
 
 from .config import TrainingRecipe
 from .data import agg_eval_df_by_bouts, label_bouts, stratified_split_by_group
@@ -89,13 +89,7 @@ class BaseAdapter(ABC):
 
 
 class SklearnAdapter(BaseAdapter):
-    """Sklearn adapter.
-
-    The pipeline is built by calling ``self._builder(config)``
-    at fit time — the builder is defined in the MODEL_REGISTRY, keeping
-    all pipeline logic in one place.  GridSearchCV is then fitted and
-    the adapter delegates predict / feature access to the pipeline.
-    """
+    """Sklearn adapter."""
 
     framework: ClassVar[str] = "sklearn"
 
@@ -160,6 +154,7 @@ class SklearnAdapter(BaseAdapter):
 
     def predict(self, df: pl.DataFrame) -> pl.DataFrame:
         """Predict."""
+        # Check model exists
         if self.model is None:
             msg = "model not yet trained."
             raise ValueError(msg)
@@ -182,19 +177,14 @@ class SklearnAdapter(BaseAdapter):
 
     def save(self) -> None:
         """Save."""
+        # Check model exists
         if self.model is None:
             msg = "model not yet trained."
             raise ValueError(msg)
-        # If clf is XGBoost, must first move to CPU before serialising
-        # This shows device config: pipe.named_steps["clf"].get_booster().save_config()
-        clf = self.model.named_steps["clf"]
-        if isinstance(clf, XGBClassifier):
-            clf.set_params(device="cpu")
         # Save
         model_dir = self.config_fp.parent
         joblib.dump(self.search, model_dir / "search.joblib")
         joblib.dump(self.model, model_dir / "model.joblib")
-        logger.info("Saved sklearn model to {}", model_dir)
 
     @classmethod
     def load(cls, config_fp: Path) -> Self:
@@ -202,6 +192,50 @@ class SklearnAdapter(BaseAdapter):
         model_dir = config_fp.parent
         inst = cls(joblib.load(model_dir / "search.joblib"), model_dir / "config.yaml")
         inst.model = joblib.load(model_dir / "model.joblib")
+        return inst
+
+
+class XgboostAdapter(SklearnAdapter):
+    """XGBoost adapter.
+
+    Different from SklearnAdapter to save/load portable serialisation
+    across systems.
+    """
+
+    framework: ClassVar[str] = "xgboost"
+
+    def save(self) -> None:
+        """Save.
+
+        Must save XGBoost model as a .ubj so it serialisable to all machines.
+        """
+        # Check model exists
+        if self.model is None:
+            msg = "model not yet trained."
+            raise ValueError(msg)
+        # If clf is XGBoost, must first move to CPU before serialising
+        preprocess: Pipeline = Pipeline(self.model.steps[:-1])
+        clf: XGBClassifier = self.model.steps[-1][1]
+        # Save
+        model_dir = self.config_fp.parent
+        joblib.dump(self.search, model_dir / "search.joblib")
+        joblib.dump(preprocess, model_dir / "preprocess.joblib")
+        clf.save_model(model_dir / "clf.ubj")
+
+    @classmethod
+    def load(cls, config_fp: Path) -> Self:
+        """Load.
+
+        Must load XGBoost model as a .ubj so it serialisable to all machines.
+        """
+        # Make inst
+        model_dir = config_fp.parent
+        inst = cls(joblib.load(model_dir / "search.joblib"), model_dir / "config.yaml")
+        # Load and reconstruct the model
+        preprocess: Pipeline = joblib.load(model_dir / "preprocess.joblib")
+        clf = XGBClassifier(device=get_gpu_device())
+        clf.load_model(model_dir / "clf.ubj")
+        inst.model = Pipeline([*preprocess.steps, ("clf", clf)])
         return inst
 
 
@@ -269,7 +303,6 @@ class TorchAdapter(BaseAdapter):
         torch.save(self.model.state_dict(), model_dir / "model.pt")
         joblib.dump(self.scaler, model_dir / "scaler.joblib")
         np.save(model_dir / "feature_mask.npy", self.feature_mask)
-        logger.info("Saved torch model to {}", model_dir)
 
     @classmethod
     def load(cls, config_fp: Path) -> Self:
@@ -289,7 +322,6 @@ class TorchAdapter(BaseAdapter):
         inst = cls(model)
         inst.scaler = joblib.load(model_dir / "scaler.joblib")
         inst.feature_mask = np.load(model_dir / "feature_mask.npy")
-        logger.info("Loaded torch model from {}", model_dir)
         return inst
 
 
