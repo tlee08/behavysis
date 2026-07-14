@@ -5,6 +5,7 @@ from .behaviour_classifier import (
     initial_train,
     make_eval_report_choose_model,
     predict_df,
+    train,
     train_all_models,
 )
 from .config import ClassifierContract, TrainingRecipe
@@ -23,6 +24,7 @@ __all__ = [
     "TrainingRecipe",
     "agg_eval_df_by_bouts",
     "init_classifier",
+    "initial_train",
     "load_feature_names",
     "load_training_data",
     "make_eval_report",
