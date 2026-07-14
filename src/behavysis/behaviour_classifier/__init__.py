@@ -2,9 +2,9 @@
 
 from .behaviour_classifier import (
     init_classifier,
+    initial_train,
     make_eval_report_choose_model,
     predict_df,
-    train,
     train_all_models,
 )
 from .config import ClassifierContract, TrainingRecipe

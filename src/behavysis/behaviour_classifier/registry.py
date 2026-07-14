@@ -19,9 +19,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.tree import DecisionTreeClassifier
 from xgboost import XGBClassifier
 
-from behavysis.utils import get_gpu_device
-
-from .adapter import BaseAdapter, SklearnAdapter, XgboostAdapter
+from .adapter import BaseAdapter, SklearnAdapter
 
 # ── registry ─────────────────────────────────────────────────────────
 
@@ -108,7 +106,7 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
         ),
         config_fp,
     ),
-    "xgb": lambda config_fp: XgboostAdapter(
+    "xgb": lambda config_fp: SklearnAdapter(
         RandomizedSearchCV(
             Pipeline(
                 [
@@ -117,6 +115,7 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
                         "clf",
                         XGBClassifier(
                             tree_method="hist",
+                            device="cpu",
                             eval_metric="aucpr",
                             n_jobs=4,
                             random_state=42,
@@ -146,7 +145,7 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
         ),
         config_fp,
     ),
-    "xgb_v2": lambda config_fp: XgboostAdapter(
+    "xgb_v2": lambda config_fp: SklearnAdapter(
         RandomizedSearchCV(
             Pipeline(
                 [
@@ -156,7 +155,7 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
                         SelectFromModel(
                             XGBClassifier(
                                 tree_method="hist",
-                                device=get_gpu_device(),
+                                device="cpu",
                                 n_estimators=100,
                                 max_depth=4,
                                 n_jobs=-1,
@@ -171,7 +170,7 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
                         "clf",
                         XGBClassifier(
                             tree_method="hist",
-                            device=get_gpu_device(),
+                            device="cpu",
                             eval_metric="aucpr",
                             n_jobs=-1,
                             random_state=42,

@@ -75,28 +75,16 @@ def init_classifier(
 # ── training ─────────────────────────────────────────────────────────
 
 
-def train(
-    contract_fp: Path,
-    model_name: str,
-    factory: Callable[[Path], BaseAdapter],
-) -> int:
-    """Train a classifier and persist artifacts in a new iteration directory.
-
-    Returns the iteration number.
-    """
-    clf_proj = ClassifierFp(contract_fp.parent)
+def train(config_fp: Path, adapter: BaseAdapter) -> None:
+    """Train."""
+    # Define project files
+    clf_proj = ClassifierFp(config_fp.parent.parent.parent)
     contract_fp = clf_proj.contract_fp()
-    iteration = _next_iteration(clf_proj.root_dir(), model_name)
-    config_fp = clf_proj.config_fp(model_name, iteration)
     contract = ClassifierContract.read_yaml(contract_fp)
-    adapter = factory(config_fp)
-    config = TrainingRecipe(
-        behaviour_name=contract.behaviour_name,
-        model_name=model_name,
-        iteration=iteration,
-        model_type=MODEL_TYPES_TO_STRING[type(adapter)],
-    )
-    config.write_yaml(config_fp)
+    config = TrainingRecipe.read_yaml(config_fp)
+    # Get config data
+    model_name = config.model_name
+    iteration = config.iteration
 
     logger.info("Training {} (iteration={:03d})", contract.behaviour_name, iteration)
 
@@ -150,6 +138,34 @@ def train(
         model_name,
         iteration,
     )
+
+
+def initial_train(
+    contract_fp: Path,
+    model_name: str,
+    factory: Callable[[Path], BaseAdapter],
+) -> int:
+    """Train a classifier and persist artifacts in a new iteration directory.
+
+    Returns the iteration number.
+    """
+    # Define project files
+    clf_proj = ClassifierFp(contract_fp.parent)
+    contract_fp = clf_proj.contract_fp()
+    iteration = _next_iteration(clf_proj.root_dir(), model_name)
+    config_fp = clf_proj.config_fp(model_name, iteration)
+    contract = ClassifierContract.read_yaml(contract_fp)
+    adapter = factory(config_fp)
+    config = TrainingRecipe(
+        behaviour_name=contract.behaviour_name,
+        model_name=model_name,
+        iteration=iteration,
+        model_type=MODEL_TYPES_TO_STRING[type(adapter)],
+    )
+    config.write_yaml(config_fp)
+
+    train(config_fp, adapter)
+
     return iteration
 
 
@@ -158,7 +174,7 @@ def train_all_models(contract_fp: Path) -> list[int]:
     results: list[int] = []
     for model_name in ROUTINE_MODELS:
         factory = MODEL_REGISTRY[model_name]
-        results.append(train(contract_fp, model_name, factory))
+        results.append(initial_train(contract_fp, model_name, factory))
     return results
 
 
