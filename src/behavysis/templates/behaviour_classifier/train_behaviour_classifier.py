@@ -10,7 +10,12 @@ with app.setup:
     import marimo as mo
 
     from behavysis import Project
-    from behavysis.behaviour_classifier import ClassifierContract, train_all_models, init_classifier
+    from behavysis.behaviour_classifier import (
+        ClassifierContract,
+        train_all_models,
+        init_classifier,
+        make_eval_report_choose_model
+    )
     from behavysis.behaviour_classifier.storage import ClassifierFp
     from behavysis.constants import FEATURES_EXTRACTED_DIR
     from behavysis.transforms import boris_to_behaviour
@@ -93,11 +98,13 @@ def _():
         training_project_dir,
     )
 
-
 @app.cell
 def _(clf_dir):
     clf_proj = ClassifierFp(clf_dir)
-    
+
+
+@app.cell
+def _(clf_proj):    
     feats_dir = clf_proj.features_dir()
     labels_dir = clf_proj.labels_dir()
     contract_fp = clf_proj.contract_fp()
@@ -145,7 +152,7 @@ def _():
     using the experiment's metadata (fps, start/stop frame) to align frames.
 
     *(Alternatively, if the source project is already scored, copy its
-    `7_behaviour_scored/*.parquet` into `ClassifierFp(clf_dir).labels_dir()`
+    `7_behaviour_scored/*.parquet` into `clf_proj.labels_dir()`
     instead of running this cell.)*
     """)
     return
@@ -191,9 +198,8 @@ def _(behaviour_name, bodyparts, contract_fp, individuals):
 
 
 @app.cell
-def _(clf_dir):
-    fp = ClassifierFp(clf_dir)
-    iterations = train_all_models(fp.contract_fp())
+def _(clf_proj):
+    iterations = train_all_models(clf_proj.contract_fp())
     iterations
     return
 
@@ -219,6 +225,15 @@ def _():
 
 
 @app.cell
+def _(clf_proj):
+    eval_res = make_eval_report_choose_model(
+        clf_proj.contract_fp(),
+        "gxb_v2",
+        1
+    )
+    eval_res
+
+@app.cell
 def _():
     mo.md("""
     ## 5. Set the active model
@@ -227,9 +242,7 @@ def _():
     used by ``predict_df`` at inference time:
 
     ```python
-    ClassifierActive(name="rf", iteration=3).write_yaml(
-        ClassifierFp(clf_dir).active_fp()
-    )
+    ClassifierActive(name="rf", iteration=3).write_yaml(clf_proj)
     ```
 
     Or edit `active.yaml` by hand:

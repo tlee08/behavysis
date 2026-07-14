@@ -7,7 +7,6 @@ import altair as alt
 import matplotlib.pyplot as plt
 import numpy as np
 import polars as pl
-import yaml
 from loguru import logger
 from pydantic import BaseModel
 from sklearn.metrics import (
@@ -221,18 +220,6 @@ def make_eval_report(splits: dict[str, pl.DataFrame]) -> EvalReport:
         )
     # Return
     return EvalReport(report=res_report, df=res_df, chart=res_chart)
-
-
-def save_eval_report(splits: dict[str, pl.DataFrame], eval_dir: Path) -> None:
-    """Write ROC/PR charts and a JSON metric report for the given splits."""
-    # Make eval dir
-    res = make_eval_report(splits)
-    # Save. Only report and charts, not df
-    eval_dir.mkdir(parents=True, exist_ok=True)
-    for _name, _report in res.report.items():
-        (eval_dir / f"{_name}.json").write_text(yaml.dump(_report))
-    for _name, _chart in res.chart.items():
-        _chart.save(eval_dir / f"{_name}.png")
 
 
 def save_feature_importance(

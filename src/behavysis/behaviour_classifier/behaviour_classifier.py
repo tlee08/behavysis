@@ -11,6 +11,7 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING
 
+import yaml
 from loguru import logger
 
 from behavysis.constants import ACTUAL, EXPERIMENT
@@ -18,7 +19,7 @@ from behavysis.constants import ACTUAL, EXPERIMENT
 from .adapter import MODEL_TYPES_TO_CLASS, MODEL_TYPES_TO_STRING, BaseAdapter
 from .config import ClassifierActive, ClassifierContract, TrainingRecipe
 from .data import label_bouts, load_training_data, stratified_split_by_group
-from .evaluation import save_eval_report
+from .evaluation import EvalReport, make_eval_report
 from .registry import MODEL_REGISTRY, ROUTINE_MODELS
 from .storage import ClassifierFp
 
@@ -122,15 +123,20 @@ def train(
     adapter.save()
 
     # Evaluate
-    # Predictions
     eval_dir = clf_proj.eval_dir(model_name, iteration)
     eval_dir.mkdir(parents=True, exist_ok=True)
-    eval_train_df = _eval_split(adapter, train_df)
+    # Predictions
+    eval_train_df = adapter.predict(train_df).with_columns(df[EXPERIMENT], df[ACTUAL])
     eval_train_df.write_parquet(eval_dir / "train_eval.parquet")
-    eval_test_df = _eval_split(adapter, test_df)
+    eval_test_df = adapter.predict(test_df).with_columns(df[EXPERIMENT], df[ACTUAL])
     eval_test_df.write_parquet(eval_dir / "test_eval.parquet")
     # Further evaluation
-    save_eval_report({"train": eval_train_df, "test": eval_test_df}, eval_dir)
+    res = make_eval_report({"train": eval_train_df, "test": eval_test_df})
+    # Save. Only report and charts, not df
+    for _name, _report in res.report.items():
+        (eval_dir / f"{_name}.json").write_text(yaml.dump(_report))
+    for _name, _chart in res.chart.items():
+        _chart.save(eval_dir / f"{_name}.png")
 
     logger.info(
         "Training complete: {} {:03d}",
@@ -194,11 +200,18 @@ def predict_df(
     )
 
 
-# ── internal helpers ─────────────────────────────────────────────────
+# ── other helpers ─────────────────────────────────────────────────
 
 
-def _eval_split(adapter: BaseAdapter, df: pl.DataFrame) -> pl.DataFrame:
-    # Run inference
-    x_df = df.drop([EXPERIMENT, ACTUAL])
-    eval_df = adapter.predict(x_df)
-    return eval_df.with_columns(df[EXPERIMENT], df[ACTUAL])
+def make_eval_report_choose_model(
+    contract_fp: Path, model_name: str, iteration: int
+) -> EvalReport:
+    """Run make_eval_report by giving a model's filepath."""
+    # Get filepaths
+    clf_proj = ClassifierFp(contract_fp.parent)
+    eval_dir = clf_proj.eval_dir(model_name, iteration)
+    # Read raw eval data
+    eval_train_df = pl.read_parquet(eval_dir / "train_eval.parquet")
+    eval_test_df = pl.read_parquet(eval_dir / "test_eval.parquet")
+    # Make evaluation
+    return make_eval_report({"train": eval_train_df, "test": eval_test_df})
