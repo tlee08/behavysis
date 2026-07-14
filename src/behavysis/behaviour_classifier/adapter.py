@@ -27,7 +27,6 @@ from behavysis.constants import (
     PROB,
     Array1D,
     Array2D,
-    ModelStrOptions,
 )
 from behavysis.schemas import BEHAVIOUR_PREDICTED_SCHEMA
 from behavysis.utils import get_gpu_device
@@ -328,10 +327,12 @@ class TorchAdapter(BaseAdapter):
 # ── registry ─────────────────────────────────────────────────────────
 
 
-MODEL_TYPES_TO_STRING: dict[type[BaseAdapter], ModelStrOptions] = {
-    SklearnAdapter: "sklearn",
-    TorchAdapter: "torch",
+MODEL_TYPES_TO_CLASS: dict[str, type[BaseAdapter]] = {
+    "sklearn": SklearnAdapter,
+    "xgboost": XgboostAdapter,
+    "torch": TorchAdapter,
 }
-MODEL_TYPES_TO_CLASS: dict[ModelStrOptions, type[BaseAdapter]] = {
-    v: k for k, v in MODEL_TYPES_TO_STRING.items()
+
+MODEL_TYPES_TO_STRING: dict[type[BaseAdapter], str] = {
+    v: k for k, v in MODEL_TYPES_TO_CLASS.items()
 }

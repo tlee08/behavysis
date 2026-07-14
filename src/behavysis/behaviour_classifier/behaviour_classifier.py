@@ -133,9 +133,9 @@ def train(
     # Further evaluation
     res = make_eval_report({"train": eval_train_df, "test": eval_test_df})
     # Save. Only report and charts, not df
-    for _name, _report in res.report.items():
+    for _name, _report in res["report"].items():
         (eval_dir / f"{_name}.json").write_text(yaml.dump(_report))
-    for _name, _chart in res.chart.items():
+    for _name, _chart in res["chart"].items():
         _chart.save(eval_dir / f"{_name}.png")
 
     logger.info(

@@ -8,8 +8,6 @@ from typing import Self
 import yaml
 from pydantic import BaseModel
 
-from behavysis.constants import ModelStrOptions  # noqa: TC001
-
 
 class YamlModel(BaseModel):
     """Base model with YAML read/write helpers."""
@@ -57,7 +55,7 @@ class TrainingRecipe(YamlModel):
 
     behaviour_name: str
 
-    model_type: ModelStrOptions
+    model_type: str
 
     model_name: str
     iteration: int
