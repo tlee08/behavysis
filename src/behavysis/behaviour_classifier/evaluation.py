@@ -9,6 +9,7 @@ import numpy as np
 import polars as pl
 import yaml
 from loguru import logger
+from pydantic import BaseModel
 from sklearn.metrics import (
     average_precision_score,
     classification_report,
@@ -25,6 +26,19 @@ BEHAV = "behav"
 LABELS = [NIL, BEHAV]
 
 SPLIT = "split"
+
+# ----- Typing ------------------------------------------------------
+
+
+class EvalReport(BaseModel):
+    """Eval report."""
+
+    report: dict[str, object]
+    df: dict[str, pl.DataFrame]
+    chart: dict[str, alt.Chart]
+
+
+# ----- Functions ---------------------------------------------------
 
 
 def binary_report(y_true: np.ndarray, y_prob: np.ndarray, y_pred: np.ndarray) -> dict:
@@ -94,7 +108,7 @@ def _pr_df(y_true: np.ndarray, y_prob: np.ndarray) -> pl.DataFrame:
 
 
 def _curve_chart(
-    points: pl.DataFrame,
+    df: pl.DataFrame,
     x_column: str,
     y_column: str,
     title: str,
@@ -102,7 +116,7 @@ def _curve_chart(
 ) -> alt.Chart:
     """Build an overlaid line chart (one line per split) with a baseline."""
     chart = (
-        alt.Chart(points)
+        alt.Chart(df)
         .mark_line()
         .encode(
             x=alt.X(f"{x_column}:Q", scale=alt.Scale(domain=[0, 1])),
@@ -117,9 +131,9 @@ def _curve_chart(
     )
 
 
-def _hist_chart(eval_df: pl.DataFrame, x_column: str, title: str) -> alt.Chart:
+def _hist_chart(df: pl.DataFrame, x_column: str, title: str) -> alt.Chart:
     return (
-        alt.Chart(eval_df)
+        alt.Chart(df)
         .mark_bar(opacity=0.3, binSpacing=0)
         .encode(
             alt.X(f"{x_column}:Q", scale=alt.Scale(domain=[0, 1])).bin(maxbins=50),
@@ -134,12 +148,12 @@ def _hist_chart(eval_df: pl.DataFrame, x_column: str, title: str) -> alt.Chart:
     )
 
 
-def make_eval_report(splits: dict[str, pl.DataFrame]) -> dict[str, dict[str, object]]:
+def make_eval_report(splits: dict[str, pl.DataFrame]) -> EvalReport:
     """Make ROC/PR charts and a JSON metric report for the given splits."""
     # Construct bouts splits eval (bouts equivalent of splits)
     bouts_splits = {_name: agg_eval_df_by_bouts(_df) for _name, _df in splits.items()}
     # Prepare to store eval results
-    res_report: dict[str, dict] = {}
+    res_report: dict[str, object] = {}
     res_df: dict[str, pl.DataFrame] = {}
     res_chart: dict[str, alt.Chart] = {}
     # For both frames and bouts evals
@@ -187,8 +201,26 @@ def make_eval_report(splits: dict[str, pl.DataFrame]) -> dict[str, dict[str, obj
         res_chart[f"{_splits_name}_pr_chart"] = _curve_chart(
             res_df[f"{_splits_name}_pr_df"], "recall", "precision", "PR curve"
         )
+        res_chart[f"{_splits_name}_thresholds_chart"] = (
+            alt.Chart(
+                res_df[f"{_splits_name}_pr_df"].unpivot(index=[SPLIT, "thresholds"])
+            )
+            .mark_line()
+            .encode(
+                x=alt.X("thresholds:Q", scale=alt.Scale(domain=[0, 1])),
+                y=alt.Y("value:Q", scale=alt.Scale(domain=[0, 1])),
+                color=alt.Color(field="variable", type="nominal"),
+                row=alt.Row(field=SPLIT, type="nominal"),
+            )
+            .properties(
+                title="PR at each Threshold",
+                width=400,
+                height=400,
+                config={"axis": {"grid": True}},
+            )
+        )
     # Return
-    return {"report": res_report, "df": res_df, "chart": res_chart}
+    return EvalReport(report=res_report, df=res_df, chart=res_chart)
 
 
 def save_eval_report(splits: dict[str, pl.DataFrame], eval_dir: Path) -> None:
@@ -197,9 +229,9 @@ def save_eval_report(splits: dict[str, pl.DataFrame], eval_dir: Path) -> None:
     res = make_eval_report(splits)
     # Save. Only report and charts, not df
     eval_dir.mkdir(parents=True, exist_ok=True)
-    for _name, _report in res["report"].items():
+    for _name, _report in res.report.items():
         (eval_dir / f"{_name}.json").write_text(yaml.dump(_report))
-    for _name, _chart in res["chart"].items():
+    for _name, _chart in res.chart.items():
         _chart.save(eval_dir / f"{_name}.png")
 
 
