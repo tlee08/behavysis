@@ -14,7 +14,9 @@ from loguru import logger
 from sklearn.base import clone
 from sklearn.metrics import precision_recall_curve
 from sklearn.model_selection import train_test_split
+from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import MinMaxScaler
+from xgboost import XGBClassifier
 
 from behavysis.constants import (
     ACTUAL,
@@ -38,7 +40,6 @@ if TYPE_CHECKING:
     from pathlib import Path
     from typing import Self
 
-    from sklearn.base import BaseEstimator
     from sklearn.model_selection._search import BaseSearchCV
 
     from .torch.base import TorchModel
@@ -102,7 +103,7 @@ class SklearnAdapter(BaseAdapter):
         """Init."""
         self.search = search
         self.config_fp = config_fp
-        self.model: BaseEstimator | None = None
+        self.model: Pipeline | None = None
 
     def fit(self, df: pl.DataFrame) -> pd.DataFrame:
         """Fit."""
@@ -181,6 +182,15 @@ class SklearnAdapter(BaseAdapter):
 
     def save(self) -> None:
         """Save."""
+        if self.model is None:
+            msg = "model not yet trained."
+            raise ValueError(msg)
+        # If clf is XGBoost, must first move to CPU before serialising
+        # This shows device config: pipe.named_steps["clf"].get_booster().save_config()
+        clf = self.model.named_steps["clf"]
+        if isinstance(clf, XGBClassifier):
+            clf.set_params(device="cpu")
+        # Save
         model_dir = self.config_fp.parent
         joblib.dump(self.search, model_dir / "search.joblib")
         joblib.dump(self.model, model_dir / "model.joblib")
