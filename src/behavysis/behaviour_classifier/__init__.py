@@ -8,7 +8,7 @@ from .data import (
     load_training_data,
     stratified_split_by_group,
 )
-from .evaluation import save_eval_report
+from .evaluation import make_eval_report, save_eval_report
 from .registry import MODEL_REGISTRY
 
 __all__ = [
@@ -18,6 +18,7 @@ __all__ = [
     "agg_eval_df_by_bouts",
     "load_feature_names",
     "load_training_data",
+    "make_eval_report",
     "predict_df",
     "save_eval_report",
     "stratified_split_by_group",

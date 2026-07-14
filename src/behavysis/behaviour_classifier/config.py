@@ -37,6 +37,8 @@ class ClassifierContract(YamlModel):
     individuals: list[str]
     bodyparts: list[str]
 
+    eval_metric: str = "f2"
+
 
 class ClassifierActive(YamlModel):
     """Stores which model to use."""

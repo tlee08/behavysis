@@ -134,13 +134,8 @@ def _hist_chart(eval_df: pl.DataFrame, x_column: str, title: str) -> alt.Chart:
     )
 
 
-def save_eval_report(
-    splits: dict[str, pl.DataFrame],
-    eval_dir: Path,
-) -> dict[str, object]:
-    """Write ROC/PR charts and a JSON metric report for the given splits."""
-    # Make eval dir
-    eval_dir.mkdir(parents=True, exist_ok=True)
+def make_eval_report(splits: dict[str, pl.DataFrame]) -> dict[str, str[str, object]]:
+    """Make ROC/PR charts and a JSON metric report for the given splits."""
     # Construct bouts splits eval (bouts equivalent of splits)
     bouts_splits = {_name: agg_eval_df_by_bouts(_df) for _name, _df in splits.items()}
     # Prepare to store eval results
@@ -192,13 +187,20 @@ def save_eval_report(
         res_chart[f"{_splits_name}_pr_chart"] = _curve_chart(
             res_df[f"{_splits_name}_pr_df"], "recall", "precision", "PR curve"
         )
-    # Save. Only report and charts, not df
-    for _name, _report in res_report.items():
-        (eval_dir / f"{_name}.json").write_text(yaml.dump(_report))
-    for _name, _chart in res_chart.items():
-        _chart.save(eval_dir / f"{_name}.png")
     # Return
-    return {**res_report, **res_df, **res_chart}
+    return {"report": res_report, "df": res_df, "chart": res_chart}
+
+
+def save_eval_report(splits: dict[str, pl.DataFrame], eval_dir: Path) -> None:
+    """Write ROC/PR charts and a JSON metric report for the given splits."""
+    # Make eval dir
+    res = make_eval_report(splits)
+    # Save. Only report and charts, not df
+    eval_dir.mkdir(parents=True, exist_ok=True)
+    for _name, _report in res["report"].items():
+        (eval_dir / f"{_name}.json").write_text(yaml.dump(_report))
+    for _name, _chart in res["chart"].items():
+        _chart.save(eval_dir / f"{_name}.png")
 
 
 def save_feature_importance(
