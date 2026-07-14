@@ -1,6 +1,6 @@
 """Behavysis behavioural classifier — training and inference."""
 
-from .behaviour_classifier import predict_df, train, train_all_models
+from .behaviour_classifier import init_classifier, predict_df, train, train_all_models
 from .config import ClassifierContract, TrainingRecipe
 from .data import (
     agg_eval_df_by_bouts,
@@ -16,6 +16,7 @@ __all__ = [
     "ClassifierContract",
     "TrainingRecipe",
     "agg_eval_df_by_bouts",
+    "init_classifier",
     "load_feature_names",
     "load_training_data",
     "make_eval_report",

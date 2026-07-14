@@ -10,7 +10,7 @@ with app.setup:
     import marimo as mo
 
     from behavysis import Project
-    from behavysis.behaviour_classifier import ClassifierContract, train_all_models
+    from behavysis.behaviour_classifier import ClassifierContract, train_all_models, init_classifier
     from behavysis.behaviour_classifier.storage import ClassifierFp
     from behavysis.constants import FEATURES_EXTRACTED_DIR
     from behavysis.transforms import boris_to_behaviour
@@ -97,6 +97,7 @@ def _():
 @app.cell
 def _(clf_dir):
     clf_proj = ClassifierFp(clf_dir)
+    
     feats_dir = clf_proj.features_dir()
     labels_dir = clf_proj.labels_dir()
     contract_fp = clf_proj.contract_fp()
@@ -180,12 +181,12 @@ def _():
 
 @app.cell
 def _(behaviour_name, bodyparts, contract_fp, individuals):
-    if not contract_fp.exists():
-        ClassifierContract(
-            behaviour_name=behaviour_name,
-            individuals=individuals,
-            bodyparts=bodyparts,
-        ).write_yaml(contract_fp)
+    init_classifier(
+        contract_fp=contract_fp,
+        behaviour_name=behaviour_name,
+        individuals=individuals,
+        bodyparts=bodyparts,
+    )
     return
 
 
