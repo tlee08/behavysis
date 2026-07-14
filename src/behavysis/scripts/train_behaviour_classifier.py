@@ -30,7 +30,7 @@ def _print_next_steps(dst: Path) -> None:
         f"     individuals, bodyparts, source project, BORIS dir).\n"
         f"  2. Run cells top-to-bottom to assemble data, train, and evaluate.\n"
         f"  3. Inspect each version's evaluation/ folder and the leaderboard.\n"
-        f"     The best model is auto-promoted to production.yaml.\n",
+        f"     The best model is auto-promoted to contract.yaml.\n",
     )
 
 

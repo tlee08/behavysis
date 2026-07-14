@@ -8,7 +8,7 @@ Module for training, versioning, comparing, and deploying binary behavioural cla
 {my_behaviour_classifier}/          # arbitrary name; behaviour is set in contract.yaml
   training_data/                    # shared pool of labelled data (mirrors project dirs)
   contract.yaml                     # shared behaviour + feature contract (all model_types)
-  production.yaml                   # {model_type, version} currently deployed
+  contract.yaml                   # {model_type, version} currently deployed
   leaderboard.yaml                  # auto-generated cross-model_type comparison
   {model_type}/                     # e.g. "rf", "dnn1", "cnn2"
     config.yaml                     # human-authored hyperparameter recipe
@@ -32,30 +32,30 @@ Human-authored shared contract — the single source of truth for what every
 model_type in the classifier trains on. Edited by hand before training, never
 auto-modified.
 
-| Field          | Type      | Description                                 |
-| -------------- | --------- | ------------------------------------------- |
-| behaviour_name | str       | Behaviour this classifier classifies        |
-| individuals    | list[str] | Animal IDs used in training                 |
-| bodyparts      | list[str] | Bodyparts used for features                 |
+| Field          | Type      | Description                          |
+| -------------- | --------- | ------------------------------------ |
+| behaviour_name | str       | Behaviour this classifier classifies |
+| individuals    | list[str] | Animal IDs used in training          |
+| bodyparts      | list[str] | Bodyparts used for features          |
 
 ### `config.yaml` (per model_type)
 
 Human-authored hyperparameter recipe. Edited by hand before training. Never auto-modified.
 
-| Field             | Type      | Description                                                     |
-| ----------------- | --------- | --------------------------------------------------------------- |
-| model_type        | str       | Key in MODEL_REGISTRY (redundant with dir, but self-describing) |
-| seed              | int       | Random seed (default 42)                                        |
-| oversample_ratio  | float     | Target pos/neg ratio for oversampling (default 0.2)             |
-| undersample_ratio | float     | Target pos/neg ratio for undersampling (default 0.4)            |
-| test_split        | float     | Fraction of data held out for testing (default 0.2)             |
-| val_split         | float     | Fraction of training data held out for validation (default 0.2) |
-| batch_size        | int       | Training batch size (default 256)                               |
-| epochs            | int       | Training epochs (default 100)                                   |
-| pcutoff           | float     | Probability threshold for binary prediction (default 0.2)       |
-| feature_selection | bool      | Drop uninformative features, fit on train split (default True)  |
-| variance_threshold| float     | Min variance (post-scaling) to keep a feature (default 0.0)     |
-| max_features      | int\|null | Cap to top-k features by RF importance (default null = all)     |
+| Field              | Type      | Description                                                     |
+| ------------------ | --------- | --------------------------------------------------------------- |
+| model_type         | str       | Key in MODEL_REGISTRY (redundant with dir, but self-describing) |
+| seed               | int       | Random seed (default 42)                                        |
+| oversample_ratio   | float     | Target pos/neg ratio for oversampling (default 0.2)             |
+| undersample_ratio  | float     | Target pos/neg ratio for undersampling (default 0.4)            |
+| test_split         | float     | Fraction of data held out for testing (default 0.2)             |
+| val_split          | float     | Fraction of training data held out for validation (default 0.2) |
+| batch_size         | int       | Training batch size (default 256)                               |
+| epochs             | int       | Training epochs (default 100)                                   |
+| pcutoff            | float     | Probability threshold for binary prediction (default 0.2)       |
+| feature_selection  | bool      | Drop uninformative features, fit on train split (default True)  |
+| variance_threshold | float     | Min variance (post-scaling) to keep a feature (default 0.0)     |
+| max_features       | int\|null | Cap to top-k features by RF importance (default null = all)     |
 
 Serialisation: YAML via Pydantic `model_dump` / `model_validate`.
 
@@ -149,7 +149,7 @@ Ranked by `test_f1_behav` descending.
 
 `overfit_ratio` = `(train_f1_behav - test_f1_behav)` — smaller is better.
 
-### `production.yaml` (classifier level)
+### `contract.yaml` (classifier level)
 
 A pure pointer to the deployed `model_type`. Written only by
 `promote_to_production` — never hand-edited. The deployed version is resolved
@@ -224,7 +224,7 @@ Deliberately separate from `leaderboard.yaml` — regenerating the leaderboard n
 `promote_to_production(clf_dir, model_type)`:
 
 - Validates that the model_type has an `active.yaml`
-- Writes `production.yaml` (a pure `{model_type}` pointer)
+- Writes `contract.yaml` (a pure `{model_type}` pointer)
 
 ### 7. Inference
 
@@ -232,12 +232,12 @@ Deliberately separate from `leaderboard.yaml` — regenerating the leaderboard n
 
 - If `model_type` and `version` are given: loads that specific version
 - If only `model_type` is given: reads `active.yaml`, loads that version
-- If neither: reads `production.yaml` → that model_type's `active.yaml` → version
+- If neither: reads `contract.yaml` → that model_type's `active.yaml` → version
 - Returns `BehaviourClassifier` with `.config` (TrainingRecipe), `.contract` (ClassifierContract), and `.predict(features_df)`
 
 ### 8. Rollback
 
-To roll back a model_type to an earlier version: call `promote(clf_dir, model_type, old_version)` to repoint its `active.yaml`. If that model_type is in production, `production.yaml` then resolves to `old_version` automatically. All version artifacts remain untouched in `versions/`.
+To roll back a model_type to an earlier version: call `promote(clf_dir, model_type, old_version)` to repoint its `active.yaml`. If that model_type is in production, `contract.yaml` then resolves to `old_version` automatically. All version artifacts remain untouched in `versions/`.
 
 ## Version string format
 
@@ -249,10 +249,10 @@ Sequence numbers are per model_type (within a classifier dir) and determined by 
 
 ## Framework serialisation
 
-| Framework | model_type examples          | Artifacts                                                          |
-| --------- | ---------------------------- | ------------------------------------------------------------------ |
+| Framework | model_type examples          | Artifacts                                                                         |
+| --------- | ---------------------------- | --------------------------------------------------------------------------------- |
 | sklearn   | rf, logreg                   | `model.joblib` (joblib dump of SklearnAdapter: estimator + scaler + feature mask) |
-| torch     | dnn1, dnn2, dnn3, cnn1, cnn2 | `model.pt` (state_dict), `scaler.joblib` (MinMaxScaler), `feature_mask.npy` |
+| torch     | dnn1, dnn2, dnn3, cnn1, cnn2 | `model.pt` (state_dict), `scaler.joblib` (MinMaxScaler), `feature_mask.npy`       |
 
 Torch loading: fresh TorchAdapter from MODEL_REGISTRY → `adapter.load_state(version_dir)` reconstructs model from state_dict + scaler + feature mask (the mask length defines `nfeatures`).
 
@@ -273,16 +273,16 @@ The selected column indices (`feature_mask`) are persisted with the model and ap
 
 Every trained version writes to `versions/{version}/evaluation/`:
 
-| File | Contents |
-| --- | --- |
-| `{train,val,test}_report.json` | precision / recall / f1 per split |
-| `{train,val,test}_eval.parquet` | per-frame prob / pred / actual |
-| `{split}_confm.png` | confusion matrix |
-| `{split}_pcutoffs.png` | metrics vs probability cutoff — use to choose `pcutoff` |
-| `{split}_logc.png` | predicted-probability distribution |
-| `history.png`, `history.parquet` | train/val loss curve (torch only) |
-| `feature_importance.png` | top features by importance (sklearn) |
-| `feature_report.json` | `n_features_total` vs `n_features_used` after selection |
+| File                             | Contents                                                |
+| -------------------------------- | ------------------------------------------------------- |
+| `{train,val,test}_report.json`   | precision / recall / f1 per split                       |
+| `{train,val,test}_eval.parquet`  | per-frame prob / pred / actual                          |
+| `{split}_confm.png`              | confusion matrix                                        |
+| `{split}_pcutoffs.png`           | metrics vs probability cutoff — use to choose `pcutoff` |
+| `{split}_logc.png`               | predicted-probability distribution                      |
+| `history.png`, `history.parquet` | train/val loss curve (torch only)                       |
+| `feature_importance.png`         | top features by importance (sklearn)                    |
+| `feature_report.json`            | `n_features_total` vs `n_features_used` after selection |
 
 Inspect these — plus each version's `metadata.yaml` (train/val/test F1) and the `overfit_ratio` in `leaderboard.yaml` — before promoting a model to production.
 
@@ -290,7 +290,7 @@ Inspect these — plus each version's `metadata.yaml` (train/val/test F1) and th
 
 - **Auto-promote on train**: always promotes if `test_f1_behav` improves
 - **Manual promote**: `promote()` and `promote_to_best()` can be called independently
-- Promotion never touches `production.yaml` — that's a separate, deliberate step
+- Promotion never touches `contract.yaml` — that's a separate, deliberate step
 
 ## Public API
 

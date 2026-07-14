@@ -17,7 +17,7 @@ def classify_behaviour(
     """Classify behaviour using trained models.
 
     Each classifier's identity and feature contract are resolved from its
-    ``production.yaml``. The experiment's ``extract_features`` config is
+    ``contract.yaml``. The experiment's ``extract_features`` config is
     validated against that contract before classifying.
     """
     model_config_ls = config.require_classify_behaviour()
