@@ -25,7 +25,7 @@ def classify_behaviour(
 
     behaviour_df_ls = []
     for model_config in model_config_ls:
-        clf_proj = ClassifierFp(model_config.clf_fp)
+        clf_proj = ClassifierFp(model_config.clf_fp.parent)
         contract = ClassifierContract.read_yaml(clf_proj.contract_fp())
         _validate_feature_contract(feat_cfg, contract)
 

@@ -41,6 +41,9 @@ class ClassifierFp:
 
     def __init__(self, root_dir: Path) -> None:
         """__init__."""
+        if not root_dir.exists():
+            msg = f"Classifier root directory does not exist:{root_dir}"
+            raise FileNotFoundError(msg)
         self._root_dir = root_dir.resolve()
 
     # ── root ────────────────────────────────────────────────────---------

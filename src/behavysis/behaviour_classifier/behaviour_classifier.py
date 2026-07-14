@@ -193,8 +193,10 @@ def predict_df(
     ``features_df`` has a ``frame`` column plus feature columns.
     Returns a long-form DataFrame with ``(frame, behaviour, prob, pred)``.
     """
+    # Retrieve active model
     clf_proj = ClassifierFp(contract_fp.parent)
     active = ClassifierActive.read_yaml(clf_proj.active_fp())
+    # Predict
     return predict_df_choose_model(
         contract_fp, active.model_name, active.iteration, x_df
     )
