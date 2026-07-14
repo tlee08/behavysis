@@ -31,6 +31,13 @@ with app.setup:
 def _():
     mo.md(r"""
     # Behavysis — Open Field (Single Mouse)
+
+    **First Steps**
+    
+    * Change `config_fp` below to either
+    "default_config_linux.yaml" or "default_config_windows.yaml"
+    depending on the machine.
+    * Add you videos to the `1_raw_videos` folder.
     """)
     return
 
@@ -71,6 +78,9 @@ def _(overwrite, proj):
     proj.format_video(overwrite=overwrite)
     return
 
+@app.cell
+def _(overwrite, proj):
+    proj.get_video_metadata()
 
 @app.cell
 def _(overwrite, proj):

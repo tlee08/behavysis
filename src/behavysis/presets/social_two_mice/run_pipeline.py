@@ -28,7 +28,16 @@ with app.setup:
 
 @app.cell(hide_code=True)
 def _():
-    mo.md(r"""# Behavysis — Social Interaction (Two Mice)""")
+    mo.md(r"""
+    # Behavysis — Social Interaction (Two Mice)
+
+    **First Steps**
+    
+    * Change `config_fp` below to either
+    "default_config_linux.yaml" or "default_config_windows.yaml"
+    depending on the machine.
+    * Add you videos to the `1_raw_videos` folder.
+    """)
 
 
 @app.cell
@@ -58,11 +67,13 @@ def _(config_fp, proj):
 def _(overwrite, proj):
     proj.format_video(overwrite=overwrite)
 
+@app.cell
+def _(overwrite, proj):
+    proj.get_video_metadata()
 
 @app.cell
 def _(overwrite, proj):
     proj.run_dlc(gputouse=None, overwrite=overwrite)
-
 
 @app.cell
 def _(proj):
