@@ -2,13 +2,13 @@
 
 import json
 from pathlib import Path
+from typing import TypedDict
 
 import altair as alt
 import matplotlib.pyplot as plt
 import numpy as np
 import polars as pl
 from loguru import logger
-from pydantic import BaseModel
 from sklearn.metrics import (
     average_precision_score,
     classification_report,
@@ -29,7 +29,7 @@ SPLIT = "split"
 # ----- Typing ------------------------------------------------------
 
 
-class EvalReport(BaseModel):
+class EvalReport(TypedDict):
     """Eval report."""
 
     report: dict[str, object]
