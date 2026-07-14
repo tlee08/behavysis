@@ -192,7 +192,7 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
                 "clf__scale_pos_weight": [5, 10, 20, 40, 60],
                 "clf__max_delta_step": [0, 1, 3, 10],
             },
-            n_iter=2,
+            n_iter=60,
             scoring="average_precision",
             cv=StratifiedGroupKFold(n_splits=3, shuffle=True, random_state=42),
             random_state=42,

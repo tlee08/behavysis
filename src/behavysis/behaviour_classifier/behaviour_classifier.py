@@ -122,13 +122,20 @@ def train(
     # Save model
     adapter.save()
 
+    # Load model from save
+    adapter = adapter.load(config_fp)
+
     # Evaluate
     eval_dir = clf_proj.eval_dir(model_name, iteration)
     eval_dir.mkdir(parents=True, exist_ok=True)
     # Predictions
-    eval_train_df = adapter.predict(train_df).with_columns(df[EXPERIMENT], df[ACTUAL])
+    eval_train_df = adapter.predict(train_df).with_columns(
+        train_df[EXPERIMENT], train_df[ACTUAL]
+    )
     eval_train_df.write_parquet(eval_dir / "train_eval.parquet")
-    eval_test_df = adapter.predict(test_df).with_columns(df[EXPERIMENT], df[ACTUAL])
+    eval_test_df = adapter.predict(test_df).with_columns(
+        test_df[EXPERIMENT], test_df[ACTUAL]
+    )
     eval_test_df.write_parquet(eval_dir / "test_eval.parquet")
     # Further evaluation
     res = make_eval_report({"train": eval_train_df, "test": eval_test_df})
