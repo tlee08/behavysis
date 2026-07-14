@@ -47,11 +47,35 @@ def _next_iteration(clf_dir: Path, model_name: str) -> int:
     return max(nums) + 1 if nums else 1
 
 
+# ── initialising ─────────────────────────────────────────────────────
+
+
+def init_classifier(
+    contract_fp: Path,
+    behaviour_name: str,
+    individuals: list[str],
+    bodyparts: list[str],
+    *,
+    overwrite: bool = False,
+) -> ClassifierContract:
+    """Make contract for classifier."""
+    # Write
+    if not contract_fp.exists() or overwrite:
+        contract = ClassifierContract(
+            behaviour_name=behaviour_name,
+            individuals=individuals,
+            bodyparts=bodyparts,
+        )
+        contract.write_yaml(contract_fp)
+    # Read
+    return ClassifierContract.read_yaml(contract_fp)
+
+
 # ── training ─────────────────────────────────────────────────────────
 
 
 def train(
-    clf_contract_fp: Path,
+    contract_fp: Path,
     model_name: str,
     factory: Callable[[Path], BaseAdapter],
 ) -> int:
@@ -59,7 +83,7 @@ def train(
 
     Returns the iteration number.
     """
-    clf_proj = ClassifierFp(clf_contract_fp.parent)
+    clf_proj = ClassifierFp(contract_fp.parent)
     contract_fp = clf_proj.contract_fp()
     iteration = _next_iteration(clf_proj.root_dir(), model_name)
     config_fp = clf_proj.config_fp(model_name, iteration)
@@ -116,20 +140,25 @@ def train(
     return iteration
 
 
-def train_all_models(clf_contract_fp: Path) -> list[int]:
+def train_all_models(contract_fp: Path) -> list[int]:
     """Train the routine model set, one iteration each."""
     results: list[int] = []
     for model_name in ROUTINE_MODELS:
         factory = MODEL_REGISTRY[model_name]
-        results.append(train(clf_contract_fp, model_name, factory))
+        results.append(train(contract_fp, model_name, factory))
     return results
+
+
+# ── set best model ───────────────────────────────────────────────────
+
+# TODO
 
 
 # ── inference ────────────────────────────────────────────────────────
 
 
 def predict_df_choose_model(
-    clf_contract_fp: Path,
+    contract_fp: Path,
     model_name: str,
     iteration: int,
     x_df: pl.DataFrame,
@@ -140,7 +169,7 @@ def predict_df_choose_model(
     Returns a long-form DataFrame with ``(frame, behaviour, prob, pred)``.
     """
     # Configs
-    clf_proj = ClassifierFp(clf_contract_fp.parent)
+    clf_proj = ClassifierFp(contract_fp.parent)
     config_fp = clf_proj.config_fp(model_name, iteration)
     config = TrainingRecipe.read_yaml(config_fp)
     # Load model
@@ -150,7 +179,7 @@ def predict_df_choose_model(
 
 
 def predict_df(
-    clf_contract_fp: Path,
+    contract_fp: Path,
     x_df: pl.DataFrame,
 ) -> pl.DataFrame:
     """Run inference on a wide features DataFrame.
@@ -158,10 +187,10 @@ def predict_df(
     ``features_df`` has a ``frame`` column plus feature columns.
     Returns a long-form DataFrame with ``(frame, behaviour, prob, pred)``.
     """
-    clf_proj = ClassifierFp(clf_contract_fp.parent)
+    clf_proj = ClassifierFp(contract_fp.parent)
     active = ClassifierActive.read_yaml(clf_proj.active_fp())
     return predict_df_choose_model(
-        clf_contract_fp, active.model_name, active.iteration, x_df
+        contract_fp, active.model_name, active.iteration, x_df
     )
 
 
