@@ -62,13 +62,20 @@ def px_per_mm(
         .to_pandas()
     )
 
-    for pt_df, pt in [(pt_a_df, pt_a), (pt_b_df, pt_b)]:
-        assert np.any(pt_df[LIKELIHOOD] > pcutoff), (
-            f'No points for "{pt}" are above the pcutoff of {pcutoff}.\n'
-            f"Consider lowering the pcutoff in the config file.\n"
-            f'The highest likelihood value in "{pt}" is '
-            f"{np.nanmax(pt_df[LIKELIHOOD])}."
+    pt_low_likelihood_ls = [
+        (_pt, np.nanmax(_pt_df[LIKELIHOOD]))
+        for _pt, _pt_df in [(pt_a, pt_a_df), (pt_b, pt_b_df)]
+        if not np.any(_pt_df[LIKELIHOOD] > pcutoff)
+    ]
+    if pt_low_likelihood_ls:
+        _names = ", ".join([_i[0] for _i in pt_low_likelihood_ls])
+        _maxes = ", ".join([f"({_i[1]}: {_i[1]})" for _i in pt_low_likelihood_ls])
+        msg = (
+            f"No points for: {_names}\n"
+            f"pcutoff is {pcutoff}.\n"
+            f"Highest likelihoods are: {_maxes}"
         )
+        raise ValueError(msg)
 
     # Interpolate low-likelihood points
     for pt_df in [pt_a_df, pt_b_df]:
