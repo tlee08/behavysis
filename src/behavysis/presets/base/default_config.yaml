@@ -67,7 +67,7 @@ calculate_parameters:
     pt_a: TopLeft
     pt_b: TopRight
     dist_mm: 400
-    pcutoff: 0.5
+    pcutoff: 0.3
 
 # ---- Preprocess keypoints (stage 4) ----
 preprocess:
