@@ -9,7 +9,11 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_selection import VarianceThreshold
 from sklearn.linear_model import LogisticRegression
 
-from behavysis.behaviour_classifier.adapter import SklearnAdapter, TorchAdapter, select_features
+from behavysis.behaviour_classifier.adapter import (
+    SklearnAdapter,
+    TorchAdapter,
+    select_features,
+)
 from behavysis.behaviour_classifier.config import TrainingRecipe
 from behavysis.behaviour_classifier.torch.architectures import DNN1
 from behavysis.behaviour_classifier.torch.base import TorchModel
@@ -67,12 +71,18 @@ class TestSklearnAdapter:
         x = rng.standard_normal((60, 6))
         x[:, 1] = 0.0
         y = rng.integers(0, 2, 60)
-        adapter = SklearnAdapter(ImbPipeline([
-            ("var_filter", VarianceThreshold()),
-            ("clf", LogisticRegression()),
-        ]))
+        adapter = SklearnAdapter(
+            ImbPipeline(
+                [
+                    ("var_filter", VarianceThreshold()),
+                    ("clf", LogisticRegression()),
+                ]
+            )
+        )
         adapter.fit(_df(x, y), _recipe())
-        support = adapter.pipeline.best_estimator_.named_steps["var_filter"].get_support()
+        support = adapter.pipeline.best_estimator_.named_steps[
+            "var_filter"
+        ].get_support()
         assert not support[1]
         prob = adapter.predict(x)
         assert prob.shape == (60,)
@@ -81,9 +91,13 @@ class TestSklearnAdapter:
         rng = np.random.default_rng(3)
         x = rng.standard_normal((60, 6))
         y = rng.integers(0, 2, 60)
-        adapter = SklearnAdapter(ImbPipeline([
-            ("clf", LogisticRegression()),
-        ]))
+        adapter = SklearnAdapter(
+            ImbPipeline(
+                [
+                    ("clf", LogisticRegression()),
+                ]
+            )
+        )
         adapter.fit(_df(x, y), _recipe())
         adapter.save(tmp_path)
         loaded = joblib.load(tmp_path / "model.joblib")
@@ -100,9 +114,13 @@ class TestSklearnAdapterGridSearch:
         rng = np.random.default_rng(5)
         x = rng.standard_normal((80, 5))
         y = rng.integers(0, 2, 80)
-        adapter = SklearnAdapter(ImbPipeline([
-            ("clf", RandomForestClassifier(random_state=42)),
-        ]))
+        adapter = SklearnAdapter(
+            ImbPipeline(
+                [
+                    ("clf", RandomForestClassifier(random_state=42)),
+                ]
+            )
+        )
         recipe = _recipe(
             hyperparameters={
                 "clf__n_estimators": [10, 20],
@@ -119,9 +137,13 @@ class TestSklearnAdapterGridSearch:
         rng = np.random.default_rng(6)
         x = rng.standard_normal((40, 3))
         y = rng.integers(0, 2, 40)
-        adapter = SklearnAdapter(ImbPipeline([
-            ("clf", LogisticRegression()),
-        ]))
+        adapter = SklearnAdapter(
+            ImbPipeline(
+                [
+                    ("clf", LogisticRegression()),
+                ]
+            )
+        )
         recipe = _recipe(
             hyperparameters={
                 "clf__C": [1.0],
