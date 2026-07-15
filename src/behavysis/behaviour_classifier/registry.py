@@ -22,7 +22,7 @@ from xgboost import XGBClassifier
 
 from behavysis.utils import get_gpu_device
 
-from .adapter import BaseAdapter, SklearnAdapter
+from .adapter import BaseAdapter, SklearnAdapter, TabPFNAdapter
 
 # ── registry ─────────────────────────────────────────────────────────
 
@@ -440,18 +440,18 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
             verbose=3,
         ),
     ),
-    # "tabpfn": lambda config_fp: TabPFNAdapter(
-    #     config_fp=config_fp,
-    #     n_estimators=8,
-    #     device="cuda",
-    #     balance_probabilities=True,
-    # ),
-    # "tabpfn_large": lambda config_fp: TabPFNAdapter(
-    #     config_fp=config_fp,
-    #     n_estimators=32,
-    #     device="cuda",
-    #     balance_probabilities=True,
-    # ),
+    "tabpfn": lambda config_fp: TabPFNAdapter(
+        config_fp=config_fp,
+        n_estimators=8,
+        device="cuda",
+        balance_probabilities=True,
+    ),
+    "tabpfn_large": lambda config_fp: TabPFNAdapter(
+        config_fp=config_fp,
+        n_estimators=32,
+        device="cuda",
+        balance_probabilities=True,
+    ),
 }
 
 # ── registry ─────────────────────────────────────────────────────────
