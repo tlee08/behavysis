@@ -4,9 +4,10 @@ from collections.abc import Callable
 from pathlib import Path
 
 import numpy as np
-from imblearn.over_sampling import RandomOverSampler
+from imblearn.over_sampling import SMOTE, RandomOverSampler
 from imblearn.pipeline import Pipeline as ImbPipeline
 from imblearn.under_sampling import RandomUnderSampler
+from sklearn.calibration import CalibratedClassifierCV
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_selection import SelectFromModel, VarianceThreshold
 from sklearn.linear_model import LogisticRegression
@@ -191,7 +192,244 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
                 "clf__scale_pos_weight": [5, 10, 20, 40, 60],
                 "clf__max_delta_step": [0, 1, 3, 10],
             },
-            n_iter=60,
+            n_iter=200,
+            scoring="average_precision",
+            cv=StratifiedGroupKFold(n_splits=3, shuffle=True, random_state=42),
+            random_state=42,
+            n_jobs=1,
+            verbose=3,
+        ),
+        config_fp,
+    ),
+    "xgb_dart": lambda config_fp: SklearnAdapter(
+        RandomizedSearchCV(
+            Pipeline(
+                [
+                    ("var_filter", VarianceThreshold(threshold=0.0)),
+                    (
+                        "selector",
+                        SelectFromModel(
+                            XGBClassifier(
+                                tree_method="hist",
+                                device="cpu",
+                                n_estimators=100,
+                                max_depth=4,
+                                n_jobs=-1,
+                                random_state=42,
+                                verbosity=2,
+                            ),
+                            threshold=-np.inf,
+                            max_features=300,
+                        ),
+                    ),
+                    (
+                        "clf",
+                        XGBClassifier(
+                            booster="dart",
+                            tree_method="hist",
+                            device="cpu",
+                            eval_metric="aucpr",
+                            n_jobs=-1,
+                            random_state=42,
+                            verbosity=2,
+                        ),
+                    ),
+                ]
+            ),
+            {
+                "clf__n_estimators": [400, 800, 1200],
+                "clf__learning_rate": [0.02, 0.1],
+                "clf__max_depth": [3, 4, 6],
+                "clf__min_child_weight": [1, 10, 30],
+                "clf__subsample": [0.6, 0.8, 1.0],
+                "clf__colsample_bytree": [0.3, 0.5, 0.7],
+                "clf__gamma": [0, 0.5, 2.0],
+                "clf__reg_lambda": [1.0, 3.0, 10.0],
+                "clf__scale_pos_weight": [5, 10, 20, 40],
+                "clf__rate_drop": [0.05, 0.1, 0.2],
+                "clf__skip_drop": [0.3, 0.5, 0.7],
+                "clf__max_delta_step": [0, 1, 3, 10],
+            },
+            n_iter=120,
+            scoring="average_precision",
+            cv=StratifiedGroupKFold(n_splits=3, shuffle=True, random_state=42),
+            random_state=42,
+            n_jobs=1,
+            verbose=3,
+        ),
+        config_fp,
+    ),
+    "xgb_smote": lambda config_fp: SklearnAdapter(
+        RandomizedSearchCV(
+            ImbPipeline(
+                [
+                    ("var_filter", VarianceThreshold(threshold=0.0)),
+                    (
+                        "selector",
+                        SelectFromModel(
+                            XGBClassifier(
+                                tree_method="hist",
+                                device="cpu",
+                                n_estimators=100,
+                                max_depth=4,
+                                n_jobs=-1,
+                                random_state=42,
+                                verbosity=2,
+                            ),
+                            threshold=-np.inf,
+                            max_features=300,
+                        ),
+                    ),
+                    ("smote", SMOTE(random_state=42, n_jobs=-1)),
+                    (
+                        "clf",
+                        XGBClassifier(
+                            tree_method="hist",
+                            device="cpu",
+                            eval_metric="aucpr",
+                            grow_policy="lossguide",
+                            n_jobs=-1,
+                            random_state=42,
+                            verbosity=2,
+                        ),
+                    ),
+                ]
+            ),
+            {
+                "smote__k_neighbors": [3, 5, 7],
+                "clf__n_estimators": [400, 800, 1200],
+                "clf__learning_rate": [0.02, 0.1],
+                "clf__max_depth": [0, 4, 6],
+                "clf__max_leaves": [31, 63, 127],
+                "clf__min_child_weight": [1, 10, 30],
+                "clf__subsample": [0.6, 0.8, 1.0],
+                "clf__colsample_bytree": [0.3, 0.5, 0.7],
+                "clf__gamma": [0, 0.5, 2.0],
+                "clf__reg_lambda": [1.0, 3.0, 10.0],
+                "clf__scale_pos_weight": [1, 3, 7],
+                "clf__max_delta_step": [0, 1, 3, 10],
+            },
+            n_iter=80,
+            scoring="average_precision",
+            cv=StratifiedGroupKFold(n_splits=3, shuffle=True, random_state=42),
+            random_state=42,
+            n_jobs=1,
+            verbose=3,
+        ),
+        config_fp,
+    ),
+    "xgb_calibrated": lambda config_fp: SklearnAdapter(
+        RandomizedSearchCV(
+            Pipeline(
+                [
+                    ("var_filter", VarianceThreshold(threshold=0.0)),
+                    (
+                        "selector",
+                        SelectFromModel(
+                            XGBClassifier(
+                                tree_method="hist",
+                                device="cpu",
+                                n_estimators=100,
+                                max_depth=4,
+                                n_jobs=-1,
+                                random_state=42,
+                                verbosity=2,
+                            ),
+                            threshold=-np.inf,
+                            max_features=300,
+                        ),
+                    ),
+                    (
+                        "clf",
+                        CalibratedClassifierCV(
+                            estimator=XGBClassifier(
+                                tree_method="hist",
+                                device="cpu",
+                                eval_metric="aucpr",
+                                n_jobs=-1,
+                                random_state=42,
+                                verbosity=2,
+                            ),
+                            cv=5,
+                            n_jobs=-1,
+                        ),
+                    ),
+                ]
+            ),
+            {
+                "clf__method": ["isotonic", "sigmoid"],
+                "clf__estimator__n_estimators": [400, 800],
+                "clf__estimator__learning_rate": [0.02, 0.1],
+                "clf__estimator__max_depth": [3, 4, 6],
+                "clf__estimator__min_child_weight": [1, 10, 30],
+                "clf__estimator__subsample": [0.6, 0.8, 1.0],
+                "clf__estimator__colsample_bytree": [0.3, 0.5, 0.7],
+                "clf__estimator__reg_lambda": [1.0, 3.0, 10.0],
+                "clf__estimator__scale_pos_weight": [5, 10, 20, 40],
+            },
+            n_iter=40,
+            scoring="average_precision",
+            cv=StratifiedGroupKFold(n_splits=3, shuffle=True, random_state=42),
+            random_state=42,
+            n_jobs=1,
+            verbose=3,
+        ),
+        config_fp,
+    ),
+    "xgb_importance": lambda config_fp: SklearnAdapter(
+        RandomizedSearchCV(
+            Pipeline(
+                [
+                    ("var_filter", VarianceThreshold(threshold=0.0)),
+                    (
+                        "selector",
+                        SelectFromModel(
+                            XGBClassifier(
+                                tree_method="hist",
+                                device="cpu",
+                                n_estimators=100,
+                                max_depth=4,
+                                n_jobs=-1,
+                                random_state=42,
+                                verbosity=2,
+                            ),
+                            threshold=-np.inf,
+                            max_features=300,
+                        ),
+                    ),
+                    (
+                        "clf",
+                        XGBClassifier(
+                            tree_method="hist",
+                            device="cpu",
+                            eval_metric="aucpr",
+                            n_jobs=-1,
+                            random_state=42,
+                            verbosity=2,
+                        ),
+                    ),
+                ]
+            ),
+            {
+                "selector__estimator__importance_type": [
+                    "weight",
+                    "gain",
+                    "total_gain",
+                    "cover",
+                    "total_cover",
+                ],
+                "clf__importance_type": ["gain", "total_gain"],
+                "clf__n_estimators": [400, 800],
+                "clf__learning_rate": [0.02, 0.1],
+                "clf__max_depth": [3, 4, 6],
+                "clf__min_child_weight": [1, 10, 30],
+                "clf__subsample": [0.6, 0.8, 1.0],
+                "clf__colsample_bytree": [0.3, 0.5, 0.7],
+                "clf__reg_lambda": [1.0, 3.0, 10.0],
+                "clf__scale_pos_weight": [5, 10, 20, 40],
+                "clf__gamma": [0, 0.5, 2.0],
+            },
+            n_iter=120,
             scoring="average_precision",
             cv=StratifiedGroupKFold(n_splits=3, shuffle=True, random_state=42),
             random_state=42,
