@@ -57,7 +57,7 @@ class BaseAdapter(ABC):
         return TrainingRecipe.read_yaml(self.config_fp)
 
     def _write_config(self, config: TrainingRecipe) -> None:
-        """Read config."""
+        """Write config."""
         return config.write_yaml(self.config_fp)
 
     def _features(self, df: pl.DataFrame) -> Array2D:
@@ -163,6 +163,16 @@ class SklearnAdapter(BaseAdapter):
         frame = df.get_column(FRAME)
         # Predict
         prob = self.model.predict_proba(self._features(df))[:, 1]
+        # smooth the probs
+        _n = 1 + config.smoothing_frames * 2
+        kernel = np.full(_n, 1) / _n
+        # Group by experiment, smooth independently
+        if EXPERIMENT in df.columns:
+            for exp in df[EXPERIMENT].unique():
+                mask = df[EXPERIMENT] == exp
+                prob[mask] = np.convolve(prob[mask], kernel, mode="same")
+        else:
+            prob = np.convolve(prob, kernel, mode="same")
         # Construct df and return
         return pl.DataFrame(
             {

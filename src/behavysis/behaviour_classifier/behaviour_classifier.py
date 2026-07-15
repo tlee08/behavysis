@@ -15,14 +15,14 @@ import polars as pl
 import yaml
 from loguru import logger
 
-from behavysis.behaviour_classifier import MODEL_REGISTRY
 from behavysis.constants import ACTUAL, EXPERIMENT
+from behavysis.utils import pass_exception
 
 from .adapter import MODEL_TYPES_TO_CLASS, MODEL_TYPES_TO_STRING, BaseAdapter
 from .config import ClassifierActive, ClassifierContract, TrainingRecipe
 from .data import label_bouts, load_all_data, stratified_split_by_group
 from .evaluation import EvalReport, make_eval_report
-from .registry import ROUTINE_MODELS
+from .registry import MODEL_REGISTRY, ROUTINE_MODELS
 from .storage import ClassifierFp
 
 if TYPE_CHECKING:
@@ -33,25 +33,33 @@ if TYPE_CHECKING:
 # ── iteration numbering ───────────────────────────────────────────────
 
 
-def _next_iteration(clf_dir: Path, model_name: str) -> int:
-    """Scan classifiers/ for {name}-NNN dirs, return max + 1."""
-    clf_proj = ClassifierFp(clf_dir)
+def list_models(contract_fp: Path) -> dict[str, list[int]]:
+    """List all models and their iterations."""
+    clf_proj = ClassifierFp(contract_fp.parent)
     cd = clf_proj.models_dir()
     if not cd.exists():
-        return 1
-    pattern = re.compile(rf"^{re.escape(model_name)}-(\d+)$")
-    nums = [
-        int(m.group(1))
-        for d in cd.iterdir()
-        if d.is_dir() and (m := pattern.match(d.name))
-    ]
+        return {}
+    pattern = re.compile(r"^(.+)-(\d+)$")
+    models: dict[str, list[int]] = {}
+    for d in sorted(cd.iterdir()):
+        if not d.is_dir():
+            continue
+        m = pattern.match(d.name)
+        if m:
+            models.setdefault(m.group(1), []).append(int(m.group(2)))
+    return models
+
+
+def _next_iteration(contract_fp: Path, model_name: str) -> int:
+    """Scan classifiers/ for {name}-NNN dirs, return max + 1."""
+    nums = list_models(contract_fp)[model_name]
     return max(nums) + 1 if nums else 1
 
 
 # ── initialising ─────────────────────────────────────────────────────
 
 
-def init_classifier(
+def write_contract(
     contract_fp: Path,
     behaviour_name: str,
     individuals: list[str],
@@ -87,7 +95,7 @@ def train_model(
 
     Args:
         contract_fp (Path):
-            Roots to the classifier project directory.
+            The classifier project's contract file.
         model_name (str):
             model name (also used for `MODEL_REGISTRY` if factory not given).
         iteration (int | None, optional):
@@ -104,27 +112,28 @@ def train_model(
     clf_proj = ClassifierFp(contract_fp.parent)
     clf_dir = clf_proj.root_dir()
     contract_fp = clf_proj.contract_fp()
-    iteration = iteration or _next_iteration(clf_dir, model_name)
+    iteration = (
+        iteration if iteration is not None else _next_iteration(clf_dir, model_name)
+    )
     model_dir = clf_proj.model_dir(model_name, iteration)
     eval_dir = clf_proj.eval_dir(model_name, iteration)
     config_fp = clf_proj.config_fp(model_name, iteration)
     # Get contract data
     contract = ClassifierContract.read_yaml(contract_fp)
-
+    # Check overwrite
+    if model_dir.exists() and not overwrite:
+        return model_dir
     # Load adapter
     factory = factory or MODEL_REGISTRY[model_name]
     adapter = factory(config_fp)
-
-    # Check overwrite and make config
-    if config_fp.exists():
-        if not overwrite:
-            return model_dir
-        config = TrainingRecipe(
+    # Make config
+    if not config_fp.exists():
+        TrainingRecipe(
             behaviour_name=contract.behaviour_name,
             model_name=model_name,
             iteration=iteration,
             model_type=MODEL_TYPES_TO_STRING[type(adapter)],
-        )
+        ).write_yaml(config_fp)
     # Get config data
     config = TrainingRecipe.read_yaml(config_fp)
 
@@ -182,48 +191,52 @@ def train_model(
 
 def train_all_models(contract_fp: Path) -> list[Path]:
     """Train the routine model set, one iteration each."""
-    return [train_model(contract_fp, name) for name in ROUTINE_MODELS]
+    return [pass_exception(train_model)(contract_fp, name) for name in ROUTINE_MODELS]
 
 
 # ── set best model ───────────────────────────────────────────────────
 
 
 def promote_best(contract_fp: Path) -> ClassifierActive:
-    """Scan all iterations, pick best by F2 on bout-level test, write active.yaml."""
+    """Update best model.
+
+    Scans all iterations,
+    picks best by given eval_metric on bout-level test,
+    writes active.yaml.
+    """
     # Get configs
     clf_proj = ClassifierFp(contract_fp.parent)
-    models_dir = clf_proj.models_dir()
     contract = ClassifierContract.read_yaml(clf_proj.contract_fp())
     # Get metrics from each model
-    pattern = re.compile(r"^(.+)-(\d+)$")
-    candidates: list[tuple[str, int, float]] = []  # (name, iter, eval_metric_value)
-    for subdir in models_dir.iterdir():
-        m = pattern.match(subdir.name)
-        if not m:
-            continue
-        model_name, iteration = m.group(1), int(m.group(2))
-        eval_report_fp = clf_proj.eval_dir(model_name, iteration) / "bouts_report.yaml"
-        if not eval_report_fp.exists():
-            logger.warning(
-                "No bouts_report.yaml for {}-{:03d}, skipping", model_name, iteration
+    candidates: list[tuple[str, int, float]] = []
+    for model_name, iterations in list_models(contract_fp).items():
+        for iteration in iterations:
+            eval_report_fp = (
+                clf_proj.eval_dir(model_name, iteration) / "bouts_report.yaml"
             )
-            continue
-        eval_report = yaml.safe_load(eval_report_fp.read_text())
-        # Actually save_eval_report uses yaml.dump, so read with yaml
-        if "test" not in eval_report:
-            logger.warning(
-                "No test split in bouts_report for {}-{:03d}, skipping",
-                model_name,
-                iteration,
-            )
-            continue
-        metrics = eval_report["test"]
-        if contract.eval_metric not in metrics:
-            continue
-        candidates.append((model_name, iteration, metrics[contract.eval_metric]))
+            if not eval_report_fp.exists():
+                logger.warning(
+                    "No bouts_report.yaml for {}-{:03d}, skipping",
+                    model_name,
+                    iteration,
+                )
+                continue
+            eval_report = yaml.safe_load(eval_report_fp.read_text())
+            # Actually save_eval_report uses yaml.dump, so read with yaml
+            if "test" not in eval_report:
+                logger.warning(
+                    "No test split in bouts_report for {}-{:03d}, skipping",
+                    model_name,
+                    iteration,
+                )
+                continue
+            metrics = eval_report["test"]
+            if contract.eval_metric not in metrics:
+                continue
+            candidates.append((model_name, iteration, metrics[contract.eval_metric]))
     # Choose best metric
     if not candidates:
-        msg = f"No valid model iterations found in {models_dir}"
+        msg = f"No valid model iterations found in {clf_proj.models_dir()}"
         raise FileNotFoundError(msg)
     if contract.eval_metric_higher_better:
         best = max(candidates, key=lambda c: c[2])
@@ -256,9 +269,13 @@ def predict_choose_model(
     ``features_df`` has a ``frame`` column plus feature columns.
     Returns a long-form DataFrame with ``(frame, behaviour, prob, pred)``.
     """
-    # Configs
     clf_proj = ClassifierFp(contract_fp.parent)
     config_fp = clf_proj.config_fp(model_name, iteration)
+    # Check if model exists
+    if not config_fp.exists():
+        msg = "Classifier's model not found. Check active.yaml."
+        raise ValueError(msg)
+    # Configs
     config = TrainingRecipe.read_yaml(config_fp)
     # Load model
     adapter = MODEL_TYPES_TO_CLASS[config.model_type].load(config_fp)

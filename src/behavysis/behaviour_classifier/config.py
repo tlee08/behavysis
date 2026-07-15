@@ -50,3 +50,4 @@ class TrainingRecipe(YamlModel):
 
     target_recall: float = 0.98
     pcutoff: float = 0.2
+    smoothing_frames: int = 1

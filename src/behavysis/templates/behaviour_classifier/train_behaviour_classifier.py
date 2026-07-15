@@ -13,10 +13,11 @@ with app.setup:
     from behavysis.behaviour_classifier import (
         ClassifierContract,
         train_all_models,
-        init_classifier,
-        make_eval_report_choose_model
+        write_contract,
+        make_eval_report_choose_model,
+        promote_best,
+        ClassifierFp,
     )
-    from behavysis.behaviour_classifier.storage import ClassifierFp
     from behavysis.constants import FEATURES_EXTRACTED_DIR
     from behavysis.transforms import boris_to_behaviour
     from behavysis.utils import configure_logger
@@ -188,7 +189,7 @@ def _():
 
 @app.cell
 def _(behaviour_name, bodyparts, contract_fp, individuals):
-    init_classifier(
+    write_contract(
         contract_fp=contract_fp,
         behaviour_name=behaviour_name,
         individuals=individuals,
@@ -225,15 +226,6 @@ def _():
 
 
 @app.cell
-def _(clf_proj):
-    eval_res = make_eval_report_choose_model(
-        clf_proj.contract_fp(),
-        "gxb_v2",
-        1
-    )
-    eval_res
-
-@app.cell
 def _():
     mo.md("""
     ## 5. Set the active model
@@ -253,6 +245,12 @@ def _():
     ```
     """)
     return
+
+
+@app.cell
+def _(clf_proj):
+    promote_best(clf_proj.contract_fp())
+
 
 
 @app.cell

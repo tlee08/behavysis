@@ -52,7 +52,7 @@ There's no way to ask "what models exist?" or "what's the latest iteration of rf
 
 ### 8. Template has a typo
 
-`train_behaviour_classifier.py:231` references `"gxb_v2"` — should be `"xgb_v2"`.
+`train_behaviour_classifier.py:231` references `"xgb_v2"` — should be `"xgb_v2"`.
 
 ## What a clean API would look like
 
