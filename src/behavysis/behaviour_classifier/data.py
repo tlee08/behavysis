@@ -95,7 +95,10 @@ def load_all_data(
 
 
 def label_bouts(df: pl.DataFrame) -> pl.DataFrame:
-    """Add ``bout_id`` — integer label per contiguous (experiment, actual) run."""
+    """Add ``bout_id`` — integer label per contiguous (experiment, actual) run.
+
+    TODO: move to behavysis.transforms.behaviours -> works better there.
+    """
     return df.sort([EXPERIMENT, FRAME]).with_columns(
         (pl.col(ACTUAL) != pl.col(ACTUAL).shift(1))
         .or_(pl.col(EXPERIMENT) != pl.col(EXPERIMENT).shift(1))

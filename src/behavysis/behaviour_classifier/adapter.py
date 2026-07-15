@@ -15,6 +15,7 @@ from sklearn.metrics import precision_recall_curve
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import MinMaxScaler
+from tabpfn import TabPFNClassifier, load_fitted_tabpfn_model, save_fitted_tabpfn_model
 from xgboost import XGBClassifier
 
 from behavysis.constants import (
@@ -118,10 +119,10 @@ class SklearnAdapter(BaseAdapter):
 
     framework: ClassVar[str] = "sklearn"
 
-    def __init__(self, search: BaseSearchCV, config_fp: Path) -> None:
+    def __init__(self, config_fp: Path, search: BaseSearchCV) -> None:
         """Init."""
-        self.search = search
         self.config_fp = config_fp
+        self.search = search
         self.model: Pipeline | None = None
 
     def fit(self, df: pl.DataFrame) -> pd.DataFrame:
@@ -129,7 +130,7 @@ class SklearnAdapter(BaseAdapter):
         # 1. Read config
         config = self._read_config()
         # Hyperparameter selection stage
-        # 2. Sort the df by EXPERIMENT, FRAME. Then compute bout_id once
+        # 2. Sort the df by EXPERIMENT, FRAME. Then compute bout_id
         df = df.sort([EXPERIMENT, FRAME])
         df = label_bouts(df)
         # 3. Row-level, prevalence-preserving downsample for the search.
@@ -177,9 +178,11 @@ class SklearnAdapter(BaseAdapter):
         return pd.DataFrame(columns=pd.Index(["loss", "vloss"]))
 
     def _raw_predict(self, df: pl.DataFrame) -> tuple[pl.Series, Array1D]:
+        # Check model exists
         if self.model is None:
             msg = "model not yet trained."
             raise ValueError(msg)
+        # Predict
         frame = df.get_column(FRAME)
         prob = self.model.predict_proba(self._features(df))[:, 1]
         return frame, prob
@@ -199,7 +202,7 @@ class SklearnAdapter(BaseAdapter):
     def load(cls, config_fp: Path) -> Self:
         """Load."""
         model_dir = config_fp.parent
-        inst = cls(joblib.load(model_dir / "search.joblib"), model_dir / "config.yaml")
+        inst = cls(model_dir / "config.yaml", joblib.load(model_dir / "search.joblib"))
         inst.model = joblib.load(model_dir / "model.joblib")
         return inst
 
@@ -239,7 +242,7 @@ class XgboostAdapter(SklearnAdapter):
         """
         # Make inst
         model_dir = config_fp.parent
-        inst = cls(joblib.load(model_dir / "search.joblib"), model_dir / "config.yaml")
+        inst = cls(model_dir / "config.yaml", joblib.load(model_dir / "search.joblib"))
         # Load and reconstruct the model
         preprocess: Pipeline = joblib.load(model_dir / "preprocess.joblib")
         clf = XGBClassifier(device=get_gpu_device())
@@ -248,15 +251,102 @@ class XgboostAdapter(SklearnAdapter):
         return inst
 
 
+class TabPFNAdapter(BaseAdapter):
+    """Adapter for TabPFN."""
+
+    framework: ClassVar[str] = "tabpfn"
+
+    def __init__(
+        self,
+        config_fp: Path,
+        n_estimators: int = 8,
+        device: str = "cuda",
+        **kwargs,
+    ) -> None:
+        """Init."""
+        self.config_fp = config_fp
+        # Store hyperparams
+        self.n_estimators = n_estimators
+        self.device = device
+        self.kwargs = kwargs
+        self.model: TabPFNClassifier | None = None
+
+    def fit(self, df: pl.DataFrame) -> pd.DataFrame:
+        """Fit."""
+        # 1. Read config
+        config = self._read_config()
+        # 2. Sort the df by EXPERIMENT, FRAME. Then compute bout_id
+        df = df.sort([EXPERIMENT, FRAME])
+        df = label_bouts(df)
+        # 3. Init classifier
+        self.model = TabPFNClassifier(
+            n_estimators=self.n_estimators,
+            device=self.device,
+            random_state=config.seed,
+            fit_mode="fit_with_cache",
+            ignore_pretraining_limits=True,
+            **self.kwargs,
+        )
+        # 4. Fit classifier
+        self.model.fit(self._features(df), self._labels(df))
+        # 5. pcutoff calibration
+        _, val_idx = stratified_split_by_group(
+            df, config.val_split, BOUT_ID, config.seed
+        )
+        y_df = self.predict(df).with_columns(df[EXPERIMENT], df[ACTUAL])
+        y_df = y_df[val_idx]
+        y_bouts_df = agg_eval_df_by_bouts(y_df)
+        _, recall, thresholds = precision_recall_curve(
+            y_bouts_df[ACTUAL], y_bouts_df[PROB], drop_intermediate=True
+        )
+        config.pcutoff = float(
+            thresholds[(recall[:-1] >= config.target_recall)][-1]
+            if np.any(recall[:-1] >= config.target_recall)
+            else 0.001
+        )
+        self._write_config(config)
+        return pd.DataFrame(columns=pd.Index(["loss", "vloss"]))
+
+    def _raw_predict(self, df: pl.DataFrame) -> tuple[pl.Series, Array1D]:
+        # Check model exists
+        if self.model is None:
+            msg = "model not yet trained."
+            raise ValueError(msg)
+        # Predict
+        frame = df.get_column(FRAME)
+        prob = self.model.predict_proba(self._features(df))[:, 1]
+        return frame, prob
+
+    def save(self) -> None:
+        """Save."""
+        # Check model exists
+        if self.model is None:
+            msg = "model not yet trained."
+            raise ValueError(msg)
+        # Save
+        model_dir = self.config_fp.parent
+        save_fitted_tabpfn_model(self.model, str(model_dir / "model"))
+
+    @classmethod
+    def load(cls, config_fp: Path) -> Self:
+        """Load."""
+        model_dir = config_fp.parent
+        inst = cls(config_fp=config_fp)
+        inst.model = load_fitted_tabpfn_model(
+            str(model_dir / "model"), device=inst.device
+        )
+        return inst
+
+
 class TorchAdapter(BaseAdapter):
     """Adapter for PyTorch models with lazy architecture instantiation."""
 
     framework: ClassVar[str] = "torch"
 
-    def __init__(self, model: TorchModel, config_fp: Path) -> None:
+    def __init__(self, config_fp: Path, model: TorchModel) -> None:
         """Init."""
         self.model: TorchModel = model
-        self.config_fp = config_fp
+        self.config_fp: Path = config_fp
         self.scaler: MinMaxScaler = MinMaxScaler()
         self.feature_mask: np.ndarray = np.ndarray([])
 
@@ -327,6 +417,7 @@ class TorchAdapter(BaseAdapter):
 MODEL_TYPES_TO_CLASS: dict[str, type[BaseAdapter]] = {
     "sklearn": SklearnAdapter,
     "xgboost": XgboostAdapter,
+    "tabpfn": TabPFNAdapter,
     "torch": TorchAdapter,
 }
 

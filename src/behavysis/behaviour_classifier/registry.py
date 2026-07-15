@@ -20,14 +20,15 @@ from sklearn.pipeline import Pipeline
 from sklearn.tree import DecisionTreeClassifier
 from xgboost import XGBClassifier
 
-from .adapter import BaseAdapter, SklearnAdapter
+from .adapter import BaseAdapter, SklearnAdapter, TabPFNAdapter
 
 # ── registry ─────────────────────────────────────────────────────────
 
 
 MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
     "baseline": lambda config_fp: SklearnAdapter(
-        GridSearchCV(
+        config_fp,
+        search=GridSearchCV(
             Pipeline(
                 [
                     ("clf", DecisionTreeClassifier(random_state=42)),
@@ -40,10 +41,10 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
             n_jobs=1,
             verbose=3,
         ),
-        config_fp,
     ),
     "rf": lambda config_fp: SklearnAdapter(
-        RandomizedSearchCV(
+        config_fp,
+        search=RandomizedSearchCV(
             Pipeline(
                 [
                     ("var_filter", VarianceThreshold()),
@@ -66,10 +67,10 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
             n_jobs=1,
             verbose=3,
         ),
-        config_fp,
     ),
     "logreg": lambda config_fp: SklearnAdapter(
-        RandomizedSearchCV(
+        config_fp,
+        search=RandomizedSearchCV(
             ImbPipeline(
                 [
                     ("undersampler", RandomUnderSampler(sampling_strategy=0.2)),
@@ -105,10 +106,10 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
             n_jobs=1,
             verbose=3,
         ),
-        config_fp,
     ),
     "xgb": lambda config_fp: SklearnAdapter(
-        RandomizedSearchCV(
+        config_fp,
+        search=RandomizedSearchCV(
             Pipeline(
                 [
                     ("var_filter", VarianceThreshold()),
@@ -144,10 +145,10 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
             n_jobs=1,
             verbose=3,
         ),
-        config_fp,
     ),
     "xgb_v2": lambda config_fp: SklearnAdapter(
-        RandomizedSearchCV(
+        config_fp,
+        search=RandomizedSearchCV(
             Pipeline(
                 [
                     ("var_filter", VarianceThreshold(threshold=0.0)),
@@ -199,10 +200,10 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
             n_jobs=1,
             verbose=3,
         ),
-        config_fp,
     ),
     "xgb_dart": lambda config_fp: SklearnAdapter(
-        RandomizedSearchCV(
+        config_fp,
+        search=RandomizedSearchCV(
             Pipeline(
                 [
                     ("var_filter", VarianceThreshold(threshold=0.0)),
@@ -257,10 +258,10 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
             n_jobs=1,
             verbose=3,
         ),
-        config_fp,
     ),
     "xgb_smote": lambda config_fp: SklearnAdapter(
-        RandomizedSearchCV(
+        config_fp,
+        search=RandomizedSearchCV(
             ImbPipeline(
                 [
                     ("var_filter", VarianceThreshold(threshold=0.0)),
@@ -316,10 +317,10 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
             n_jobs=1,
             verbose=3,
         ),
-        config_fp,
     ),
     "xgb_calibrated": lambda config_fp: SklearnAdapter(
-        RandomizedSearchCV(
+        config_fp,
+        search=RandomizedSearchCV(
             Pipeline(
                 [
                     ("var_filter", VarianceThreshold(threshold=0.0)),
@@ -374,10 +375,10 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
             n_jobs=1,
             verbose=3,
         ),
-        config_fp,
     ),
     "xgb_importance": lambda config_fp: SklearnAdapter(
-        RandomizedSearchCV(
+        config_fp,
+        search=RandomizedSearchCV(
             Pipeline(
                 [
                     ("var_filter", VarianceThreshold(threshold=0.0)),
@@ -436,7 +437,18 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
             n_jobs=1,
             verbose=3,
         ),
-        config_fp,
+    ),
+    "tabpfn": lambda config_fp: TabPFNAdapter(
+        config_fp=config_fp,
+        n_estimators=8,
+        device="cuda",
+        balance_probabilities=True,
+    ),
+    "tabpfn_large": lambda config_fp: TabPFNAdapter(
+        config_fp=config_fp,
+        n_estimators=32,
+        device="cuda",
+        balance_probabilities=True,
     ),
 }
 
