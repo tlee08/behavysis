@@ -6,7 +6,7 @@ from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict, PositiveFloat, PositiveInt
 
-from behavysis.models._helper import YamlModel
+from behavysis.models.base import YamlModel
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Config Not Configured Error

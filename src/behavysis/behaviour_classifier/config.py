@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from behavysis.models._helper import YamlModel
+from behavysis.models.base import YamlModel
 
 
 class ClassifierContract(YamlModel):

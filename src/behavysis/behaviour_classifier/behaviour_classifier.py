@@ -14,13 +14,13 @@ import polars as pl
 import yaml
 from loguru import logger
 
-from behavysis.constants import ACTUAL, EXPERIMENT, FRAME
+from behavysis.constants import ACTUAL, BOUT, EXPERIMENT, FRAME
 from behavysis.utils import pass_exception, trace
 
 from .adapter import MODEL_TYPES_TO_CLASS, MODEL_TYPES_TO_STRING, BaseAdapter
 from .config import ClassifierActive, ClassifierContract, TrainingRecipe
 from .data import label_bouts, load_all_data, stratified_split_by_group
-from .evaluation import EvalReport, make_eval_report
+from .evaluation import EvalResult, make_eval_report
 from .registry import MODEL_REGISTRY
 from .storage import ClassifierFp
 
@@ -182,7 +182,7 @@ def promote_best(contract_fp: Path) -> ClassifierActive:
     # Get eval_metric values for each model
     scores = []
     for model_name in list_models(contract_fp):
-        report_fp = clf_proj.eval_dir(model_name) / "bouts_report.yaml"
+        report_fp = clf_proj.eval_dir(model_name) / f"{BOUT}_report.yaml"
         if not report_fp.exists():
             continue
         report = yaml.safe_load(report_fp.read_text())
@@ -251,7 +251,7 @@ def predict(
 # ── other helpers ─────────────────────────────────────────────────
 
 
-def make_eval_report_choose_model(contract_fp: Path, model_name: str) -> EvalReport:
+def make_eval_report_choose_model(contract_fp: Path, model_name: str) -> EvalResult:
     """Run make_eval_report by giving a model's filepath."""
     # Get filepaths
     clf_proj = ClassifierFp(contract_fp.parent)

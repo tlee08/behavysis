@@ -18,7 +18,7 @@ from sklearn.metrics import (
 )
 
 from behavysis.behaviour_classifier.data import agg_eval_df_by_bouts
-from behavysis.constants import ACTUAL, PRED, PROB
+from behavysis.constants import ACTUAL, BOUT, FRAME, PRED, PROB
 
 NIL = "nil"
 BEHAV = "behav"
@@ -26,21 +26,23 @@ LABELS = [NIL, BEHAV]
 
 SPLIT = "split"
 
-# ----- Typing ------------------------------------------------------
+# ----- schemas -----------------------------------------------------
 
 
-class EvalReport(TypedDict):
-    """Eval report."""
+class EvalResult(TypedDict):
+    """Eval result."""
 
-    report: dict[str, object]
+    report: dict[str, dict[str, dict[str, float]]]
     df: dict[str, pl.DataFrame]
     chart: dict[str, alt.Chart]
 
 
-# ----- Functions ---------------------------------------------------
+# ----- Helper Functions ---------------------------------------------------
 
 
-def binary_report(y_true: np.ndarray, y_prob: np.ndarray, y_pred: np.ndarray) -> dict:
+def binary_report(
+    y_true: np.ndarray, y_prob: np.ndarray, y_pred: np.ndarray
+) -> dict[str, float]:
     """Summarise binary-classification performance for one split."""
     y_true = np.asarray(y_true).astype(int)
     y_prob = np.asarray(y_prob, dtype=np.float64)
@@ -147,16 +149,19 @@ def _hist_chart(df: pl.DataFrame, x_column: str, title: str) -> alt.Chart:
     )
 
 
-def make_eval_report(splits: dict[str, pl.DataFrame]) -> EvalReport:
+# ----- API Functions ---------------------------------------------------
+
+
+def make_eval_report(splits: dict[str, pl.DataFrame]) -> EvalResult:
     """Make ROC/PR charts and a YAML metric report for the given splits."""
     # Construct bouts splits eval (bouts equivalent of splits)
     bouts_splits = {_name: agg_eval_df_by_bouts(_df) for _name, _df in splits.items()}
     # Prepare to store eval results
-    res_report: dict[str, object] = {}
+    res_report: dict[str, dict[str, dict[str, float]]] = {}
     res_df: dict[str, pl.DataFrame] = {}
     res_chart: dict[str, alt.Chart] = {}
     # For both frames and bouts evals
-    for _splits_name, _splits_data in {"frames": splits, "bouts": bouts_splits}.items():
+    for _splits_name, _splits_data in {FRAME: splits, BOUT: bouts_splits}.items():
         # Make report
         res_report[f"{_splits_name}_report"] = {
             _name: binary_report(
@@ -219,7 +224,7 @@ def make_eval_report(splits: dict[str, pl.DataFrame]) -> EvalReport:
             )
         )
     # Return
-    return EvalReport(report=res_report, df=res_df, chart=res_chart)
+    return EvalResult(report=res_report, df=res_df, chart=res_chart)
 
 
 def save_feature_importance(

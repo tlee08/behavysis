@@ -1,6 +1,7 @@
 """Pydantic Models."""
 
 from .analysis_result import AnalysisResult
+from .base import YamlModel
 from .bouts import Bout, Bouts, BoutStruct
 from .experiment_config import (
     AnalyseConfig,
@@ -29,4 +30,5 @@ __all__ = [
     "PreprocessConfig",
     "RunDlcConfig",
     "VideoMetadata",
+    "YamlModel",
 ]
