@@ -322,7 +322,7 @@ class TabPFNAdapter(BaseAdapter):
             raise ValueError(msg)
         # Save
         model_dir = self.config_fp.parent
-        save_fitted_tabpfn_model(self.model, str(model_dir / "model"))
+        save_fitted_tabpfn_model(self.model, str(model_dir / "model.tabpfn_fit"))
 
     @classmethod
     def load(cls, config_fp: Path) -> Self:
@@ -330,7 +330,7 @@ class TabPFNAdapter(BaseAdapter):
         model_dir = config_fp.parent
         inst = cls(config_fp=config_fp)
         inst.model = load_fitted_tabpfn_model(
-            str(model_dir / "model"), device=inst.device
+            str(model_dir / "model.tabpfn_fit"), device=inst.device
         )
         return inst
 
