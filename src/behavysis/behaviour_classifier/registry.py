@@ -272,7 +272,7 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
                         SelectFromModel(
                             XGBClassifier(
                                 tree_method="hist",
-                                device="cpu",
+                                device=get_gpu_device(),
                                 n_estimators=100,
                                 max_depth=4,
                                 n_jobs=-1,
@@ -288,7 +288,7 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
                         "clf",
                         XGBClassifier(
                             tree_method="hist",
-                            device="cpu",
+                            device=get_gpu_device(),
                             eval_metric="aucpr",
                             grow_policy="lossguide",
                             n_jobs=-1,
@@ -331,7 +331,7 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
                         SelectFromModel(
                             XGBClassifier(
                                 tree_method="hist",
-                                device="cpu",
+                                device=get_gpu_device(),
                                 n_estimators=100,
                                 max_depth=4,
                                 n_jobs=-1,
@@ -347,13 +347,13 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
                         CalibratedClassifierCV(
                             estimator=XGBClassifier(
                                 tree_method="hist",
-                                device="cpu",
+                                device=get_gpu_device(),
                                 eval_metric="aucpr",
                                 n_jobs=-1,
                                 random_state=42,
                                 verbosity=2,
                             ),
-                            cv=5,
+                            cv=3,
                             n_jobs=-1,
                         ),
                     ),
@@ -443,13 +443,13 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
     "tabpfn": lambda config_fp: TabPFNAdapter(
         config_fp=config_fp,
         n_estimators=8,
-        device="cuda",
+        device=get_gpu_device(),
         balance_probabilities=True,
     ),
     "tabpfn_large": lambda config_fp: TabPFNAdapter(
         config_fp=config_fp,
         n_estimators=32,
-        device="cuda",
+        device=get_gpu_device(),
         balance_probabilities=True,
     ),
 }
