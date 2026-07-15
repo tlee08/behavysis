@@ -21,7 +21,7 @@ from .adapter import MODEL_TYPES_TO_CLASS, MODEL_TYPES_TO_STRING, BaseAdapter
 from .config import ClassifierActive, ClassifierContract, TrainingRecipe
 from .data import label_bouts, load_all_data, stratified_split_by_group
 from .evaluation import EvalReport, make_eval_report
-from .registry import MODEL_REGISTRY, ROUTINE_MODELS
+from .registry import MODEL_REGISTRY
 from .storage import ClassifierFp
 
 if TYPE_CHECKING:
@@ -59,7 +59,13 @@ def write_contract(
 def list_models(contract_fp: Path) -> list[str]:
     """List all models."""
     clf_proj = ClassifierFp(contract_fp.parent)
-    return [_i.stem for _i in clf_proj.models_dir().iterdir()]
+    if not clf_proj.models_dir().exists():
+        return []
+    return [
+        _i.stem
+        for _i in clf_proj.models_dir().iterdir()
+        if clf_proj.config_fp(_i.stem).exists()
+    ]
 
 
 # ── training ─────────────────────────────────────────────────────────
@@ -161,7 +167,7 @@ def train_model(
 
 def train_all_models(contract_fp: Path) -> list[Path]:
     """Train the routine model set."""
-    return [pass_exception(train_model)(contract_fp, name) for name in ROUTINE_MODELS]
+    return [pass_exception(train_model)(contract_fp, name) for name in MODEL_REGISTRY]
 
 
 # ── set best model ───────────────────────────────────────────────────
@@ -193,6 +199,7 @@ def promote_best(contract_fp: Path) -> ClassifierActive:
     # Update active.yaml
     active = ClassifierActive(model_name=model_name)
     active.write_yaml(clf_proj.active_fp())
+    logger.info(f"Promoted {model_name} ({contract.eval_metric}={score})")
     return active
 
 

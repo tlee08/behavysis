@@ -11,13 +11,13 @@ folders.  Each training run produces a flat numbered model directory::
             5_features_extracted/
             7_behaviour_scored/
         classifiers/
-            rf-001/
+            rf/
                 config.yaml            # human-authored recipe
                 model.joblib           # fitted sklearn Pipeline
                 evaluation/            # plots, parquet eval data
-            rf-002/
+            logreg/
                 ...
-            logreg-001/
+            xgb/
                 ...
 """
 

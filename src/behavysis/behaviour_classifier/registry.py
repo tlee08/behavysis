@@ -203,7 +203,3 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
 }
 
 # ── registry ─────────────────────────────────────────────────────────
-
-
-# Models trained by ``train_all_models``. Others remain callable manually.
-ROUTINE_MODELS = ["xgb_v2"]
