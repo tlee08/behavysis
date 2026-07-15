@@ -20,6 +20,8 @@ from sklearn.pipeline import Pipeline
 from sklearn.tree import DecisionTreeClassifier
 from xgboost import XGBClassifier
 
+from behavysis.utils import get_gpu_device
+
 from .adapter import BaseAdapter, SklearnAdapter, TabPFNAdapter
 
 # ── registry ─────────────────────────────────────────────────────────
@@ -117,7 +119,7 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
                         "clf",
                         XGBClassifier(
                             tree_method="hist",
-                            device="cpu",
+                            device=get_gpu_device(),
                             eval_metric="aucpr",
                             n_jobs=4,
                             random_state=42,
@@ -157,7 +159,7 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
                         SelectFromModel(
                             XGBClassifier(
                                 tree_method="hist",
-                                device="cpu",
+                                device=get_gpu_device(),
                                 n_estimators=100,
                                 max_depth=4,
                                 n_jobs=-1,
@@ -172,7 +174,7 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
                         "clf",
                         XGBClassifier(
                             tree_method="hist",
-                            device="cpu",
+                            device=get_gpu_device(),
                             eval_metric="aucpr",
                             n_jobs=-1,
                             random_state=42,
@@ -212,7 +214,7 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
                         SelectFromModel(
                             XGBClassifier(
                                 tree_method="hist",
-                                device="cpu",
+                                device=get_gpu_device(),
                                 n_estimators=100,
                                 max_depth=4,
                                 n_jobs=-1,
@@ -228,7 +230,7 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
                         XGBClassifier(
                             booster="dart",
                             tree_method="hist",
-                            device="cpu",
+                            device=get_gpu_device(),
                             eval_metric="aucpr",
                             n_jobs=-1,
                             random_state=42,
@@ -387,7 +389,7 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
                         SelectFromModel(
                             XGBClassifier(
                                 tree_method="hist",
-                                device="cpu",
+                                device=get_gpu_device(),
                                 n_estimators=100,
                                 max_depth=4,
                                 n_jobs=-1,
@@ -402,7 +404,7 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
                         "clf",
                         XGBClassifier(
                             tree_method="hist",
-                            device="cpu",
+                            device=get_gpu_device(),
                             eval_metric="aucpr",
                             n_jobs=-1,
                             random_state=42,

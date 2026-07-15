@@ -102,7 +102,7 @@ def train_model(
     # Get contract data
     contract = ClassifierContract.read_yaml(contract_fp)
     # Check overwrite
-    if model_dir.exists() and not overwrite:
+    if eval_dir.exists() and not overwrite:
         return model_dir
     # Load adapter
     factory = factory or MODEL_REGISTRY[model_name]

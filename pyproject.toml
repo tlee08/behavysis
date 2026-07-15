@@ -63,8 +63,7 @@ build-backend = "uv_build"
 include = ["src/**/*.py"]
 extend-exclude = [
     "src/behavysis/presets/*/run_pipeline.py",
-    "src/behavysis/templates/dlc/dlc_builder.py",
-    "src/behavysis/templates/behaviour_classifier/train_behaviour_classifier.py",
+    "src/behavysis/templates/*.py",
 ]
 
 [tool.ruff.lint]

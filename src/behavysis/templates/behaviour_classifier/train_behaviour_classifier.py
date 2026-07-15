@@ -11,12 +11,10 @@ with app.setup:
 
     from behavysis import Project
     from behavysis.behaviour_classifier import (
-        ClassifierContract,
+        ClassifierFp,
+        promote_best,
         train_all_models,
         write_contract,
-        make_eval_report_choose_model,
-        promote_best,
-        ClassifierFp,
     )
     from behavysis.constants import FEATURES_EXTRACTED_DIR
     from behavysis.transforms import boris_to_behaviour
@@ -54,7 +52,6 @@ def _():
 
     This notebook: **assemble training data → train → inspect → set active**.
     """)
-    return
 
 
 @app.cell
@@ -62,7 +59,6 @@ def _():
     mo.md("""
     ## 1. Configure — edit these
     """)
-    return
 
 
 @app.cell
@@ -99,13 +95,14 @@ def _():
         training_project_dir,
     )
 
+
 @app.cell
 def _(clf_dir):
     clf_proj = ClassifierFp(clf_dir)
 
 
 @app.cell
-def _(clf_proj):    
+def _(clf_proj):
     feats_dir = clf_proj.features_dir()
     labels_dir = clf_proj.labels_dir()
     contract_fp = clf_proj.contract_fp()
@@ -128,7 +125,6 @@ def _():
     The classifier's `training_data/` mirrors the pipeline's stage folders.
     Copy the extracted features from the source project.
     """)
-    return
 
 
 @app.cell
@@ -140,7 +136,6 @@ def _(feats_dir, overwrite, proj):
         if overwrite or not _dst.exists():
             shutil.copyfile(_src, _dst)
     sorted(p.name for p in feats_dir.iterdir())
-    return
 
 
 @app.cell
@@ -156,7 +151,6 @@ def _():
     `7_behaviour_scored/*.parquet` into `clf_proj.labels_dir()`
     instead of running this cell.)*
     """)
-    return
 
 
 @app.cell
@@ -171,7 +165,6 @@ def _(behaviour_name, boris_dir, labels_dir, overwrite, proj):
             overwrite=overwrite,
         )
     sorted(p.name for p in labels_dir.iterdir())
-    return
 
 
 @app.cell
@@ -184,7 +177,6 @@ def _():
     a numbered directory with its own `config.yaml`, `model.joblib`,
     and `evaluation/` folder.
     """)
-    return
 
 
 @app.cell
@@ -195,13 +187,11 @@ def _(behaviour_name, bodyparts, contract_fp, individuals):
         individuals=individuals,
         bodyparts=bodyparts,
     )
-    return
 
 
 @app.cell
 def _(clf_proj):
     train_all_models(clf_proj.contract_fp())
-    return
 
 
 @app.cell
@@ -221,7 +211,6 @@ def _():
     Pick the best one by inspecting test_eval.parquet
     metrics, or add your own analysis over the raw eval data.
     """)
-    return
 
 
 @app.cell
@@ -242,13 +231,11 @@ def _():
     name: rf
     ```
     """)
-    return
 
 
 @app.cell
 def _(clf_proj):
     promote_best(clf_proj.contract_fp())
-
 
 
 @app.cell
@@ -261,16 +248,15 @@ def _():
 
     ```yaml
     classify_behaviour:
-      - clf_fp: /absolute/path/to/behaviour_classifier
-        pcutoff: 0.5
-        min_empty_window_secs: 0.2
-        sub_behaviour: []
+        - clf_fp: /absolute/path/to/behaviour_classifier
+            pcutoff: 0.5
+            min_empty_window_secs: 0.2
+            sub_behaviour: []
     ```
 
     The behaviour name, feature contract, and active model are all resolved
     automatically from the classifier directory.
     """)
-    return
 
 
 if __name__ == "__main__":
