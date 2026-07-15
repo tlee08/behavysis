@@ -17,10 +17,12 @@ from .data import (
 )
 from .evaluation import make_eval_report
 from .registry import MODEL_REGISTRY
+from .storage import ClassifierFp
 
 __all__ = [
     "MODEL_REGISTRY",
     "ClassifierContract",
+    "ClassifierFp",
     "TrainingRecipe",
     "agg_eval_df_by_bouts",
     "init_classifier",

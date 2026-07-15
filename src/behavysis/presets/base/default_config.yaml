@@ -84,7 +84,7 @@ extract_features:
 # ---- Behaviour classification (stage 6) ----
 classify_behaviour:
   - clf_fp: /absolute/path/to/behaviour_classifier/contract.yaml
-    user_defined: []
+    sub_behaviour: []
 
 # ---- Quantitative analysis (stage 8) ----
 analyse:

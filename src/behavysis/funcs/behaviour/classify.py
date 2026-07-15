@@ -25,11 +25,11 @@ def classify_behaviour(
 
     behaviour_df_ls = []
     for model_config in model_config_ls:
-        clf_proj = ClassifierFp(model_config.clf_fp.parent)
+        clf_proj = ClassifierFp(model_config.contract_fp.parent)
         contract = ClassifierContract.read_yaml(clf_proj.contract_fp())
         _validate_feature_contract(feat_cfg, contract)
 
-        behaviour_df_i = predict_df(model_config.clf_fp, features_df)
+        behaviour_df_i = predict_df(model_config.contract_fp, features_df)
 
         behaviour_df_ls.append(behaviour_df_i)
         logger.info("Completed {} classification.", contract.behaviour_name)

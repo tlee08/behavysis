@@ -21,6 +21,4 @@ class TestExtractFeaturesConfig:
 class TestClassifyBehaviourConfig:
     def test_defaults(self):
         cfg = ClassifyBehaviourConfig()
-        assert cfg.pcutoff is None
-        assert cfg.min_empty_window_secs == 0.2
-        assert cfg.user_defined == []
+        assert cfg.sub_behaviour == []

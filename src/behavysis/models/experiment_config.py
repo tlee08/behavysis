@@ -92,8 +92,8 @@ class ExtractFeaturesConfig(BaseModel):
 class ClassifyBehaviourConfig(BaseModel):
     """ClassifyBehaviourConfig."""
 
-    clf_fp: Path = Path("path") / "to" / "model" / "contract.yaml"
-    user_defined: list[str] = []
+    contract_fp: Path = Path("path") / "to" / "model" / "contract.yaml"
+    sub_behaviour: list[str] = []
 
 
 class AnalyseConfig(SubfuncModel):

@@ -69,7 +69,7 @@ extract_features:
 
 classify_behaviour:
   - clf_fp: /absolute/path/to/behaviour_classifier/contract.yaml
-    user_defined: []
+    sub_behaviour: []
 
 analyse:
   bins_sec_ls: [30, 60, 120]

@@ -56,7 +56,7 @@ BEHAVIOUR_PREDICTED_SCHEMA: SchemaDict = {
     PRED: pl.Int64,
 }
 
-# BehaviourScoredDf base columns; user_defined columns are dynamic and validated
+# BehaviourScoredDf base columns; sub_behaviour columns are dynamic and validated
 # against BoutStruct at read/write boundaries.
 BEHAVIOUR_SCORED_BASE: SchemaDict = {
     FRAME: pl.Int64,

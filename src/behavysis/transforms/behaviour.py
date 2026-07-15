@@ -1,7 +1,7 @@
 """Behaviour utility functions operating on Polars DataFrames.
 
 Predicted: (frame, behaviour, prob, pred)
-Scored: (frame, behaviour, pred, actual, [user_defined...])
+Scored: (frame, behaviour, pred, actual, [sub_behaviour...])
 """
 
 from pathlib import Path
@@ -80,7 +80,7 @@ def predicted_to_scored(
     Returns:
     -------
     pl.DataFrame
-        Scored behaviour DataFrame with pred, actual, and user_defined columns.
+        Scored behaviour DataFrame with pred, actual, and sub_behaviour columns.
     """
     result_df = df.select([FRAME, BEHAVIOUR, PRED])
     result_df = result_df.with_columns(
@@ -178,14 +178,14 @@ def frames2bouts(df: pl.DataFrame) -> Bouts:
                 actual_vals.value_counts().sort(COUNT, descending=True).row(0)[0],
             )
 
-            user_defined = {}
+            sub_behaviour = {}
             for col in [
                 c for c in df.columns if c not in {FRAME, BEHAVIOUR, PRED, ACTUAL}
             ]:
                 if col in bout_slice.columns:
                     vals = bout_slice.select(col).to_series().drop_nulls()
                     if len(vals) > 0:
-                        user_defined[col] = int(
+                        sub_behaviour[col] = int(
                             vals.value_counts().sort(COUNT, descending=True).row(0)[0],
                         )
 
@@ -196,7 +196,7 @@ def frames2bouts(df: pl.DataFrame) -> Bouts:
                     dur=dur_val,
                     behaviour=behaviour,
                     actual=actual_mode,
-                    sub_behaviour=user_defined,
+                    sub_behaviour=sub_behaviour,
                 ),
             )
 

@@ -268,7 +268,7 @@ def _():
       - clf_fp: /absolute/path/to/behaviour_classifier
         pcutoff: 0.5
         min_empty_window_secs: 0.2
-        user_defined: []
+        sub_behaviour: []
     ```
 
     The behaviour name, feature contract, and active model are all resolved
