@@ -21,10 +21,13 @@ from behavysis.constants import (
     TRUE_NEG,
     UNSURE,
     Array1D,
+    Array2D,
 )
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+# ── loading ─────────────────────────────────────────────────────
 
 
 def load_feature_names(x_dir: Path) -> list[str]:
@@ -94,6 +97,9 @@ def load_all_data(
     return pl.concat(pieces, how="diagonal_relaxed")
 
 
+# ── bout-related splitting ─────────────────────────────────────────────────────
+
+
 def label_bouts(df: pl.DataFrame) -> pl.DataFrame:
     """Add ``bout_id`` — integer label per contiguous (experiment, actual) run.
 
@@ -143,3 +149,20 @@ def agg_eval_df_by_bouts(df: pl.DataFrame) -> pl.DataFrame:
         )
         .sort(BOUT_ID)
     )
+
+
+# ── X and y df preparing ─────────────────────────────────────────────────────
+
+
+def df_get_features(df: pl.DataFrame) -> Array2D:
+    """Given a df, only return features (filters out metadata and label columns)."""
+    return (
+        df.drop([EXPERIMENT, FRAME, ACTUAL, BOUT_ID], strict=False)
+        .to_numpy()
+        .astype(np.float32)
+    )
+
+
+def df_get_labels(df: pl.DataFrame) -> Array1D:
+    """Given a df, return only the labels."""
+    return df[ACTUAL].to_numpy()

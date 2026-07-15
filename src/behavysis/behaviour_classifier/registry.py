@@ -281,7 +281,7 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
                             max_features=300,
                         ),
                     ),
-                    ("smote", SMOTE(random_state=42, n_jobs=-1)),
+                    ("smote", SMOTE(sampling_strategy="auto", random_state=42)),
                     (
                         "clf",
                         XGBClassifier(

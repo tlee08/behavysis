@@ -27,13 +27,18 @@ from behavysis.constants import (
     PRED,
     PROB,
     Array1D,
-    Array2D,
 )
 from behavysis.schemas import BEHAVIOUR_PREDICTED_SCHEMA
 from behavysis.utils import get_gpu_device
 
 from .config import TrainingRecipe
-from .data import agg_eval_df_by_bouts, label_bouts, stratified_split_by_group
+from .data import (
+    agg_eval_df_by_bouts,
+    df_get_features,
+    df_get_labels,
+    label_bouts,
+    stratified_split_by_group,
+)
 from .torch._helper import select_features
 
 if TYPE_CHECKING:
@@ -43,8 +48,6 @@ if TYPE_CHECKING:
     from sklearn.model_selection._search import BaseSearchCV
 
     from .torch.base import TorchModel
-
-_META_COLS = [EXPERIMENT, FRAME, ACTUAL, BOUT_ID]
 
 
 class BaseAdapter(ABC):
@@ -60,12 +63,6 @@ class BaseAdapter(ABC):
     def _write_config(self, config: TrainingRecipe) -> None:
         """Write config."""
         return config.write_yaml(self.config_fp)
-
-    def _features(self, df: pl.DataFrame) -> Array2D:
-        return df.drop(_META_COLS, strict=False).to_numpy().astype(np.float32)
-
-    def _labels(self, df: pl.DataFrame) -> Array1D:
-        return df[ACTUAL].to_numpy()
 
     @abstractmethod
     def fit(self, df: pl.DataFrame) -> pd.DataFrame:
@@ -140,15 +137,15 @@ class SklearnAdapter(BaseAdapter):
             sub_idx, _ = train_test_split(
                 idx,
                 train_size=config.downsample_n,
-                stratify=self._labels(df),
+                stratify=df_get_labels(df),
                 random_state=config.seed,
             )
             sub_df = df[sub_idx]
         # 4. Grouped-by-bout_id CV on surviving rows → no CV leakage.
         self.search.refit = False
         self.search.fit(
-            self._features(sub_df),
-            self._labels(sub_df),
+            df_get_features(sub_df),
+            df_get_labels(sub_df),
             groups=sub_df[BOUT_ID].to_numpy(),
         )
         # Full training stage
@@ -159,7 +156,7 @@ class SklearnAdapter(BaseAdapter):
         train_df = df[train_idx]
         # 6. Refit best pipeline on train_df
         self.model = clone(self.search.estimator).set_params(**self.search.best_params_)
-        self.model.fit(self._features(train_df), self._labels(train_df))
+        self.model.fit(df_get_features(train_df), df_get_labels(train_df))
         # 7. Find best pcutoff with val_idx and update config with best pcutoff value
         # Use per-bouts eval instead of per-frames eval
         y_df = self.predict(df).with_columns(df[EXPERIMENT], df[ACTUAL], df[BOUT_ID])
@@ -184,7 +181,7 @@ class SklearnAdapter(BaseAdapter):
             raise ValueError(msg)
         # Predict
         frame = df.get_column(FRAME)
-        prob = self.model.predict_proba(self._features(df))[:, 1]
+        prob = self.model.predict_proba(df_get_features(df))[:, 1]
         return frame, prob
 
     def save(self) -> None:
@@ -288,7 +285,7 @@ class TabPFNAdapter(BaseAdapter):
             **self.kwargs,
         )
         # 4. Fit classifier
-        self.model.fit(self._features(df), self._labels(df))
+        self.model.fit(df_get_features(df), df_get_labels(df))
         # 5. pcutoff calibration
         _, val_idx = stratified_split_by_group(
             df, config.val_split, BOUT_ID, config.seed
@@ -314,7 +311,7 @@ class TabPFNAdapter(BaseAdapter):
             raise ValueError(msg)
         # Predict
         frame = df.get_column(FRAME)
-        prob = self.model.predict_proba(self._features(df))[:, 1]
+        prob = self.model.predict_proba(df_get_features(df))[:, 1]
         return frame, prob
 
     def save(self) -> None:
@@ -353,13 +350,10 @@ class TorchAdapter(BaseAdapter):
     def fit(self, df: pl.DataFrame) -> pd.DataFrame:
         """Fit."""
         config = self._read_config()
-        # Prepare
-        x = df.drop(_META_COLS, strict=False).to_numpy()
-        y = df[ACTUAL].to_numpy()
         # Preprocess
-        x = self.scaler.fit_transform(x)
+        x = self.scaler.fit_transform(df_get_features(df))
         self.feature_mask = select_features(
-            x, y, config.variance_threshold, config.max_features
+            x, df_get_labels(df), config.variance_threshold, config.max_features
         )
         nfeatures = len(self.feature_mask)
         # Train
