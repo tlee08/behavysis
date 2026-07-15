@@ -298,6 +298,9 @@ class TabPFNAdapter(BaseAdapter):
         )
         # 4. Fit classifier on sub_df
         self.model.fit(df_get_features(sub_df), df_get_labels(sub_df))
+        # 5. Set pcutoff as hardcoded 0.5 (tabpfn sorts itself out)
+        config.pcutoff = 0.5
+        self._write_config(config)
         # Return
         return pd.DataFrame(columns=pd.Index(["loss", "vloss"]))
 
