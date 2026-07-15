@@ -15,7 +15,7 @@ import yaml
 from loguru import logger
 
 from behavysis.constants import ACTUAL, EXPERIMENT
-from behavysis.utils import pass_exception
+from behavysis.utils import pass_exception, trace
 
 from .adapter import MODEL_TYPES_TO_CLASS, MODEL_TYPES_TO_STRING, BaseAdapter
 from .config import ClassifierActive, ClassifierContract, TrainingRecipe
@@ -167,7 +167,9 @@ def train_model(
 
 def train_all_models(contract_fp: Path) -> list[Path]:
     """Train the routine model set."""
-    return [pass_exception(train_model)(contract_fp, name) for name in MODEL_REGISTRY]
+    return [
+        pass_exception(trace(train_model))(contract_fp, name) for name in MODEL_REGISTRY
+    ]
 
 
 # ── set best model ───────────────────────────────────────────────────
