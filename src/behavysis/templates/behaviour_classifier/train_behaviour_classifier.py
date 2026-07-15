@@ -37,7 +37,7 @@ def _():
     ```
     {clf_dir}/
         contract.yaml               # shared behaviour + feature contract
-        active.yaml                 # {name: rf, iteration: 3} — which model to use
+        active.yaml                 # {name: rf} — which model to use
         training_data/
             5_features_extracted/   # features (from a processed behavysis project)
             7_behaviour_scored/     # labels  (from BORIS, or a scored project)
@@ -180,8 +180,8 @@ def _():
     ## 3. Write contract and train
 
     `train_all_models` writes the shared `contract.yaml` if missing, then
-    trains every registered model type in a new iteration. Each iteration
-    gets a numbered directory with its own `config.yaml`, `model.joblib`,
+    trains every registered model type. Each model gets
+    a numbered directory with its own `config.yaml`, `model.joblib`,
     and `evaluation/` folder.
     """)
     return
@@ -200,8 +200,7 @@ def _(behaviour_name, bodyparts, contract_fp, individuals):
 
 @app.cell
 def _(clf_proj):
-    iterations = train_all_models(clf_proj.contract_fp())
-    iterations
+    train_all_models(clf_proj.contract_fp())
     return
 
 
@@ -210,7 +209,7 @@ def _():
     mo.md("""
     ## 4. Inspect evaluation artifacts
 
-    Each iteration's `evaluation/` folder contains:
+    Each model's `evaluation/` folder contains:
 
     | File | What it tells you |
     | --- | --- |
@@ -219,7 +218,7 @@ def _():
     | `feature_importance.png` | Top features by importance |
     | `feature_report.yaml` | Feature counts before/after selection |
 
-    Iterations are numbered — pick the best one by inspecting test_eval.parquet
+    Pick the best one by inspecting test_eval.parquet
     metrics, or add your own analysis over the raw eval data.
     """)
     return
@@ -230,18 +229,17 @@ def _():
     mo.md("""
     ## 5. Set the active model
 
-    Write ``active.yaml`` to point to the best iteration.  This is the model
+    Write ``active.yaml`` to point to the best model.  This is the model
     used by ``predict_df`` at inference time:
 
     ```python
-    ClassifierActive(name="rf", iteration=3).write_yaml(clf_proj)
+    ClassifierActive(name="rf").write_yaml(clf_proj)
     ```
 
     Or edit `active.yaml` by hand:
 
     ```yaml
     name: rf
-    iteration: 3
     ```
     """)
     return

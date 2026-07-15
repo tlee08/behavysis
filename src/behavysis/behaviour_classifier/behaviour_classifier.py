@@ -2,13 +2,12 @@
 
 A classifier is fully self-contained in its own directory (``clf_dir``).
 Training data lives inside it.  Each training run produces a numbered
-iteration directory containing ``config.yaml``, ``model.joblib``, and
+directory containing ``config.yaml``, ``model.joblib``, and
 an ``evaluation/`` folder.  See ``storage`` for the full on-disk layout.
 """
 
 from __future__ import annotations
 
-import re
 from typing import TYPE_CHECKING
 
 import polars as pl
@@ -28,32 +27,6 @@ from .storage import ClassifierFp
 if TYPE_CHECKING:
     from collections.abc import Callable
     from pathlib import Path
-
-
-# ── iteration numbering ───────────────────────────────────────────────
-
-
-def list_models(contract_fp: Path) -> dict[str, list[int]]:
-    """List all models and their iterations."""
-    clf_proj = ClassifierFp(contract_fp.parent)
-    cd = clf_proj.models_dir()
-    if not cd.exists():
-        return {}
-    pattern = re.compile(r"^(.+)-(\d+)$")
-    models: dict[str, list[int]] = {}
-    for d in sorted(cd.iterdir()):
-        if not d.is_dir():
-            continue
-        m = pattern.match(d.name)
-        if m:
-            models.setdefault(m.group(1), []).append(int(m.group(2)))
-    return models
-
-
-def _next_iteration(contract_fp: Path, model_name: str) -> int:
-    """Scan classifiers/ for {name}-NNN dirs, return max + 1."""
-    nums = list_models(contract_fp)[model_name]
-    return max(nums) + 1 if nums else 1
 
 
 # ── initialising ─────────────────────────────────────────────────────
@@ -80,6 +53,15 @@ def write_contract(
     return ClassifierContract.read_yaml(contract_fp)
 
 
+# ── model discovery ───────────────────────────────────────────────
+
+
+def list_models(contract_fp: Path) -> list[str]:
+    """List all models."""
+    clf_proj = ClassifierFp(contract_fp.parent)
+    return [_i.stem for _i in clf_proj.models_dir().iterdir()]
+
+
 # ── training ─────────────────────────────────────────────────────────
 
 
@@ -87,7 +69,6 @@ def train_model(
     contract_fp: Path,
     model_name: str,
     *,
-    iteration: int | None = None,
     overwrite: bool = False,
     factory: Callable[[Path], BaseAdapter] | None = None,
 ) -> Path:
@@ -98,10 +79,8 @@ def train_model(
             The classifier project's contract file.
         model_name (str):
             model name (also used for `MODEL_REGISTRY` if factory not given).
-        iteration (int | None, optional):
-            If given then use, otherwise auto-next-iteration.
         overwrite (bool, optional):
-            Allow retraining an existing iteration. Defaults to False.
+            Allow retraining an existing model. Defaults to False.
         factory (Callable[[Path], BaseAdapter] | None, optional):
             Override registry. Defaults to None.
 
@@ -110,14 +89,10 @@ def train_model(
     """
     # Define project files
     clf_proj = ClassifierFp(contract_fp.parent)
-    clf_dir = clf_proj.root_dir()
     contract_fp = clf_proj.contract_fp()
-    iteration = (
-        iteration if iteration is not None else _next_iteration(clf_dir, model_name)
-    )
-    model_dir = clf_proj.model_dir(model_name, iteration)
-    eval_dir = clf_proj.eval_dir(model_name, iteration)
-    config_fp = clf_proj.config_fp(model_name, iteration)
+    model_dir = clf_proj.model_dir(model_name)
+    eval_dir = clf_proj.eval_dir(model_name)
+    config_fp = clf_proj.config_fp(model_name)
     # Get contract data
     contract = ClassifierContract.read_yaml(contract_fp)
     # Check overwrite
@@ -131,7 +106,6 @@ def train_model(
         TrainingRecipe(
             behaviour_name=contract.behaviour_name,
             model_name=model_name,
-            iteration=iteration,
             model_type=MODEL_TYPES_TO_STRING[type(adapter)],
         ).write_yaml(config_fp)
     # Get config data
@@ -153,7 +127,7 @@ def train_model(
     test_df = df[test_idx]
 
     # Train
-    logger.info("Training {} (iteration={:03d})", contract.behaviour_name, iteration)
+    logger.info("Training {}", contract.behaviour_name)
     adapter.fit(train_df)
 
     # Save model
@@ -181,16 +155,12 @@ def train_model(
     for _name, _chart in res["chart"].items():
         _chart.save(eval_dir / f"{_name}.png")
 
-    logger.info(
-        "Training complete: {} {:03d}",
-        model_name,
-        iteration,
-    )
+    logger.info("Training complete: {}", model_name)
     return model_dir
 
 
 def train_all_models(contract_fp: Path) -> list[Path]:
-    """Train the routine model set, one iteration each."""
+    """Train the routine model set."""
     return [pass_exception(train_model)(contract_fp, name) for name in ROUTINE_MODELS]
 
 
@@ -198,60 +168,31 @@ def train_all_models(contract_fp: Path) -> list[Path]:
 
 
 def promote_best(contract_fp: Path) -> ClassifierActive:
-    """Update best model.
-
-    Scans all iterations,
-    picks best by given eval_metric on bout-level test,
-    writes active.yaml.
-    """
-    # Get configs
+    """Promote the model with the best evaluation metric."""
     clf_proj = ClassifierFp(contract_fp.parent)
     contract = ClassifierContract.read_yaml(clf_proj.contract_fp())
-    # Get metrics from each model
-    candidates: list[tuple[str, int, float]] = []
-    for model_name, iterations in list_models(contract_fp).items():
-        for iteration in iterations:
-            eval_report_fp = (
-                clf_proj.eval_dir(model_name, iteration) / "bouts_report.yaml"
-            )
-            if not eval_report_fp.exists():
-                logger.warning(
-                    "No bouts_report.yaml for {}-{:03d}, skipping",
-                    model_name,
-                    iteration,
-                )
-                continue
-            eval_report = yaml.safe_load(eval_report_fp.read_text())
-            # Actually save_eval_report uses yaml.dump, so read with yaml
-            if "test" not in eval_report:
-                logger.warning(
-                    "No test split in bouts_report for {}-{:03d}, skipping",
-                    model_name,
-                    iteration,
-                )
-                continue
-            metrics = eval_report["test"]
-            if contract.eval_metric not in metrics:
-                continue
-            candidates.append((model_name, iteration, metrics[contract.eval_metric]))
-    # Choose best metric
-    if not candidates:
-        msg = f"No valid model iterations found in {clf_proj.models_dir()}"
+    # Get eval_metric values for each model
+    scores = []
+    for model_name in list_models(contract_fp):
+        report_fp = clf_proj.eval_dir(model_name) / "bouts_report.yaml"
+        if not report_fp.exists():
+            continue
+        report = yaml.safe_load(report_fp.read_text())
+        score = report.get("test", {}).get(contract.eval_metric)
+        if score is not None:
+            scores.append((model_name, score))
+    # Get best model, given the list of eval_metric scores
+    if not scores:
+        msg = f"No valid model evaluations found in {clf_proj.models_dir()}"
         raise FileNotFoundError(msg)
-    if contract.eval_metric_higher_better:
-        best = max(candidates, key=lambda c: c[2])
-    else:
-        best = min(candidates, key=lambda c: c[2])
-    # Set best metric
-    active = ClassifierActive(model_name=best[0], iteration=best[1])
-    active.write_yaml(clf_proj.active_fp())
-    logger.info(
-        "Promoted {}-{:03d} ({}={:.4f})",
-        best[0],
-        best[1],
-        contract.eval_metric,
-        best[2],
+    model_name, score = (
+        max(scores, key=lambda x: x[1])
+        if contract.eval_metric_higher_better
+        else min(scores, key=lambda x: x[1])
     )
+    # Update active.yaml
+    active = ClassifierActive(model_name=model_name)
+    active.write_yaml(clf_proj.active_fp())
     return active
 
 
@@ -261,7 +202,6 @@ def promote_best(contract_fp: Path) -> ClassifierActive:
 def predict_choose_model(
     contract_fp: Path,
     model_name: str,
-    iteration: int,
     x_df: pl.DataFrame,
 ) -> pl.DataFrame:
     """Run inference on a wide features DataFrame.
@@ -270,7 +210,7 @@ def predict_choose_model(
     Returns a long-form DataFrame with ``(frame, behaviour, prob, pred)``.
     """
     clf_proj = ClassifierFp(contract_fp.parent)
-    config_fp = clf_proj.config_fp(model_name, iteration)
+    config_fp = clf_proj.config_fp(model_name)
     # Check if model exists
     if not config_fp.exists():
         msg = "Classifier's model not found. Check active.yaml."
@@ -296,19 +236,17 @@ def predict(
     clf_proj = ClassifierFp(contract_fp.parent)
     active = ClassifierActive.read_yaml(clf_proj.active_fp())
     # Predict
-    return predict_choose_model(contract_fp, active.model_name, active.iteration, x_df)
+    return predict_choose_model(contract_fp, active.model_name, x_df)
 
 
 # ── other helpers ─────────────────────────────────────────────────
 
 
-def make_eval_report_choose_model(
-    contract_fp: Path, model_name: str, iteration: int
-) -> EvalReport:
+def make_eval_report_choose_model(contract_fp: Path, model_name: str) -> EvalReport:
     """Run make_eval_report by giving a model's filepath."""
     # Get filepaths
     clf_proj = ClassifierFp(contract_fp.parent)
-    eval_dir = clf_proj.eval_dir(model_name, iteration)
+    eval_dir = clf_proj.eval_dir(model_name)
     # Read raw eval data
     eval_train_df = pl.read_parquet(eval_dir / "train_eval.parquet")
     eval_test_df = pl.read_parquet(eval_dir / "test_eval.parquet")

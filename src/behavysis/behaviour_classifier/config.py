@@ -25,11 +25,10 @@ class ClassifierActive(YamlModel):
     """Stores which model to use."""
 
     model_name: str
-    iteration: int
 
 
 class TrainingRecipe(YamlModel):
-    """Human-authored training recipe (config.yaml per iteration).
+    """Human-authored training recipe (config.yaml).
 
     Model-specific hyperparameters live in ``hyperparameters``. Every value
     must be a list — even single-option entries (e.g. ``random_state: [42]``).
@@ -41,7 +40,6 @@ class TrainingRecipe(YamlModel):
     model_type: str
 
     model_name: str
-    iteration: int
 
     seed: int = 42
     test_split: float = 0.2

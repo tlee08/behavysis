@@ -73,9 +73,35 @@ class BaseAdapter(ABC):
         Returns per-epoch history (empty for sklearn).
         """
 
-    @abstractmethod
     def predict(self, df: pl.DataFrame) -> pl.DataFrame:
-        """Return predicted probabilities for the given feature array."""
+        """Return predicted probabilities + binary preds with smoothing."""
+        config = self._read_config()
+        # Raw model inference — subclass responsibility
+        frame, prob = self._raw_predict(df)
+        # Shared smoothing — per-experiment, uniform moving average
+        if config.smoothing_frames > 0:
+            n = 1 + config.smoothing_frames * 2
+            kernel = np.full(n, 1.0) / n
+            if EXPERIMENT in df.columns:
+                for exp in df[EXPERIMENT].unique():
+                    mask = (df[EXPERIMENT] == exp).to_numpy()
+                    prob[mask] = np.convolve(prob[mask], kernel, mode="same")
+            else:
+                prob = np.convolve(prob, kernel, mode="same")
+        # Shared thresholding + output construction
+        return pl.DataFrame(
+            {
+                FRAME: frame,
+                BEHAVIOUR: config.behaviour_name,
+                PROB: prob,
+                PRED: prob > config.pcutoff,
+            },
+            schema=BEHAVIOUR_PREDICTED_SCHEMA,
+        )
+
+    @abstractmethod
+    def _raw_predict(self, df: pl.DataFrame) -> tuple[pl.Series, Array1D]:
+        """Return (frame_series, raw_probability_array) from model inference."""
 
     @abstractmethod
     def save(self) -> None:
@@ -151,38 +177,13 @@ class SklearnAdapter(BaseAdapter):
         # Return
         return pd.DataFrame(columns=pd.Index(["loss", "vloss"]))
 
-    def predict(self, df: pl.DataFrame) -> pl.DataFrame:
-        """Predict."""
-        # Check model exists
+    def _raw_predict(self, df: pl.DataFrame) -> tuple[pl.Series, Array1D]:
         if self.model is None:
             msg = "model not yet trained."
             raise ValueError(msg)
-        # Read config
-        config = self._read_config()
-        # Prepare
         frame = df.get_column(FRAME)
-        # Predict
         prob = self.model.predict_proba(self._features(df))[:, 1]
-        # smooth the probs
-        _n = 1 + config.smoothing_frames * 2
-        kernel = np.full(_n, 1) / _n
-        # Group by experiment, smooth independently
-        if EXPERIMENT in df.columns:
-            for exp in df[EXPERIMENT].unique():
-                mask = df[EXPERIMENT] == exp
-                prob[mask] = np.convolve(prob[mask], kernel, mode="same")
-        else:
-            prob = np.convolve(prob, kernel, mode="same")
-        # Construct df and return
-        return pl.DataFrame(
-            {
-                FRAME: frame,
-                BEHAVIOUR: config.behaviour_name,
-                PROB: prob,
-                PRED: prob > config.pcutoff,
-            },
-            schema=BEHAVIOUR_PREDICTED_SCHEMA,
-        )
+        return frame, prob
 
     def save(self) -> None:
         """Save."""
@@ -282,25 +283,12 @@ class TorchAdapter(BaseAdapter):
             val_split=config.val_split,
         )
 
-    def predict(self, df: pl.DataFrame) -> pl.DataFrame:
-        """Predict."""
-        config = self._read_config()
-        # Prepare
+    def _raw_predict(self, df: pl.DataFrame) -> tuple[pl.Series, Array1D]:
         x = df.drop(_META_COLS, strict=False).to_numpy()
         frame = df.get_column(FRAME)
-        # Predict
         x = self.scaler.transform(x)[:, self.feature_mask]
         prob = self.model.predict(x, None, batch_size=256)
-        # Construct df and return
-        return pl.DataFrame(
-            {
-                FRAME: frame,
-                BEHAVIOUR: config.behaviour_name,
-                PROB: prob,
-                PRED: prob > config.pcutoff,
-            },
-            schema=BEHAVIOUR_PREDICTED_SCHEMA,
-        )
+        return frame, prob
 
     def save(self) -> None:
         """Save."""
