@@ -270,6 +270,7 @@ class Experiment:
         # Convert predicted to scored
         behaviour_scored_df = predicted_to_scored(behaviour_predicted_df, bouts_struct)
         # Write
+        self.get_fp(BEHAVIOUR_SCORED_DIR).parent.mkdir(parents=True, exist_ok=True)
         behaviour_scored_df.write_parquet(self.get_fp(BEHAVIOUR_SCORED_DIR))
 
     @trace
