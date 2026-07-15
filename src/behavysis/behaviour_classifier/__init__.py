@@ -9,12 +9,7 @@ from .behaviour_classifier import (
     write_contract,
 )
 from .config import ClassifierContract, TrainingRecipe
-from .data import (
-    agg_eval_df_by_bouts,
-    load_all_data,
-    load_feature_names,
-    stratified_split_by_group,
-)
+from .data import load_all_data, load_feature_names, stratified_split_by_group
 from .evaluation import make_eval_report
 from .registry import MODEL_REGISTRY
 from .storage import ClassifierFp
@@ -24,7 +19,6 @@ __all__ = [
     "ClassifierContract",
     "ClassifierFp",
     "TrainingRecipe",
-    "agg_eval_df_by_bouts",
     "load_all_data",
     "load_feature_names",
     "make_eval_report",

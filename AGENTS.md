@@ -88,7 +88,7 @@ Jinja2 templates for project scaffolding (`run_pipeline_script.py`, DLC config, 
 
 ### Logging
 
-Uses `loguru`. The `@trace` decorator (`utils/logger_utils.py`) logs entry/exit/duration for each pipeline stage. **IMPORTANT**: `@trace` catches all exceptions and logs them rather than re-raising — the pipeline continues to the next experiment on failure.
+Uses `loguru`. The `@trace` decorator (`utils/logger_utils.py`) logs entry/exit/duration for each pipeline stage. **IMPORTANT**: `@trace` logs them then re-raises, `pass_exception` catches them — the pipeline continues to the next experiment on failure.
 
 ### Plotting
 

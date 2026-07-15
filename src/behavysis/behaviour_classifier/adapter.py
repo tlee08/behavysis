@@ -126,12 +126,13 @@ class SklearnAdapter(BaseAdapter):
 
     def fit(self, df: pl.DataFrame) -> pd.DataFrame:
         """Fit."""
-        # 0. Read config
+        # 1. Read config
         config = self._read_config()
         # Hyperparameter selection stage
-        # 1. Compute bout_id once, on the full ordered frame (correct boundaries).
+        # 2. Sort the df by EXPERIMENT, FRAME. Then compute bout_id once
+        df = df.sort([EXPERIMENT, FRAME])
         df = label_bouts(df)
-        # 2. Row-level, prevalence-preserving downsample for the search.
+        # 3. Row-level, prevalence-preserving downsample for the search.
         sub_df = df
         if len(df) > config.downsample_n:
             idx = np.arange(len(df))
@@ -142,7 +143,7 @@ class SklearnAdapter(BaseAdapter):
                 random_state=config.seed,
             )
             sub_df = df[sub_idx]
-        # 3. Grouped-by-bout_id CV on surviving rows → no CV leakage.
+        # 4. Grouped-by-bout_id CV on surviving rows → no CV leakage.
         self.search.refit = False
         self.search.fit(
             self._features(sub_df),
@@ -150,20 +151,18 @@ class SklearnAdapter(BaseAdapter):
             groups=sub_df[BOUT_ID].to_numpy(),
         )
         # Full training stage
-        # 4. Make train-val split by bouts (to programatically find best pcutoff)
+        # 5. Make train-val split by bouts (to programatically find best pcutoff)
         train_idx, val_idx = stratified_split_by_group(
             df, config.val_split, BOUT_ID, config.seed
         )
         train_df = df[train_idx]
-        val_df = df[val_idx]
-        # 5. Refit best pipeline on train_df
+        # 6. Refit best pipeline on train_df
         self.model = clone(self.search.estimator).set_params(**self.search.best_params_)
         self.model.fit(self._features(train_df), self._labels(train_df))
-        # 6. Find best pcutoff with val_df and update config with best pcutoff value
+        # 7. Find best pcutoff with val_idx and update config with best pcutoff value
         # Use per-bouts eval instead of per-frames eval
-        y_df = self.predict(val_df).with_columns(
-            val_df[EXPERIMENT], val_df[ACTUAL], val_df[BOUT_ID]
-        )
+        y_df = self.predict(df).with_columns(df[EXPERIMENT], df[ACTUAL], df[BOUT_ID])
+        y_df = y_df[val_idx]
         y_bouts_df = agg_eval_df_by_bouts(y_df)
         _, recall, thresholds = precision_recall_curve(
             y_bouts_df[ACTUAL], y_bouts_df[PROB], drop_intermediate=True

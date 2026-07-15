@@ -14,7 +14,7 @@ import polars as pl
 import yaml
 from loguru import logger
 
-from behavysis.constants import ACTUAL, EXPERIMENT
+from behavysis.constants import ACTUAL, EXPERIMENT, FRAME
 from behavysis.utils import pass_exception, trace
 
 from .adapter import MODEL_TYPES_TO_CLASS, MODEL_TYPES_TO_STRING, BaseAdapter
@@ -129,8 +129,8 @@ def train_model(
     train_idx, test_idx = stratified_split_by_group(
         df, config.test_split, EXPERIMENT, config.seed
     )
-    train_df = df[train_idx]
-    test_df = df[test_idx]
+    train_df = df[train_idx].sort([EXPERIMENT, FRAME])
+    test_df = df[test_idx].sort([EXPERIMENT, FRAME])
 
     # Train
     logger.info("Training {}", contract.behaviour_name)
