@@ -446,12 +446,6 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
         device=get_gpu_device(),
         balance_probabilities=True,
     ),
-    "tabpfn_large": lambda config_fp: TabPFNAdapter(
-        config_fp=config_fp,
-        n_estimators=32,
-        device=get_gpu_device(),
-        balance_probabilities=True,
-    ),
 }
 
 # ── registry ─────────────────────────────────────────────────────────

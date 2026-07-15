@@ -270,6 +270,7 @@ class TabPFNAdapter(BaseAdapter):
 
     def fit(self, df: pl.DataFrame) -> pd.DataFrame:
         """Fit."""
+        # TODO: figure out how to free GPU memory
         # 1. Read config
         config = self._read_config()
         # Full training stage. No hyperparameter tuning
