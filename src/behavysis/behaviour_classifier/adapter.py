@@ -141,7 +141,7 @@ class SklearnAdapter(BaseAdapter):
                 random_state=config.seed,
             )
             sub_df = df[sub_idx]
-        # 4. Grouped-by-bout_id CV on surviving rows → no CV leakage.
+        # 4. hyperparameter selection on sub_df. CV grouped-by-bout_id
         self.search.refit = False
         self.search.fit(
             df_get_features(sub_df),
@@ -272,9 +272,21 @@ class TabPFNAdapter(BaseAdapter):
         """Fit."""
         # 1. Read config
         config = self._read_config()
+        # Full training stage. No hyperparameter tuning
         # 2. Sort the df by EXPERIMENT, FRAME. Then compute bout_id
         df = df.sort([EXPERIMENT, FRAME])
         df = label_bouts(df)
+        # 3. Row-level, prevalence-preserving downsample for the search.
+        sub_df = df
+        if len(df) > config.downsample_n:
+            idx = np.arange(len(df))
+            sub_idx, _ = train_test_split(
+                idx,
+                train_size=config.downsample_n,
+                stratify=df_get_labels(df),
+                random_state=config.seed,
+            )
+            sub_df = df[sub_idx]
         # 3. Init classifier
         self.model = TabPFNClassifier(
             n_estimators=self.n_estimators,
@@ -284,24 +296,9 @@ class TabPFNAdapter(BaseAdapter):
             ignore_pretraining_limits=True,
             **self.kwargs,
         )
-        # 4. Fit classifier
-        self.model.fit(df_get_features(df), df_get_labels(df))
-        # 5. pcutoff calibration
-        _, val_idx = stratified_split_by_group(
-            df, config.val_split, BOUT_ID, config.seed
-        )
-        y_df = self.predict(df).with_columns(df[EXPERIMENT], df[ACTUAL])
-        y_df = y_df[val_idx]
-        y_bouts_df = agg_eval_df_by_bouts(y_df)
-        _, recall, thresholds = precision_recall_curve(
-            y_bouts_df[ACTUAL], y_bouts_df[PROB], drop_intermediate=True
-        )
-        config.pcutoff = float(
-            thresholds[(recall[:-1] >= config.target_recall)][-1]
-            if np.any(recall[:-1] >= config.target_recall)
-            else 0.001
-        )
-        self._write_config(config)
+        # 4. Fit classifier on sub_df
+        self.model.fit(df_get_features(sub_df), df_get_labels(sub_df))
+        # Return
         return pd.DataFrame(columns=pd.Index(["loss", "vloss"]))
 
     def _raw_predict(self, df: pl.DataFrame) -> tuple[pl.Series, Array1D]:
