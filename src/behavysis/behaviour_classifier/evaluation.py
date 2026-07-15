@@ -1,6 +1,5 @@
 """Evaluation metrics and visualization for behavioural classifier."""
 
-import json
 from pathlib import Path
 from typing import TypedDict
 
@@ -8,6 +7,7 @@ import altair as alt
 import matplotlib.pyplot as plt
 import numpy as np
 import polars as pl
+import yaml
 from loguru import logger
 from sklearn.metrics import (
     average_precision_score,
@@ -148,7 +148,7 @@ def _hist_chart(df: pl.DataFrame, x_column: str, title: str) -> alt.Chart:
 
 
 def make_eval_report(splits: dict[str, pl.DataFrame]) -> EvalReport:
-    """Make ROC/PR charts and a JSON metric report for the given splits."""
+    """Make ROC/PR charts and a YAML metric report for the given splits."""
     # Construct bouts splits eval (bouts equivalent of splits)
     bouts_splits = {_name: agg_eval_df_by_bouts(_df) for _name, _df in splits.items()}
     # Prepare to store eval results
@@ -258,7 +258,7 @@ def save_feature_report(
     eval_dir: Path,
     n_features_total: int | None = None,
 ) -> None:
-    """Save feature count and importance summary as JSON."""
+    """Save feature count and importance summary as YAML."""
     low_importance_threshold = 0.001
     n_used = len(feature_names)
     report: dict = {
@@ -275,5 +275,5 @@ def save_feature_report(
         report["n_features_low_importance_lte_0.001"] = n_low
 
     eval_dir.mkdir(parents=True, exist_ok=True)
-    (eval_dir / "feature_report.json").write_text(json.dumps(report, indent=2))
-    logger.info("Saved feature report to %s", eval_dir / "feature_report.json")
+    (eval_dir / "feature_report.yaml").write_text(yaml.dump(report))
+    logger.info("Saved feature report to %s", eval_dir / "feature_report.yaml")

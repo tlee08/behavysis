@@ -3,7 +3,7 @@
 import polars as pl
 from loguru import logger
 
-from behavysis.behaviour_classifier import ClassifierContract, predict_df
+from behavysis.behaviour_classifier import ClassifierContract, predict
 from behavysis.behaviour_classifier.storage import ClassifierFp
 from behavysis.models import ExperimentConfig, ExperimentMetadata, ExtractFeaturesConfig
 from behavysis.schemas import BEHAVIOUR_PREDICTED_SCHEMA
@@ -29,7 +29,7 @@ def classify_behaviour(
         contract = ClassifierContract.read_yaml(clf_proj.contract_fp())
         _validate_feature_contract(feat_cfg, contract)
 
-        behaviour_df_i = predict_df(model_config.contract_fp, features_df)
+        behaviour_df_i = predict(model_config.contract_fp, features_df)
 
         behaviour_df_ls.append(behaviour_df_i)
         logger.info("Completed {} classification.", contract.behaviour_name)

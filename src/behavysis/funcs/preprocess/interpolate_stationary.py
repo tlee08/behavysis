@@ -1,22 +1,4 @@
-"""Functions have the following format.
-
-Parameters
-----------
-dlc_fp : str
-    The input video filepath.
-dst_fp : str
-    The output video filepath.
-config_fp : str
-    The JSON config filepath.
-overwrite : bool
-    Whether to overwrite the output file (if it exists).
-
-Returns:
--------
-str
-    Description of the function's outcome.
-
-"""
+"""Functions have the following format."""
 
 import polars as pl
 from loguru import logger

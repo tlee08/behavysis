@@ -109,14 +109,12 @@ class Experiment:
         """Returns the experiment's metadata."""
         if not self.get_fp(METADATA_DIR).exists():
             return ExperimentMetadata()
-        return ExperimentMetadata.model_validate_json(
-            self.get_fp(METADATA_DIR).read_text(),
-        )
+        return ExperimentMetadata.read_yaml(self.get_fp(METADATA_DIR))
 
     def write_metadata(self, metadata: ExperimentMetadata) -> None:
         """Save the experiment's metadata to disk."""
         self.get_fp(METADATA_DIR).parent.mkdir(parents=True, exist_ok=True)
-        self.get_fp(METADATA_DIR).write_text(metadata.model_dump_json(indent=2))
+        metadata.write_yaml(self.get_fp(METADATA_DIR))
 
     @trace
     def update_config(

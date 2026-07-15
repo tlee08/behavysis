@@ -4,8 +4,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import yaml
 from pydantic import BaseModel, ConfigDict, PositiveFloat, PositiveInt
+
+from behavysis.models._helper import YamlModel
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Config Not Configured Error
@@ -108,7 +109,7 @@ class AnalyseConfig(SubfuncModel):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
-class ExperimentConfig(BaseModel):
+class ExperimentConfig(YamlModel):
     """Experiment Config."""
 
     format_video: FormatVideoConfig | None
@@ -118,16 +119,6 @@ class ExperimentConfig(BaseModel):
     extract_features: ExtractFeaturesConfig | None
     classify_behaviour: list[ClassifyBehaviourConfig] | None
     analyse: AnalyseConfig | None
-
-    @classmethod
-    def read_yaml(cls, fp: Path) -> ExperimentConfig:
-        """Read the config from a yaml file."""
-        return cls.model_validate(yaml.safe_load(fp.read_text()))
-
-    def write_yaml(self, fp: Path) -> None:
-        """Write the config to a yaml file."""
-        fp.parent.mkdir(parents=True, exist_ok=True)
-        fp.write_text(yaml.dump(self.model_dump(), default_flow_style=False))
 
     def require_format_video(self) -> FormatVideoConfig:
         """Require the format_video config."""

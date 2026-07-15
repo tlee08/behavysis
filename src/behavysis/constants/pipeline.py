@@ -17,7 +17,7 @@ ANALYSIS_COMBINED_DIR = "9_analysis_combined"
 
 STAGES = {
     CONFIG_DIR: "yaml",
-    METADATA_DIR: "json",
+    METADATA_DIR: "yaml",
     RAW_VIDEO_DIR: "mp4",
     FORMATTED_VIDEO_DIR: "mp4",
     KEYPOINTS_DIR: DF_IO_FORMAT,

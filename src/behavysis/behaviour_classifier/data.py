@@ -38,7 +38,7 @@ def load_feature_names(x_dir: Path) -> list[str]:
     return [c for c in pl.read_parquet(fp_ls[0]).columns if c != FRAME]
 
 
-def load_training_data(
+def load_all_data(
     x_dir: Path,
     y_dir: Path,
     behaviour_name: str,

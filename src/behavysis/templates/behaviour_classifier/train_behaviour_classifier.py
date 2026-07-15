@@ -216,7 +216,7 @@ def _():
     | `train_eval.parquet` | Raw eval: experiment, frame, y_true, y_prob, y_pred |
     | `test_eval.parquet` | Same for the held-out test split |
     | `feature_importance.png` | Top features by importance |
-    | `feature_report.json` | Feature counts before/after selection |
+    | `feature_report.yaml` | Feature counts before/after selection |
 
     Iterations are numbered — pick the best one by inspecting test_eval.parquet
     metrics, or add your own analysis over the raw eval data.

@@ -275,14 +275,14 @@ Every trained version writes to `versions/{version}/evaluation/`:
 
 | File                             | Contents                                                |
 | -------------------------------- | ------------------------------------------------------- |
-| `{train,val,test}_report.json`   | precision / recall / f1 per split                       |
+| `{train,val,test}_report.yaml`   | precision / recall / f1 per split                       |
 | `{train,val,test}_eval.parquet`  | per-frame prob / pred / actual                          |
 | `{split}_confm.png`              | confusion matrix                                        |
 | `{split}_pcutoffs.png`           | metrics vs probability cutoff — use to choose `pcutoff` |
 | `{split}_logc.png`               | predicted-probability distribution                      |
 | `history.png`, `history.parquet` | train/val loss curve (torch only)                       |
 | `feature_importance.png`         | top features by importance (sklearn)                    |
-| `feature_report.json`            | `n_features_total` vs `n_features_used` after selection |
+| `feature_report.yaml`            | `n_features_total` vs `n_features_used` after selection |
 
 Inspect these — plus each version's `metadata.yaml` (train/val/test F1) and the `overfit_ratio` in `leaderboard.yaml` — before promoting a model to production.
 

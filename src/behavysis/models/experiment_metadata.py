@@ -2,6 +2,8 @@
 
 from pydantic import BaseModel, ConfigDict, PositiveFloat, PositiveInt
 
+from behavysis.models._helper import YamlModel
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # Config Not Configured Error
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -31,7 +33,7 @@ class VideoMetadata(BaseModel):
     total_frames: PositiveInt | None = None
 
 
-class ExperimentMetadata(BaseModel):
+class ExperimentMetadata(YamlModel):
     """Experiment Metadata."""
 
     model_config = ConfigDict(extra="forbid")
