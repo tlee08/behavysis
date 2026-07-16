@@ -10,7 +10,6 @@ import numpy as np
 import pandas as pd
 import polars as pl
 import torch
-from imblearn.under_sampling import RandomUnderSampler
 from sklearn.base import clone
 from sklearn.feature_selection import SelectFromModel
 from sklearn.metrics import precision_recall_curve
@@ -40,7 +39,6 @@ from .data import (
     label_bouts,
     smooth_preds,
     stratified_split_by_group,
-    train_df_resample,
 )
 from .torch._helper import select_features
 
@@ -107,15 +105,12 @@ class SklearnAdapter(BaseAdapter):
         # 2. Sort the df by EXPERIMENT, FRAME. Then compute bout_id
         df = df.sort([EXPERIMENT, FRAME])
         df = label_bouts(df)
-        # 3. Undersample to reduce
-        sampler = RandomUnderSampler(sampling_strategy="auto", random_state=config.seed)
-        sub_df = train_df_resample(df, sampler)
-        # 4. hyperparameter selection on sub_df. CV grouped-by-bout_id
+        # 4. hyperparameter selection on df. CV grouped-by-bout_id
         self.search.refit = False
         self.search.fit(
-            df_get_features(sub_df),
-            df_get_labels(sub_df),
-            groups=sub_df[BOUT_ID].to_numpy(),
+            df_get_features(df),
+            df_get_labels(df),
+            groups=df[BOUT_ID].to_numpy(),
         )
         # Full training stage
         # 5. Make train-val split by bouts (to programatically find best pcutoff)
@@ -279,9 +274,6 @@ class TabPFNAdapter(BaseAdapter):
         # 2. Sort the df by EXPERIMENT, FRAME. Then compute bout_id
         df = df.sort([EXPERIMENT, FRAME])
         df = label_bouts(df)
-        # 3. Undersample to reduce
-        sampler = RandomUnderSampler(sampling_strategy="auto", random_state=config.seed)
-        sub_df = train_df_resample(df, sampler)
         # 4. Init classifier
         self.model = TabPFNClassifier(
             n_estimators=self.n_estimators,
@@ -294,7 +286,7 @@ class TabPFNAdapter(BaseAdapter):
         # 5. Construct pipeline
         self.pipeline = Pipeline([("selector", self.selector), ("clf", self.model)])
         # 6. Fit classifier on sub_df
-        self.pipeline.fit(df_get_features(sub_df), df_get_labels(sub_df))
+        self.pipeline.fit(df_get_features(df), df_get_labels(df))
         # 7. Set pcutoff as hardcoded 0.5 (tabpfn sorts itself out)
         config.pcutoff = 0.5
         self._write_config(config)
