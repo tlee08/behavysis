@@ -38,6 +38,7 @@ with app.setup:
 
 @app.cell
 def _():
+    # NOTE: works really well here but not in classifier... why?
     os.environ["TABPFN_TOKEN"] = "tabpfn_sk_23S3mPIBEbqQE2GeenqDZsaeyyaja27BORrI4rc0K6Q"
     # Option 1: tabpfn_sk_YXNlFdoaMqaPUNFnopfmZEJmZSh7QzhzprsA0xiOGKU
     # Option 2: tabpfn_sk_23S3mPIBEbqQE2GeenqDZsaeyyaja27BORrI4rc0K6Q

@@ -10,14 +10,16 @@ import numpy as np
 import pandas as pd
 import polars as pl
 import torch
+from imblearn.under_sampling import RandomUnderSampler
 from sklearn.base import clone
+from sklearn.feature_selection import SelectFromModel
 from sklearn.metrics import precision_recall_curve
-from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import MinMaxScaler
 from tabpfn import TabPFNClassifier, load_fitted_tabpfn_model, save_fitted_tabpfn_model
 from xgboost import XGBClassifier
 
+from behavysis.behaviour_classifier import smooth_preds
 from behavysis.constants import (
     ACTUAL,
     BEHAVIOUR,
@@ -38,6 +40,7 @@ from .data import (
     df_get_labels,
     label_bouts,
     stratified_split_by_group,
+    train_df_resample,
 )
 from .torch._helper import select_features
 
@@ -71,35 +74,9 @@ class BaseAdapter(ABC):
         Returns per-epoch history (empty for sklearn).
         """
 
+    @abstractmethod
     def predict(self, df: pl.DataFrame) -> pl.DataFrame:
         """Return predicted probabilities + binary preds with smoothing."""
-        config = self._read_config()
-        # Raw model inference — subclass responsibility
-        frame, prob = self._raw_predict(df)
-        # Shared smoothing — per-experiment, uniform moving average
-        if config.smoothing_frames > 0:
-            n = 1 + config.smoothing_frames * 2
-            kernel = np.full(n, 1.0) / n
-            if EXPERIMENT in df.columns:
-                for exp in df[EXPERIMENT].unique():
-                    mask = (df[EXPERIMENT] == exp).to_numpy()
-                    prob[mask] = np.convolve(prob[mask], kernel, mode="same")
-            else:
-                prob = np.convolve(prob, kernel, mode="same")
-        # Shared thresholding + output construction
-        return pl.DataFrame(
-            {
-                FRAME: frame,
-                BEHAVIOUR: config.behaviour_name,
-                PROB: prob,
-                PRED: prob > config.pcutoff,
-            },
-            schema=BEHAVIOUR_PREDICTED_SCHEMA,
-        )
-
-    @abstractmethod
-    def _raw_predict(self, df: pl.DataFrame) -> tuple[pl.Series, Array1D]:
-        """Return (frame_series, raw_probability_array) from model inference."""
 
     @abstractmethod
     def save(self) -> None:
@@ -130,17 +107,9 @@ class SklearnAdapter(BaseAdapter):
         # 2. Sort the df by EXPERIMENT, FRAME. Then compute bout_id
         df = df.sort([EXPERIMENT, FRAME])
         df = label_bouts(df)
-        # 3. Row-level, prevalence-preserving downsample for the search.
-        sub_df = df
-        if len(df) > config.downsample_n:
-            idx = np.arange(len(df))
-            sub_idx, _ = train_test_split(
-                idx,
-                train_size=config.downsample_n,
-                stratify=df_get_labels(df),
-                random_state=config.seed,
-            )
-            sub_df = df[sub_idx]
+        # 3. Undersample to reduce
+        sampler = RandomUnderSampler(sampling_strategy="auto", random_state=config.seed)
+        sub_df = train_df_resample(df, sampler)
         # 4. hyperparameter selection on sub_df. CV grouped-by-bout_id
         self.search.refit = False
         self.search.fit(
@@ -160,10 +129,10 @@ class SklearnAdapter(BaseAdapter):
         # 7. Find best pcutoff with val_idx and update config with best pcutoff value
         # Use per-bouts eval instead of per-frames eval
         y_df = self.predict(df).with_columns(df[EXPERIMENT], df[ACTUAL], df[BOUT_ID])
-        y_df = y_df[val_idx]
-        y_bouts_df = agg_eval_df_by_bouts(y_df)
+        y_val_df = y_df[val_idx]
+        y_val_bouts_df = agg_eval_df_by_bouts(y_val_df)
         _, recall, thresholds = precision_recall_curve(
-            y_bouts_df[ACTUAL], y_bouts_df[PROB], drop_intermediate=True
+            y_val_bouts_df[ACTUAL], y_val_bouts_df[PROB], drop_intermediate=True
         )
         config.pcutoff = float(
             thresholds[(recall[:-1] >= config.target_recall)][-1]
@@ -174,15 +143,28 @@ class SklearnAdapter(BaseAdapter):
         # Return
         return pd.DataFrame(columns=pd.Index(["loss", "vloss"]))
 
-    def _raw_predict(self, df: pl.DataFrame) -> tuple[pl.Series, Array1D]:
+    def predict(self, df: pl.DataFrame) -> pl.DataFrame:
+        """Return predicted probabilities + binary preds with smoothing."""
         # Check model exists
         if self.model is None:
             msg = "model not yet trained."
             raise ValueError(msg)
+        # Get configs
+        config = self._read_config()
         # Predict
         frame = df.get_column(FRAME)
         prob = self.model.predict_proba(df_get_features(df))[:, 1]
-        return frame, prob
+        # Construct df
+        y_df = pl.DataFrame(
+            {
+                FRAME: frame,
+                BEHAVIOUR: config.behaviour_name,
+                PROB: prob,
+                PRED: prob > config.pcutoff,
+            },
+            schema=BEHAVIOUR_PREDICTED_SCHEMA,
+        )
+        return smooth_preds(y_df, config.smoothing_frames, "median")
 
     def save(self) -> None:
         """Save."""
@@ -222,7 +204,7 @@ class XgboostAdapter(SklearnAdapter):
         if self.model is None:
             msg = "model not yet trained."
             raise ValueError(msg)
-        # If clf is XGBoost, must first move to CPU before serialising
+        # clf is XGBoost, must first move to CPU before serialising
         preprocess: Pipeline = Pipeline(self.model.steps[:-1])
         clf: XGBClassifier = self.model.steps[-1][1]
         # Save
@@ -237,14 +219,17 @@ class XgboostAdapter(SklearnAdapter):
 
         Must load XGBoost model as a .ubj so it serialisable to all machines.
         """
-        # Make inst
         model_dir = config_fp.parent
+        # Instatiate
         inst = cls(model_dir / "config.yaml", joblib.load(model_dir / "search.joblib"))
-        # Load and reconstruct the model
+        # Load pipelin
         preprocess: Pipeline = joblib.load(model_dir / "preprocess.joblib")
+        # Load model
         clf = XGBClassifier(device=get_gpu_device())
         clf.load_model(model_dir / "clf.ubj")
+        # Reconstruct pipeline
         inst.model = Pipeline([*preprocess.steps, ("clf", clf)])
+        # Return
         return inst
 
 
@@ -266,7 +251,24 @@ class TabPFNAdapter(BaseAdapter):
         self.n_estimators = n_estimators
         self.device = device
         self.kwargs = kwargs
+        # TODO: hardcoded
+        self.selector = (
+            SelectFromModel(
+                XGBClassifier(
+                    tree_method="hist",
+                    device=get_gpu_device(),
+                    n_estimators=100,
+                    max_depth=4,
+                    n_jobs=-1,
+                    random_state=42,
+                    verbosity=2,
+                ),
+                threshold=-np.inf,
+                max_features=300,
+            ),
+        )
         self.model: TabPFNClassifier | None = None
+        self.pipeline = None
 
     def fit(self, df: pl.DataFrame) -> pd.DataFrame:
         """Fit."""
@@ -277,18 +279,10 @@ class TabPFNAdapter(BaseAdapter):
         # 2. Sort the df by EXPERIMENT, FRAME. Then compute bout_id
         df = df.sort([EXPERIMENT, FRAME])
         df = label_bouts(df)
-        # 3. Row-level, prevalence-preserving downsample for the search.
-        sub_df = df
-        if len(df) > config.downsample_n:
-            idx = np.arange(len(df))
-            sub_idx, _ = train_test_split(
-                idx,
-                train_size=config.downsample_n,
-                stratify=df_get_labels(df),
-                random_state=config.seed,
-            )
-            sub_df = df[sub_idx]
-        # 3. Init classifier
+        # 3. Undersample to reduce
+        sampler = RandomUnderSampler(sampling_strategy="auto", random_state=config.seed)
+        sub_df = train_df_resample(df, sampler)
+        # 4. Init classifier
         self.model = TabPFNClassifier(
             n_estimators=self.n_estimators,
             device=self.device,
@@ -297,23 +291,39 @@ class TabPFNAdapter(BaseAdapter):
             ignore_pretraining_limits=True,
             **self.kwargs,
         )
-        # 4. Fit classifier on sub_df
-        self.model.fit(df_get_features(sub_df), df_get_labels(sub_df))
-        # 5. Set pcutoff as hardcoded 0.5 (tabpfn sorts itself out)
+        # 5. Construct pipeline
+        self.pipeline = Pipeline([("selector", self.selector), ("clf", self.model)])
+        # 6. Fit classifier on sub_df
+        self.pipeline.fit(df_get_features(sub_df), df_get_labels(sub_df))
+        # 7. Set pcutoff as hardcoded 0.5 (tabpfn sorts itself out)
         config.pcutoff = 0.5
         self._write_config(config)
         # Return
         return pd.DataFrame(columns=pd.Index(["loss", "vloss"]))
 
-    def _raw_predict(self, df: pl.DataFrame) -> tuple[pl.Series, Array1D]:
+    def predict(self, df: pl.DataFrame) -> pl.DataFrame:
+        """Return predicted probabilities + binary preds with smoothing."""
         # Check model exists
         if self.model is None:
             msg = "model not yet trained."
             raise ValueError(msg)
+        # Get configs
+        config = self._read_config()
         # Predict
         frame = df.get_column(FRAME)
-        prob = self.model.predict_proba(df_get_features(df))[:, 1]
-        return frame, prob
+        prob = self.pipeline.predict_proba(df_get_features(df))[:, 1]
+        # Construct df
+        y_df = pl.DataFrame(
+            {
+                FRAME: frame,
+                BEHAVIOUR: config.behaviour_name,
+                PROB: prob,
+                PRED: prob > config.pcutoff,
+            },
+            schema=BEHAVIOUR_PREDICTED_SCHEMA,
+        )
+        # Smooth and return
+        return smooth_preds(y_df, config.smoothing_frames, "median")
 
     def save(self) -> None:
         """Save."""
@@ -321,18 +331,21 @@ class TabPFNAdapter(BaseAdapter):
         if self.model is None:
             msg = "model not yet trained."
             raise ValueError(msg)
-        # Save
+        # Save model
         model_dir = self.config_fp.parent
-        save_fitted_tabpfn_model(self.model, str(model_dir / "model.tabpfn_fit"))
+        save_fitted_tabpfn_model(self.model, model_dir / "model.tabpfn_fit")
 
     @classmethod
     def load(cls, config_fp: Path) -> Self:
         """Load."""
         model_dir = config_fp.parent
+        # Instatiate
         inst = cls(config_fp=config_fp)
+        # Load model
         inst.model = load_fitted_tabpfn_model(
-            str(model_dir / "model.tabpfn_fit"), device=inst.device
+            model_dir / "model.tabpfn_fit", device=get_gpu_device()
         )
+        # Return
         return inst
 
 

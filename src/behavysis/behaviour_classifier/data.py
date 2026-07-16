@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 import numpy as np
 import polars as pl
+from imblearn.under_sampling.base import BaseUnderSampler
 from sklearn.model_selection import StratifiedGroupKFold
 
 from behavysis.constants import (
@@ -166,3 +167,58 @@ def df_get_features(df: pl.DataFrame) -> Array2D:
 def df_get_labels(df: pl.DataFrame) -> Array1D:
     """Given a df, return only the labels."""
     return df[ACTUAL].to_numpy()
+
+
+# ── preprocessing ─────────────────────────────────────────────────────────────
+
+
+def train_df_resample(df: pl.DataFrame, rus: BaseUnderSampler) -> pl.DataFrame:
+    """Resample."""
+    # Sample and get sampled IDs
+    idx = np.arange(len(df))
+    idx, _ = rus.fit_resample(idx, df_get_labels(df))
+    # Get sampled df
+    return df[idx]
+
+
+# ── y prob smoothing ──────────────────────────────────────────────────────────
+
+
+def smooth_preds(
+    y_df: pl.DataFrame,
+    smoothing_frames: int,
+    agg_func: Literal["mean", "median"],
+) -> pl.DataFrame:
+    """Smoothing "pred" per-experiment.
+
+    Assumes y_df is sorted with contiguous frames
+    (or contiguous frames within each "experiment").
+    Smoothing frames is either side of current.
+    """
+    # If no smoothing
+    if smoothing_frames <= 0:
+        return y_df
+    # Get window size
+    window_size = 2 * smoothing_frames + 1
+    # Make smoothing agg expression
+    expr = pl.col(PRED)
+    if agg_func == "mean":
+        expr = expr.rolling_mean(
+            window_size=window_size,
+            center=True,
+            min_samples=1,
+        )
+    elif agg_func == "median":
+        expr = expr.rolling_median(
+            window_size=window_size,
+            center=True,
+            min_samples=1,
+        )
+    else:
+        msg = f"Unsupported aggregation: {agg_func}"
+        raise ValueError(msg)
+    # If multiple experiments in df, then group by them
+    if EXPERIMENT in y_df.columns:
+        expr = expr.over(EXPERIMENT)
+    # Compute and return
+    return y_df.with_columns(expr.alias(PRED))
