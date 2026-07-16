@@ -572,9 +572,9 @@ def _compute_movement_sums(
         keys = [f"{indiv}_{bp}_movement" for bp in bodyparts]
         existing = [k for k in keys if k in features]
         if existing:
-            f[f"movement_sum_{indiv}"] = np.sum([features[k] for k in existing], axis=0)
+            f[f"{indiv}_movement_sum"] = np.sum([features[k] for k in existing], axis=0)
 
-    total_keys = [f"movement_sum_{indiv}" for indiv in individuals]
+    total_keys = [f"{indiv}_movement_sum" for indiv in individuals]
     existing_total = [k for k in total_keys if k in f]
     if existing_total:
         f["movement_sum_all"] = np.sum([f[k] for k in existing_total], axis=0)
