@@ -34,6 +34,8 @@ from behavysis.utils import log_file_exists
 
 COUNT = "count"
 
+# TODO: simplify frames -> bouts -> frames transform logic. Use label_bouts logic
+
 
 def vect2bouts(vect: pl.Series, offset: int = 0) -> pl.DataFrame:
     """Convert boolean vector to bouts DataFrame with start, stop, dur columns.

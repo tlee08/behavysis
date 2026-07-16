@@ -36,6 +36,21 @@ ROLL_WINDOW_DIVISORS: list[float] = [
     15,
 ]
 
+AGG_PREFIXES = (
+    "movement_sum_",
+    "cdist_sum_",
+    "angle_sum_",
+    "sum_probabilities",
+)
+AGG_SUFFIXES = (
+    "_hull_perimeter",
+    "_hull_area_change",
+    "_cdist_max",
+    "_cdist_min",
+    "_cdist_mean",
+    "_cdist_sum",
+)
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Vectorized math helpers (generic, reusable)
@@ -80,6 +95,23 @@ def _count_in_ranges(
             np.float64
         )
     return results
+
+
+def _angle3pt(  # noqa: PLR0913
+    ax: Array1D,
+    ay: Array1D,
+    bx: Array1D,
+    by: Array1D,
+    cx: Array1D,
+    cy: Array1D,
+) -> Array1D:
+    """Angle at vertex B in radians, vectorized over frames.
+
+    Returns [0, np.pi].
+    """
+    v1x, v1y = ax - bx, ay - by
+    v2x, v2y = cx - bx, cy - by
+    return np.abs(np.arctan2(v1x * v2y - v1y * v2x, v1x * v2x + v1y * v2y))
 
 
 def _roll_median_mean(
@@ -168,6 +200,7 @@ def extract_features(
         ),
         individuals=cfg.individuals,
         bodyparts=cfg.bodyparts,
+        angles=cfg.angles,
         fps=metadata.require_fps(),
         px_per_mm=metadata.require_px_per_mm(),
     )
@@ -180,10 +213,11 @@ def extract_features(
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
-def compute_features(
+def compute_features(  # noqa: PLR0913
     keypoints_df: pl.DataFrame,
     individuals: list[str],
     bodyparts: list[str],
+    angles: list[tuple[str, str, str]],
     fps: float,
     px_per_mm: float,
 ) -> pl.DataFrame:
@@ -220,14 +254,18 @@ def compute_features(
 
     features: dict[str, Array1D] = {}
 
+    # Raw features
     features |= _compute_within_distances(arrs, individuals, bodyparts, px_per_mm)
     features |= _compute_cross_distances(arrs, individuals, bodyparts, px_per_mm)
     features |= _compute_movements(arrs, individuals, bodyparts, px_per_mm)
     features |= _compute_hull(arrs, individuals, px_per_mm)
     features |= _compute_cdist_stats(arrs, individuals, px_per_mm)
-    features |= _compute_total_movements(features, individuals, bodyparts)
-    features |= _compute_total_cdist(features, individuals)
+    features |= _compute_angles(arrs, individuals, bodyparts, angles)
+    features |= _compute_tortuosity(arrs, individuals, bodyparts, roll_windows)
     features |= _compute_probability(arr_prob)
+    # Derived features
+    features |= _compute_movement_sums(features, individuals, bodyparts)
+    features |= _compute_cdist_sum(features, individuals)
     features |= _compute_rolling(features, roll_windows)
     features |= _compute_deviations(features)
     features |= _compute_percentile_ranks(features)
@@ -451,30 +489,99 @@ def _compute_cdist_stats(
     return f
 
 
-def _compute_total_movements(
+def _compute_angles(
+    arrs: dict[str, Array2D],
+    individuals: list[str],
+    bodyparts: list[str],
+    angle_triples: list[tuple[str, str, str]],
+) -> dict[str, Array1D]:
+    """Columns: `{indiv}_{name}_angle`, `angle_sum_all`."""
+    f: dict[str, Array1D] = {}
+
+    for at in angle_triples:
+        bp_idx = {
+            at[0]: bodyparts.index(at[0]),
+            at[1]: bodyparts.index(at[1]),
+            at[2]: bodyparts.index(at[2]),
+        }
+        for indiv in individuals:
+            arr = arrs[indiv]
+            ax, ay = _get_xy(arr, bp_idx[at[0]])
+            bx, by = _get_xy(arr, bp_idx[at[1]])
+            cx, cy = _get_xy(arr, bp_idx[at[2]])
+            f[f"{indiv}_{at[0]}_{at[1]}_{at[2]}_angle"] = _angle3pt(
+                ax, ay, bx, by, cx, cy
+            )
+
+    angle_keys = [k for k in f if k.endswith("_angle")]
+    if angle_keys:
+        f["angle_sum_all"] = np.sum([f[k] for k in angle_keys], axis=0)
+    return f
+
+
+def _compute_tortuosity(
+    arrs: dict[str, Array2D],
+    individuals: list[str],
+    bodyparts: list[str],
+    roll_windows: list[int],
+) -> dict[str, Array1D]:
+    """Path tortuosity of each bodypart's trajectory per individual.
+
+    Columns: ``{indiv}_{bp}_tortuosity_w{frames}``.
+
+    Measures how much a tracked bodypart's path winds/curves within each
+    rolling time window. Normalised by 2π — 0 means perfectly straight,
+    higher values indicate more winding paths.
+    """
+    f: dict[str, Array1D] = {}
+    for indiv in individuals:
+        arr = arrs[indiv]
+        for bp_i, bp in enumerate(bodyparts):
+            x, y = _get_xy(arr, bp_i)
+            n = len(x)
+            # Per-frame turn angles: angle at point i, vertex at i,
+            # neighbours at i-1 and i+1. angle3pt(prev, vertex, next)
+            turn_angles = _angle3pt(x[:-2], y[:-2], x[1:-1], y[1:-1], x[2:], y[2:])
+            # turn_angles has length n-2; turn_angles[k] corresponds to
+            # frame triplet (k, k+1, k+2), vertex at k+1.
+            cum = np.insert(turn_angles, 0, 0.0).cumsum()
+            for wf in roll_windows:
+                if wf < 3:  # noqa: PLR2004
+                    f[f"{indiv}_{bp}_tortuosity_w{wf}"] = np.zeros(n, dtype=np.float64)
+                    continue
+                win = wf - 2  # number of turn angles in a wf-frame window
+                rolling_sum = cum[win:] - cum[:-win]  # len = n - win
+                tort = rolling_sum / (2.0 * np.pi)
+                result = np.full(n, tort[-1], dtype=np.float64)
+                result[: len(tort)] = tort
+                f[f"{indiv}_{bp}_tortuosity_w{wf}"] = result
+    return f
+
+
+def _compute_movement_sums(
     features: dict[str, Array1D],
     individuals: list[str],
     bodyparts: list[str],
 ) -> dict[str, Array1D]:
     """Sum of all bodypart movements per individual and grand total.
 
-    Columns: ``total_movement_{indiv}``, ``total_movement_all``.
+    Columns: ``movement_sum_{indiv}``, ``movement_sum_all``.
     """
     f: dict[str, Array1D] = {}
     for indiv in individuals:
         keys = [f"{indiv}_{bp}_movement" for bp in bodyparts]
         existing = [k for k in keys if k in features]
         if existing:
-            f[f"total_movement_{indiv}"] = sum(features[k] for k in existing)
+            f[f"movement_sum_{indiv}"] = np.sum([features[k] for k in existing], axis=0)
 
-    total_keys = [f"total_movement_{indiv}" for indiv in individuals]
+    total_keys = [f"movement_sum_{indiv}" for indiv in individuals]
     existing_total = [k for k in total_keys if k in f]
     if existing_total:
-        f["total_movement_all"] = sum(f[k] for k in existing_total)
+        f["movement_sum_all"] = np.sum([f[k] for k in existing_total], axis=0)
     return f
 
 
-def _compute_total_cdist(
+def _compute_cdist_sum(
     features: dict[str, Array1D],
     individuals: list[str],
 ) -> dict[str, Array1D]:
@@ -485,7 +592,7 @@ def _compute_total_cdist(
     keys = [f"{indiv}_cdist_sum" for indiv in individuals]
     existing = [k for k in keys if k in features]
     if existing:
-        return {"cdist_sum_all": sum(features[k] for k in existing)}
+        return {"cdist_sum_all": np.sum([features[k] for k in existing], axis=0)}
     return {}
 
 
@@ -514,24 +621,20 @@ def _compute_rolling(
 
     Columns: ``{base_name}_median/mean_w{frames}``.
 
-    Only applies to base (non-derived) features. Windows are distinct integer
-    frame counts.
+    Rolling is restricted to aggregate features (totals, hull stats, cdist
+    summaries). Per-bodypart-pair distances and individual bodypart movements
+    are excluded — rolling them creates combinatorial noise without signal.
     """
     aggs: dict[str, Array1D] = {}
-
-    exclude = {
-        "low_prob_detections",
-        "sum_probabilities",
-    }
     base_keys = [
         k
         for k in features
         if (
-            not any(k.startswith(p) for p in exclude)
-            and "_median_" not in k
+            "_median_" not in k
             and "_mean_" not in k
             and "_deviation" not in k
             and "_percentile_rank" not in k
+            and (k.startswith(AGG_PREFIXES) or k.endswith(AGG_SUFFIXES))
         )
     ]
 
@@ -551,31 +654,19 @@ def _compute_deviations(
 
     Columns: ``{name}_deviation``.
 
-    Computed for aggregate features (totals, cdist, hull) and rolling means.
+    Computed for aggregate features (totals, cdist, hull, probability)
+    and all rolling mean features.
     """
     aggs: dict[str, Array1D] = {}
-
-    dev_prefixes = (
-        "total_movement",
-        "cdist_sum",
-        "sum_probabilities",
-    )
-    dev_suffixes = (
-        "_hull_perimeter",
-        "_cdist_mean",
-        "_cdist_max",
-        "_cdist_min",
-    )
     for key, val in features.items():
         if "_deviation" in key or "_percentile_rank" in key:
             continue
-        if key.startswith(dev_prefixes) or key.endswith(dev_suffixes):
+        if (
+            key.startswith(AGG_PREFIXES)
+            or key.endswith(AGG_SUFFIXES)
+            or "_mean_" in key
+        ):
             aggs[f"{key}_deviation"] = val.mean() - val
-
-    # Also compute deviations for rolling mean features
-    for key in list(features.keys()):
-        if "_mean_" in key and "_deviation" not in key and "percentile" not in key:
-            aggs[f"{key}_deviation"] = features[key].mean() - features[key]
 
     return aggs
 
@@ -590,12 +681,10 @@ def _compute_percentile_ranks(
     Computed for total movements, cdist sums, and their deviations only.
     """
     aggs: dict[str, Array1D] = {}
-
-    rank_prefixes = ("total_movement", "cdist_sum")
     for key, val in features.items():
         if "_percentile_rank" in key:
             continue
-        if key.startswith(rank_prefixes):
+        if key.startswith(AGG_PREFIXES):
             aggs[f"{key}_percentile_rank"] = _pct_rank(val)
 
     return aggs

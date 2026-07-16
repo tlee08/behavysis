@@ -59,3 +59,10 @@ def _validate_feature_contract(
             f"model={sorted(contract.bodyparts)}"
         )
         raise ValueError(msg)
+    if set(feat_cfg.angles) != set(contract.angles):
+        msg = (
+            f"Angles mismatch for '{contract.behaviour_name}': "
+            f"experiment={sorted(feat_cfg.angles)}, "
+            f"model={sorted(contract.angles)}"
+        )
+        raise ValueError(msg)

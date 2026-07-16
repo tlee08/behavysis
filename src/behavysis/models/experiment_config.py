@@ -88,6 +88,7 @@ class ExtractFeaturesConfig(BaseModel):
 
     individuals: list[str]
     bodyparts: list[str]
+    angles: list[tuple[str, str, str]]
 
 
 class ClassifyBehaviourConfig(BaseModel):
