@@ -19,7 +19,6 @@ from sklearn.preprocessing import MinMaxScaler
 from tabpfn import TabPFNClassifier, load_fitted_tabpfn_model, save_fitted_tabpfn_model
 from xgboost import XGBClassifier
 
-from behavysis.behaviour_classifier import smooth_preds
 from behavysis.constants import (
     ACTUAL,
     BEHAVIOUR,
@@ -39,6 +38,7 @@ from .data import (
     df_get_features,
     df_get_labels,
     label_bouts,
+    smooth_preds,
     stratified_split_by_group,
     train_df_resample,
 )
