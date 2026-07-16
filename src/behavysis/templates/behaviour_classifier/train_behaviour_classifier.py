@@ -71,9 +71,21 @@ def _():
     # experiment's `extract_features` config at inference.
     # `individuals` and `bodyparts` MUST match the source project's
     # `extract_features` config, or inference features will not align.
-    behaviour_name = "attack"
+    behaviour_name = "aggression"
     individuals = ["mouse1marked", "mouse2unmarked"]
-    bodyparts = ["Nose", "BodyCentre", "LeftEar", "RightEar"]
+    bodyparts = [
+        "LeftEar",
+        "RightEar",
+        "Nose",
+        "BodyCentre",
+        "LeftFlankMid",
+        "RightFlankMid",
+        "TailBase1",
+        "TailTip4",
+    ]
+    angles = [
+        ("Nose", "BodyCentre", "TailBase1"),
+    ]
 
     # A behavysis project whose experiments have been processed through the
     # `extract_features` stage — the source of the training features.

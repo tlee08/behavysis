@@ -66,6 +66,8 @@ preprocess:
 extract_features:
   bodyparts: *bpts_all
   individuals: *individuals
+  angles:
+    - [Nose, BodyCentre, TailBase1]
 
 classify_behaviour:
   - clf_fp: /absolute/path/to/behaviour_classifier/contract.yaml
