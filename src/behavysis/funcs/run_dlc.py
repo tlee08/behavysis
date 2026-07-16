@@ -12,8 +12,8 @@ from loguru import logger
 from behavysis.constants import CACHE_DIR, DF_IO_FORMAT
 from behavysis.models import ExperimentConfig
 from behavysis.schemas import KEYPOINTS_SCHEMA, write_df
-from behavysis.transforms.keypoint import convert_raw_dlc_to_keypoints
-from behavysis.utils.template_utils import save_template
+from behavysis.transforms import convert_raw_dlc_to_keypoints
+from behavysis.utils import save_template
 
 DLC_HDF_KEY = "data"
 

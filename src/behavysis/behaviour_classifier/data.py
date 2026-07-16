@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING, Literal
 
 import numpy as np
 import polars as pl
-from imblearn.under_sampling.base import BaseUnderSampler
 from sklearn.model_selection import StratifiedGroupKFold
 
 from behavysis.constants import (
@@ -27,6 +26,8 @@ from behavysis.constants import (
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+    from imblearn.under_sampling.base import BaseUnderSampler
 
 # ── loading ─────────────────────────────────────────────────────
 
@@ -172,16 +173,16 @@ def df_get_labels(df: pl.DataFrame) -> Array1D:
 # ── preprocessing ─────────────────────────────────────────────────────────────
 
 
-def train_df_resample(df: pl.DataFrame, rus: BaseUnderSampler) -> pl.DataFrame:
+def train_df_resample(df: pl.DataFrame, sampler: BaseUnderSampler) -> pl.DataFrame:
     """Resample."""
     # Make idx (has to be in shape (n,1))
     idx = np.arange(len(df)).reshape(1, -1)
     # Sample and get sampled IDs
-    sub_idx, _ = rus.fit_resample(idx, df_get_labels(df))
+    sub_idx, _ = sampler.fit_resample(idx, df_get_labels(df))
     # Convert idx back to shape (n)
     sub_idx = sub_idx.reshape(1)
     # Get sampled df
-    return df[idx]
+    return df[sub_idx]
 
 
 # ── y prob smoothing ──────────────────────────────────────────────────────────

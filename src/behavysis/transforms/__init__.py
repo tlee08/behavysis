@@ -17,7 +17,7 @@ from .behaviour import (
     predicted_to_scored,
     vect2bouts,
 )
-from .keypoint import check_bpts_exist, get_indivs_bpts
+from .keypoint import check_bpts_exist, convert_raw_dlc_to_keypoints, get_indivs_bpts
 
 __all__ = [
     "agg_behaviour",
@@ -25,6 +25,7 @@ __all__ = [
     "boris_to_behaviour",
     "bouts2frames",
     "check_bpts_exist",
+    "convert_raw_dlc_to_keypoints",
     "frames2bouts",
     "get_bouts_struct",
     "get_indivs_bpts",

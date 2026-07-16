@@ -93,5 +93,5 @@ def px_per_mm(
     )
     px_per_mm_val = dist_px / dist_mm
 
-    metadata.px_per_mm = px_per_mm_val
+    metadata.px_per_mm = float(px_per_mm_val)
     return metadata

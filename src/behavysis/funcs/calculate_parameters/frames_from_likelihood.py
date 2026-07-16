@@ -118,8 +118,12 @@ def _calc_exists_from_likelihood(
 
         all_exists = exists if all_exists is None else all_exists & exists
 
-    assert isinstance(all_exists, np.ndarray), "No individuals."
-    assert np.any(all_exists), "The subject was not detected in any frames."
+    if all_exists is None:
+        msg = "No individuals."
+        raise TypeError(msg)
+    if not np.any(all_exists):
+        msg = "The subject was not detected in any frames."
+        raise ValueError(msg)
     true_indices = np.flatnonzero(all_exists)
     start_frame = true_indices[0]
     stop_frame = true_indices[-1]
