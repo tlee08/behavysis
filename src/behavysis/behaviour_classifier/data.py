@@ -174,9 +174,12 @@ def df_get_labels(df: pl.DataFrame) -> Array1D:
 
 def train_df_resample(df: pl.DataFrame, rus: BaseUnderSampler) -> pl.DataFrame:
     """Resample."""
+    # Make idx (has to be in shape (n,1))
+    idx = np.arange(len(df)).reshape(1, -1)
     # Sample and get sampled IDs
-    idx = np.arange(len(df))
-    idx, _ = rus.fit_resample(idx, df_get_labels(df))
+    sub_idx, _ = rus.fit_resample(idx, df_get_labels(df))
+    # Convert idx back to shape (n)
+    sub_idx = sub_idx.reshape(1)
     # Get sampled df
     return df[idx]
 

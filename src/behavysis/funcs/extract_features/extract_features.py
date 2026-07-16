@@ -16,6 +16,7 @@ import numpy as np
 import polars as pl
 from loguru import logger
 from scipy.spatial import ConvexHull
+from scipy.spatial.distance import pdist
 
 from behavysis.transforms.keypoint import check_bpts_exist
 
@@ -71,18 +72,12 @@ def _euclidean(
     px_per_mm: float,
 ) -> Array1D:
     """Vectorized Euclidean distance between two point sets, scaled to mm."""
-    return np.sqrt((ax - bx) ** 2 + (ay - by) ** 2) / px_per_mm
+    return np.hypot(ax - bx, ay - by) / px_per_mm
 
 
 def _movement_frame_to_frame(ax: Array1D, ay: Array1D, px_per_mm: float) -> Array1D:
     """Frame-to-frame Euclidean movement for a single body-part."""
-    ax_shifted = np.empty_like(ax)
-    ay_shifted = np.empty_like(ay)
-    ax_shifted[0] = ax[0]
-    ay_shifted[0] = ay[0]
-    ax_shifted[1:] = ax[:-1]
-    ay_shifted[1:] = ay[:-1]
-    return _euclidean(ax_shifted, ay_shifted, ax, ay, px_per_mm)
+    return np.hypot(np.diff(ax, prepend=ax[0]), np.diff(ay, prepend=ay[0])) / px_per_mm
 
 
 def _hull_perimeter(points: Array2D, px_per_mm: float) -> tuple[float, float]:
@@ -94,12 +89,6 @@ def _hull_perimeter(points: Array2D, px_per_mm: float) -> tuple[float, float]:
         return hull.area / px_per_mm, hull.volume / (px_per_mm**2)
     except Exception:
         return 0.0, 0.0
-
-
-def _cdist(points: Array2D) -> Array2D:
-    """Pairwise Euclidean distances between all points (like scipy cdist)."""
-    diff = points[:, None, :] - points[None, :, :]
-    return np.sqrt((diff**2).sum(axis=-1))
 
 
 def _count_in_ranges(
@@ -470,14 +459,13 @@ def _compute_cdist_stats(
             valid = ~np.isnan(points).any(axis=1)
             pts = points[valid]
             if len(pts) >= 2:  # noqa: PLR2004
-                dists = _cdist(pts)
-                triu = dists[np.triu_indices_from(dists, k=1)]
-                if len(triu) > 0:
-                    triu_mm = triu / px_per_mm
-                    large[frame_i] = np.max(triu_mm)
-                    small[frame_i] = np.min(triu_mm)
-                    mean_[frame_i] = np.mean(triu_mm)
-                    sum_[frame_i] = np.sum(triu_mm)
+                dists = pdist(pts)
+                if len(dists) > 0:
+                    dists_mm = dists / px_per_mm
+                    large[frame_i] = np.max(dists_mm)
+                    small[frame_i] = np.min(dists_mm)
+                    mean_[frame_i] = np.mean(dists_mm)
+                    sum_[frame_i] = np.sum(dists_mm)
         f[f"{indiv}_cdist_max"] = large
         f[f"{indiv}_cdist_min"] = small
         f[f"{indiv}_cdist_mean"] = mean_
@@ -600,11 +588,11 @@ def _compute_deviations(
         "_cdist_max",
         "_cdist_min",
     )
-    for key in features:
+    for key, val in features.items():
         if "_deviation" in key or "_percentile_rank" in key:
             continue
         if key.startswith(dev_prefixes) or key.endswith(dev_suffixes):
-            aggs[f"{key}_deviation"] = features[key].mean() - features[key]
+            aggs[f"{key}_deviation"] = val.mean() - val
 
     # Also compute deviations for rolling mean features
     for key in list(features.keys()):
@@ -626,11 +614,11 @@ def _compute_percentile_ranks(
     aggs: dict[str, Array1D] = {}
 
     rank_prefixes = ("total_movement", "cdist_sum")
-    for key in features:
+    for key, val in features.items():
         if "_percentile_rank" in key:
             continue
         if key.startswith(rank_prefixes):
-            aggs[f"{key}_percentile_rank"] = _pct_rank(features[key])
+            aggs[f"{key}_percentile_rank"] = _pct_rank(val)
 
     return aggs
 
