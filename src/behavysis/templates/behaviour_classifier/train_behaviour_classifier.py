@@ -227,8 +227,8 @@ def _(angles, behaviour_name, bodyparts, contract_fp, individuals):
 
 
 @app.cell
-def _(clf_proj):
-    train_all_models(clf_proj.contract_fp())
+def _(clf_proj, overwrite):
+    train_all_models(clf_proj.contract_fp(), overwrite=overwrite)
     return
 
 
