@@ -31,31 +31,27 @@ with app.setup:
 @app.cell
 def _():
     mo.md("""
-    # Train & Evaluate a behavysis behaviour classifier
+    # Train & Evaluate a behaviour classifier
 
-    A classifier is **self-contained** in its own directory (`clf_dir`). Its
-    name is arbitrary — the behaviour it classifies is declared in the shared
-    `contract.yaml`. The layout is:
+    A self-contained classifier directory. Layout:
 
     ```
     {clf_dir}/
-        contract.yaml               # shared behaviour + feature contract
-        active.yaml                 # {model_name: rf} — which model to use
+        contract.yaml
+        active.yaml                 # {model_name: xgb}
         training_data/
-            5_features_extracted/   # features (from a processed behavysis project)
-            7_behaviour_scored/     # labels  (from BORIS, or a scored project)
+            5_features_extracted/
+            7_behaviour_scored/
         classifiers/
             rf/
-                config.yaml         # TrainingRecipe (hyperparameters)
-                model.joblib        # fitted sklearn Pipeline
-                evaluation/         # plots, eval parquets
-            xgb/
-                ...
-            logreg/
-                ...
+                config.yaml
+                model.joblib
+                evaluation/
+            xgb/ ...
+            logreg/ ...
     ```
 
-    This notebook: **assemble training data → train → evaluate → set active**.
+    **assemble data → train → evaluate → set active**
     """)
     return
 
@@ -70,42 +66,30 @@ def _():
 
 @app.cell
 def _():
-    # The classifier directory (arbitrary name; created if missing).
+    # Classifier root directory.
     clf_dir = Path("/absolute/path/to/behaviour_classifier")
 
-    # The behaviour and the feature contract the classifier is trained on.
-    # These are written once to `contract.yaml` and validated against each
-    # experiment's `extract_features` config at inference.
-    # `individuals` and `bodyparts` MUST match the source project's
-    # `extract_features` config, or inference features will not align.
+    # Behaviour to classify — written to contract.yaml.
+    # individuals, bodyparts, angles MUST match the source project's
+    # extract_features config.
     behaviour_name = "aggression"
     individuals = ["mouse1marked", "mouse2unmarked"]
     bodyparts = [
-        "LeftEar",
-        "RightEar",
-        "Nose",
-        "BodyCentre",
-        "LeftFlankMid",
-        "RightFlankMid",
-        "TailBase1",
-        "TailTip4",
+        "LeftEar", "RightEar", "Nose", "BodyCentre",
+        "LeftFlankMid", "RightFlankMid", "TailBase1", "TailTip4",
     ]
     angles = [
         ("Nose", "BodyCentre", "TailBase1"),
     ]
 
-    # A behavysis project whose experiments have been processed through the
-    # `extract_features` stage — the source of the training features.
+    # Source project (must have completed extract_features stage).
     training_project_dir = Path("/absolute/path/to/behavysis_project")
     names_ls = [i.stem for i in (training_project_dir / "1_raw_videos").iterdir()]
 
-    # BORIS exports: one `{experiment}.tsv` per experiment, holding manual scores.
+    # Directory of BORIS .tsv exports (one per experiment).
     boris_dir = Path("/absolute/path/to/boris_tsvs")
 
-    # Metrics to show in the evaluation summary (after training).
-    # Available: accuracy, precision, recall, f1, roc_auc, pr_auc,
-    #            gini, tp, fp, fn, tn, n, n_positive,
-    #            precision_at_recall_099, precision_at_recall_100
+    # Metrics to show in evaluation summary.
     view_metrics = [
         "accuracy", "precision", "recall", "f1",
         "roc_auc", "pr_auc", "gini",
@@ -137,8 +121,7 @@ def _():
     mo.md("""
     ## 2. Assemble training data
 
-    The classifier's `training_data/` mirrors the pipeline's stage folders.
-    Copy the extracted features from the source project.
+    Copy extracted features from the source project.
     """)
     return
 
@@ -176,13 +159,11 @@ def _():
     mo.md("""
     ### Labels from BORIS
 
-    Most training labels come from **manually scored videos exported from
-    BORIS**. `boris_to_behaviour` converts each `.tsv` into a scored parquet,
-    using the experiment's metadata (fps, start/stop frame) to align frames.
+    Convert BORIS `.tsv` exports into scored parquets, aligned to each
+    experiment's metadata (fps, frame range).
 
-    *(Alternatively, if the source project is already scored, copy its
-    `7_behaviour_scored/*.parquet` into `clf_proj.labels_dir()`
-    instead of running this cell.)*
+    *(If the source project is already scored, copy
+    `7_behaviour_scored/*.parquet` into `clf_proj.labels_dir()` instead.)*
     """)
     return
 
@@ -207,9 +188,7 @@ def _():
     mo.md("""
     ## 3. Write contract and train
 
-    Writes `contract.yaml` then trains every registered model type.
-    Each model gets a named directory (`classifiers/{model_name}/`)
-    with its own `config.yaml`, `model.joblib`, and `evaluation/` folder.
+    Writes `contract.yaml`, then trains every registered model.
     """)
     return
 
@@ -222,13 +201,13 @@ def _(angles, behaviour_name, bodyparts, contract_fp, individuals):
         individuals=individuals,
         bodyparts=bodyparts,
         angles=angles,
-    )
+    ).model_dump()
     return
 
 
 @app.cell
-def _(clf_proj, overwrite):
-    train_all_models(clf_proj.contract_fp(), overwrite=overwrite)
+def _(clf_proj):
+    train_all_models(clf_proj.contract_fp())
     return
 
 
@@ -380,14 +359,6 @@ def _(eval_all):
 
 
 @app.cell
-def _():
-    mo.md("""
-    #### ROC
-    """)
-    return
-
-
-@app.cell
 def _(roc_df):
     if roc_df is not None:
         _diag = (
@@ -411,14 +382,6 @@ def _(roc_df):
 
 
 @app.cell
-def _():
-    mo.md("""
-    #### PR
-    """)
-    return
-
-
-@app.cell
 def _(pr_df):
     if pr_df is not None:
         pr_chart = (
@@ -438,9 +401,7 @@ def _(pr_df):
 
 @app.cell
 def _():
-    mo.md("""
-    ### Bout health & review efficiency
-    """)
+    mo.md("""### Bout health""")
     return
 
 
@@ -468,29 +429,14 @@ def _(eval_all):
 
 
 @app.cell
-def _():
-    mo.md("""
-    **Bout detection quality** (higher is better)
-    """)
-    return
-
-
-@app.cell
 def _(health_df):
     mo.ui.table(health_df, page_size=20) if health_df is not None else None
     return
 
 
 @app.cell
-def _():
-    mo.md("""
-    **Review efficiency** = predicted-positive / true-positive. Closer to 1.0 = fewer false positives to review.
-    """)
-    return
-
-
-@app.cell
 def _(eff_df):
+    mo.md("**Review efficiency** = pred_pos / true_pos")
     mo.ui.table(eff_df, page_size=20) if eff_df is not None else None
     return
 
@@ -527,9 +473,7 @@ def _():
     mo.md("""
     ## 5. Set the active model
 
-    ``promote_best`` (below) picks the best model automatically based on
-    the contract's ``eval_metric`` and writes ``active.yaml``.
-
+    ``promote_best`` picks the best model and writes ``active.yaml``.
     Or edit by hand:
 
     ```yaml
@@ -548,10 +492,9 @@ def _(clf_proj):
 @app.cell
 def _():
     mo.md("""
-    ## 6. Use the classifier in a pipeline
+    ## 6. Use in a pipeline
 
-    Point an experiment's `classify_behaviour` config at the classifier root
-    (where `active.yaml` and `contract.yaml` live):
+    Add to an experiment's config:
 
     ```yaml
     classify_behaviour:
@@ -560,9 +503,6 @@ def _():
             min_empty_window_secs: 0.2
             sub_behaviour: []
     ```
-
-    The behaviour name, feature contract, and active model are all resolved
-    automatically from the classifier directory.
     """)
     return
 
