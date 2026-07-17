@@ -165,9 +165,9 @@ def agg_eval_df_by_bouts(df: pl.DataFrame) -> pl.DataFrame:
         .group_by(BOUT_ID)
         .agg(
             pl.col(ACTUAL).max(),
-            pl.col(PROB).max().alias(f"{PROB}_max"),
+            pl.col(PROB).max(),
             pl.col(PROB).mean().alias(f"{PROB}_mean"),
-            pl.col(PRED).max().alias(f"{PRED}_max"),
+            pl.col(PRED).max(),
             pl.col(PRED).mean().alias(f"{PRED}_mean"),
             pl.len().alias("bout_n_frames"),
         )

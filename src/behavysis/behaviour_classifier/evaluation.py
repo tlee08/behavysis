@@ -281,7 +281,7 @@ def make_eval_result(splits: dict[str, pl.DataFrame]) -> EvalResult:
             _name: _report(
                 _df[ACTUAL].to_numpy(), _df[PROB].to_numpy(), _df[PRED].to_numpy()
             )
-            for _name, (_df) in _splits_data.items()
+            for _name, _df in _splits_data.items()
         }
         # Make eval dataframes
         res_df[f"{_splits_name}_eval_df"] = pl.concat(
