@@ -37,7 +37,7 @@ from .data import (
     df_get_features,
     df_get_labels,
     label_bouts,
-    smooth_preds,
+    smooth_prob,
     stratified_split_by_group,
 )
 from .torch._helper import select_features
@@ -159,7 +159,7 @@ class SklearnAdapter(BaseAdapter):
             },
             schema=BEHAVIOUR_PREDICTED_SCHEMA,
         )
-        return smooth_preds(y_df, config.smoothing_frames, "median")
+        return smooth_prob(y_df, config.smoothing_frames, "median")
 
     def save(self) -> None:
         """Save."""
@@ -270,12 +270,6 @@ class TabpfnAdapter(BaseAdapter):
         config = self._read_config()
         # Predict (in batches to avoid GPU OOM)
         frame = df.get_column(FRAME)
-        # chunk_size = 50_000
-        # prob = np.zeros(df.shape[0])
-        # for i in range(0, df.shape[0], chunk_size):
-        #     prob[i : i + chunk_size] = self.model.predict_proba(
-        #         df_get_features(df)[i : i + chunk_size]
-        #     )[:, 1]
         prob = self.model.predict_proba(df_get_features(df))[:, 1]
         # Construct df
         y_df = pl.DataFrame(
@@ -291,7 +285,7 @@ class TabpfnAdapter(BaseAdapter):
         torch.cuda.empty_cache()
         gc.collect()
         # Smooth and return
-        return smooth_preds(y_df, config.smoothing_frames, "median")
+        return smooth_prob(y_df, config.smoothing_frames, "median")
 
     def save(self) -> None:
         """Save."""

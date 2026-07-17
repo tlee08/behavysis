@@ -188,12 +188,12 @@ def df_resample(df: pl.DataFrame, resampler: BaseUnderSampler) -> pl.DataFrame:
 # ── y prob smoothing ──────────────────────────────────────────────────────────
 
 
-def smooth_preds(
+def smooth_prob(
     y_df: pl.DataFrame,
     smoothing_frames: int,
     agg_func: Literal["mean", "median"],
 ) -> pl.DataFrame:
-    """Smoothing "pred" per-experiment.
+    """Smoothing "prob" per-experiment.
 
     Assumes y_df is sorted with contiguous frames
     (or contiguous frames within each "experiment").
@@ -205,7 +205,7 @@ def smooth_preds(
     # Get window size
     window_size = 2 * smoothing_frames + 1
     # Make smoothing agg expression
-    expr = pl.col(PRED)
+    expr = pl.col(PROB)
     if agg_func == "mean":
         expr = expr.rolling_mean(
             window_size=window_size,
@@ -225,4 +225,4 @@ def smooth_preds(
     if EXPERIMENT in y_df.columns:
         expr = expr.over(EXPERIMENT)
     # Compute and return
-    return y_df.with_columns(expr.alias(PRED))
+    return y_df.with_columns(expr)

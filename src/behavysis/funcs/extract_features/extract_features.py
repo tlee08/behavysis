@@ -39,6 +39,7 @@ ROLL_WINDOW_DIVISORS: list[float] = [
 AGG_PREFIXES = (
     "movement_sum_",
     "cdist_sum_",
+    "centroid_movement_",
     "angle_sum_",
     "sum_probabilities",
 )
@@ -80,7 +81,7 @@ def _hull_perimeter(points: Array2D, px_per_mm: float) -> tuple[float, float]:
     try:
         hull = ConvexHull(points)
         return hull.area / px_per_mm, hull.volume / (px_per_mm**2)
-    except Exception:
+    except Exception:  # noqa: BLE001
         return 0.0, 0.0
 
 
@@ -260,6 +261,7 @@ def compute_features(  # noqa: PLR0913
     features |= _compute_movements(arrs, individuals, bodyparts, px_per_mm)
     features |= _compute_hull(arrs, individuals, px_per_mm)
     features |= _compute_cdist_stats(arrs, individuals, px_per_mm)
+    features |= _compute_centroid_movements(arrs, individuals, px_per_mm)
     features |= _compute_angles(arrs, individuals, bodyparts, angles)
     features |= _compute_tortuosity(arrs, individuals, bodyparts, roll_windows)
     features |= _compute_probability(arr_prob)
@@ -486,6 +488,28 @@ def _compute_cdist_stats(
         f[f"{indiv}_cdist_min"] = small
         f[f"{indiv}_cdist_mean"] = mean_
         f[f"{indiv}_cdist_sum"] = sum_
+    return f
+
+
+def _compute_centroid_movements(
+    arrs: dict[str, Array2D],
+    individuals: list[str],
+    px_per_mm: float,
+) -> dict[str, Array1D]:
+    """Centroid movement from mean of all bodypart positions per individual.
+
+    Columns: ``{indiv}_centroid_movement``, ``centroid_movement_all``.
+    """
+    f: dict[str, Array1D] = {}
+    for indiv in individuals:
+        arr = arrs[indiv]
+        # mean position across bodyparts: (n_frames, 2)
+        cx = arr[:, 0::2].mean(axis=1)
+        cy = arr[:, 1::2].mean(axis=1)
+        f[f"{indiv}_centroid_movement"] = _movement_frame_to_frame(cx, cy, px_per_mm)
+
+    all_keys = [f"{indiv}_centroid_movement" for indiv in individuals]
+    f["centroid_movement_all"] = np.sum([f[k] for k in all_keys], axis=0)
     return f
 
 

@@ -452,18 +452,6 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
             "SUBSAMPLE_SAMPLES": 100_000,
         },
     ),
-    "tabpfn_large": lambda config_fp: TabpfnAdapter(
-        config_fp=config_fp,
-        n_estimators=32,
-        balance_probabilities=True,
-        device=get_gpu_device(),
-        ignore_pretraining_limits=True,
-        fit_mode="fit_with_cache",
-        random_state=42,
-        inference_config={
-            "SUBSAMPLE_SAMPLES": 100_000,
-        },
-    ),
 }
 
 # ── registry ─────────────────────────────────────────────────────────

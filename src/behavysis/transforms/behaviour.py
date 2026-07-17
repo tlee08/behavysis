@@ -84,6 +84,7 @@ def predicted_to_scored(
     pl.DataFrame
         Scored behaviour DataFrame with pred, actual, and sub_behaviour columns.
     """
+    # TODO: also return column schema for data validation later
     result_df = df.select([FRAME, BEHAVIOUR, PRED])
     result_df = result_df.with_columns(
         pl.when(pl.col(PRED) == TRUE_POS)

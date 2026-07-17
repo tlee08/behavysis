@@ -32,7 +32,7 @@ if TYPE_CHECKING:
 # ── initialising ─────────────────────────────────────────────────────
 
 
-def write_contract(
+def write_contract(  # noqa: PLR0913
     contract_fp: Path,
     behaviour_name: str,
     individuals: list[str],
@@ -147,16 +147,14 @@ def train_model(
     # Evaluate
     eval_dir.mkdir(parents=True, exist_ok=True)
     # Predictions
-    eval_train_df = adapter.predict(train_df).with_columns(
+    adapter.predict(train_df).with_columns(
         train_df[EXPERIMENT], train_df[ACTUAL]
-    )
-    eval_train_df.write_parquet(eval_dir / "train_eval.parquet")
-    eval_test_df = adapter.predict(test_df).with_columns(
+    ).write_parquet(eval_dir / "train_eval.parquet")
+    adapter.predict(test_df).with_columns(
         test_df[EXPERIMENT], test_df[ACTUAL]
-    )
-    eval_test_df.write_parquet(eval_dir / "test_eval.parquet")
+    ).write_parquet(eval_dir / "test_eval.parquet")
     # Further evaluation
-    res = make_eval_result({"train": eval_train_df, "test": eval_test_df})
+    res = make_eval_result_choose_model(contract_fp, model_name)
     # Save. Only report and charts, not df
     for _name, _report in res["report"].items():
         (eval_dir / f"{_name}.yaml").write_text(yaml.dump(_report))
@@ -258,8 +256,10 @@ def make_eval_result_choose_model(contract_fp: Path, model_name: str) -> EvalRes
     # Get filepaths
     clf_proj = ClassifierFp(contract_fp.parent)
     eval_dir = clf_proj.eval_dir(model_name)
-    # Read raw eval data
-    eval_train_df = pl.read_parquet(eval_dir / "train_eval.parquet")
-    eval_test_df = pl.read_parquet(eval_dir / "test_eval.parquet")
-    # Make evaluation
-    return make_eval_result({"train": eval_train_df, "test": eval_test_df})
+    # Read raw eval data and make evaluation
+    return make_eval_result(
+        {
+            "train": pl.read_parquet(eval_dir / "train_eval.parquet"),
+            "test": pl.read_parquet(eval_dir / "test_eval.parquet"),
+        }
+    )
