@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import gc
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, ClassVar
 
@@ -232,22 +233,15 @@ class TabpfnAdapter(BaseAdapter):
 
     framework: ClassVar[str] = "tabpfn"
 
-    def __init__(
-        self,
-        config_fp: Path,
-        device: str = "cuda",
-        **kwargs,
-    ) -> None:
+    def __init__(self, config_fp: Path, **kwargs) -> None:
         """Init."""
         self.config_fp = config_fp
         # Store hyperparams
-        self.device = device
         self.kwargs = kwargs
         self.model: TabPFNClassifier | None = None
 
     def fit(self, df: pl.DataFrame) -> pd.DataFrame:
         """Fit."""
-        # TODO: figure out how to free GPU memory
         # 1. Read config
         config = self._read_config()
         # Full training stage. No hyperparameter tuning
@@ -256,9 +250,6 @@ class TabpfnAdapter(BaseAdapter):
         df = label_bouts(df)
         # 3. Init classifier
         self.model = TabPFNClassifier(
-            device=self.device,
-            random_state=config.seed,
-            ignore_pretraining_limits=True,
             **self.kwargs,
         )
         # 4. Fit classifier on sub_df
@@ -296,6 +287,9 @@ class TabpfnAdapter(BaseAdapter):
             },
             schema=BEHAVIOUR_PREDICTED_SCHEMA,
         )
+        # Clear GPU memory
+        torch.cuda.empty_cache()
+        gc.collect()
         # Smooth and return
         return smooth_preds(y_df, config.smoothing_frames, "median")
 
