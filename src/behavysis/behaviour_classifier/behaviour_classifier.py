@@ -169,7 +169,7 @@ def train_model(
 def train_all_models(contract_fp: Path, *, overwrite: bool = False) -> list[Path]:
     """Train the routine model set."""
     return [
-        pass_exception(trace(train_model))(contract_fp, model_name, overwrite)
+        pass_exception(trace(train_model))(contract_fp, model_name, overwrite=overwrite)
         for model_name in MODEL_REGISTRY
     ]
 
