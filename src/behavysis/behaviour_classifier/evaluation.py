@@ -216,14 +216,14 @@ def _bout_health(bout_df: pl.DataFrame) -> dict[str, float]:
     bout_detection_rate_50pct : float
         Fraction of real behavioural bouts (``ACTUAL.max() == 1``)
         where the model predicts positive on >= 50 % of frames
-        (``PRED_mean >= 0.5``).  A stricter alternative to the raw
+        (``pred_mean >= 0.5``).  A stricter alternative to the raw
         bout recall which only requires a single overlapping frame.
     bout_detection_rate_any : float
         Fraction of real bouts with at least one predicted positive
         frame (``PRED.max() == 1``).  Identical to bout-level recall
         from the standard report; included here for convenience.
     mean_coverage : float
-        Mean ``PRED_mean`` across real bouts.  If this is 0.85, the
+        Mean ``pred_mean`` across real bouts.  If this is 0.85, the
         typical real behavioural episode has 85 % of its frames caught
         by the classifier.
     fragmentation : float
@@ -247,11 +247,11 @@ def _bout_health(bout_df: pl.DataFrame) -> dict[str, float]:
         if n_real > 0
         else 0.0,
         "bout_detection_rate_50pct": float(
-            real_bouts.select((pl.col("PRED_mean") >= 0.5).mean()).item()  # noqa: PLR2004
+            real_bouts.select((pl.col(f"{PRED}_mean") >= 0.5).mean()).item()  # noqa: PLR2004
         )
         if n_real > 0
         else 0.0,
-        "mean_coverage": float(real_bouts.select(pl.col("PRED_mean").mean()).item())
+        "mean_coverage": float(real_bouts.select(pl.col(f"{PRED}_mean").mean()).item())
         if n_real > 0
         else 0.0,
         "fragmentation": n_pred / n_real if n_real > 0 else 0.0,
