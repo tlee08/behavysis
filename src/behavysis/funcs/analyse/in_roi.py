@@ -28,7 +28,7 @@ class InRoiConfig(BaseModel):
     bodyparts: list[str]
     roi_name: str
     is_in: bool = True
-    padding_mm: float = 0.0
+    padding_mm: float
 
 
 SPACING = 30
@@ -174,7 +174,7 @@ def in_roi(
     return results
 
 
-def _make_location_scatterplot(
+def _make_location_scatterplot(  # noqa: PLR0913
     analysis_df: pl.DataFrame,
     corners_df: pl.DataFrame,
     avg_positions: dict[str, pl.DataFrame],

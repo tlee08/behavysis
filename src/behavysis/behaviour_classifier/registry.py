@@ -22,7 +22,7 @@ from xgboost import XGBClassifier
 
 from behavysis.utils import get_gpu_device
 
-from .adapter import BaseAdapter, SklearnAdapter, TabPFNAdapter
+from .adapter import BaseAdapter, SklearnAdapter, TabpfnAdapter
 
 # ── registry ─────────────────────────────────────────────────────────
 
@@ -440,17 +440,29 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
             verbose=3,
         ),
     ),
-    "tabpfn": lambda config_fp: TabPFNAdapter(
+    "tabpfn": lambda config_fp: TabpfnAdapter(
         config_fp=config_fp,
         n_estimators=8,
-        device=get_gpu_device(),
         balance_probabilities=True,
+        device=get_gpu_device(),
+        ignore_pretraining_limits=True,
+        fit_mode="fit_with_cache",
+        random_state=42,
+        inference_config={
+            "SUBSAMPLE_SAMPLES": 100_000,
+        },
     ),
-    "tabpfn_large": lambda config_fp: TabPFNAdapter(
+    "tabpfn_large": lambda config_fp: TabpfnAdapter(
         config_fp=config_fp,
         n_estimators=32,
-        device=get_gpu_device(),
         balance_probabilities=True,
+        device=get_gpu_device(),
+        ignore_pretraining_limits=True,
+        fit_mode="fit_with_cache",
+        random_state=42,
+        inference_config={
+            "SUBSAMPLE_SAMPLES": 100_000,
+        },
     ),
 }
 

@@ -26,7 +26,7 @@ class SocialDistanceConfig(BaseModel):
     """SocialDistanceConfig."""
 
     bodyparts: list[str]
-    smoothing_sec: PositiveFloat = 1.0
+    smoothing_sec: PositiveFloat
 
 
 def social_distance(
@@ -45,7 +45,9 @@ def social_distance(
 
     check_bpts_exist(keypoints_df, bpts)
     indivs, _ = get_indivs_bpts(keypoints_df)
-    assert len(indivs) >= 2, "Social distance requires at least 2 individuals."
+    if len(indivs) < 2:  # noqa: PLR2004
+        msg = "Social distance requires at least 2 individuals."
+        raise ValueError(msg)
 
     indiv_a, indiv_b = indivs[0], indivs[1]
     pair_name = f"{indiv_a}_{indiv_b}"

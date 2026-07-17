@@ -10,7 +10,6 @@ import numpy as np
 import pandas as pd
 import polars as pl
 import torch
-from imblearn.under_sampling import RandomUnderSampler
 from sklearn.base import clone
 from sklearn.metrics import precision_recall_curve
 from sklearn.pipeline import Pipeline
@@ -36,7 +35,6 @@ from .data import (
     agg_eval_df_by_bouts,
     df_get_features,
     df_get_labels,
-    df_resample,
     label_bouts,
     smooth_preds,
     stratified_split_by_group,
@@ -229,7 +227,7 @@ class XgboostAdapter(SklearnAdapter):
         return inst
 
 
-class TabPFNAdapter(BaseAdapter):
+class TabpfnAdapter(BaseAdapter):
     """Adapter for TabPFN."""
 
     framework: ClassVar[str] = "tabpfn"
@@ -237,14 +235,12 @@ class TabPFNAdapter(BaseAdapter):
     def __init__(
         self,
         config_fp: Path,
-        n_estimators: int = 8,
         device: str = "cuda",
         **kwargs,
     ) -> None:
         """Init."""
         self.config_fp = config_fp
         # Store hyperparams
-        self.n_estimators = n_estimators
         self.device = device
         self.kwargs = kwargs
         self.model: TabPFNClassifier | None = None
@@ -258,21 +254,16 @@ class TabPFNAdapter(BaseAdapter):
         # 2. Sort the df by EXPERIMENT, FRAME. Then compute bout_id
         df = df.sort([EXPERIMENT, FRAME])
         df = label_bouts(df)
-        # 3. Resample
-        resampler = RandomUnderSampler(sampling_strategy="auto", random_state=42)
-        sub_df = df_resample(df, resampler)
-        # 4. Init classifier
+        # 3. Init classifier
         self.model = TabPFNClassifier(
-            n_estimators=self.n_estimators,
             device=self.device,
             random_state=config.seed,
-            fit_mode="fit_with_cache",
             ignore_pretraining_limits=True,
             **self.kwargs,
         )
-        # 6. Fit classifier on sub_df
-        self.model.fit(df_get_features(sub_df), df_get_labels(sub_df))
-        # 7. Set pcutoff as hardcoded 0.5 (tabpfn sorts itself out)
+        # 4. Fit classifier on sub_df
+        self.model.fit(df_get_features(df), df_get_labels(df))
+        # 5. Set pcutoff as hardcoded 0.5 (tabpfn sorts itself out)
         config.pcutoff = 0.5
         self._write_config(config)
         # Return
@@ -286,9 +277,15 @@ class TabPFNAdapter(BaseAdapter):
             raise ValueError(msg)
         # Get configs
         config = self._read_config()
-        # Predict
+        # Predict (in batches to avoid GPU OOM)
         frame = df.get_column(FRAME)
-        prob = self.model.predict_proba(df_get_features(df))[:, 1]
+        chunk_size = 5000
+        prob = np.zeros(df.shape[0])
+        for i in range(0, df.shape[0], chunk_size):
+            prob[i : i + chunk_size] = self.model.predict_proba(
+                df_get_features(df)[i : i + chunk_size]
+            )[:, 1]
+        # prob = self.model.predict_proba(df_get_features(df))[:, 1]
         # Construct df
         y_df = pl.DataFrame(
             {
@@ -402,7 +399,7 @@ class TorchAdapter(BaseAdapter):
 MODEL_TYPES_TO_CLASS: dict[str, type[BaseAdapter]] = {
     "sklearn": SklearnAdapter,
     "xgboost": XgboostAdapter,
-    "tabpfn": TabPFNAdapter,
+    "tabpfn": TabpfnAdapter,
     "torch": TorchAdapter,
 }
 

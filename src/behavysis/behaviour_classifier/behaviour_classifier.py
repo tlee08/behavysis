@@ -37,6 +37,7 @@ def write_contract(
     behaviour_name: str,
     individuals: list[str],
     bodyparts: list[str],
+    angles: list[tuple[str, str, str]],
     *,
     overwrite: bool = False,
 ) -> ClassifierContract:
@@ -47,6 +48,7 @@ def write_contract(
             behaviour_name=behaviour_name,
             individuals=individuals,
             bodyparts=bodyparts,
+            angles=angles,
         )
         contract.write_yaml(contract_fp)
     # Read

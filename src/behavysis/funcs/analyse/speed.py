@@ -25,7 +25,7 @@ class SpeedConfig(BaseModel):
     """SpeedConfig."""
 
     bodyparts: list[str]
-    smoothing_sec: PositiveFloat = 1.0
+    smoothing_sec: PositiveFloat
 
 
 def speed(
