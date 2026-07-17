@@ -18,8 +18,8 @@ class PxPerMmConfig(BaseModel):
 
     pt_a: str
     pt_b: str
-    dist_mm: PositiveFloat = 400.0
-    pcutoff: PositiveFloat = 0.5
+    dist_mm: PositiveFloat
+    pcutoff: PositiveFloat
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

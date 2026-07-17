@@ -17,8 +17,8 @@ class FromLikelihoodConfig(BaseModel):
     """FromLikelihoodConfig."""
 
     bodyparts: list[str]
-    window_sec: PositiveFloat = 1.0
-    pcutoff: PositiveFloat = 0.8
+    window_sec: PositiveFloat
+    pcutoff: PositiveFloat
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

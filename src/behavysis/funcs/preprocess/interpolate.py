@@ -13,7 +13,7 @@ from behavysis.models import ExperimentConfig, ExperimentMetadata
 class InterpolateConfig(BaseModel):
     """InterpolateConfig."""
 
-    pcutoff: PositiveFloat = 0.5
+    pcutoff: PositiveFloat
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

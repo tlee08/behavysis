@@ -16,10 +16,10 @@ class InterpolateStationaryConfig(BaseModel):
     """InterpolateStationaryConfig."""
 
     bodypart: str = "bodypart"
-    pcutoff: PositiveFloat = 0.8
-    pcutoff_all: PositiveFloat = 0.6
-    x: PositiveInt = 0
-    y: PositiveInt = 0
+    pcutoff: PositiveFloat
+    pcutoff_all: PositiveFloat
+    x: PositiveInt
+    y: PositiveInt
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
