@@ -253,7 +253,7 @@ def predict(
 # ── other helpers ─────────────────────────────────────────────────
 
 
-def make_eval_report_choose_model(contract_fp: Path, model_name: str) -> EvalResult:
+def make_eval_result_choose_model(contract_fp: Path, model_name: str) -> EvalResult:
     """Run make_eval_report by giving a model's filepath."""
     # Get filepaths
     clf_proj = ClassifierFp(contract_fp.parent)

@@ -2,7 +2,7 @@
 
 from .behaviour_classifier import (
     list_models,
-    make_eval_report_choose_model,
+    make_eval_result_choose_model,
     predict,
     promote_best,
     train_all_models,
@@ -28,8 +28,8 @@ __all__ = [
     "list_models",
     "load_all_data",
     "load_feature_names",
-    "make_eval_report",
-    "make_eval_report_choose_model",
+    "make_eval_result",
+    "make_eval_result_choose_model",
     "predict",
     "promote_best",
     "smooth_preds",
