@@ -40,16 +40,20 @@ AGG_PREFIXES = (
     "movement_sum_",
     "cdist_sum_",
     "centroid_movement_",
+    "centroid_distance_",
     "angle_sum_",
     "sum_probabilities",
 )
 AGG_SUFFIXES = (
     "_hull_perimeter",
     "_hull_area_change",
+    "_movement_sum",
     "_cdist_max",
     "_cdist_min",
     "_cdist_mean",
     "_cdist_sum",
+    "_centroid_movement",
+    "_centroid_distance",
 )
 
 
@@ -262,6 +266,7 @@ def compute_features(  # noqa: PLR0913
     features |= _compute_hull(arrs, individuals, px_per_mm)
     features |= _compute_cdist_stats(arrs, individuals, px_per_mm)
     features |= _compute_centroid_movements(arrs, individuals, px_per_mm)
+    features |= _compute_centroid_distance(arrs, individuals, px_per_mm)
     features |= _compute_angles(arrs, individuals, bodyparts, angles)
     features |= _compute_tortuosity(arrs, individuals, bodyparts, roll_windows)
     features |= _compute_probability(arr_prob)
@@ -510,6 +515,44 @@ def _compute_centroid_movements(
 
     all_keys = [f"{indiv}_centroid_movement" for indiv in individuals]
     f["centroid_movement_all"] = np.sum([f[k] for k in all_keys], axis=0)
+    return f
+
+
+def _compute_centroid_distance(
+    arrs: dict[str, Array2D],
+    individuals: list[str],
+    px_per_mm: float,
+) -> dict[str, Array1D]:
+    """Inter-individual centroid distances.
+
+    The centroid of each individual is the arithmetic mean of all its
+    bodypart positions at each frame.  Pairwise distances between these
+    centroids measure gross inter-animal proximity — the single most
+    informative social-distance signal in SimBA and the behavioural
+    biology literature.
+
+    Columns:
+    ``{ind_a}_{ind_b}_centroid_distance`` — per-pair distance.
+    ``centroid_distance_all`` — sum over all pairs.
+    """
+    f: dict[str, Array1D] = {}
+    n = len(individuals)
+    if n < 2:  # noqa: PLR2004
+        return f
+
+    for (_i, ind_a), (_j, ind_b) in combinations(enumerate(individuals), 2):
+        arr_a, arr_b = arrs[ind_a], arrs[ind_b]
+        cx_a = arr_a[:, 0::2].mean(axis=1)
+        cy_a = arr_a[:, 1::2].mean(axis=1)
+        cx_b = arr_b[:, 0::2].mean(axis=1)
+        cy_b = arr_b[:, 1::2].mean(axis=1)
+        f[f"{ind_a}_{ind_b}_centroid_distance"] = _euclidean(
+            cx_a, cy_a, cx_b, cy_b, px_per_mm
+        )
+
+    keys = [k for k in f if k.endswith("_centroid_distance")]
+    if keys:
+        f["centroid_distance_all"] = np.sum([f[k] for k in keys], axis=0)
     return f
 
 
