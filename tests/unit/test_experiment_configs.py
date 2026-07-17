@@ -13,6 +13,7 @@ class TestExtractFeaturesConfig:
         cfg = ExtractFeaturesConfig(
             individuals=["mouse1marked", "mouse2unmarked"],
             bodyparts=["Nose", "LeftEar", "TailBase1"],
+            angles=[],
         )
         assert cfg.individuals == ["mouse1marked", "mouse2unmarked"]
         assert cfg.bodyparts == ["Nose", "LeftEar", "TailBase1"]

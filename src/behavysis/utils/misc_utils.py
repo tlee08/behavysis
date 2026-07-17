@@ -1,6 +1,7 @@
 """Miscellaneous utility functions."""
 
 import contextlib
+import gc
 from collections.abc import Callable
 from functools import wraps
 
@@ -34,3 +35,19 @@ def get_gpu_device() -> str:
 def get_gpu_device_ids() -> list[int]:
     """Return GPU device IDs."""
     return list(range(torch.cuda.device_count()))
+
+
+def clean_memory(_func: Callable) -> Callable:
+    """Clear the GPU cache and garbage collector."""
+
+    @wraps(_func)
+    def wrapper(*args: object, **kwargs: object) -> object:
+        # Run func
+        res = _func(*args, **kwargs)
+        # Clean
+        torch.cuda.empty_cache()
+        gc.collect()
+        # Return
+        return res
+
+    return wrapper

@@ -140,14 +140,36 @@ def stratified_split_by_group(
 
 
 def agg_eval_df_by_bouts(df: pl.DataFrame) -> pl.DataFrame:
-    """Aggregate an eval_df by bouts."""
+    """Aggregate per-frame eval data to per-bout rows.
+
+    Each row represents one contiguous run (bout) of ACTUAL labels.  The
+    aggregation preserves:
+
+    * ``ACTUAL.max()`` — whether the bout is a real behavioural episode (1)
+        or a non-behaviour gap (0).  This is the ground-truth label at bout
+        level.
+    * ``PROB.max()`` / ``PROB.mean()`` — peak and average model confidence
+        across the bout.  Useful for ROC/PR curves (max) and for gauging
+        how consistently the model recognises the behaviour (mean).
+    * ``PRED.max()`` — whether *any* frame in the bout was predicted
+        positive (standard SimBA bout-level match).
+    * ``PRED.mean()`` — fraction of bout frames predicted positive.
+        Answers: "how much of this bout did the model actually cover?"
+        A bout with ``PRED.mean() < 0.5`` means the model missed more than
+        half its frames, even if ``PRED.max() == 1``.  This enables
+        IoU-style evaluation with custom coverage thresholds.
+    * ``bout_n_frames`` — bout duration in frames.
+    """
     return (
         label_bouts(df.sort([pl.col(EXPERIMENT), pl.col(FRAME)]))
         .group_by(BOUT_ID)
         .agg(
             pl.col(ACTUAL).max(),
-            pl.col(PROB).max(),
-            pl.col(PRED).max(),
+            pl.col(PROB).max().alias(f"{PROB}_max"),
+            pl.col(PROB).mean().alias(f"{PROB}_mean"),
+            pl.col(PRED).max().alias(f"{PRED}_max"),
+            pl.col(PRED).mean().alias(f"{PRED}_mean"),
+            pl.len().alias("bout_n_frames"),
         )
         .sort(BOUT_ID)
     )

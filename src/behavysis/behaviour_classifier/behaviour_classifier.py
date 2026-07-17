@@ -15,7 +15,7 @@ import yaml
 from loguru import logger
 
 from behavysis.constants import ACTUAL, BOUT, EXPERIMENT, FRAME
-from behavysis.utils import pass_exception, trace
+from behavysis.utils import clean_memory, pass_exception, trace
 
 from .adapter import MODEL_TYPES_TO_CLASS, MODEL_TYPES_TO_STRING, BaseAdapter
 from .config import ClassifierActive, ClassifierContract, TrainingRecipe
@@ -73,6 +73,7 @@ def list_models(contract_fp: Path) -> list[str]:
 # ── training ─────────────────────────────────────────────────────────
 
 
+@clean_memory
 def train_model(
     contract_fp: Path,
     model_name: str,
@@ -208,6 +209,7 @@ def promote_best(contract_fp: Path) -> ClassifierActive:
 # ── inference ────────────────────────────────────────────────────────
 
 
+@clean_memory
 def predict_choose_model(
     contract_fp: Path,
     model_name: str,

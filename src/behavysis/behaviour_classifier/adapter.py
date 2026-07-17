@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import gc
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, ClassVar
 
@@ -155,11 +154,14 @@ class SklearnAdapter(BaseAdapter):
                 FRAME: frame,
                 BEHAVIOUR: config.behaviour_name,
                 PROB: prob,
-                PRED: prob > config.pcutoff,
+                PRED: 0,  # placeholder. Must smooth first
             },
             schema=BEHAVIOUR_PREDICTED_SCHEMA,
         )
-        return smooth_prob(y_df, config.smoothing_frames, "median")
+        # Smooth, threshold, and return
+        return smooth_prob(y_df, config.smoothing_frames, "median").with_columns(
+            (pl.col(PROB) > config.pcutoff).alias(PRED)
+        )
 
     def save(self) -> None:
         """Save."""
@@ -268,7 +270,7 @@ class TabpfnAdapter(BaseAdapter):
             raise ValueError(msg)
         # Get configs
         config = self._read_config()
-        # Predict (in batches to avoid GPU OOM)
+        # Predict
         frame = df.get_column(FRAME)
         prob = self.model.predict_proba(df_get_features(df))[:, 1]
         # Construct df
@@ -277,15 +279,14 @@ class TabpfnAdapter(BaseAdapter):
                 FRAME: frame,
                 BEHAVIOUR: config.behaviour_name,
                 PROB: prob,
-                PRED: prob > config.pcutoff,
+                PRED: 0,  # placeholder. Must smooth first
             },
             schema=BEHAVIOUR_PREDICTED_SCHEMA,
         )
-        # Clear GPU memory
-        torch.cuda.empty_cache()
-        gc.collect()
-        # Smooth and return
-        return smooth_prob(y_df, config.smoothing_frames, "median")
+        # Smooth, threshold, and return
+        return smooth_prob(y_df, config.smoothing_frames, "median").with_columns(
+            (pl.col(PROB) > config.pcutoff).alias(PRED)
+        )
 
     def save(self) -> None:
         """Save."""

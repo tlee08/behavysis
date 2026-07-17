@@ -26,6 +26,7 @@ LABELS = [NIL, BEHAV]
 
 SPLIT = "split"
 
+
 # ----- schemas -----------------------------------------------------
 
 
@@ -40,7 +41,57 @@ class EvalResult(TypedDict):
 # ----- Helper Functions ---------------------------------------------------
 
 
-def binary_report(
+def _precision_at_recall(
+    y_true: np.ndarray,
+    y_prob: np.ndarray,
+    target_recall: float,
+) -> float:
+    """Best achievable precision while maintaining recall >= target.
+
+    Computed from the full precision-recall curve. Answers: "if I want
+    to catch at least X% of behaviour, what precision can I expect?"
+    This is the single most decision-relevant metric for a screening
+    classifier — higher recall costs precision (more false positives to
+    review), and this function quantifies that trade-off at the target
+    operating point.
+
+    Parameters:
+    -----------
+    y_true : np.ndarray
+        Ground-truth binary labels.
+    y_prob : np.ndarray
+        Predicted probabilities.
+    target_recall : float
+        Minimum acceptable recall (e.g. 0.99).
+
+    Returns:
+    --------
+    float
+        Maximum precision at any threshold where recall >= target.
+        0.0 if the target recall cannot be achieved.
+    """
+    precision, recall, _ = precision_recall_curve(y_true, y_prob)
+    mask = recall >= target_recall
+    if mask.any():
+        return float(np.max(precision[mask]))
+    return 0.0
+
+
+def _precision_at_target_recalls(
+    y_true: np.ndarray,
+    y_prob: np.ndarray,
+) -> dict[str, float]:
+    """Compute precision at each target recall checkpoint."""
+    return {
+        label: _precision_at_recall(y_true, y_prob, threshold)
+        for threshold, label in (
+            (0.99, "precision_at_recall_099"),
+            (1.00, "precision_at_recall_100"),
+        )
+    }
+
+
+def _report(
     y_true: np.ndarray, y_prob: np.ndarray, y_pred: np.ndarray
 ) -> dict[str, float]:
     """Summarise binary-classification performance for one split."""
@@ -80,6 +131,7 @@ def binary_report(
         "fp": fp,
         "fn": fn,
         "tn": tn,
+        **_precision_at_target_recalls(y_true, y_prob),
     }
 
 
@@ -149,6 +201,68 @@ def _hist_chart(df: pl.DataFrame, x_column: str, title: str) -> alt.Chart:
     )
 
 
+# ----- Bout health metrics -------------------------------------------
+
+
+def _bout_health(bout_df: pl.DataFrame) -> dict[str, float]:
+    """Compute temporal-quality metrics from per-bout eval data.
+
+    Goes beyond binary bout detection (did we overlap at all?) to
+    answer questions about *how well* the model covers behavioral
+    episodes in time.
+
+    Metrics computed
+    ----------------
+    bout_detection_rate_50pct : float
+        Fraction of real behavioural bouts (``ACTUAL.max() == 1``)
+        where the model predicts positive on >= 50 % of frames
+        (``PRED_mean >= 0.5``).  A stricter alternative to the raw
+        bout recall which only requires a single overlapping frame.
+    bout_detection_rate_any : float
+        Fraction of real bouts with at least one predicted positive
+        frame (``PRED.max() == 1``).  Identical to bout-level recall
+        from the standard report; included here for convenience.
+    mean_coverage : float
+        Mean ``PRED_mean`` across real bouts.  If this is 0.85, the
+        typical real behavioural episode has 85 % of its frames caught
+        by the classifier.
+    fragmentation : float
+        ``n_predicted_bouts / n_real_bouts``.  Values > 1 indicate
+        that the model is splitting real episodes into multiple
+        predicted fragments.  High fragmentation may cause a human
+        reviewer to mark the same real event multiple times.
+    mean_bout_len_real : float
+        Average duration (in frames) of true behavioural bouts.
+    """
+    real_bouts = bout_df.filter(pl.col(ACTUAL) == 1)
+    pred_bouts = bout_df.filter(pl.col(PRED) == 1)
+
+    n_real = real_bouts.height
+    n_pred = pred_bouts.height
+
+    return {
+        "bout_detection_rate_any": float(
+            real_bouts.select(pl.col(PRED).max().mean()).item()
+        )
+        if n_real > 0
+        else 0.0,
+        "bout_detection_rate_50pct": float(
+            real_bouts.select((pl.col("PRED_mean") >= 0.5).mean()).item()  # noqa: PLR2004
+        )
+        if n_real > 0
+        else 0.0,
+        "mean_coverage": float(real_bouts.select(pl.col("PRED_mean").mean()).item())
+        if n_real > 0
+        else 0.0,
+        "fragmentation": n_pred / n_real if n_real > 0 else 0.0,
+        "mean_bout_len_real": float(
+            real_bouts.select(pl.col("bout_n_frames").mean()).item()
+        )
+        if n_real > 0
+        else 0.0,
+    }
+
+
 # ----- API Functions ---------------------------------------------------
 
 
@@ -164,7 +278,7 @@ def make_eval_result(splits: dict[str, pl.DataFrame]) -> EvalResult:
     for _splits_name, _splits_data in {FRAME: splits, BOUT: bouts_splits}.items():
         # Make report
         res_report[f"{_splits_name}_report"] = {
-            _name: binary_report(
+            _name: _report(
                 _df[ACTUAL].to_numpy(), _df[PROB].to_numpy(), _df[PRED].to_numpy()
             )
             for _name, (_df) in _splits_data.items()
@@ -223,6 +337,21 @@ def make_eval_result(splits: dict[str, pl.DataFrame]) -> EvalResult:
                 config={"axis": {"grid": True}},
             )
         )
+    # Bout health
+    res_report[f"{BOUT}_health"] = {
+        _name: _bout_health(_df) for _name, _df in bouts_splits.items()
+    }
+    # Review efficiency (frame-level: predicted-positive / true-positive frames)
+    res_report["review_efficiency"] = {
+        _name: {
+            "efficiency": float(
+                _df.select(pl.col(PRED).sum() / pl.col(ACTUAL).sum()).item()
+            )
+        }
+        if _df.select(pl.col(ACTUAL).sum()).item() > 0
+        else {"efficiency": 0.0}
+        for _name, _df in splits.items()
+    }
     # Return
     return EvalResult(report=res_report, df=res_df, chart=res_chart)
 
