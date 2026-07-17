@@ -171,6 +171,7 @@ class SklearnAdapter(BaseAdapter):
             raise ValueError(msg)
         # Save
         model_dir = self.config_fp.parent
+        model_dir.mkdir(parents=True, exist_ok=True)
         joblib.dump(self.search, model_dir / "search.joblib")
         joblib.dump(self.model, model_dir / "model.joblib")
 
@@ -206,6 +207,7 @@ class XgboostAdapter(SklearnAdapter):
         clf: XGBClassifier = self.model.steps[-1][1]
         # Save
         model_dir = self.config_fp.parent
+        model_dir.mkdir(parents=True, exist_ok=True)
         joblib.dump(self.search, model_dir / "search.joblib")
         joblib.dump(preprocess, model_dir / "preprocess.joblib")
         clf.save_model(model_dir / "clf.ubj")
@@ -296,6 +298,7 @@ class TabpfnAdapter(BaseAdapter):
             raise ValueError(msg)
         # Save model
         model_dir = self.config_fp.parent
+        model_dir.mkdir(parents=True, exist_ok=True)
         save_fitted_tabpfn_model(self.model, model_dir / "model.tabpfn_fit")
 
     @classmethod
@@ -357,6 +360,7 @@ class TorchAdapter(BaseAdapter):
             raise RuntimeError(msg)
 
         model_dir = self.config_fp.parent
+        model_dir.mkdir(parents=True, exist_ok=True)
         torch.save(self.model.state_dict(), model_dir / "model.pt")
         joblib.dump(self.scaler, model_dir / "scaler.joblib")
         np.save(model_dir / "feature_mask.npy", self.feature_mask)
