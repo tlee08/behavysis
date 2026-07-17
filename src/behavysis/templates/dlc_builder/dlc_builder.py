@@ -52,6 +52,7 @@ def _():
 
     - TODO: in pose_inference.yaml
     """)
+    return
 
 
 @app.cell(hide_code=True)
@@ -61,10 +62,11 @@ def _():
 
     DLC models are usually stored in the `Z:\PRJ-BowenLab\PRJ-BowenLab\DeepLabCut-Projects` folder.
     """)
+    return
 
 
 @app.cell
-def _(display):
+def _():
     # CHANGE
     root_dir = "set/me/here"
     # CHANGE
@@ -102,6 +104,7 @@ def _():
 
     NOTE: don't need to run if project is already created.
     """)
+    return
 
 
 @app.cell
@@ -148,6 +151,7 @@ def _(
         os.remove(proj_dir / "videos" / "placeholder_vid.mp4")
         (proj_dir / "videos_raw").mkdir(parents=True, exist_ok=True)
         (proj_dir / "test_on_novels").mkdir(parents=True, exist_ok=True)
+    return
 
 
 @app.cell(hide_code=True)
@@ -164,6 +168,7 @@ def _():
     - `multianimalbodyparts`: bodyparts for an animal (e.g. `Nose`)
     - `numframes2pick`: The number of frames to extract from each video for labeling. A rule of thumb is ~500 frames overall is sufficient to train a model well.
     """)
+    return
 
 
 @app.cell(hide_code=True)
@@ -175,6 +180,7 @@ def _():
 
     Copy training videos to the `<proj_dir>\videos_raw` folder.
     """)
+    return
 
 
 @app.cell(hide_code=True)
@@ -186,6 +192,7 @@ def _():
 
     Set the `res_width` and `res_height` values in the 2nd top Python cell (that has all the other settings for training this model).
     """)
+    return
 
 
 @app.cell
@@ -216,6 +223,7 @@ def _(proj_dir, res_height, res_width):
             res_width=res_width,
             res_height=res_height,
         )
+    return
 
 
 @app.cell(hide_code=True)
@@ -226,6 +234,7 @@ def _():
     This is required for DLC's extract frames step.
     It looks at the video filepaths in the config file and extracts frames from those videos for labeling.
     """)
+    return
 
 
 @app.cell
@@ -273,6 +282,7 @@ def _(config_fp, proj_dir):
     #     copy_videos=True,
     # )
     update_config_videos(proj_dir)
+    return
 
 
 @app.cell(hide_code=True)
@@ -287,6 +297,7 @@ def _():
 
     NOTE: it can be useful to trim videos and import these to the project to get frames that you'd particularly like to label (e.g. close interaction in social experiments).
     """)
+    return
 
 
 @app.cell
@@ -322,6 +333,7 @@ def _(proj_dir):
         #     crop=False  # keep as False
         # )
         vid.release()
+    return
 
 
 @app.cell(hide_code=True)
@@ -329,11 +341,13 @@ def _():
     mo.md(r"""
     ## Label frames
     """)
+    return
 
 
 @app.cell
 def _(config_fp):
     deeplabcut.label_frames(config_fp)
+    return
 
 
 @app.cell(hide_code=True)
@@ -341,6 +355,7 @@ def _():
     mo.md(r"""
     TODO: check that all frames are labelled without deleting rows and images
     """)
+    return
 
 
 @app.cell(hide_code=True)
@@ -348,6 +363,7 @@ def _():
     mo.md(r"""
     ## Create training dataset
     """)
+    return
 
 
 @app.cell
@@ -355,6 +371,7 @@ def _(config_fp):
     # deeplabcut.create_training_dataset(config_fp)
 
     deeplabcut.create_multianimaltraining_dataset(config_fp)
+    return
 
 
 @app.cell(hide_code=True)
@@ -364,6 +381,7 @@ def _():
 
     Note the pytorch training config. These particular config are stored in the `dlc-models-pytorch/.../train/pytorch_config.yaml` file.
     """)
+    return
 
 
 @app.cell
@@ -394,6 +412,7 @@ def _(config_fp, gputouse):
             "train_settings.seed": 42,
         },
     )
+    return
 
 
 @app.cell(hide_code=True)
@@ -405,6 +424,7 @@ def _():
 
     It is advisable to instead run the model on some novel videos and inspect its performance by eye.
     """)
+    return
 
 
 @app.cell
@@ -430,6 +450,7 @@ def _():
     - For multi-animal experiments, do points assemble to a single animal well (even if the identity is incorrect),
     - For multi-animal experiments, don't worry about swapping identities - a postprocessing step is done in our pipeline which fixes the identities to the markings/non-markings of each animal.
     """)
+    return
 
 
 @app.cell
@@ -469,6 +490,7 @@ def _(config_fp, novel_vids_dir):
         destfolder=novel_vids_dir / "out",
         overwrite=True,
     )
+    return
 
 
 if __name__ == "__main__":

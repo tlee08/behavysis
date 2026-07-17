@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.23.11"
+__generated_with = "0.23.10"
 app = marimo.App(width="full")
 
 with app.setup:
@@ -38,14 +38,6 @@ with app.setup:
 
 @app.cell
 def _():
-    # NOTE: works really well here but not in classifier... why?
-    os.environ["TABPFN_TOKEN"] = "tabpfn_sk_23S3mPIBEbqQE2GeenqDZsaeyyaja27BORrI4rc0K6Q"
-    # Option 1: tabpfn_sk_YXNlFdoaMqaPUNFnopfmZEJmZSh7QzhzprsA0xiOGKU
-    # Option 2: tabpfn_sk_23S3mPIBEbqQE2GeenqDZsaeyyaja27BORrI4rc0K6Q
-
-
-@app.cell
-def _():
     clf_dir = Path.cwd()
     behaviour_name = "aggression"
 
@@ -75,6 +67,7 @@ def _(df):
     train_idx, test_idx = stratified_split_by_group(df, 0.2, EXPERIMENT, 42)
     train_df = df[train_idx].sort([EXPERIMENT, FRAME])
     test_df = df[test_idx].sort([EXPERIMENT, FRAME])
+    return
 
 
 @app.cell
@@ -122,6 +115,7 @@ def _():
 @app.cell
 def _(clf, exp1_df):
     clf.fit(df_get_features(exp1_df), df_get_labels(exp1_df))
+    return
 
 
 @app.cell
@@ -149,6 +143,7 @@ def _(eval_df):
     res = make_eval_result({"test": eval_df})
 
     res
+    return
 
 
 if __name__ == "__main__":
