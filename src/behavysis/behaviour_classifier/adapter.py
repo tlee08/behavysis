@@ -10,6 +10,7 @@ import numpy as np
 import pandas as pd
 import polars as pl
 import torch
+from imblearn.under_sampling import RandomUnderSampler
 from sklearn.base import clone
 from sklearn.metrics import precision_recall_curve
 from sklearn.pipeline import Pipeline
@@ -35,6 +36,7 @@ from .data import (
     agg_eval_df_by_bouts,
     df_get_features,
     df_get_labels,
+    df_resample,
     label_bouts,
     smooth_preds,
     stratified_split_by_group,
@@ -256,6 +258,9 @@ class TabPFNAdapter(BaseAdapter):
         # 2. Sort the df by EXPERIMENT, FRAME. Then compute bout_id
         df = df.sort([EXPERIMENT, FRAME])
         df = label_bouts(df)
+        # 3. Resample
+        resampler = RandomUnderSampler(sampling_strategy="auto", random_state=42)
+        sub_df = df_resample(df, resampler)
         # 4. Init classifier
         self.model = TabPFNClassifier(
             n_estimators=self.n_estimators,
@@ -266,7 +271,7 @@ class TabPFNAdapter(BaseAdapter):
             **self.kwargs,
         )
         # 6. Fit classifier on sub_df
-        self.model.fit(df_get_features(df), df_get_labels(df))
+        self.model.fit(df_get_features(sub_df), df_get_labels(sub_df))
         # 7. Set pcutoff as hardcoded 0.5 (tabpfn sorts itself out)
         config.pcutoff = 0.5
         self._write_config(config)
