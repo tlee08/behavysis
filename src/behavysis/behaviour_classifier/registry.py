@@ -446,7 +446,6 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
         balance_probabilities=True,
         device=get_gpu_device(),
         ignore_pretraining_limits=True,
-        fit_mode="fit_with_cache",
         random_state=42,
         inference_config={
             "SUBSAMPLE_SAMPLES": 100_000,
@@ -458,7 +457,6 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
         balance_probabilities=True,
         device=get_gpu_device(),
         ignore_pretraining_limits=True,
-        fit_mode="fit_with_cache",
         random_state=42,
         inference_config={
             "SUBSAMPLE_SAMPLES": 100_000,
