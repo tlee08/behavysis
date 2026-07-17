@@ -11,7 +11,6 @@ import pandas as pd
 import polars as pl
 import torch
 from sklearn.base import clone
-from sklearn.feature_selection import SelectFromModel
 from sklearn.metrics import precision_recall_curve
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import MinMaxScaler
@@ -246,24 +245,7 @@ class TabPFNAdapter(BaseAdapter):
         self.n_estimators = n_estimators
         self.device = device
         self.kwargs = kwargs
-        # TODO: hardcoded
-        self.selector = (
-            SelectFromModel(
-                XGBClassifier(
-                    tree_method="hist",
-                    device=get_gpu_device(),
-                    n_estimators=100,
-                    max_depth=4,
-                    n_jobs=-1,
-                    random_state=42,
-                    verbosity=2,
-                ),
-                threshold=-np.inf,
-                max_features=300,
-            ),
-        )
         self.model: TabPFNClassifier | None = None
-        self.pipeline = None
 
     def fit(self, df: pl.DataFrame) -> pd.DataFrame:
         """Fit."""
@@ -283,10 +265,8 @@ class TabPFNAdapter(BaseAdapter):
             ignore_pretraining_limits=True,
             **self.kwargs,
         )
-        # 5. Construct pipeline
-        self.pipeline = Pipeline([("selector", self.selector), ("clf", self.model)])
         # 6. Fit classifier on sub_df
-        self.pipeline.fit(df_get_features(df), df_get_labels(df))
+        self.model.fit(df_get_features(df), df_get_labels(df))
         # 7. Set pcutoff as hardcoded 0.5 (tabpfn sorts itself out)
         config.pcutoff = 0.5
         self._write_config(config)
@@ -303,7 +283,7 @@ class TabPFNAdapter(BaseAdapter):
         config = self._read_config()
         # Predict
         frame = df.get_column(FRAME)
-        prob = self.pipeline.predict_proba(df_get_features(df))[:, 1]
+        prob = self.model.predict_proba(df_get_features(df))[:, 1]
         # Construct df
         y_df = pl.DataFrame(
             {
