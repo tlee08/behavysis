@@ -20,7 +20,7 @@ from behavysis.utils import pass_exception, trace
 from .adapter import MODEL_TYPES_TO_CLASS, MODEL_TYPES_TO_STRING, BaseAdapter
 from .config import ClassifierActive, ClassifierContract, TrainingRecipe
 from .data import label_bouts, load_all_data, stratified_split_by_group
-from .evaluation import EvalResult, make_eval_report
+from .evaluation import EvalResult, make_eval_result
 from .registry import MODEL_REGISTRY
 from .storage import ClassifierFp
 
@@ -156,7 +156,7 @@ def train_model(
     )
     eval_test_df.write_parquet(eval_dir / "test_eval.parquet")
     # Further evaluation
-    res = make_eval_report({"train": eval_train_df, "test": eval_test_df})
+    res = make_eval_result({"train": eval_train_df, "test": eval_test_df})
     # Save. Only report and charts, not df
     for _name, _report in res["report"].items():
         (eval_dir / f"{_name}.yaml").write_text(yaml.dump(_report))
@@ -262,4 +262,4 @@ def make_eval_report_choose_model(contract_fp: Path, model_name: str) -> EvalRes
     eval_train_df = pl.read_parquet(eval_dir / "train_eval.parquet")
     eval_test_df = pl.read_parquet(eval_dir / "test_eval.parquet")
     # Make evaluation
-    return make_eval_report({"train": eval_train_df, "test": eval_test_df})
+    return make_eval_result({"train": eval_train_df, "test": eval_test_df})

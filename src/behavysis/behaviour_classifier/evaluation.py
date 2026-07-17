@@ -152,7 +152,7 @@ def _hist_chart(df: pl.DataFrame, x_column: str, title: str) -> alt.Chart:
 # ----- API Functions ---------------------------------------------------
 
 
-def make_eval_report(splits: dict[str, pl.DataFrame]) -> EvalResult:
+def make_eval_result(splits: dict[str, pl.DataFrame]) -> EvalResult:
     """Make ROC/PR charts and a YAML metric report for the given splits."""
     # Construct bouts splits eval (bouts equivalent of splits)
     bouts_splits = {_name: agg_eval_df_by_bouts(_df) for _name, _df in splits.items()}

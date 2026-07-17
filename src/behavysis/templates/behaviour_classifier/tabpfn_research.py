@@ -13,7 +13,7 @@ with app.setup:
     from tabpfn import TabPFNClassifier
 
     from behavysis.behaviour_classifier import (
-        make_eval_report,
+        make_eval_result,
     )
     from behavysis.behaviour_classifier.data import (
         label_bouts,
@@ -146,7 +146,7 @@ def _(exp2_df, predictions):
 
 @app.cell
 def _(eval_df):
-    res = make_eval_report({"test": eval_df})
+    res = make_eval_result({"test": eval_df})
 
     res
 

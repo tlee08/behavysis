@@ -1,6 +1,7 @@
 """Behavysis behavioural classifier — training and inference."""
 
 from .behaviour_classifier import (
+    list_models,
     make_eval_report_choose_model,
     predict,
     promote_best,
@@ -15,7 +16,7 @@ from .data import (
     smooth_preds,
     stratified_split_by_group,
 )
-from .evaluation import make_eval_report
+from .evaluation import make_eval_result
 from .registry import MODEL_REGISTRY
 from .storage import ClassifierFp
 
@@ -24,6 +25,7 @@ __all__ = [
     "ClassifierContract",
     "ClassifierFp",
     "TrainingRecipe",
+    "list_models",
     "load_all_data",
     "load_feature_names",
     "make_eval_report",

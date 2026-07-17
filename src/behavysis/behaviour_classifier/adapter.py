@@ -270,13 +270,13 @@ class TabpfnAdapter(BaseAdapter):
         config = self._read_config()
         # Predict (in batches to avoid GPU OOM)
         frame = df.get_column(FRAME)
-        chunk_size = 5000
-        prob = np.zeros(df.shape[0])
-        for i in range(0, df.shape[0], chunk_size):
-            prob[i : i + chunk_size] = self.model.predict_proba(
-                df_get_features(df)[i : i + chunk_size]
-            )[:, 1]
-        # prob = self.model.predict_proba(df_get_features(df))[:, 1]
+        # chunk_size = 50_000
+        # prob = np.zeros(df.shape[0])
+        # for i in range(0, df.shape[0], chunk_size):
+        #     prob[i : i + chunk_size] = self.model.predict_proba(
+        #         df_get_features(df)[i : i + chunk_size]
+        #     )[:, 1]
+        prob = self.model.predict_proba(df_get_features(df))[:, 1]
         # Construct df
         y_df = pl.DataFrame(
             {
