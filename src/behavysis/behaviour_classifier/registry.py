@@ -114,45 +114,6 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
         search=RandomizedSearchCV(
             Pipeline(
                 [
-                    ("var_filter", VarianceThreshold()),
-                    (
-                        "clf",
-                        XGBClassifier(
-                            tree_method="hist",
-                            device=get_gpu_device(),
-                            eval_metric="aucpr",
-                            n_jobs=4,
-                            random_state=42,
-                            verbosity=2,
-                        ),
-                    ),
-                ]
-            ),
-            {
-                "var_filter__threshold": [0.0],
-                "clf__max_depth": [3, 4, 6],
-                "clf__learning_rate": [0.02, 0.1],
-                "clf__n_estimators": [400, 800],
-                "clf__min_child_weight": [1, 10, 30, 50],
-                "clf__subsample": [0.6, 0.8, 1.0],
-                "clf__colsample_bytree": [0.3, 0.5, 0.7],
-                "clf__gamma": [0, 0.5, 2.0],
-                "clf__reg_lambda": [1.0, 3.0, 10.0],
-                "clf__scale_pos_weight": [1, 10, 40],
-            },
-            n_iter=40,
-            scoring="average_precision",
-            cv=StratifiedGroupKFold(n_splits=3, shuffle=True, random_state=42),
-            random_state=42,
-            n_jobs=1,
-            verbose=3,
-        ),
-    ),
-    "xgb_v2": lambda config_fp: SklearnAdapter(
-        config_fp,
-        search=RandomizedSearchCV(
-            Pipeline(
-                [
                     ("var_filter", VarianceThreshold(threshold=0.0)),
                     (
                         "selector",
@@ -167,7 +128,6 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
                                 verbosity=2,
                             ),
                             threshold=-np.inf,
-                            max_features=300,
                         ),
                     ),
                     (
@@ -184,6 +144,14 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
                 ]
             ),
             {
+                "selector__estimator__importance_type": [
+                    "weight",
+                    "gain",
+                    "total_gain",
+                    "cover",
+                    "total_cover",
+                ],
+                "selector__max_features": [300, None],
                 "clf__n_estimators": [400, 800, 1200],
                 "clf__learning_rate": [0.02, 0.1],
                 "clf__max_depth": [3, 4, 6],
@@ -195,7 +163,7 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
                 "clf__scale_pos_weight": [5, 10, 20, 40, 60],
                 "clf__max_delta_step": [0, 1, 3, 10],
             },
-            n_iter=200,
+            n_iter=400,
             scoring="average_precision",
             cv=StratifiedGroupKFold(n_splits=3, shuffle=True, random_state=42),
             random_state=42,
@@ -222,7 +190,6 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
                                 verbosity=2,
                             ),
                             threshold=-np.inf,
-                            max_features=300,
                         ),
                     ),
                     (
@@ -240,6 +207,7 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
                 ]
             ),
             {
+                "selector__max_features": [300, None],
                 "clf__n_estimators": [400, 800, 1200],
                 "clf__learning_rate": [0.02, 0.1],
                 "clf__max_depth": [3, 4, 6],
@@ -253,7 +221,7 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
                 "clf__skip_drop": [0.3, 0.5, 0.7],
                 "clf__max_delta_step": [0, 1, 3, 10],
             },
-            n_iter=120,
+            n_iter=200,
             scoring="average_precision",
             cv=StratifiedGroupKFold(n_splits=3, shuffle=True, random_state=42),
             random_state=42,
@@ -371,68 +339,6 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
                 "clf__estimator__scale_pos_weight": [5, 10, 20, 40],
             },
             n_iter=40,
-            scoring="average_precision",
-            cv=StratifiedGroupKFold(n_splits=3, shuffle=True, random_state=42),
-            random_state=42,
-            n_jobs=1,
-            verbose=3,
-        ),
-    ),
-    "xgb_importance": lambda config_fp: SklearnAdapter(
-        config_fp,
-        search=RandomizedSearchCV(
-            Pipeline(
-                [
-                    ("var_filter", VarianceThreshold(threshold=0.0)),
-                    (
-                        "selector",
-                        SelectFromModel(
-                            XGBClassifier(
-                                tree_method="hist",
-                                device=get_gpu_device(),
-                                n_estimators=100,
-                                max_depth=4,
-                                n_jobs=-1,
-                                random_state=42,
-                                verbosity=2,
-                            ),
-                            threshold=-np.inf,
-                            max_features=300,
-                        ),
-                    ),
-                    (
-                        "clf",
-                        XGBClassifier(
-                            tree_method="hist",
-                            device=get_gpu_device(),
-                            eval_metric="aucpr",
-                            n_jobs=-1,
-                            random_state=42,
-                            verbosity=2,
-                        ),
-                    ),
-                ]
-            ),
-            {
-                "selector__estimator__importance_type": [
-                    "weight",
-                    "gain",
-                    "total_gain",
-                    "cover",
-                    "total_cover",
-                ],
-                "clf__importance_type": ["gain", "total_gain"],
-                "clf__n_estimators": [400, 800],
-                "clf__learning_rate": [0.02, 0.1],
-                "clf__max_depth": [3, 4, 6],
-                "clf__min_child_weight": [1, 10, 30],
-                "clf__subsample": [0.6, 0.8, 1.0],
-                "clf__colsample_bytree": [0.3, 0.5, 0.7],
-                "clf__reg_lambda": [1.0, 3.0, 10.0],
-                "clf__scale_pos_weight": [5, 10, 20, 40],
-                "clf__gamma": [0, 0.5, 2.0],
-            },
-            n_iter=120,
             scoring="average_precision",
             cv=StratifiedGroupKFold(n_splits=3, shuffle=True, random_state=42),
             random_state=42,
