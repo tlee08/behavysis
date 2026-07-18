@@ -6,6 +6,7 @@ app = marimo.App(width="full")
 with app.setup:
     import shutil
     from pathlib import Path
+    import io
 
     import altair as alt
     import marimo as mo
@@ -255,35 +256,25 @@ def _():
 def _(eval_all, view_metrics):
     rows = []
     for _model, _res in eval_all.items():
-        _report = _res["report"]
-        for _split, _metrics in _report.get("frame_report", {}).items():
-            for _metric in view_metrics:
-                if _metric in _metrics:
-                    rows.append({
-                        "model": _model,
-                        "level": "frame",
-                        "split": _split,
-                        "metric": _metric,
-                        "value": _metrics[_metric],
-                    })
-        for _split, _metrics in _report.get("bout_report", {}).items():
-            for _metric in view_metrics:
-                if _metric in _metrics:
-                    rows.append({
-                        "model": _model,
-                        "level": "bout",
-                        "split": _split,
-                        "metric": _metric,
-                        "value": _metrics[_metric],
-                    })
+        for _level in ["frame", "bout"]:
+            for _split, _metrics in _res["report"].get(f"{_level}_report", {}).items():
+                for _metric in view_metrics:
+                    if _metric in _metrics:
+                        rows.append({
+                            "level": _level,
+                            "split": _split,
+                            "metric": _metric,
+                            "model": _model,
+                            "value": _metrics[_metric],
+                        })
 
     metrics_df = pl.DataFrame(
         rows,
         schema={
-            "model": pl.String,
             "level": pl.String,
             "split": pl.String,
             "metric": pl.String,
+            "model": pl.String,
             "value": pl.Float64,
         },
     ).sort(["level", "split", "metric", "model"])
@@ -302,24 +293,20 @@ def _(eval_all, view_metrics):
 @app.cell
 def _(metrics_df, view_metrics):
     _df = metrics_df.filter(
-        pl.col("level") == "frame",
-        pl.col("split") == "test",
         pl.col("metric").is_in(view_metrics),
     )
     bar_chart = (
         alt.Chart(_df)
         .mark_bar()
         .encode(
-            alt.X("metric", type="nominal", title=None),
-            alt.Y("value", type="quantitative", scale=alt.Scale(domain=[0, 1])),
-            alt.Color("model", type="nominal"),
+            alt.X("metric:N"),
+            alt.Y("value:Q", scale=alt.Scale(domain=[0, 1])),
+            alt.Color("model:N"),
             alt.XOffset("model"),
-            alt.Column("metric", type="nominal", title=None)
-            .header(labelOrient="bottom"),
+            alt.Column("level:N"),
+            alt.Row("split:N"),
         )
         .properties(height=200, width=80)
-        .configure_axis(grid=False)
-        .resolve_scale(x="independent")
     )
     mo.ui.altair_chart(bar_chart)
     return
@@ -328,7 +315,7 @@ def _(metrics_df, view_metrics):
 @app.cell
 def _():
     mo.md("""
-    ### ROC & PR curves (test split)
+    ### ROC & PR curves
     """)
     return
 
@@ -338,20 +325,17 @@ def _(eval_all):
     roc_parts = []
     pr_parts = []
     for _model, _res in eval_all.items():
-        _roc = _res["df"].get("frame_roc_df")
-        if _roc is not None:
-            roc_parts.append(
-                _roc.filter(pl.col("split") == "test")
-                .select(["fpr", "tpr"])
-                .with_columns(pl.lit(_model).alias("model"))
-            )
-        _pr = _res["df"].get("frame_pr_df")
-        if _pr is not None:
-            pr_parts.append(
-                _pr.filter(pl.col("split") == "test")
-                .select(["recall", "precision"])
-                .with_columns(pl.lit(_model).alias("model"))
-            )
+        for _level in ["frame", "bout"]:
+            _roc = _res["df"].get(f"{_level}_roc_df")
+            if _roc is not None:
+                roc_parts.append(
+                    _roc.with_columns(pl.lit(_model).alias("model"))
+                )
+            _pr = _res["df"].get(f"{_level}_pr_df")
+            if _pr is not None:
+                pr_parts.append(
+                    _pr.with_columns(pl.lit(_model).alias("model"))
+                )
 
     roc_df = pl.concat(roc_parts) if roc_parts else None
     pr_df = pl.concat(pr_parts) if pr_parts else None
@@ -366,18 +350,22 @@ def _(roc_df):
             .mark_line(strokeDash=[4, 4], color="grey")
             .encode(x="x:Q", y="y:Q")
         )
-        roc_chart = (
+        roc_chart = ((
             alt.Chart(roc_df)
             .mark_line()
             .encode(
-                x=alt.X("fpr:Q", title="False Positive Rate",
-                        scale=alt.Scale(domain=[0, 1])),
-                y=alt.Y("tpr:Q", title="True Positive Rate",
-                        scale=alt.Scale(domain=[0, 1])),
-                color=alt.Color("model:N"),
+                alt.X("fpr:Q", title="False Positive Rate", scale=alt.Scale(domain=[0, 1])),
+                alt.Y("tpr:Q", title="True Positive Rate", scale=alt.Scale(domain=[0, 1])),
+                alt.Color("model:N"),
+                alt.Column("level:N"),
+                alt.Row("split:N"),
             )
-        ) + _diag
-        mo.ui.altair_chart(roc_chart.properties(width=500, height=400))
+        ) + _diag).properties(width=500, height=400)
+
+        # Must show as image, because too many points
+        _file = io.BytesIO()
+        roc_chart.save(_file, format="png")
+        mo.image(_file)
     return
 
 
@@ -388,14 +376,18 @@ def _(pr_df):
             alt.Chart(pr_df)
             .mark_line()
             .encode(
-                x=alt.X("recall:Q", title="Recall",
-                        scale=alt.Scale(domain=[0, 1])),
-                y=alt.Y("precision:Q", title="Precision",
-                        scale=alt.Scale(domain=[0, 1])),
-                color=alt.Color("model:N"),
+                alt.X("recall:Q", title="Recall", scale=alt.Scale(domain=[0, 1])),
+                alt.Y("precision:Q", title="Precision", scale=alt.Scale(domain=[0, 1])),
+                alt.Color("model:N"),
+                alt.Column("level:N"),
+                alt.Row("split:N"),
             )
         )
-        mo.ui.altair_chart(pr_chart.properties(width=500, height=400))
+
+        # Must show as image, because too many points
+        _file = io.BytesIO()
+        pr_chart.save(_file, format="png")
+        mo.image(_file)
     return
 
 

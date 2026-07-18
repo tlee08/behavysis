@@ -254,7 +254,7 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
                 "clf__method": ["isotonic", "sigmoid"],
                 "clf__estimator__n_estimators": [400, 800],
                 "clf__estimator__learning_rate": [0.02, 0.1],
-                "clf__max_depth": [3, 4, 6, 8, 10],
+                "clf__estimator__max_depth": [3, 4, 6, 8, 10],
                 "clf__estimator__min_child_weight": [1, 10, 30],
                 "clf__estimator__subsample": [0.6, 0.8, 1.0],
                 "clf__estimator__colsample_bytree": [0.3, 0.5, 0.7],
