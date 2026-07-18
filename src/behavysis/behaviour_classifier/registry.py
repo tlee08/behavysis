@@ -114,14 +114,6 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
                 ]
             ),
             {
-                "selector__estimator__importance_type": [
-                    "weight",
-                    "gain",
-                    "total_gain",
-                    "cover",
-                    "total_cover",
-                ],
-                "selector__max_features": [300, None],
                 "clf__n_estimators": [400, 800, 1200],
                 "clf__learning_rate": [0.02, 0.1],
                 "clf__max_depth": [3, 4, 6, 8, 10],
@@ -162,7 +154,6 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
                 ]
             ),
             {
-                "selector__max_features": [300, None],
                 "clf__n_estimators": [400, 800, 1200],
                 "clf__learning_rate": [0.02, 0.1],
                 "clf__max_depth": [3, 4, 6, 8, 10],

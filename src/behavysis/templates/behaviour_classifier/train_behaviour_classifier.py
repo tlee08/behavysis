@@ -306,7 +306,7 @@ def _(metrics_df, view_metrics):
             alt.Column("level:N"),
             alt.Row("split:N"),
         )
-        .properties(height=200, width=80)
+        .properties(height=200, width=200)
     )
     mo.ui.altair_chart(bar_chart)
     return
@@ -329,12 +329,18 @@ def _(eval_all):
             _roc = _res["df"].get(f"{_level}_roc_df")
             if _roc is not None:
                 roc_parts.append(
-                    _roc.with_columns(pl.lit(_model).alias("model"))
+                    _roc.with_columns(
+                        pl.lit(_model).alias("model"),
+                        pl.lit(_level).alias("alias"),
+                    )
                 )
             _pr = _res["df"].get(f"{_level}_pr_df")
             if _pr is not None:
                 pr_parts.append(
-                    _pr.with_columns(pl.lit(_model).alias("model"))
+                    _pr.with_columns(
+                        pl.lit(_model).alias("model"),
+                        pl.lit(_level).alias("alias"),
+                    )
                 )
 
     roc_df = pl.concat(roc_parts) if roc_parts else None
@@ -393,7 +399,9 @@ def _(pr_df):
 
 @app.cell
 def _():
-    mo.md("""### Bout health""")
+    mo.md("""
+    ### Bout health
+    """)
     return
 
 
