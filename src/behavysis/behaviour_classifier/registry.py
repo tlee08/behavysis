@@ -89,13 +89,13 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
                                 verbose=1,
                             ),
                             threshold=-np.inf,
-                            max_features=200,
                         ),
                     ),
                     ("clf", LogisticRegression(random_state=42, verbose=1)),
                 ]
             ),
             {
+                "selector__max_features": [20, 50, 100, 200],
                 "var_filter__threshold": [0.0],
                 "clf__C": [0.1, 1.0, 10.0],
                 "clf__penalty": ["l2", None],
