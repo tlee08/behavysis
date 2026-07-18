@@ -116,21 +116,6 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
                 [
                     ("var_filter", VarianceThreshold(threshold=0.0)),
                     (
-                        "selector",
-                        SelectFromModel(
-                            XGBClassifier(
-                                tree_method="hist",
-                                device=get_gpu_device(),
-                                n_estimators=100,
-                                max_depth=4,
-                                n_jobs=-1,
-                                random_state=42,
-                                verbosity=2,
-                            ),
-                            threshold=-np.inf,
-                        ),
-                    ),
-                    (
                         "clf",
                         XGBClassifier(
                             tree_method="hist",
@@ -178,21 +163,6 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
                 [
                     ("var_filter", VarianceThreshold(threshold=0.0)),
                     (
-                        "selector",
-                        SelectFromModel(
-                            XGBClassifier(
-                                tree_method="hist",
-                                device=get_gpu_device(),
-                                n_estimators=100,
-                                max_depth=4,
-                                n_jobs=-1,
-                                random_state=42,
-                                verbosity=2,
-                            ),
-                            threshold=-np.inf,
-                        ),
-                    ),
-                    (
                         "clf",
                         XGBClassifier(
                             booster="dart",
@@ -235,22 +205,6 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
             ImbPipeline(
                 [
                     ("var_filter", VarianceThreshold(threshold=0.0)),
-                    (
-                        "selector",
-                        SelectFromModel(
-                            XGBClassifier(
-                                tree_method="hist",
-                                device=get_gpu_device(),
-                                n_estimators=100,
-                                max_depth=4,
-                                n_jobs=-1,
-                                random_state=42,
-                                verbosity=2,
-                            ),
-                            threshold=-np.inf,
-                            max_features=300,
-                        ),
-                    ),
                     ("smote", SMOTE(sampling_strategy="auto", random_state=42)),
                     (
                         "clf",
@@ -294,22 +248,6 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
             Pipeline(
                 [
                     ("var_filter", VarianceThreshold(threshold=0.0)),
-                    (
-                        "selector",
-                        SelectFromModel(
-                            XGBClassifier(
-                                tree_method="hist",
-                                device=get_gpu_device(),
-                                n_estimators=100,
-                                max_depth=4,
-                                n_jobs=-1,
-                                random_state=42,
-                                verbosity=2,
-                            ),
-                            threshold=-np.inf,
-                            max_features=300,
-                        ),
-                    ),
                     (
                         "clf",
                         CalibratedClassifierCV(
