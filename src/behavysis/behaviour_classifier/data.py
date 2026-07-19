@@ -40,7 +40,11 @@ def load_feature_names(x_dir: Path) -> list[str]:
     fp_ls = sorted(x_dir.iterdir())
     if not fp_ls:
         return []
-    return [c for c in pl.read_parquet(fp_ls[0]).columns if c != FRAME]
+    return [
+        c
+        for c in pl.read_parquet(fp_ls[0]).columns
+        if c not in [EXPERIMENT, FRAME, ACTUAL, BOUT_ID]
+    ]
 
 
 def load_all_data(
