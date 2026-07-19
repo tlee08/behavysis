@@ -28,6 +28,7 @@ if TYPE_CHECKING:
 
     from imblearn.under_sampling.base import BaseUnderSampler
 
+
 # ── loading ─────────────────────────────────────────────────────
 
 
@@ -85,6 +86,19 @@ def load_all_data(
         pieces.append(aligned.with_columns(pl.lit(name).alias(EXPERIMENT)))
 
     return pl.concat(pieces, how="diagonal_relaxed")
+
+
+# ── X and y df preparing ─────────────────────────────────────────────────────
+
+
+def df_get_features(df: pl.DataFrame) -> pl.DataFrame:
+    """Given a df, only return features (filters out metadata and label columns)."""
+    return df.drop([EXPERIMENT, FRAME, ACTUAL, BOUT_ID], strict=False).cast(pl.Float32)
+
+
+def df_get_labels(df: pl.DataFrame) -> pl.Series:
+    """Given a df, return only the labels."""
+    return df[ACTUAL]
 
 
 # ── bout-related splitting ─────────────────────────────────────────────────────
@@ -161,19 +175,6 @@ def agg_eval_df_by_bouts(df: pl.DataFrame) -> pl.DataFrame:
         )
         .sort(BOUT_ID)
     )
-
-
-# ── X and y df preparing ─────────────────────────────────────────────────────
-
-
-def df_get_features(df: pl.DataFrame) -> pl.DataFrame:
-    """Given a df, only return features (filters out metadata and label columns)."""
-    return df.drop([EXPERIMENT, FRAME, ACTUAL, BOUT_ID], strict=False).cast(pl.Float32)
-
-
-def df_get_labels(df: pl.DataFrame) -> pl.Series:
-    """Given a df, return only the labels."""
-    return df[ACTUAL]
 
 
 # ── preprocessing ─────────────────────────────────────────────────────────────

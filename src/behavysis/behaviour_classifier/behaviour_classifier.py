@@ -207,6 +207,23 @@ def promote_best(contract_fp: Path) -> ClassifierActive:
     return active
 
 
+# ── retrieve model ────────────────────────────────────────────────────────
+
+
+def load_adapter(contract_fp: Path, model_name: str) -> BaseAdapter:
+    """Load adapter, given contract_fp and model name."""
+    clf_proj = ClassifierFp(contract_fp.parent)
+    config_fp = clf_proj.config_fp(model_name)
+    # Check if model exists
+    if not config_fp.exists():
+        msg = "Classifier's model not found. Check active.yaml."
+        raise ValueError(msg)
+    # Configs
+    config = TrainingRecipe.read_yaml(config_fp)
+    # Load model
+    return MODEL_TYPES_TO_CLASS[config.model_type].load(config_fp)
+
+
 # ── inference ────────────────────────────────────────────────────────
 
 
@@ -221,16 +238,8 @@ def predict_choose_model(
     ``features_df`` has a ``frame`` column plus feature columns.
     Returns a long-form DataFrame with ``(frame, behaviour, prob, pred)``.
     """
-    clf_proj = ClassifierFp(contract_fp.parent)
-    config_fp = clf_proj.config_fp(model_name)
-    # Check if model exists
-    if not config_fp.exists():
-        msg = "Classifier's model not found. Check active.yaml."
-        raise ValueError(msg)
-    # Configs
-    config = TrainingRecipe.read_yaml(config_fp)
-    # Load model
-    adapter = MODEL_TYPES_TO_CLASS[config.model_type].load(config_fp)
+    # Load adapter
+    adapter = load_adapter(contract_fp, model_name)
     # Run inference
     return adapter.predict(x_df)
 

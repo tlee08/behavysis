@@ -1,13 +1,12 @@
 """Evaluation metrics and visualization for behavioural classifier."""
 
-from pathlib import Path
 from typing import TypedDict
 
 import altair as alt
 import matplotlib.pyplot as plt
 import numpy as np
 import polars as pl
-import yaml
+import shap
 from loguru import logger
 from sklearn.metrics import (
     average_precision_score,
@@ -16,8 +15,14 @@ from sklearn.metrics import (
     roc_auc_score,
     roc_curve,
 )
+from sklearn.model_selection import train_test_split
+from sklearn.pipeline import Pipeline
 
-from behavysis.behaviour_classifier.data import agg_eval_df_by_bouts
+from behavysis.behaviour_classifier.data import (
+    agg_eval_df_by_bouts,
+    df_get_features,
+    df_get_labels,
+)
 from behavysis.constants import ACTUAL, BOUT, FRAME, PRED, PROB
 
 NIL = "nil"
@@ -356,58 +361,54 @@ def make_eval_result(splits: dict[str, pl.DataFrame]) -> EvalResult:
     return EvalResult(report=res_report, df=res_df, chart=res_chart)
 
 
-def save_feature_importance(
-    feature_names: list[str],
-    importances: np.ndarray,
-    eval_dir: Path,
+# ----- Explainability -------------------------------------------
+
+
+def compute_shap(
+    model: Pipeline,
+    df: pl.DataFrame,
     *,
     top_n: int = 30,
-) -> None:
-    """Save feature importance bar chart."""
-    n = min(top_n, len(importances))
-    if n == 0:
-        return
-    idx = np.argsort(importances)[-n:]
-    names = [feature_names[i] for i in idx]
-    vals = importances[idx]
+    max_samples: int = 500,
+) -> dict:
+    """Compute shap for tree-based model."""
+    preprocessor = model[:-1]
+    clf = model.steps[-1][1]
 
-    fig, ax = plt.subplots(figsize=(10, max(6, n * 0.3)))
-    ax.barh(range(n), vals, color="steelblue")
-    ax.set_yticks(range(n))
-    ax.set_yticklabels(names, fontsize=8)
-    ax.set_xlabel("Feature Importance")
-    ax.set_title(f"Top {n} Features by Importance")
-    fig.tight_layout()
-    fig.savefig(eval_dir / "feature_importance.png", dpi=150)
-    plt.close(fig)
-    logger.info(
-        "Saved feature importance plot to %s",
-        eval_dir / "feature_importance.png",
+    features_df = df_get_features(df)
+    features_df = preprocessor.transform(features_df)
+    feature_names = preprocessor.get_feature_names_out()
+    y_df = df_get_labels(df)
+
+    if len(features_df) > max_samples:
+        idx, _ = train_test_split(
+            np.arange(features_df.shape[0]),
+            train_size=max_samples,
+            stratify=y_df,
+            random_state=42,
+        )
+        features_df = features_df[idx]
+
+    shap_explainer = shap.TreeExplainer(clf)
+    shap_values = shap_explainer.shap_values(features_df)
+    shap_values = shap_values[1] if isinstance(shap_values, list) else shap_values
+    mean_abs_shap = np.abs(shap_values).mean(axis=0)
+    importance_df = pl.DataFrame(
+        {
+            "feature": feature_names,
+            "mean_abs_shap": mean_abs_shap,
+        }
+    ).sort("mean_abs_shap", descending=True)
+
+    top_idx = np.argsort(mean_abs_shap)[-top_n:]
+    shap.summary_plot(
+        shap_values[:, top_idx],
+        features_df[:, top_idx],
+        feature_names=feature_names[top_idx],
+        show=False,
     )
 
-
-def save_feature_report(
-    feature_names: list[str],
-    importances: np.ndarray | None,
-    eval_dir: Path,
-    n_features_total: int | None = None,
-) -> None:
-    """Save feature count and importance summary as YAML."""
-    low_importance_threshold = 0.001
-    n_used = len(feature_names)
-    report: dict = {
-        "n_features_total": (
-            n_features_total if n_features_total is not None else n_used
-        ),
-        "n_features_used": n_used,
+    return {
+        "importance_df": importance_df,
+        "fig": plt.gcf(),
     }
-
-    if importances is not None:
-        non_zero = int(np.sum(importances > 0))
-        report["n_features_non_zero_importance"] = non_zero
-        n_low = int(np.sum(importances < low_importance_threshold))
-        report["n_features_low_importance_lte_0.001"] = n_low
-
-    eval_dir.mkdir(parents=True, exist_ok=True)
-    (eval_dir / "feature_report.yaml").write_text(yaml.dump(report))
-    logger.info("Saved feature report to %s", eval_dir / "feature_report.yaml")
