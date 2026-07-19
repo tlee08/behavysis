@@ -12,7 +12,6 @@ from .behaviour_classifier import (
 from .config import ClassifierContract, TrainingRecipe
 from .data import (
     load_all_data,
-    load_feature_names,
     smooth_prob,
     stratified_split_by_group,
 )
@@ -27,7 +26,6 @@ __all__ = [
     "TrainingRecipe",
     "list_models",
     "load_all_data",
-    "load_feature_names",
     "make_eval_result",
     "make_eval_result_choose_model",
     "predict",

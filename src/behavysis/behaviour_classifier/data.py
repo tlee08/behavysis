@@ -21,7 +21,6 @@ from behavysis.constants import (
     TRUE_NEG,
     UNSURE,
     Array1D,
-    Array2D,
 )
 
 if TYPE_CHECKING:
@@ -30,21 +29,6 @@ if TYPE_CHECKING:
     from imblearn.under_sampling.base import BaseUnderSampler
 
 # ── loading ─────────────────────────────────────────────────────
-
-
-def load_feature_names(x_dir: Path) -> list[str]:
-    """Load feature column names from the first features parquet file.
-
-    Returns column names excluding "frame".
-    """
-    fp_ls = sorted(x_dir.iterdir())
-    if not fp_ls:
-        return []
-    return [
-        c
-        for c in pl.read_parquet(fp_ls[0]).columns
-        if c not in [EXPERIMENT, FRAME, ACTUAL, BOUT_ID]
-    ]
 
 
 def load_all_data(
@@ -182,18 +166,14 @@ def agg_eval_df_by_bouts(df: pl.DataFrame) -> pl.DataFrame:
 # ── X and y df preparing ─────────────────────────────────────────────────────
 
 
-def df_get_features(df: pl.DataFrame) -> Array2D:
+def df_get_features(df: pl.DataFrame) -> pl.DataFrame:
     """Given a df, only return features (filters out metadata and label columns)."""
-    return (
-        df.drop([EXPERIMENT, FRAME, ACTUAL, BOUT_ID], strict=False)
-        .to_numpy()
-        .astype(np.float32)
-    )
+    return df.drop([EXPERIMENT, FRAME, ACTUAL, BOUT_ID], strict=False).cast(pl.Float32)
 
 
-def df_get_labels(df: pl.DataFrame) -> Array1D:
+def df_get_labels(df: pl.DataFrame) -> pl.Series:
     """Given a df, return only the labels."""
-    return df[ACTUAL].to_numpy()
+    return df[ACTUAL]
 
 
 # ── preprocessing ─────────────────────────────────────────────────────────────
