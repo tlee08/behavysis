@@ -276,36 +276,40 @@ def make_eval_result(splits: dict[str, pl.DataFrame]) -> EvalResult:
     # Construct bouts splits eval (bouts equivalent of splits)
     bouts_splits = {_name: agg_eval_df_by_bouts(_df) for _name, _df in splits.items()}
     # Prepare to store eval results
-    res_report: dict[str, dict[str, dict[str, float]]] = {}
-    res_df: dict[str, pl.DataFrame] = {}
-    res_chart: dict[str, alt.Chart] = {}
+    res_report_dict: dict[str, dict[str, dict[str, float]]] = {}
+    res_df_dict: dict[str, pl.DataFrame] = {}
+    res_chart_dict: dict[str, alt.Chart] = {}
     # For both frames and bouts evals
     for _splits_name, _splits_data in {FRAME: splits, BOUT: bouts_splits}.items():
         # Make report
-        res_report[f"{_splits_name}_report"] = {
+        res_report_dict[f"{_splits_name}_report"] = {
             _name: _report(
-                _df[ACTUAL].to_numpy(), _df[PROB].to_numpy(), _df[PRED].to_numpy()
+                _df.get_column(ACTUAL).to_numpy(),
+                _df.get_column(PROB).to_numpy(),
+                _df.get_column(PRED).to_numpy(),
             )
             for _name, _df in _splits_data.items()
         }
         # Make eval dataframes
-        res_df[f"{_splits_name}_eval_df"] = pl.concat(
+        res_df_dict[f"{_splits_name}_eval_df"] = pl.concat(
             _df.with_columns(pl.lit(_name).alias(SPLIT))
             for _name, _df in _splits_data.items()
         )
-        res_df[f"{_splits_name}_roc_df"] = pl.concat(
+        res_df_dict[f"{_splits_name}_roc_df"] = pl.concat(
             [
-                _roc_df(_df[ACTUAL].to_numpy(), _df[PROB].to_numpy()).with_columns(
-                    pl.lit(_name).alias(SPLIT)
-                )
+                _roc_df(
+                    _df.get_column(ACTUAL).to_numpy(),
+                    _df.get_column(PROB).to_numpy(),
+                ).with_columns(pl.lit(_name).alias(SPLIT))
                 for _name, _df in _splits_data.items()
             ]
         )
-        res_df[f"{_splits_name}_pr_df"] = pl.concat(
+        res_df_dict[f"{_splits_name}_pr_df"] = pl.concat(
             [
-                _pr_df(_df[ACTUAL].to_numpy(), _df[PROB].to_numpy()).with_columns(
-                    pl.lit(_name).alias(SPLIT)
-                )
+                _pr_df(
+                    _df.get_column(ACTUAL).to_numpy(),
+                    _df.get_column(PROB).to_numpy(),
+                ).with_columns(pl.lit(_name).alias(SPLIT))
                 for _name, _df in _splits_data.items()
             ]
         )
@@ -315,18 +319,22 @@ def make_eval_result(splits: dict[str, pl.DataFrame]) -> EvalResult:
             .mark_line(strokeDash=[4, 4], color="grey")
             .encode(x="x:Q", y="y:Q")
         )
-        res_chart[f"{_splits_name}_hist_chart"] = _hist_chart(
-            res_df[f"{_splits_name}_eval_df"], PROB, f"Prob Histogram {_splits_name}"
+        res_chart_dict[f"{_splits_name}_hist_chart"] = _hist_chart(
+            res_df_dict[f"{_splits_name}_eval_df"],
+            PROB,
+            f"Prob Histogram {_splits_name}",
         )
-        res_chart[f"{_splits_name}_roc_chart"] = _curve_chart(
-            res_df[f"{_splits_name}_roc_df"], "fpr", "tpr", "ROC curve", diagonal
+        res_chart_dict[f"{_splits_name}_roc_chart"] = _curve_chart(
+            res_df_dict[f"{_splits_name}_roc_df"], "fpr", "tpr", "ROC curve", diagonal
         )
-        res_chart[f"{_splits_name}_pr_chart"] = _curve_chart(
-            res_df[f"{_splits_name}_pr_df"], "recall", "precision", "PR curve"
+        res_chart_dict[f"{_splits_name}_pr_chart"] = _curve_chart(
+            res_df_dict[f"{_splits_name}_pr_df"], "recall", "precision", "PR curve"
         )
-        res_chart[f"{_splits_name}_thresholds_chart"] = (
+        res_chart_dict[f"{_splits_name}_thresholds_chart"] = (
             alt.Chart(
-                res_df[f"{_splits_name}_pr_df"].unpivot(index=[SPLIT, "thresholds"])
+                res_df_dict[f"{_splits_name}_pr_df"].unpivot(
+                    index=[SPLIT, "thresholds"]
+                )
             )
             .mark_line()
             .encode(
@@ -343,11 +351,11 @@ def make_eval_result(splits: dict[str, pl.DataFrame]) -> EvalResult:
             )
         )
     # Bout health
-    res_report[f"{BOUT}_health"] = {
+    res_report_dict[f"{BOUT}_health"] = {
         _name: _bout_health(_df) for _name, _df in bouts_splits.items()
     }
     # Review efficiency (frame-level: predicted-positive / true-positive frames)
-    res_report["review_efficiency"] = {
+    res_report_dict["review_efficiency"] = {
         _name: {
             "efficiency": float(
                 _df.select(pl.col(PRED).sum() / pl.col(ACTUAL).sum()).item()
@@ -358,7 +366,7 @@ def make_eval_result(splits: dict[str, pl.DataFrame]) -> EvalResult:
         for _name, _df in splits.items()
     }
     # Return
-    return EvalResult(report=res_report, df=res_df, chart=res_chart)
+    return EvalResult(report=res_report_dict, df=res_df_dict, chart=res_chart_dict)
 
 
 # ----- Explainability -------------------------------------------
@@ -372,43 +380,46 @@ def compute_shap(
     max_samples: int = 500,
 ) -> dict:
     """Compute shap for tree-based model."""
-    preprocessor = model[:-1]
+    preprocessor = model[:-1].set_output(transform="pandas")
     clf = model.steps[-1][1]
 
-    features_df = df_get_features(df)
-    features_df = preprocessor.transform(features_df)
+    features_df = preprocessor.transform(df_get_features(df))
     feature_names = preprocessor.get_feature_names_out()
-    y_df = df_get_labels(df)
 
     if len(features_df) > max_samples:
         idx, _ = train_test_split(
             np.arange(features_df.shape[0]),
             train_size=max_samples,
-            stratify=y_df,
+            stratify=df_get_labels(df),
             random_state=42,
         )
-        features_df = features_df[idx]
+        features_df = features_df.loc[idx, :]
 
     shap_explainer = shap.TreeExplainer(clf)
-    shap_values = shap_explainer.shap_values(features_df)
-    shap_values = shap_values[1] if isinstance(shap_values, list) else shap_values
-    mean_abs_shap = np.abs(shap_values).mean(axis=0)
-    importance_df = pl.DataFrame(
-        {
-            "feature": feature_names,
-            "mean_abs_shap": mean_abs_shap,
-        }
-    ).sort("mean_abs_shap", descending=True)
+    shap_values = shap_explainer(features_df)
 
-    top_idx = np.argsort(mean_abs_shap)[-top_n:]
-    shap.summary_plot(
-        shap_values[:, top_idx],
-        features_df[:, top_idx],
-        feature_names=feature_names[top_idx],
-        show=False,
+    mean_abs_shap = np.abs(shap_values.values).mean(axis=0)[:, 1]
+    importance_df = (
+        pl.DataFrame(
+            {
+                "feature": feature_names,
+                "mean_abs_shap": mean_abs_shap,
+            }
+        )
+        .sort("mean_abs_shap", descending=True)
+        .with_row_index("rank")
     )
+    top_n_feature_names = importance_df.head(top_n).get_column("feature").to_numpy()
+
+    plt.figure()
+    shap.plots.bar(shap_values[:, top_n_feature_names, 1], max_display=top_n)
+    importance_plt = plt.gcf()
+    plt.figure()
+    shap.plots.beeswarm(shap_values[:, top_n_feature_names, 1], max_display=top_n)
+    beeswarm_plt = plt.gcf()
 
     return {
         "importance_df": importance_df,
-        "fig": plt.gcf(),
+        "importance_plt": importance_plt,
+        "beeswarm_plt": beeswarm_plt,
     }

@@ -132,8 +132,8 @@ def train_model(
     train_idx, test_idx = stratified_split_by_group(
         df, config.test_split, EXPERIMENT, config.seed
     )
-    train_df = df[train_idx].sort([EXPERIMENT, FRAME])
-    test_df = df[test_idx].sort([EXPERIMENT, FRAME])
+    train_df = df.gather(train_idx).sort([EXPERIMENT, FRAME])
+    test_df = df.gather(test_idx).sort([EXPERIMENT, FRAME])
 
     # Train
     logger.info("Training {}", contract.behaviour_name)
@@ -149,10 +149,10 @@ def train_model(
     eval_dir.mkdir(parents=True, exist_ok=True)
     # Predictions
     adapter.predict(train_df).with_columns(
-        train_df[EXPERIMENT], train_df[ACTUAL]
+        train_df.get_column(EXPERIMENT), train_df.get_column(ACTUAL)
     ).write_parquet(eval_dir / "train_eval.parquet")
     adapter.predict(test_df).with_columns(
-        test_df[EXPERIMENT], test_df[ACTUAL]
+        test_df.get_column(EXPERIMENT), test_df.get_column(ACTUAL)
     ).write_parquet(eval_dir / "test_eval.parquet")
     # Further evaluation
     res = make_eval_result_choose_model(contract_fp, model_name)

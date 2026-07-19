@@ -21,6 +21,10 @@ with app.setup:
         train_all_models,
         write_contract,
     )
+    import joblib
+    from behavysis.behaviour_classifier.data import df_get_features, load_all_data, df_get_labels
+    from behavysis.behaviour_classifier.evaluation import compute_shap
+
     from behavysis.constants import FEATURES_EXTRACTED_DIR
     from behavysis.transforms import boris_to_behaviour
     from behavysis.utils import configure_logger
@@ -456,6 +460,7 @@ def _(health_df):
         .properties(height=200, width=200)
     )
     mo.ui.altair_chart(health_chart)
+    return
 
 
 @app.cell
@@ -493,6 +498,30 @@ def _(eval_all):
     mo.accordion(accordion_items, multiple=True) if accordion_items else mo.md(
         "No per-model detail charts."
     )
+    return
+
+
+@app.cell
+def _():
+    mo.md("""
+    ### Model Explainability
+    """)
+    return
+
+
+@app.cell
+def _(clf_proj, behaviour_name):
+    # Load model (sklearn)
+    model = joblib.load(clf_proj.config_fp("rf").with_name("model.joblib"))
+    # Load data
+    df = load_all_data(
+        clf_proj.features_dir(),
+        clf_proj.labels_dir(),
+        behaviour_name,
+    )
+    # Get SHAP
+    result = compute_shap(model, df)
+    result
     return
 
 

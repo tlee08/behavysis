@@ -109,24 +109,30 @@ class SklearnAdapter(BaseAdapter):
         self.search.fit(
             df_get_features(df),
             df_get_labels(df),
-            groups=df[BOUT_ID].to_numpy(),
+            groups=df.get_column(BOUT_ID).to_numpy(),
         )
         # Full training stage
         # 5. Make train-val split by bouts (to programatically find best pcutoff)
         train_idx, val_idx = stratified_split_by_group(
             df, config.val_split, BOUT_ID, config.seed
         )
-        train_df = df[train_idx]
+        train_df = df.gather(train_idx)
         # 6. Refit best pipeline on train_df
         self.model = clone(self.search.estimator).set_params(**self.search.best_params_)
         self.model.fit(df_get_features(train_df), df_get_labels(train_df))
         # 7. Find best pcutoff with val_idx and update config with best pcutoff value
         # Use per-bouts eval instead of per-frames eval
-        y_df = self.predict(df).with_columns(df[EXPERIMENT], df[ACTUAL], df[BOUT_ID])
-        y_val_df = y_df[val_idx]
+        y_df = self.predict(df).with_columns(
+            df.get_column(EXPERIMENT),
+            df.get_column(ACTUAL),
+            df.get_column(BOUT_ID),
+        )
+        y_val_df = y_df.gather(val_idx)
         y_val_bouts_df = agg_eval_df_by_bouts(y_val_df)
         _, recall, thresholds = precision_recall_curve(
-            y_val_bouts_df[ACTUAL], y_val_bouts_df[PROB], drop_intermediate=True
+            y_val_bouts_df.get_column(ACTUAL),
+            y_val_bouts_df.get_column(PROB),
+            drop_intermediate=True,
         )
         config.pcutoff = float(
             thresholds[(recall[:-1] >= config.target_recall)][-1]
@@ -201,7 +207,7 @@ class XgboostAdapter(SklearnAdapter):
             msg = "model not yet trained."
             raise ValueError(msg)
         # clf is XGBoost, must first move to CPU before serialising
-        preprocess: Pipeline = Pipeline(self.model.steps[:-1])
+        preprocess: Pipeline = self.model[:-1]
         clf: XGBClassifier = self.model.steps[-1][1]
         # Save
         self.config_fp.parent.mkdir(parents=True, exist_ok=True)
