@@ -170,17 +170,15 @@ class SklearnAdapter(BaseAdapter):
             msg = "model not yet trained."
             raise ValueError(msg)
         # Save
-        model_dir = self.config_fp.parent
-        model_dir.mkdir(parents=True, exist_ok=True)
-        joblib.dump(self.search, model_dir / "search.joblib")
-        joblib.dump(self.model, model_dir / "model.joblib")
+        self.config_fp.parent.mkdir(parents=True, exist_ok=True)
+        joblib.dump(self.search, self.config_fp.with_name("search.joblib"))
+        joblib.dump(self.model, self.config_fp.with_name("model.joblib"))
 
     @classmethod
     def load(cls, config_fp: Path) -> Self:
         """Load."""
-        model_dir = config_fp.parent
-        inst = cls(model_dir / "config.yaml", joblib.load(model_dir / "search.joblib"))
-        inst.model = joblib.load(model_dir / "model.joblib")
+        inst = cls(config_fp, joblib.load(config_fp.with_name("search.joblib")))
+        inst.model = joblib.load(config_fp.with_name("model.joblib"))
         return inst
 
 
@@ -206,11 +204,10 @@ class XgboostAdapter(SklearnAdapter):
         preprocess: Pipeline = Pipeline(self.model.steps[:-1])
         clf: XGBClassifier = self.model.steps[-1][1]
         # Save
-        model_dir = self.config_fp.parent
-        model_dir.mkdir(parents=True, exist_ok=True)
-        joblib.dump(self.search, model_dir / "search.joblib")
-        joblib.dump(preprocess, model_dir / "preprocess.joblib")
-        clf.save_model(model_dir / "clf.ubj")
+        self.config_fp.parent.mkdir(parents=True, exist_ok=True)
+        joblib.dump(self.search, self.config_fp.with_name("search.joblib"))
+        joblib.dump(preprocess, self.config_fp.with_name("preprocess.joblib"))
+        clf.save_model(self.config_fp.with_name("clf.ubj"))
 
     @classmethod
     def load(cls, config_fp: Path) -> Self:
@@ -218,14 +215,13 @@ class XgboostAdapter(SklearnAdapter):
 
         Must load XGBoost model as a .ubj so it serialisable to all machines.
         """
-        model_dir = config_fp.parent
         # Instatiate
-        inst = cls(model_dir / "config.yaml", joblib.load(model_dir / "search.joblib"))
+        inst = cls(config_fp, joblib.load(config_fp.with_name("search.joblib")))
         # Load pipelin
-        preprocess: Pipeline = joblib.load(model_dir / "preprocess.joblib")
+        preprocess: Pipeline = joblib.load(config_fp.with_name("preprocess.joblib"))
         # Load model
         clf = XGBClassifier(device=get_gpu_device())
-        clf.load_model(model_dir / "clf.ubj")
+        clf.load_model(config_fp.with_name("clf.ubj"))
         # Reconstruct pipeline
         inst.model = Pipeline([*preprocess.steps, ("clf", clf)])
         # Return
@@ -297,19 +293,19 @@ class TabpfnAdapter(BaseAdapter):
             msg = "model not yet trained."
             raise ValueError(msg)
         # Save model
-        model_dir = self.config_fp.parent
-        model_dir.mkdir(parents=True, exist_ok=True)
-        save_fitted_tabpfn_model(self.model, model_dir / "model.tabpfn_fit")
+        self.config_fp.parent.mkdir(parents=True, exist_ok=True)
+        save_fitted_tabpfn_model(
+            self.model, self.config_fp.with_name("model.tabpfn_fit")
+        )
 
     @classmethod
     def load(cls, config_fp: Path) -> Self:
         """Load."""
-        model_dir = config_fp.parent
         # Instatiate
-        inst = cls(config_fp=config_fp)
+        inst = cls(config_fp)
         # Load model
         inst.model = load_fitted_tabpfn_model(
-            model_dir / "model.tabpfn_fit", device=get_gpu_device()
+            config_fp.with_name("model.tabpfn_fit"), device=get_gpu_device()
         )
         # Return
         return inst
@@ -361,9 +357,9 @@ class TorchAdapter(BaseAdapter):
 
         model_dir = self.config_fp.parent
         model_dir.mkdir(parents=True, exist_ok=True)
-        torch.save(self.model.state_dict(), model_dir / "model.pt")
-        joblib.dump(self.scaler, model_dir / "scaler.joblib")
-        np.save(model_dir / "feature_mask.npy", self.feature_mask)
+        torch.save(self.model.state_dict(), self.config_fp.with_name("model.pt"))
+        joblib.dump(self.scaler, self.config_fp.with_name("scaler.joblib"))
+        np.save(self.config_fp.with_name("feature_mask.npy"), self.feature_mask)
 
     @classmethod
     def load(cls, config_fp: Path) -> Self:
@@ -372,17 +368,16 @@ class TorchAdapter(BaseAdapter):
         Requires self.model_factory to be set (from MODEL_REGISTRY
         instantiation before calling this method).
         """
-        model_dir = config_fp.parent
         model = model.load_state_dict(
             torch.load(
-                model_dir / "model.pt",
+                config_fp.with_name("model.pt"),
                 map_location=torch.device("cpu"),
                 weights_only=True,
             )
         )
-        inst = cls(model)
-        inst.scaler = joblib.load(model_dir / "scaler.joblib")
-        inst.feature_mask = np.load(model_dir / "feature_mask.npy")
+        inst = cls(config_fp)
+        inst.scaler = joblib.load(config_fp.with_name("scaler.joblib"))
+        inst.feature_mask = np.load(config_fp.with_name("feature_mask.npy"))
         return inst
 
 
