@@ -96,7 +96,7 @@ def _():
         "roc_auc", "pr_auc", "gini",
     ]
 
-    overwrite = True
+    overwrite = False
     return (
         angles,
         behaviour_name,
@@ -131,8 +131,7 @@ def _():
 def _(clf_proj):
     feats_dir = clf_proj.features_dir()
     labels_dir = clf_proj.labels_dir()
-    contract_fp = clf_proj.contract_fp()
-    return contract_fp, feats_dir, labels_dir
+    return feats_dir, labels_dir
 
 
 @app.cell
@@ -195,9 +194,9 @@ def _():
 
 
 @app.cell
-def _(angles, behaviour_name, bodyparts, contract_fp, individuals):
+def _(angles, behaviour_name, bodyparts, clf_proj, individuals):
     write_contract(
-        contract_fp=contract_fp,
+        contract_fp=clf_proj.contract_fp(),
         behaviour_name=behaviour_name,
         individuals=individuals,
         bodyparts=bodyparts,
@@ -220,6 +219,13 @@ def _():
     return
 
 
+@app.function
+def show_chart_img(chart, width=300):
+    _file = io.BytesIO()
+    chart.save(_file, format="png")
+    return mo.image(_file, width=width)
+
+
 @app.cell
 def _(clf_proj):
     trained_models = list_models(clf_proj.contract_fp())
@@ -232,15 +238,15 @@ def _(clf_proj):
 
 
 @app.cell
-def _(contract_fp, trained_models):
+def _(clf_proj, trained_models):
     # Load eval for every model that has both train and test eval parquets.
     eval_all = {}
     for _model in trained_models:
-        _eval_dir = ClassifierFp(contract_fp.parent).eval_dir(_model)
+        _eval_dir = ClassifierFp(clf_proj.contract_fp().parent).eval_dir(_model)
         if (_eval_dir / "train_eval.parquet").exists() and (
             _eval_dir / "test_eval.parquet"
         ).exists():
-            eval_all[_model] = make_eval_result_choose_model(contract_fp, _model)
+            eval_all[_model] = make_eval_result_choose_model(clf_proj.contract_fp(), _model)
     return (eval_all,)
 
 
@@ -281,8 +287,8 @@ def _(eval_all, view_metrics):
 
     mo.ui.table(
         metrics_df.pivot(
+            on="metric",
             index=["model", "level", "split"],
-            columns="metric",
             values="value",
         ),
         page_size=20,
@@ -331,7 +337,7 @@ def _(eval_all):
                 roc_parts.append(
                     _roc.with_columns(
                         pl.lit(_model).alias("model"),
-                        pl.lit(_level).alias("alias"),
+                        pl.lit(_level).alias("level"),
                     )
                 )
             _pr = _res["df"].get(f"{_level}_pr_df")
@@ -339,7 +345,7 @@ def _(eval_all):
                 pr_parts.append(
                     _pr.with_columns(
                         pl.lit(_model).alias("model"),
-                        pl.lit(_level).alias("alias"),
+                        pl.lit(_level).alias("level"),
                     )
                 )
 
@@ -350,50 +356,48 @@ def _(eval_all):
 
 @app.cell
 def _(roc_df):
-    if roc_df is not None:
-        _diag = (
-            alt.Chart(pl.DataFrame({"x": [0.0, 1.0], "y": [0.0, 1.0]}))
-            .mark_line(strokeDash=[4, 4], color="grey")
-            .encode(x="x:Q", y="y:Q")
-        )
-        roc_chart = ((
-            alt.Chart(roc_df)
-            .mark_line()
-            .encode(
-                alt.X("fpr:Q", title="False Positive Rate", scale=alt.Scale(domain=[0, 1])),
-                alt.Y("tpr:Q", title="True Positive Rate", scale=alt.Scale(domain=[0, 1])),
-                alt.Color("model:N"),
-                alt.Column("level:N"),
-                alt.Row("split:N"),
-            )
-        ) + _diag).properties(width=500, height=400)
+    mo.stop(roc_df is None, mo.md("roc_df is None"))
 
-        # Must show as image, because too many points
-        _file = io.BytesIO()
-        roc_chart.save(_file, format="png")
-        mo.image(_file)
+    _diag = (
+        alt.Chart(pl.DataFrame({"x": [0.0, 1.0], "y": [0.0, 1.0]}))
+        .mark_line(strokeDash=[4, 4], color="grey")
+        .encode(x="x:Q", y="y:Q")
+    )
+    roc_chart = (
+        alt.Chart(roc_df)
+        .mark_line()
+        .encode(
+            alt.X("fpr:Q", title="False Positive Rate", scale=alt.Scale(domain=[0, 1])),
+            alt.Y("tpr:Q", title="True Positive Rate", scale=alt.Scale(domain=[0, 1])),
+            alt.Color("model:N"),
+            alt.Column("level:N"),
+            alt.Row("split:N"),
+        )
+    ).properties(width=300, height=300)
+
+    # Must show as image, because too many points
+    show_chart_img(roc_chart)
     return
 
 
 @app.cell
 def _(pr_df):
-    if pr_df is not None:
-        pr_chart = (
-            alt.Chart(pr_df)
-            .mark_line()
-            .encode(
-                alt.X("recall:Q", title="Recall", scale=alt.Scale(domain=[0, 1])),
-                alt.Y("precision:Q", title="Precision", scale=alt.Scale(domain=[0, 1])),
-                alt.Color("model:N"),
-                alt.Column("level:N"),
-                alt.Row("split:N"),
-            )
-        )
+    mo.stop(pr_df is None, mo.md("pr_df is None"))
 
-        # Must show as image, because too many points
-        _file = io.BytesIO()
-        pr_chart.save(_file, format="png")
-        mo.image(_file)
+    pr_chart = (
+        alt.Chart(pr_df)
+        .mark_line()
+        .encode(
+            alt.X("recall:Q", title="Recall", scale=alt.Scale(domain=[0, 1])),
+            alt.Y("precision:Q", title="Precision", scale=alt.Scale(domain=[0, 1])),
+            alt.Color("model:N"),
+            alt.Column("level:N"),
+            alt.Row("split:N"),
+        )
+    ).properties(width=300, height=300)
+
+    # Must show as image, because too many points
+    show_chart_img(pr_chart)
     return
 
 
@@ -435,6 +439,26 @@ def _(health_df):
 
 
 @app.cell
+def _(health_df):
+    _df = health_df.unpivot(index=["model", "split"], variable_name="metric")
+
+    health_chart = (
+        alt.Chart(_df)
+        .mark_bar()
+        .encode(
+            alt.Y("value:Q"),
+            alt.Color("model:N"),
+            alt.XOffset("model"),
+            alt.Column("metric:N"),
+            alt.Row("split:N"),
+        )
+        .resolve_scale(y="independent")
+        .properties(height=200, width=200)
+    )
+    mo.ui.altair_chart(health_chart)
+
+
+@app.cell
 def _(eff_df):
     mo.md("**Review efficiency** = pred_pos / true_pos")
     mo.ui.table(eff_df, page_size=20) if eff_df is not None else None
@@ -455,12 +479,16 @@ def _(eval_all):
     for _model, _res in eval_all.items():
         _panels = []
         for _name, _chart in _res["chart"].items():
-            _panels.append(mo.vstack([
-                mo.md(f"**{_name}**"),
-                mo.ui.altair_chart(_chart),
-            ]))
+            _panels.append(
+                mo.vstack(
+                    [
+                        mo.md(f"**{_name}**"),
+                        show_chart_img(_chart),
+                    ]
+                )
+            )
         if _panels:
-            accordion_items[_model] = mo.vstack(_panels)
+            accordion_items[_model] = mo.hstack(_panels)
 
     mo.accordion(accordion_items, multiple=True) if accordion_items else mo.md(
         "No per-model detail charts."
