@@ -614,7 +614,6 @@ def _compute_tortuosity(
             cum = np.insert(turn_angles, 0, 0.0).cumsum()
             for wf in roll_windows:
                 if wf < 3:  # noqa: PLR2004
-                    f[f"{indiv}_{bp}_tortuosity_w{wf}"] = np.zeros(n, dtype=np.float64)
                     continue
                 win = wf - 2  # number of turn angles in a wf-frame window
                 rolling_sum = cum[win:] - cum[:-win]  # len = n - win
