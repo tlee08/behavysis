@@ -75,17 +75,7 @@ def _():
     clf_dir = Path("/absolute/path/to/behaviour_classifier")
 
     # Behaviour to classify — written to contract.yaml.
-    # individuals, bodyparts, angles MUST match the source project's
-    # extract_features config.
     behaviour_name = "aggression"
-    individuals = ["mouse1marked", "mouse2unmarked"]
-    bodyparts = [
-        "LeftEar", "RightEar", "Nose", "BodyCentre",
-        "LeftFlankMid", "RightFlankMid", "TailBase1", "TailTip4",
-    ]
-    angles = [
-        ("Nose", "BodyCentre", "TailBase1"),
-    ]
 
     # Source project (must have completed extract_features stage).
     training_project_dir = Path("/absolute/path/to/behavysis_project")
@@ -102,12 +92,9 @@ def _():
 
     overwrite = False
     return (
-        angles,
         behaviour_name,
-        bodyparts,
         boris_dir,
         clf_dir,
-        individuals,
         names_ls,
         overwrite,
         training_project_dir,
@@ -198,13 +185,10 @@ def _():
 
 
 @app.cell
-def _(angles, behaviour_name, bodyparts, clf_proj, individuals):
+def _(behaviour_name, clf_proj):
     write_contract(
         contract_fp=clf_proj.contract_fp(),
         behaviour_name=behaviour_name,
-        individuals=individuals,
-        bodyparts=bodyparts,
-        angles=angles,
     ).model_dump()
     return
 

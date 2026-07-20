@@ -15,10 +15,6 @@ class ClassifierContract(YamlModel):
 
     behaviour_name: str
 
-    individuals: list[str]
-    bodyparts: list[str]
-    angles: list[tuple[str, str, str]]
-
     eval_metric: str = "f2"
     eval_metric_higher_better: bool = True
 
