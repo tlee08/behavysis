@@ -179,3 +179,25 @@ Phase 4: Training & deployment
 ---
 
 Shall I proceed with implementation, or would you like to discuss any part of this plan first?
+
+---
+
+---
+
+Improving existing feature extraction:
+
+Yes — you already have inter-individual distances: `_compute_cross_distances` gives every `{ind_a}_{bp_a}_to_{ind_b}_{bp_b}_dist` pair, and `_compute_centroid_distance` gives the gross `{ind_a}_{ind_b}_centroid_distance`. But for a _social_ behaviour classifier, there are important gaps — features that are simple reductions or derivatives of what you're already computing:
+
+**1. Min cross distance per animal pair (`{ind_a}_{ind_b}_cross_dist_min`)**
+You compute all N×M bodypart-to-bodypart distances between two animals. The minimum of those at each frame — "how close are they at their closest point?" — is the single most interpretable social-proximity signal. One line of code from existing `_compute_cross_distances` output. Easy.
+
+**2. Speed toward/away (`{ind_a}_{ind_b}_centroid_speed_toward`)**
+The frame-to-frame derivative of centroid distance. Tells you if animals are approaching (negative), retreating (positive), or standing still. This is the most biologically meaningful signal for chase/avoidance/approach behaviours. Also a one-liner from existing centroid distances: `np.diff(centroid_dist)`.
+
+**3. Movement asymmetry (`movement_asymmetry_{ind_a}_{ind_b}`)**
+Ratio or difference of per-individual movement sums. If mouse A is moving 5x faster than mouse B, that's aggression (chasing). If they're matched, it's play or exploration. Computed from existing `_movement_sum` per individual.
+
+**4. Inter-animal orientation / facing** (harder, needs new infrastructure)  
+Whether two animals are facing each other, parallel, or away. Requires defining a heading vector per animal (from the existing `angles` config, e.g. Nose→BodyCentre defines direction). Compute relative angle between two heading vectors. This is the strongest signal for directed social behaviours, but it's a new feature category — not a one-liner.
+
+The first three are trivial to add since they're derivations of existing features. Want me to implement those?
