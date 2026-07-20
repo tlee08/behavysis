@@ -15,7 +15,7 @@ from pathlib import Path
 
 import yaml
 
-_PRESETS_ROOT = Path(__file__).parent / "presets"
+_PRESETS_ROOT = Path(__file__).parent
 
 _PRESET_NAMES = sorted(
     d.name
