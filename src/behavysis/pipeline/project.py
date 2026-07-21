@@ -246,10 +246,24 @@ class Project:
                 if not df_ls:
                     continue
                 # Concatenate data
-                combined = pl.concat(df_ls)
+                combined_df = pl.concat(df_ls)
                 # Write Parquet
                 out_fp = subdir1 / f"all_{subdir2.stem}.{DF_IO_FORMAT}"
-                write_df(combined, out_fp)
+                write_df(combined_df, out_fp)
                 # Also write CSV
+                combined_csv_df = combined_df.to_pandas()
+                if "bin_sec" in df.columns:
+                    # If binned
+                    _cols = ["individual", "measure", "agg"]
+                    combined_csv_df = combined_csv_df.set_index(
+                        ["experiment", "bin_sec", *_cols]
+                    )["value"].unstack(_cols)
+                else:
+                    # If summary
+                    _cols = ["measure", "agg"]
+                    combined_csv_df = combined_csv_df.set_index(
+                        ["experiment", "individual", *_cols]
+                    )["value"].unstack(_cols)
+                # Prepare in specific format
                 csv_fp = subdir1 / f"all_{subdir2.stem}.csv"
-                combined.write_csv(csv_fp)
+                combined_csv_df.write_csv(csv_fp)
