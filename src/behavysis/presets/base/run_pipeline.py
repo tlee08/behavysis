@@ -86,12 +86,6 @@ def _(proj):
 
 @app.cell
 def _(overwrite, proj):
-    proj.get_video_metadata(overwrite=overwrite)
-    return
-
-
-@app.cell
-def _(overwrite, proj):
     proj.run_dlc(gputouse=None, overwrite=overwrite)
     return
 
