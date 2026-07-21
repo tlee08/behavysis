@@ -78,8 +78,11 @@ preprocess:
 
 # ---- Extract features for behaviour classifier (stage 5) ----
 extract_features:
-  individuals: *individuals
-  bodyparts: *bpts_all
+  generic:
+    bodyparts: *bpts_all
+    individuals: *individuals
+    angles:
+      - [Nose, BodyCentre, TailBase1]
 
 # ---- Behaviour classification (stage 6) ----
 classify_behaviour:

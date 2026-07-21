@@ -118,7 +118,7 @@ def train_model(
 
     # Load and align data
     df = load_all_data(
-        clf_proj.features_dir(),
+        clf_proj.features_dir(contract.feature_set),
         clf_proj.labels_dir(),
         contract.behaviour_name,
     )

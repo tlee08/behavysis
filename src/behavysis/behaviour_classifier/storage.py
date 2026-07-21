@@ -68,9 +68,9 @@ class ClassifierFp:
         """training_data_dir."""
         return self.root_dir() / TRAINING_DATA
 
-    def features_dir(self) -> Path:
+    def features_dir(self, feature_set: str) -> Path:
         """features_dir."""
-        return self.training_data_dir() / FEATURES_EXTRACTED_DIR
+        return self.training_data_dir() / FEATURES_EXTRACTED_DIR / feature_set
 
     def labels_dir(self) -> Path:
         """labels_dir."""

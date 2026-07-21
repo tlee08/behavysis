@@ -64,10 +64,11 @@ preprocess:
     pcutoff: 0.5
 
 extract_features:
-  bodyparts: *bpts_all
-  individuals: *individuals
-  angles:
-    - [Nose, BodyCentre, TailBase1]
+  generic:
+    bodyparts: *bpts_all
+    individuals: *individuals
+    angles:
+      - [Nose, BodyCentre, TailBase1]
 
 classify_behaviour:
   - clf_fp: /absolute/path/to/behaviour_classifier/contract.yaml

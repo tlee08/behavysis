@@ -24,6 +24,12 @@ from behavysis.constants import (
     SUMMARY,
     VALUE,
 )
+from behavysis.funcs import (
+    AnalyseFunc,
+    CalculateParametersFunc,
+    ExtractFeaturesFunc,
+    PreprocessFunc,
+)
 from behavysis.funcs.run_dlc import ma_dlc_run_batch
 from behavysis.pipeline import Experiment
 from behavysis.schemas import read_df, write_df
@@ -165,14 +171,14 @@ class Project:
             ]
             list(dask.compute(*delayed_tasks))
 
-    def calculate_parameters(self, funcs: tuple[Callable, ...]) -> None:
+    def calculate_parameters(self, funcs: tuple[CalculateParametersFunc, ...]) -> None:
         """Calculate parameters for all experiments."""
         self._run(
             Experiment.calculate_parameters,
             funcs=funcs,
         )
 
-    def preprocess(self, funcs: tuple[Callable, ...], *, overwrite: bool) -> None:
+    def preprocess(self, funcs: tuple[PreprocessFunc, ...], *, overwrite: bool) -> None:
         """Preprocess all experiments."""
         self._run(
             Experiment.preprocess,
@@ -180,10 +186,13 @@ class Project:
             overwrite=overwrite,
         )
 
-    def extract_features(self, *, overwrite: bool) -> None:
+    def extract_features(
+        self, funcs: tuple[ExtractFeaturesFunc, ...], *, overwrite: bool
+    ) -> None:
         """Extract features for all experiments."""
         self._run(
             Experiment.extract_features,
+            funcs=funcs,
             overwrite=overwrite,
         )
 
@@ -205,7 +214,7 @@ class Project:
             overwrite=overwrite,
         )
 
-    def analyse(self, funcs: tuple[Callable, ...]) -> None:
+    def analyse(self, funcs: tuple[AnalyseFunc, ...]) -> None:
         """Analyse all experiments."""
         self._run(
             Experiment.analyse,
