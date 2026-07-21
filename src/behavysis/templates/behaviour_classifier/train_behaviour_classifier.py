@@ -14,7 +14,7 @@ with app.setup:
 
     from behavysis import Project
     from behavysis.behaviour_classifier import (
-        ClassifierFp,
+        ClassifierPaths,
         list_models,
         make_eval_result_choose_model,
         promote_best,
@@ -49,7 +49,7 @@ def _():
             7_behaviour_scored/
         classifiers/
             rf/
-                config.yaml
+                recipe.yaml
                 model.joblib
                 evaluation/
             xgb/ ...
@@ -104,8 +104,8 @@ def _():
 
 @app.cell
 def _(clf_dir):
-    clf_proj = ClassifierFp(clf_dir)
-    return (clf_proj,)
+    clf = ClassifierPaths(clf_dir)
+    return (clf,)
 
 
 @app.cell
@@ -119,9 +119,9 @@ def _():
 
 
 @app.cell
-def _(clf_proj):
-    feats_dir = clf_proj.features_dir()
-    labels_dir = clf_proj.labels_dir()
+def _(clf):
+    feats_dir = clf.features_dir("generic")
+    labels_dir = clf.labels_dir()
     return feats_dir, labels_dir
 
 
@@ -154,7 +154,7 @@ def _():
     experiment's metadata (fps, frame range).
 
     *(If the source project is already scored, copy
-    `7_behaviour_scored/*.parquet` into `clf_proj.labels_dir()` instead.)*
+    `7_behaviour_scored/*.parquet` into `clf.labels_dir()` instead.)*
     """)
     return
 
@@ -185,17 +185,17 @@ def _():
 
 
 @app.cell
-def _(behaviour_name, clf_proj):
+def _(behaviour_name, clf):
     write_contract(
-        contract_fp=clf_proj.contract_fp(),
+        clf=clf,
         behaviour_name=behaviour_name,
     ).model_dump()
     return
 
 
 @app.cell
-def _(clf_proj, overwrite):
-    train_all_models(clf_proj.contract_fp(), overwrite=overwrite)
+def _(clf, overwrite):
+    train_all_models(clf, overwrite=overwrite)
     return
 
 
@@ -215,8 +215,8 @@ def show_chart_img(chart, width=300):
 
 
 @app.cell
-def _(clf_proj):
-    trained_models = list_models(clf_proj.contract_fp())
+def _(clf):
+    trained_models = list_models(clf)
     _msg = (
         f"Found **{len(trained_models)}** trained models: "
         f"{', '.join(trained_models)}"
@@ -226,15 +226,15 @@ def _(clf_proj):
 
 
 @app.cell
-def _(clf_proj, trained_models):
+def _(clf, trained_models):
     # Load eval for every model that has both train and test eval parquets.
     eval_all = {}
     for _model in trained_models:
-        _eval_dir = ClassifierFp(clf_proj.contract_fp().parent).eval_dir(_model)
+        _eval_dir = clf.eval_dir(_model)
         if (_eval_dir / "train_eval.parquet").exists() and (
             _eval_dir / "test_eval.parquet"
         ).exists():
-            eval_all[_model] = make_eval_result_choose_model(clf_proj.contract_fp(), _model)
+            eval_all[_model] = make_eval_result_choose_model(clf, _model)
     return (eval_all,)
 
 
@@ -494,13 +494,13 @@ def _():
 
 
 @app.cell
-def _(clf_proj, behaviour_name):
+def _(clf, behaviour_name):
     # Load model (sklearn)
-    model = joblib.load(clf_proj.config_fp("rf").with_name("model.joblib"))
+    model = joblib.load(clf.recipe_fp("rf").with_name("model.joblib"))
     # Load data
     df = load_all_data(
-        clf_proj.features_dir(),
-        clf_proj.labels_dir(),
+        clf.features_dir(),
+        clf.labels_dir(),
         behaviour_name,
     )
     # Get SHAP
@@ -525,8 +525,8 @@ def _():
 
 
 @app.cell
-def _(clf_proj):
-    promote_best(clf_proj.contract_fp())
+def _(clf):
+    promote_best(clf)
     return
 
 
@@ -539,10 +539,8 @@ def _():
 
     ```yaml
     classify_behaviour:
-        - clf_fp: /absolute/path/to/behaviour_classifier
-            pcutoff: 0.5
-            min_empty_window_secs: 0.2
-            sub_behaviour: []
+        - contract_fp: /absolute/path/to/behaviour_classifier/contract.yaml
+          sub_behaviour: []
     ```
     """)
     return

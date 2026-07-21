@@ -1,45 +1,52 @@
 # =============================================================================
-# Two-Mouse Social Interaction
+# Hind Paw Withdrawal
 # =============================================================================
 #
-# Social interaction test: two mice (one marked, one unmarked).
-# Measures distance, social distance, and thigmotaxis.
+# Hind paw withdrawal and rearing
 # =============================================================================
 
 _bpts_front: &bpts_front
-  - Nose
-  - LeftEar
-  - RightEar
-  - BodyCentre
-_bpts_centre: &bpts_centre
-  - LeftFlankMid
-  - BodyCentre
-  - RightFlankMid
-  - LeftFlankRear
-  - RightFlankRear
-  - TailBase1
+  - nose
+  - ear_r
+  - ear_l
+_bpts_hind: &bpts_hind
+  - nose
+  - ear_r
+  - ear_l
+  - mid_back
+  - lower_back
+  - tail_base
 _bpts_all: &bpts_all
-  - LeftEar
-  - RightEar
-  - Nose
-  - BodyCentre
-  - LeftFlankMid
-  - RightFlankMid
-  - TailBase1
-  - TailTip4
+  - nose
+  - ear_r
+  - ear_l
+  # front paw
+  - front_toe_r
+  - front_knee_r
+  - front_toe_l
+  - front_knee_l
+  # hind paw
+  - hind_toe_r
+  - hind_heel_r
+  - hind_knee_r
+  - hind_toe_l
+  - hind_heel_l
+  - hind_knee_l
+  # back and tail
+  - mid_back
+  - lower_back
+  - tail_base
+  - tail_tip
 _bpts_corners: &bpts_corners
-  - TopLeft
-  - TopRight
-  - BottomRight
-  - BottomLeft
+  - arena_r
+  - arena_l
 _individuals: &individuals
-  - mouse1marked
-  - mouse2unmarked
+  - rat
 
 format_video:
-  width_px: 960
-  height_px: 540
-  fps: 15.0
+  width_px: 540
+  height_px: 960
+  fps: 50
   start_sec: null
   stop_sec: null
 
@@ -48,15 +55,15 @@ run_dlc:
 
 calculate_parameters:
   from_likelihood:
-    bodyparts: *bpts_all
-    window_sec: 1.0
-    pcutoff: 0.8
+    bodyparts: *bpts_hind
+    window_sec: 0.5
+    pcutoff: 0.5
   stop_frame_from_dur:
-    dur_sec: 900
+    dur_sec: 6000
   px_per_mm:
-    pt_a: TopLeft
-    pt_b: TopRight
-    dist_mm: 400
+    pt_a: arena_r
+    pt_b: arena_l
+    dist_mm: 100
     pcutoff: 0.3
 
 preprocess:
@@ -68,7 +75,9 @@ extract_features:
     bodyparts: *bpts_all
     individuals: *individuals
     angles:
-      - [Nose, BodyCentre, TailBase1]
+      - [hind_toe_r, hind_heel_r, hind_knee_r]
+      - [hind_toe_l, hind_heel_l, hind_knee_l]
+  hpw: {}
 
 classify_behaviour:
   - contract_fp: /absolute/path/to/behaviour_classifier/contract.yaml
@@ -77,20 +86,18 @@ classify_behaviour:
 analyse:
   bins_sec_ls: [30, 60, 120]
   custom_bins_sec_ls: []
+  speed:
+    smoothing_sec: 1.0
+    bodyparts: *bpts_front
   distance:
     smoothing_sec: 1.0
-    bodyparts: *bpts_centre
+    bodyparts: *bpts_front
   in_roi:
-    - roi_name: thigmotaxis
-      is_in: false
-      padding_mm: -20.0
-      roi_corners: *bpts_corners
-      bodyparts: *bpts_front
     - roi_name: in_centre
       is_in: true
-      padding_mm: -50
+      padding_mm: 0
       roi_corners: *bpts_corners
       bodyparts: *bpts_front
   social_distance:
     smoothing_sec: 1.0
-    bodyparts: *bpts_centre
+    bodyparts: *bpts_front

@@ -14,16 +14,16 @@ from behavysis.behaviour_classifier.adapter import (
     TorchAdapter,
     select_features,
 )
-from behavysis.behaviour_classifier.config import TrainingRecipe
+from behavysis.behaviour_classifier.config import ModelRecipe
 from behavysis.behaviour_classifier.torch.architectures import DNN1
 from behavysis.behaviour_classifier.torch.base import TorchModel
 from behavysis.behaviour_classifier.torch.dataset import WindowDataset
 
 
-def _recipe(**kw) -> TrainingRecipe:
+def _recipe(**kw) -> ModelRecipe:
     base = dict(name="test")
     base.update(kw)
-    return TrainingRecipe(**base)
+    return ModelRecipe(**base)
 
 
 def _df(x: np.ndarray, y: np.ndarray, name: str = "test") -> pl.DataFrame:

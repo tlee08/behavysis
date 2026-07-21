@@ -82,11 +82,10 @@ class ExtractFeaturesConfig(SubfuncModel):
     """Configuration for feature extraction."""
 
 
-class ClassifyBehaviourConfig(BaseModel):
-    """ClassifyBehaviourConfig."""
+class ClassifierRef(BaseModel):
+    """Pointer to a classifier's contract.yaml."""
 
     contract_fp: Path = Path("path") / "to" / "model" / "contract.yaml"
-    feature_set: str = "generic"
     sub_behaviour: list[str] = []
 
 
@@ -110,7 +109,7 @@ class ExperimentConfig(YamlModel):
     calculate_parameters: CalculateParametersConfig | None
     preprocess: PreprocessConfig | None
     extract_features: ExtractFeaturesConfig | None
-    classify_behaviour: list[ClassifyBehaviourConfig] | None
+    classify_behaviour: list[ClassifierRef] | None
     analyse: AnalyseConfig | None
 
     def require_format_video(self) -> FormatVideoConfig:
@@ -148,7 +147,7 @@ class ExperimentConfig(YamlModel):
             raise ConfigNotConfiguredError(msg)
         return self.extract_features
 
-    def require_classify_behaviour(self) -> list[ClassifyBehaviourConfig]:
+    def require_classify_behaviour(self) -> list[ClassifierRef]:
         """Require the classify_behaviour config."""
         if self.classify_behaviour is None:
             msg = "classify_behaviour"

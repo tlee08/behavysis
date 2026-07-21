@@ -1,24 +1,21 @@
 """Classify Behaviours."""
 
-from pathlib import Path
-
 import polars as pl
 from loguru import logger
 
-from behavysis.behaviour_classifier import ClassifierContract, predict
-from behavysis.behaviour_classifier.storage import ClassifierFp
+from behavysis.behaviour_classifier import ClassifierContract, ClassifierPaths, predict
 
 
 def classify_single(
-    contract_fp: Path,
+    clf: ClassifierPaths,
     features_df: pl.DataFrame,
 ) -> pl.DataFrame:
     """Run inference with a single classifier on the given features DataFrame.
 
     Parameters
     ----------
-    contract_fp : Path
-        Path to the classifier's contract.yaml.
+    clf : ClassifierPaths
+        The classifier's directory layout helper.
     features_df : pl.DataFrame
         Wide features DataFrame with ``frame`` + feature columns.
 
@@ -27,8 +24,7 @@ def classify_single(
     pl.DataFrame
         ``(frame, behaviour, prob, pred)`` long-form predictions.
     """
-    clf_proj = ClassifierFp(contract_fp.parent)
-    contract = ClassifierContract.read_yaml(clf_proj.contract_fp())
-    result = predict(contract_fp, features_df)
+    contract = ClassifierContract.read_yaml(clf.contract_fp())
+    result = predict(clf, features_df)
     logger.info("Completed {} classification.", contract.behaviour_name)
     return result

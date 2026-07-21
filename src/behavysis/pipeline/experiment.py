@@ -7,7 +7,7 @@ import cv2
 import numpy as np
 import polars as pl
 
-from behavysis.behaviour_classifier import ClassifierContract
+from behavysis.behaviour_classifier import ClassifierContract, ClassifierPaths
 from behavysis.constants import (
     ANALYSIS_COMBINED_DIR,
     ANALYSIS_DIR,
@@ -241,11 +241,11 @@ class Experiment:
         # Process
         behaviour_df_ls = []
         for model_config in self.read_config().require_classify_behaviour():
-            features_df = pl.read_parquet(
-                self.get_features_fp(model_config.feature_set)
-            )
+            clf = ClassifierPaths(model_config.contract_fp.parent)
+            contract = ClassifierContract.read_yaml(clf.contract_fp())
+            features_df = read_df(self.get_features_fp(contract.feature_set))
             behaviour_df_ls.append(
-                classify_single(model_config.contract_fp, features_df)
+                classify_single(clf, features_df)
             )
         # Save
         write_df(

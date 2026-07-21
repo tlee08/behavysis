@@ -20,7 +20,7 @@ with app.setup:
         load_all_data,
         stratified_split_by_group,
     )
-    from behavysis.behaviour_classifier.storage import ClassifierFp
+    from behavysis.behaviour_classifier.storage import ClassifierPaths
     from behavysis.constants import (
         ACTUAL,
         BOUT_ID,
@@ -41,20 +41,20 @@ def _():
     clf_dir = Path.cwd()
     behaviour_name = "aggression"
 
-    clf_proj = ClassifierFp(clf_dir)
-    contract_fp = clf_proj.contract_fp()
-    feats_dst = clf_proj.features_dir()
-    labels_dst = clf_proj.labels_dir()
+    clf = ClassifierPaths(clf_dir)
+    contract_fp = clf.contract_fp()
+    feats_dst = clf.features_dir("generic")
+    labels_dst = clf.labels_dir()
     labels_dst.mkdir(parents=True, exist_ok=True)
-    return behaviour_name, clf_proj
+    return behaviour_name, clf
 
 
 @app.cell
-def _(behaviour_name, clf_proj):
+def _(behaviour_name, clf):
     # Load and align data
     df = load_all_data(
-        clf_proj.features_dir(),
-        clf_proj.labels_dir(),
+        clf.features_dir("generic"),
+        clf.labels_dir(),
         behaviour_name,
     )
     df = label_bouts(df)

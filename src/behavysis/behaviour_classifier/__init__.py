@@ -9,7 +9,7 @@ from .behaviour_classifier import (
     train_model,
     write_contract,
 )
-from .config import ClassifierContract, TrainingRecipe
+from .config import ActiveModel, ClassifierContract, ModelRecipe
 from .data import (
     load_all_data,
     smooth_prob,
@@ -17,13 +17,14 @@ from .data import (
 )
 from .evaluation import make_eval_result
 from .registry import MODEL_REGISTRY
-from .storage import ClassifierFp
+from .storage import ClassifierPaths
 
 __all__ = [
     "MODEL_REGISTRY",
+    "ActiveModel",
     "ClassifierContract",
-    "ClassifierFp",
-    "TrainingRecipe",
+    "ClassifierPaths",
+    "ModelRecipe",
     "list_models",
     "load_all_data",
     "make_eval_result",

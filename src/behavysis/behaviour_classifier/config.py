@@ -8,7 +8,7 @@ from behavysis.models.base import YamlModel
 class ClassifierContract(YamlModel):
     """Shared classifier contract (contract.yaml per classifier).
 
-    The single source of truth for what every model_type in the classifier
+    The single source of truth for what every model in the classifier
     trains on: the behaviour, the feature set name, and the evaluation
     metric. Authored before training and never auto-modified.
     """
@@ -19,14 +19,14 @@ class ClassifierContract(YamlModel):
     eval_metric_higher_better: bool = True
 
 
-class ClassifierActive(YamlModel):
+class ActiveModel(YamlModel):
     """Stores which model to use."""
 
     model_name: str
 
 
-class TrainingRecipe(YamlModel):
-    """Human-authored training recipe (config.yaml).
+class ModelRecipe(YamlModel):
+    """Human-authored model recipe (recipe.yaml).
 
     Model-specific hyperparameters live in ``hyperparameters``. Every value
     must be a list — even single-option entries (e.g. ``random_state: [42]``).

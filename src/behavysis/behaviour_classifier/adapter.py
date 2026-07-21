@@ -30,7 +30,7 @@ from behavysis.constants import (
 from behavysis.schemas import BEHAVIOUR_PREDICTED_SCHEMA
 from behavysis.utils import get_gpu_device
 
-from .config import TrainingRecipe
+from .config import ModelRecipe
 from .data import (
     agg_eval_df_by_bouts,
     df_get_features,
@@ -54,15 +54,15 @@ class BaseAdapter(ABC):
     """Abstract adapter with fit / predict."""
 
     framework: ClassVar[str]
-    config_fp: Path
+    recipe_fp: Path
 
-    def _read_config(self) -> TrainingRecipe:
-        """Read config."""
-        return TrainingRecipe.read_yaml(self.config_fp)
+    def _read_recipe(self) -> ModelRecipe:
+        """Read recipe."""
+        return ModelRecipe.read_yaml(self.recipe_fp)
 
-    def _write_config(self, config: TrainingRecipe) -> None:
-        """Write config."""
-        return config.write_yaml(self.config_fp)
+    def _write_recipe(self, recipe: ModelRecipe) -> None:
+        """Write recipe."""
+        return recipe.write_yaml(self.recipe_fp)
 
     @abstractmethod
     def fit(self, df: pl.DataFrame) -> pd.DataFrame:
@@ -81,7 +81,7 @@ class BaseAdapter(ABC):
 
     @classmethod
     @abstractmethod
-    def load(cls, config_fp: Path) -> Self:
+    def load(cls, recipe_fp: Path) -> Self:
         """Load model artifacts."""
 
 
@@ -90,16 +90,16 @@ class SklearnAdapter(BaseAdapter):
 
     framework: ClassVar[str] = "sklearn"
 
-    def __init__(self, config_fp: Path, search: BaseSearchCV) -> None:
+    def __init__(self, recipe_fp: Path, search: BaseSearchCV) -> None:
         """Init."""
-        self.config_fp = config_fp
+        self.recipe_fp = recipe_fp
         self.search = search
         self.model: Pipeline | None = None
 
     def fit(self, df: pl.DataFrame) -> pd.DataFrame:
         """Fit."""
-        # 1. Read config
-        config = self._read_config()
+        # 1. Read recipe
+        recipe = self._read_recipe()
         # Hyperparameter selection stage
         # 2. Sort the df by EXPERIMENT, FRAME. Then compute bout_id
         df = df.sort([EXPERIMENT, FRAME])
@@ -114,13 +114,13 @@ class SklearnAdapter(BaseAdapter):
         # Full training stage
         # 5. Make train-val split by bouts (to programatically find best pcutoff)
         train_idx, val_idx = stratified_split_by_group(
-            df, config.val_split, BOUT_ID, config.seed
+            df, recipe.val_split, BOUT_ID, recipe.seed
         )
         train_df = df.gather(train_idx)
         # 6. Refit best pipeline on train_df
         self.model = clone(self.search.estimator).set_params(**self.search.best_params_)
         self.model.fit(df_get_features(train_df), df_get_labels(train_df))
-        # 7. Find best pcutoff with val_idx and update config with best pcutoff value
+        # 7. Find best pcutoff with val_idx and update recipe with best pcutoff value
         # Use per-bouts eval instead of per-frames eval
         y_df = self.predict(df).with_columns(
             df.get_column(EXPERIMENT),
@@ -134,12 +134,12 @@ class SklearnAdapter(BaseAdapter):
             y_val_bouts_df.get_column(PROB),
             drop_intermediate=True,
         )
-        config.pcutoff = float(
-            thresholds[(recall[:-1] >= config.target_recall)][-1]
-            if np.any(recall[:-1] >= config.target_recall)
+        recipe.pcutoff = float(
+            thresholds[(recall[:-1] >= recipe.target_recall)][-1]
+            if np.any(recall[:-1] >= recipe.target_recall)
             else 0.001
         )
-        self._write_config(config)
+        self._write_recipe(recipe)
         # Return
         return pd.DataFrame(columns=pd.Index(["loss", "vloss"]))
 
@@ -149,8 +149,8 @@ class SklearnAdapter(BaseAdapter):
         if self.model is None:
             msg = "model not yet trained."
             raise ValueError(msg)
-        # Get configs
-        config = self._read_config()
+        # Get recipe
+        recipe = self._read_recipe()
         # Predict
         frame = df.get_column(FRAME)
         prob = self.model.predict_proba(df_get_features(df))[:, 1]
@@ -158,15 +158,15 @@ class SklearnAdapter(BaseAdapter):
         y_df = pl.DataFrame(
             {
                 FRAME: frame,
-                BEHAVIOUR: config.behaviour_name,
+                BEHAVIOUR: recipe.behaviour_name,
                 PROB: prob,
                 PRED: 0,  # placeholder. Must smooth first
             },
             schema=BEHAVIOUR_PREDICTED_SCHEMA,
         )
         # Smooth, threshold, and return
-        return smooth_prob(y_df, config.smoothing_frames, "median").with_columns(
-            (pl.col(PROB) > config.pcutoff).alias(PRED)
+        return smooth_prob(y_df, recipe.smoothing_frames, "median").with_columns(
+            (pl.col(PROB) > recipe.pcutoff).alias(PRED)
         )
 
     def save(self) -> None:
@@ -176,15 +176,15 @@ class SklearnAdapter(BaseAdapter):
             msg = "model not yet trained."
             raise ValueError(msg)
         # Save
-        self.config_fp.parent.mkdir(parents=True, exist_ok=True)
-        joblib.dump(self.search, self.config_fp.with_name("search.joblib"))
-        joblib.dump(self.model, self.config_fp.with_name("model.joblib"))
+        self.recipe_fp.parent.mkdir(parents=True, exist_ok=True)
+        joblib.dump(self.search, self.recipe_fp.with_name("search.joblib"))
+        joblib.dump(self.model, self.recipe_fp.with_name("model.joblib"))
 
     @classmethod
-    def load(cls, config_fp: Path) -> Self:
+    def load(cls, recipe_fp: Path) -> Self:
         """Load."""
-        inst = cls(config_fp, joblib.load(config_fp.with_name("search.joblib")))
-        inst.model = joblib.load(config_fp.with_name("model.joblib"))
+        inst = cls(recipe_fp, joblib.load(recipe_fp.with_name("search.joblib")))
+        inst.model = joblib.load(recipe_fp.with_name("model.joblib"))
         return inst
 
 
@@ -210,24 +210,24 @@ class XgboostAdapter(SklearnAdapter):
         preprocess: Pipeline = self.model[:-1]
         clf: XGBClassifier = self.model.steps[-1][1]
         # Save
-        self.config_fp.parent.mkdir(parents=True, exist_ok=True)
-        joblib.dump(self.search, self.config_fp.with_name("search.joblib"))
-        joblib.dump(preprocess, self.config_fp.with_name("preprocess.joblib"))
-        clf.save_model(self.config_fp.with_name("clf.ubj"))
+        self.recipe_fp.parent.mkdir(parents=True, exist_ok=True)
+        joblib.dump(self.search, self.recipe_fp.with_name("search.joblib"))
+        joblib.dump(preprocess, self.recipe_fp.with_name("preprocess.joblib"))
+        clf.save_model(self.recipe_fp.with_name("clf.ubj"))
 
     @classmethod
-    def load(cls, config_fp: Path) -> Self:
+    def load(cls, recipe_fp: Path) -> Self:
         """Load.
 
         Must load XGBoost model as a .ubj so it serialisable to all machines.
         """
         # Instatiate
-        inst = cls(config_fp, joblib.load(config_fp.with_name("search.joblib")))
+        inst = cls(recipe_fp, joblib.load(recipe_fp.with_name("search.joblib")))
         # Load pipelin
-        preprocess: Pipeline = joblib.load(config_fp.with_name("preprocess.joblib"))
+        preprocess: Pipeline = joblib.load(recipe_fp.with_name("preprocess.joblib"))
         # Load model
         clf = XGBClassifier(device=get_gpu_device())
-        clf.load_model(config_fp.with_name("clf.ubj"))
+        clf.load_model(recipe_fp.with_name("clf.ubj"))
         # Reconstruct pipeline
         inst.model = Pipeline([*preprocess.steps, ("clf", clf)])
         # Return
@@ -239,17 +239,17 @@ class TabpfnAdapter(BaseAdapter):
 
     framework: ClassVar[str] = "tabpfn"
 
-    def __init__(self, config_fp: Path, **kwargs) -> None:
+    def __init__(self, recipe_fp: Path, **kwargs) -> None:
         """Init."""
-        self.config_fp = config_fp
+        self.recipe_fp = recipe_fp
         # Store hyperparams
         self.kwargs = kwargs
         self.model: TabPFNClassifier | None = None
 
     def fit(self, df: pl.DataFrame) -> pd.DataFrame:
         """Fit."""
-        # 1. Read config
-        config = self._read_config()
+        # 1. Read recipe
+        recipe = self._read_recipe()
         # Full training stage. No hyperparameter tuning
         # 2. Sort the df by EXPERIMENT, FRAME. Then compute bout_id
         df = df.sort([EXPERIMENT, FRAME])
@@ -261,8 +261,8 @@ class TabpfnAdapter(BaseAdapter):
         # 4. Fit classifier on sub_df
         self.model.fit(df_get_features(df), df_get_labels(df))
         # 5. Set pcutoff as hardcoded 0.5 (tabpfn sorts itself out)
-        config.pcutoff = 0.5
-        self._write_config(config)
+        recipe.pcutoff = 0.5
+        self._write_recipe(recipe)
         # Return
         return pd.DataFrame(columns=pd.Index(["loss", "vloss"]))
 
@@ -272,8 +272,8 @@ class TabpfnAdapter(BaseAdapter):
         if self.model is None:
             msg = "model not yet trained."
             raise ValueError(msg)
-        # Get configs
-        config = self._read_config()
+        # Get recipe
+        recipe = self._read_recipe()
         # Predict
         frame = df.get_column(FRAME)
         prob = self.model.predict_proba(df_get_features(df))[:, 1]
@@ -281,15 +281,15 @@ class TabpfnAdapter(BaseAdapter):
         y_df = pl.DataFrame(
             {
                 FRAME: frame,
-                BEHAVIOUR: config.behaviour_name,
+                BEHAVIOUR: recipe.behaviour_name,
                 PROB: prob,
                 PRED: 0,  # placeholder. Must smooth first
             },
             schema=BEHAVIOUR_PREDICTED_SCHEMA,
         )
         # Smooth, threshold, and return
-        return smooth_prob(y_df, config.smoothing_frames, "median").with_columns(
-            (pl.col(PROB) > config.pcutoff).alias(PRED)
+        return smooth_prob(y_df, recipe.smoothing_frames, "median").with_columns(
+            (pl.col(PROB) > recipe.pcutoff).alias(PRED)
         )
 
     def save(self) -> None:
@@ -299,19 +299,19 @@ class TabpfnAdapter(BaseAdapter):
             msg = "model not yet trained."
             raise ValueError(msg)
         # Save model
-        self.config_fp.parent.mkdir(parents=True, exist_ok=True)
+        self.recipe_fp.parent.mkdir(parents=True, exist_ok=True)
         save_fitted_tabpfn_model(
-            self.model, self.config_fp.with_name("model.tabpfn_fit")
+            self.model, self.recipe_fp.with_name("model.tabpfn_fit")
         )
 
     @classmethod
-    def load(cls, config_fp: Path) -> Self:
+    def load(cls, recipe_fp: Path) -> Self:
         """Load."""
         # Instatiate
-        inst = cls(config_fp)
+        inst = cls(recipe_fp)
         # Load model
         inst.model = load_fitted_tabpfn_model(
-            config_fp.with_name("model.tabpfn_fit"), device=get_gpu_device()
+            recipe_fp.with_name("model.tabpfn_fit"), device=get_gpu_device()
         )
         # Return
         return inst
@@ -322,20 +322,20 @@ class TorchAdapter(BaseAdapter):
 
     framework: ClassVar[str] = "torch"
 
-    def __init__(self, config_fp: Path, model: TorchModel) -> None:
+    def __init__(self, recipe_fp: Path, model: TorchModel) -> None:
         """Init."""
         self.model: TorchModel = model
-        self.config_fp: Path = config_fp
+        self.recipe_fp: Path = recipe_fp
         self.scaler: MinMaxScaler = MinMaxScaler()
         self.feature_mask: np.ndarray = np.ndarray([])
 
     def fit(self, df: pl.DataFrame) -> pd.DataFrame:
         """Fit."""
-        config = self._read_config()
+        recipe = self._read_recipe()
         # Preprocess
         x = self.scaler.fit_transform(df_get_features(df))
         self.feature_mask = select_features(
-            x, df_get_labels(df), config.variance_threshold, config.max_features
+            x, df_get_labels(df), recipe.variance_threshold, recipe.max_features
         )
         nfeatures = len(self.feature_mask)
         # Train
@@ -343,9 +343,9 @@ class TorchAdapter(BaseAdapter):
             [x[:, self.feature_mask]],
             [y],
             [np.arange(x.shape[0])],
-            batch_size=config.batch_size,
-            epochs=config.epochs,
-            val_split=config.val_split,
+            batch_size=recipe.batch_size,
+            epochs=recipe.epochs,
+            val_split=recipe.val_split,
         )
 
     def _raw_predict(self, df: pl.DataFrame) -> tuple[pl.Series, Array1D]:
@@ -361,14 +361,14 @@ class TorchAdapter(BaseAdapter):
             msg = "Cannot save unfitted torch model."
             raise RuntimeError(msg)
 
-        model_dir = self.config_fp.parent
+        model_dir = self.recipe_fp.parent
         model_dir.mkdir(parents=True, exist_ok=True)
-        torch.save(self.model.state_dict(), self.config_fp.with_name("model.pt"))
-        joblib.dump(self.scaler, self.config_fp.with_name("scaler.joblib"))
-        np.save(self.config_fp.with_name("feature_mask.npy"), self.feature_mask)
+        torch.save(self.model.state_dict(), self.recipe_fp.with_name("model.pt"))
+        joblib.dump(self.scaler, self.recipe_fp.with_name("scaler.joblib"))
+        np.save(self.recipe_fp.with_name("feature_mask.npy"), self.feature_mask)
 
     @classmethod
-    def load(cls, config_fp: Path) -> Self:
+    def load(cls, recipe_fp: Path) -> Self:
         """Reconstruct model + scaler + mask from version_dir artifacts.
 
         Requires self.model_factory to be set (from MODEL_REGISTRY
@@ -376,14 +376,14 @@ class TorchAdapter(BaseAdapter):
         """
         model = model.load_state_dict(
             torch.load(
-                config_fp.with_name("model.pt"),
+                recipe_fp.with_name("model.pt"),
                 map_location=torch.device("cpu"),
                 weights_only=True,
             )
         )
-        inst = cls(config_fp)
-        inst.scaler = joblib.load(config_fp.with_name("scaler.joblib"))
-        inst.feature_mask = np.load(config_fp.with_name("feature_mask.npy"))
+        inst = cls(recipe_fp)
+        inst.scaler = joblib.load(recipe_fp.with_name("scaler.joblib"))
+        inst.feature_mask = np.load(recipe_fp.with_name("feature_mask.npy"))
         return inst
 
 

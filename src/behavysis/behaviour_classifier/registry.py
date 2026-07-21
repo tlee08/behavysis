@@ -27,8 +27,8 @@ from .adapter import BaseAdapter, SklearnAdapter, TabpfnAdapter
 
 
 MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
-    "baseline": lambda config_fp: SklearnAdapter(
-        config_fp,
+    "baseline": lambda recipe_fp: SklearnAdapter(
+        recipe_fp,
         search=GridSearchCV(
             Pipeline(
                 [
@@ -43,8 +43,8 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
             verbose=3,
         ),
     ),
-    "rf": lambda config_fp: SklearnAdapter(
-        config_fp,
+    "rf": lambda recipe_fp: SklearnAdapter(
+        recipe_fp,
         search=RandomizedSearchCV(
             Pipeline(
                 [
@@ -69,8 +69,8 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
             verbose=3,
         ),
     ),
-    "logreg": lambda config_fp: SklearnAdapter(
-        config_fp,
+    "logreg": lambda recipe_fp: SklearnAdapter(
+        recipe_fp,
         search=RandomizedSearchCV(
             ImbPipeline(
                 [
@@ -94,8 +94,8 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
             verbose=3,
         ),
     ),
-    "xgb": lambda config_fp: SklearnAdapter(
-        config_fp,
+    "xgb": lambda recipe_fp: SklearnAdapter(
+        recipe_fp,
         search=RandomizedSearchCV(
             Pipeline(
                 [
@@ -132,8 +132,8 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
             verbose=3,
         ),
     ),
-    "xgb_dart": lambda config_fp: SklearnAdapter(
-        config_fp,
+    "xgb_dart": lambda recipe_fp: SklearnAdapter(
+        recipe_fp,
         search=RandomizedSearchCV(
             Pipeline(
                 [
@@ -173,8 +173,8 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
             verbose=3,
         ),
     ),
-    "xgb_smote": lambda config_fp: SklearnAdapter(
-        config_fp,
+    "xgb_smote": lambda recipe_fp: SklearnAdapter(
+        recipe_fp,
         search=RandomizedSearchCV(
             ImbPipeline(
                 [
@@ -214,8 +214,8 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
             verbose=3,
         ),
     ),
-    "xgb_calibrated": lambda config_fp: SklearnAdapter(
-        config_fp,
+    "xgb_calibrated": lambda recipe_fp: SklearnAdapter(
+        recipe_fp,
         search=RandomizedSearchCV(
             Pipeline(
                 [
@@ -256,8 +256,8 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
             verbose=3,
         ),
     ),
-    "tabpfn": lambda config_fp: TabpfnAdapter(
-        config_fp=config_fp,
+    "tabpfn": lambda recipe_fp: TabpfnAdapter(
+        recipe_fp=recipe_fp,
         n_estimators=8,
         balance_probabilities=True,
         device=get_gpu_device(),
@@ -268,8 +268,8 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
             "SUBSAMPLE_SAMPLES": 100_000,
         },
     ),
-    "tabpfn-large": lambda config_fp: TabpfnAdapter(
-        config_fp=config_fp,
+    "tabpfn-large": lambda recipe_fp: TabpfnAdapter(
+        recipe_fp=recipe_fp,
         n_estimators=16,
         balance_probabilities=True,
         device=get_gpu_device(),

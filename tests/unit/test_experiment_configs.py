@@ -3,7 +3,7 @@
 import pytest
 
 from behavysis.models import (
-    ClassifyBehaviourConfig,
+    ClassifierRef,
     ExtractFeaturesConfig,
 )
 
@@ -19,7 +19,7 @@ class TestExtractFeaturesConfig:
         assert cfg.bodyparts == ["Nose", "LeftEar", "TailBase1"]
 
 
-class TestClassifyBehaviourConfig:
+class TestClassifierRef:
     def test_defaults(self):
-        cfg = ClassifyBehaviourConfig()
+        cfg = ClassifierRef()
         assert cfg.sub_behaviour == []
