@@ -79,6 +79,12 @@ def _(overwrite, proj):
 
 
 @app.cell
+def _(overwrite, proj):
+    proj.get_video_metadata(overwrite=overwrite)
+    return
+
+
+@app.cell
 def _(proj):
     proj.get_video_metadata()
     return

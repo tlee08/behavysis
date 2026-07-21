@@ -18,8 +18,9 @@ with app.setup:
         start_frame_from_likelihood,
         start_stop_trim,
         stop_frame_from_dur,
+        social_distance,
     )
-    from behavysis.funcs.analyse import social_distance
+    from behavysis.models import ExperimentConfig
     from behavysis.utils import configure_logger
 
     configure_logger()
@@ -47,6 +48,13 @@ def _():
     names_ls = [i.stem for i in (proj_dir / "1_raw_videos").iterdir()]
     config_fp = proj_dir / "default_config.yaml"
     nprocs = 4
+
+    mo.accordion(
+        {
+            "Videos": names_ls,
+            "Config": ExperimentConfig.read_yaml(config_fp).model_dump(),
+        }
+    )
     return config_fp, names_ls, nprocs, overwrite, proj_dir
 
 
@@ -73,6 +81,12 @@ def _(overwrite, proj):
 @app.cell
 def _(proj):
     proj.get_video_metadata()
+    return
+
+
+@app.cell
+def _(overwrite, proj):
+    proj.get_video_metadata(overwrite=overwrite)
     return
 
 
