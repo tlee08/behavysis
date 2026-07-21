@@ -252,6 +252,7 @@ class Project:
                 write_df(combined_df, out_fp)
                 # Also write CSV
                 combined_csv_df = combined_df.to_pandas()
+                print(combined_csv_df.columns, subdir2.stem)
                 if "bin_sec" in df.columns:
                     # If binned
                     _cols = ["individual", "measure", "agg"]
