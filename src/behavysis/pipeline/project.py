@@ -11,11 +11,18 @@ from loguru import logger
 from natsort import natsorted
 
 from behavysis.constants import (
+    AGG,
     ANALYSIS_DIR,
+    BIN_SEC,
+    BINNED,
     DF_IO_FORMAT,
     EXPERIMENT,
     FORMATTED_VIDEO_DIR,
+    INDIVIDUAL,
     KEYPOINTS_DIR,
+    MEASURE,
+    SUMMARY,
+    VALUE,
 )
 from behavysis.funcs.run_dlc import ma_dlc_run_batch
 from behavysis.pipeline import Experiment
@@ -252,19 +259,18 @@ class Project:
                 write_df(combined_df, out_fp)
                 # Also write CSV
                 combined_csv_df = combined_df.to_pandas()
-                print(combined_csv_df.columns, subdir2.stem)
-                if "bin_sec" in df.columns:
+                if BINNED in subdir2.stem:
                     # If binned
-                    _cols = ["individual", "measure", "agg"]
+                    _cols = [INDIVIDUAL, MEASURE, AGG]
                     combined_csv_df = combined_csv_df.set_index(
-                        ["experiment", "bin_sec", *_cols]
-                    )["value"].unstack(_cols)
-                else:
+                        [EXPERIMENT, BIN_SEC, *_cols]
+                    )[VALUE].unstack(_cols)
+                elif SUMMARY in subdir2.stem:
                     # If summary
-                    _cols = ["measure", "agg"]
+                    _cols = [MEASURE, AGG]
                     combined_csv_df = combined_csv_df.set_index(
-                        ["experiment", "individual", *_cols]
-                    )["value"].unstack(_cols)
+                        [EXPERIMENT, INDIVIDUAL, *_cols]
+                    )[VALUE].unstack(_cols)
                 # Prepare in specific format
                 csv_fp = subdir1 / f"all_{subdir2.stem}.csv"
                 combined_csv_df.write_csv(csv_fp)
