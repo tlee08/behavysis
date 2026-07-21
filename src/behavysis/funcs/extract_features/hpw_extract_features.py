@@ -26,7 +26,11 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import polars as pl
-from scipy.ndimage import uniform_filter1d
+from scipy.ndimage import (
+    maximum_filter1d,
+    minimum_filter1d,
+    uniform_filter1d,
+)
 
 if TYPE_CHECKING:
     from behavysis.constants import Array1D, Array2D
@@ -173,6 +177,27 @@ _VEL_SMOOTH_WINDOW: int = 3  # frames — smoothing before computing acceleratio
 _FLOOR_ROLL_WINDOW_SEC: float = 5.0  # seconds for rolling floor estimate
 _VY_PEAK_WINDOW_SEC: float = 0.2  # seconds for local vy peak detection
 _EPS: float = 1e-6  # small constant for safe division
+_MIN_KURT_WINDOW: int = 4  # minimum window frames for valid kurtosis
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Rolling window parameters
+# ═══════════════════════════════════════════════════════════════════════════════
+
+ROLL_WINDOW_DIVISORS: list[float] = [2, 5, 6, 7.5, 15]
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Cross-feature name constants
+# ═══════════════════════════════════════════════════════════════════════════════
+
+X01_BODY_STILLNESS_MM_S = "X01_body_stillness_mm_s"
+X02_R_PAW_LIFT_RATIO = "X02_r_paw_lift_ratio"
+X03_L_PAW_LIFT_RATIO = "X03_l_paw_lift_ratio"
+
+CROSS_FEATURES: list[str] = [
+    X01_BODY_STILLNESS_MM_S,
+    X02_R_PAW_LIFT_RATIO,
+    X03_L_PAW_LIFT_RATIO,
+]
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Helpers — DataFrame → numpy extraction
@@ -199,11 +224,7 @@ def _extract_bodypart_xy(
     )
 
     frames_all = (
-        keypoints_df.select("frame")
-        .unique()
-        .sort("frame")
-        .to_series()
-        .to_numpy()
+        keypoints_df.select("frame").unique().sort("frame").to_series().to_numpy()
     )
     n_frames = len(frames_all)
 
@@ -400,6 +421,151 @@ def _estimate_floor_y(
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# Rolling window aggregation
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+def _rolling_window_stats(
+    arr: Array1D,
+    window: int,
+) -> dict[str, Array1D]:
+    """Compute rolling mean, std, min, max, and excess kurtosis.
+
+    Uses scipy.ndimage filters — vectorized, centered windows,
+    ``mode="nearest"`` for edge handling (no NaN at boundaries).
+
+    Parameters
+    ----------
+    arr : Array1D
+        Input 1D feature array.
+    window : int
+        Rolling window size in frames.
+
+    Returns:
+    -------
+    dict[str, Array1D]
+        ``{"_mean", "_std", "_min", "_max", "_kurt"}`` arrays.
+    """
+    m = uniform_filter1d(arr, size=window, mode="nearest")
+    lo = minimum_filter1d(arr, size=window, mode="nearest")
+    hi = maximum_filter1d(arr, size=window, mode="nearest")
+
+    m2 = uniform_filter1d(np.square(arr), size=window, mode="nearest")
+    var = np.maximum(m2 - np.square(m), 0.0)
+    std = np.sqrt(var)
+
+    # Excess kurtosis: E[(X-u)^4] / sigma^4 - 3
+    # Requires >= _MIN_KURT_WINDOW samples; zeroed for smaller windows.
+    if window >= _MIN_KURT_WINDOW:
+        m3 = uniform_filter1d(np.power(arr, 3), size=window, mode="nearest")
+        m4 = uniform_filter1d(np.power(arr, 4), size=window, mode="nearest")
+        mu4 = m4 - 4 * m * m3 + 6 * np.square(m) * m2 - 3 * np.power(m, 4)
+        kurt = np.divide(
+            mu4,
+            np.square(var) + _EPS,
+            out=np.zeros_like(mu4, dtype=np.float64),
+        ) - 3.0
+    else:
+        kurt = np.zeros_like(m)
+
+    return {"_mean": m, "_std": std, "_min": lo, "_max": hi, "_kurt": kurt}
+
+
+def _compute_rolling_aggregates(
+    features: dict[str, Array1D],
+    fps: float,
+    n_frames: int,
+) -> dict[str, Array1D]:
+    """Rolling-window mean, std, min, max, kurtosis for each primitive feature.
+
+    Applies the same ``ROLL_WINDOW_DIVISORS`` convention as the generic
+    feature battery. All HPW features are aggregate-level signals,
+    so every feature gets rolling aggregates (no filtering needed).
+
+    Parameters
+    ----------
+    features : dict[str, Array1D]
+        Primitive feature arrays (R01-R06, W01-W19).
+    fps : float
+        Frames per second.
+    n_frames : int
+        Number of frames (to guard against absurd window sizes).
+
+    Returns:
+    -------
+    dict[str, Array1D]
+        Rolling feature arrays keyed as ``{name}_{stat}_w{frames}``.
+    """
+    roll_windows = sorted(
+        {
+            w
+            for d in ROLL_WINDOW_DIVISORS
+            if (w := max(2, int(fps / d))) <= n_frames / 2
+        }
+    )
+
+    aggs: dict[str, Array1D] = {}
+    for wf in roll_windows:
+        for key, arr in features.items():
+            stats = _rolling_window_stats(arr, wf)
+            for stat_name in ("_mean", "_std", "_min", "_max", "_kurt"):
+                aggs[f"{key}{stat_name}_w{wf}"] = _ffill_bfill_1d(stats[stat_name])
+
+    return aggs
+
+
+def _compute_cross_features(
+    features: dict[str, Array1D],
+    body_stillness_frames: int,
+) -> dict[str, Array1D]:
+    """Cross-feature aggregations that combine multiple primitive signals.
+
+    Computes features that require interaction between primitives — the
+    classifier cannot derive these from individual rolling stats alone.
+
+    Parameters
+    ----------
+    features : dict[str, Array1D]
+        Primitive feature arrays. Must contain body velocity (W15),
+        paw elevations (W04, W10), and paw vertical velocities (W01, W07).
+    body_stillness_frames : int
+        Window size in frames for the body stillness computation.
+
+    Returns:
+    -------
+    dict[str, Array1D]
+        Cross-feature arrays.
+    """
+    f: dict[str, Array1D] = {}
+
+    # ── X01: body stillness — rolling std of hind body vertical velocity ──
+    w15 = features[W15_HIND_BODY_VERTICAL_V_MM_S]
+    w15_mean = _smooth_uniform(w15, body_stillness_frames)
+    w15_mean_sq = _smooth_uniform(np.square(w15), body_stillness_frames)
+    w15_var = np.maximum(w15_mean_sq - np.square(w15_mean), 0.0)
+    f[X01_BODY_STILLNESS_MM_S] = _ffill_bfill_1d(np.sqrt(w15_var))
+
+    # ── X02/X03: paw lift ratio — elevation vs velocity smooth ──
+    # High ratio = paw elevated but slow → holding paw up (withdrawal)
+    # Low ratio  = paw moving fast relative to height → stepping/walking
+    for elev_key, vy_key, cross_key in [
+        (W04_R_PAW_ELEVATION_MM, W01_R_PAW_VERTICAL_V_MM_S, X02_R_PAW_LIFT_RATIO),
+        (W10_L_PAW_ELEVATION_MM, W07_L_PAW_VERTICAL_V_MM_S, X03_L_PAW_LIFT_RATIO),
+    ]:
+        elev_smooth = _smooth_uniform(features[elev_key], body_stillness_frames)
+        vy_smooth = _smooth_uniform(features[vy_key], body_stillness_frames)
+        f[cross_key] = _ffill_bfill_1d(
+            np.divide(
+                elev_smooth,
+                np.abs(vy_smooth) + _EPS,
+                out=np.zeros_like(elev_smooth, dtype=np.float64),
+            )
+        )
+
+    return f
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # Rearing feature computation
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -461,12 +627,8 @@ def _compute_rearing_features(
     )
 
     # ── R05: front paw elevation relative to hind paws ──
-    front_toe_mean_y = np.mean(
-        [xy[FRONT_TOE_R][1], xy[FRONT_TOE_L][1]], axis=0
-    )
-    hind_toe_mean_y = np.mean(
-        [xy[HIND_TOE_R][1], xy[HIND_TOE_L][1]], axis=0
-    )
+    front_toe_mean_y = np.mean([xy[FRONT_TOE_R][1], xy[FRONT_TOE_L][1]], axis=0)
+    hind_toe_mean_y = np.mean([xy[HIND_TOE_R][1], xy[HIND_TOE_L][1]], axis=0)
     f[R05_FRONT_PAW_ELEVATION_MM] = (hind_toe_mean_y - front_toe_mean_y) / px_per_mm
 
     # ── R06: nose vertical velocity ──
@@ -594,13 +756,9 @@ def _compute_withdrawal_features(
     f[W14_PAW_VERTICAL_V_ASYMMETRY_MM_S] = np.abs(r_vy - l_vy)
 
     # ── Hind body vertical velocity (control signal: what the body is doing) ──
-    body_y_arrays = [
-        xy[bp][1] for bp in [MID_BACK, LOWER_BACK, TAIL_BASE, TAIL_TIP]
-    ]
+    body_y_arrays = [xy[bp][1] for bp in [MID_BACK, LOWER_BACK, TAIL_BASE, TAIL_TIP]]
     hind_body_y = np.mean(np.column_stack(body_y_arrays), axis=1)
-    f[W15_HIND_BODY_VERTICAL_V_MM_S] = _vertical_velocity(
-        hind_body_y, px_per_mm, fps
-    )
+    f[W15_HIND_BODY_VERTICAL_V_MM_S] = _vertical_velocity(hind_body_y, px_per_mm, fps)
 
     # ── Paw velocity relative to body (paw minus body = isolated paw movement) ──
     body_vy = f[W15_HIND_BODY_VERTICAL_V_MM_S]
@@ -649,13 +807,15 @@ def compute_hpw_features(
     features |= _compute_rearing_features(xy, floor_y, px_per_mm, fps)
     features |= _compute_withdrawal_features(xy, floor_y, px_per_mm, fps)
 
-    frames = (
-        keypoints_df.select("frame")
-        .unique()
-        .sort("frame")
-        .to_series()
-        .to_numpy()
+    n_frames = features[next(iter(features))].shape[0]
+
+    features |= _compute_rolling_aggregates(features, fps, n_frames)
+    features |= _compute_cross_features(
+        features,
+        body_stillness_frames=max(2, int(fps / 5)),
     )
+
+    frames = keypoints_df.select("frame").unique().sort("frame").to_series().to_numpy()
 
     col_data: dict[str, np.ndarray] = {"frame": frames.astype(np.int64)}
     col_data |= {k: v.astype(np.float64) for k, v in features.items()}
