@@ -1,6 +1,6 @@
 """Pipeline stage functions."""
 
-from .analyse import AnalyseFunc, distance, in_roi, speed
+from .analyse import AnalyseFunc, distance, in_roi
 from .behaviour import analyse_behaviour, classify_behaviour
 from .calculate_parameters import (
     CalculateParametersFunc,
@@ -40,7 +40,6 @@ __all__ = [
     "ma_dlc_run_batch",
     "ma_dlc_run_single",
     "px_per_mm",
-    "speed",
     "start_frame_from_csv",
     "start_frame_from_likelihood",
     "start_stop_trim",

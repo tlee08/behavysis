@@ -2,7 +2,7 @@
 # Open Field — Single Mouse
 # =============================================================================
 #
-# Standard open field test: one mouse, measures speed, distance,
+# Standard open field test: one mouse, measures distance,
 # and thigmotaxis (in_roi).
 #
 # Edit the DLC model path and arena measurements, then run the notebook.
@@ -69,9 +69,6 @@ classify_behaviour: null
 analyse:
   bins_sec_ls: [30, 60, 120]
   custom_bins_sec_ls: []
-  speed:
-    smoothing_sec: 1.0
-    bodyparts: *bpts_centre
   distance:
     smoothing_sec: 1.0
     bodyparts: *bpts_centre

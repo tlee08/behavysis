@@ -90,9 +90,6 @@ classify_behaviour:
 analyse:
   bins_sec_ls: [30, 60, 120]
   custom_bins_sec_ls: [60, 120, 300, 600]
-  speed:
-    smoothing_sec: 1.0
-    bodyparts: *bpts_centre
   distance:
     smoothing_sec: 1.0
     bodyparts: *bpts_centre

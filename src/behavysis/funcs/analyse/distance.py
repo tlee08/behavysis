@@ -21,59 +21,11 @@ if TYPE_CHECKING:
     from behavysis.models import ExperimentConfig, ExperimentMetadata
 
 
-class SpeedConfig(BaseModel):
-    """SpeedConfig."""
+class DistanceConfig(BaseModel):
+    """DistanceConfig."""
 
     bodyparts: list[str]
     smoothing_sec: PositiveFloat
-
-
-def speed(
-    keypoints_df: pl.DataFrame,
-    vid_frame: np.ndarray,  # noqa: ARG001
-    config: ExperimentConfig,
-    metadata: ExperimentMetadata,
-) -> list[AnalysisResult]:
-    """Determines the speed of the subject in each frame."""
-    name = metadata.require_name()
-
-    cfg = config.require_analyse().require("speed", SpeedConfig)
-    bpts = cfg.bodyparts
-    smoothing_sec = cfg.smoothing_sec
-    smoothing_frames = int(smoothing_sec * metadata.require_fps())
-
-    check_bpts_exist(keypoints_df, bpts)
-    indivs, _ = get_indivs_bpts(keypoints_df)
-
-    movement_df = _compute_movement(
-        keypoints_df,
-        bpts,
-        indivs,
-        metadata.require_px_per_mm(),
-        smoothing_frames,
-    )
-
-    analysis_df = movement_df.select(
-        pl.col("frame"),
-        pl.col("individual"),
-        pl.col("measure").str.replace("DistMM", "SpeedMMperSec").alias("measure"),
-        (pl.col("value") * metadata.require_fps()).alias("value"),
-    )
-
-    return [
-        AnalysisResult(
-            relative_path=Path(FBF) / f"{name}.{DF_IO_FORMAT}",
-            result=analysis_df,
-            save_func=lambda fp, obj: write_df(obj, fp, ANALYSIS_SCHEMA),
-        ),
-        *summary_binned_quantitative(
-            analysis_df,
-            name,
-            metadata.require_fps(),
-            config.require_analyse().bins_sec_ls,
-            config.require_analyse().custom_bins_sec_ls,
-        ),
-    ]
 
 
 def distance(
@@ -85,7 +37,7 @@ def distance(
     """Determines the distance travelled by the subject in each frame."""
     name = metadata.require_name()
 
-    cfg = config.require_analyse().require("speed", SpeedConfig)
+    cfg = config.require_analyse().require("distance", DistanceConfig)
     bpts = cfg.bodyparts
     smoothing_sec = cfg.smoothing_sec
     smoothing_frames = int(smoothing_sec * metadata.require_fps())

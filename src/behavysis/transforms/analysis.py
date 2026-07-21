@@ -45,13 +45,13 @@ def agg_quantitative(df: pl.DataFrame, fps: float) -> pl.DataFrame:
         df.group_by(INDIVIDUAL, MEASURE)
         .agg(
             [
-                pl.col("value").mean().alias("mean"),
-                pl.col("value").std(ddof=0).alias("std"),
-                pl.col("value").min().alias("min"),
-                pl.col("value").quantile(0.25).alias("Q1"),
-                pl.col("value").median().alias("median"),
-                pl.col("value").quantile(0.75).alias("Q3"),
-                pl.col("value").max().alias("max"),
+                # pl.col("value").mean().alias("mean"),
+                # pl.col("value").std(ddof=0).alias("std"),
+                # pl.col("value").min().alias("min"),
+                # pl.col("value").quantile(0.25).alias("Q1"),
+                # pl.col("value").median().alias("median"),
+                # pl.col("value").quantile(0.75).alias("Q3"),
+                # pl.col("value").max().alias("max"),
                 pl.col("value").sum().alias("sum"),
             ],
         )
@@ -90,13 +90,13 @@ def agg_behaviour(df: pl.DataFrame, fps: float) -> pl.DataFrame:
             MEASURE: measure,
             "bout_freq": bout_freq,
             "bout_dur_total": float(dur_sec.sum()),
-            "bout_dur_mean": float(dur_sec.mean()),
-            "bout_dur_std": float(dur_sec.std(ddof=0)) if len(dur_sec) > 1 else 0.0,
-            "bout_dur_min": float(dur_sec.min()),
-            "bout_dur_Q1": float(dur_sec.quantile(0.25)),
-            "bout_dur_median": float(dur_sec.median()),
-            "bout_dur_Q3": float(dur_sec.quantile(0.75)),
-            "bout_dur_max": float(dur_sec.max()),
+            # "bout_dur_mean": float(dur_sec.mean()),
+            # "bout_dur_std": float(dur_sec.std(ddof=0)) if len(dur_sec) > 1 else 0.0,
+            # "bout_dur_min": float(dur_sec.min()),
+            # "bout_dur_Q1": float(dur_sec.quantile(0.25)),
+            # "bout_dur_median": float(dur_sec.median()),
+            # "bout_dur_Q3": float(dur_sec.quantile(0.75)),
+            # "bout_dur_max": float(dur_sec.max()),
         }
         results.append(stats)
 

@@ -15,7 +15,6 @@ with app.setup:
         in_roi,
         interpolate,
         px_per_mm,
-        speed,
         start_frame_from_likelihood,
         start_stop_trim,
         stop_frame_from_dur,
@@ -132,7 +131,7 @@ def _(overwrite, proj):
 @app.cell
 def _(proj):
     proj.analyse(
-        funcs=(speed, distance, in_roi, social_distance),
+        funcs=(distance, in_roi, social_distance),
     )
     return
 

@@ -3,7 +3,7 @@
 # =============================================================================
 #
 # Social interaction test: two mice (one marked, one unmarked).
-# Measures speed, distance, social distance, and thigmotaxis.
+# Measures distance, social distance, and thigmotaxis.
 # =============================================================================
 
 _bpts_front: &bpts_front
@@ -75,9 +75,6 @@ classify_behaviour:
 analyse:
   bins_sec_ls: [30, 60, 120]
   custom_bins_sec_ls: []
-  speed:
-    smoothing_sec: 1.0
-    bodyparts: *bpts_centre
   distance:
     smoothing_sec: 1.0
     bodyparts: *bpts_centre

@@ -48,13 +48,13 @@ Run cells in order:
 4. **Run DLC** — keypoint tracking on GPU (stage 3)
 5. **Calculate parameters** — auto-computes start/stop frames, px_per_mm
 6. **Preprocess** — trims, interpolates low-likelihood points (stage 4)
-7. **Analyse** — speed, distance, thigmotaxis (stage 8), then combines & collates
+7. **Analyse** — distance, thigmotaxis (stage 8), then combines & collates
 
 ## 5. Results
 
 After the pipeline completes:
 
-- `8_analysis/speed/binned_30/` — time-binned speed stats per experiment
+- `8_analysis/distance/binned_30/` — time-binned distance stats per experiment
 - `8_analysis/__ALL_binned_30.parquet` — all experiments combined
 - `9_analysis_combined/` — per-experiment combined analysis tables
 
