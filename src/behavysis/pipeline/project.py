@@ -257,7 +257,8 @@ class Project:
                 # Write Parquet
                 out_fp = subdir1 / f"all_{subdir2.stem}.{DF_IO_FORMAT}"
                 write_df(combined_df, out_fp)
-                # Also write CSV
+                # Also write CSV, which has been formatted to wider
+                # (easier to view)
                 combined_csv_df = combined_df.to_pandas()
                 if BINNED in subdir2.stem:
                     # If binned
@@ -273,4 +274,4 @@ class Project:
                     )[VALUE].unstack(_cols)
                 # Prepare in specific format
                 csv_fp = subdir1 / f"all_{subdir2.stem}.csv"
-                combined_csv_df.write_csv(csv_fp)
+                combined_csv_df.to_csv(csv_fp)
