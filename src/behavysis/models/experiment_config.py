@@ -78,23 +78,15 @@ class PreprocessConfig(SubfuncModel):
     """PreprocessConfig."""
 
 
-class ExtractFeaturesConfig(BaseModel):
-    """Configuration for generic feature extraction.
-
-    Specifies which individuals and bodyparts to include. Features are
-    computed programmatically from the full cartesian product — no
-    semantic bodypart roles required.
-    """
-
-    individuals: list[str]
-    bodyparts: list[str]
-    angles: list[tuple[str, str, str]]
+class ExtractFeaturesConfig(SubfuncModel):
+    """Configuration for feature extraction."""
 
 
 class ClassifyBehaviourConfig(BaseModel):
     """ClassifyBehaviourConfig."""
 
     contract_fp: Path = Path("path") / "to" / "model" / "contract.yaml"
+    feature_set: str = "generic"
     sub_behaviour: list[str] = []
 
 

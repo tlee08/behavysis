@@ -13,6 +13,7 @@ PREPROCESSED_DIR = "4_preprocessed"
 FEATURES_EXTRACTED_DIR = "5_features_extracted"
 BEHAVIOUR_PREDICTED_DIR = "6_behaviour_predicted"
 BEHAVIOUR_SCORED_DIR = "7_behaviour_scored"
+ANALYSIS_DIR = "8_analysis"
 ANALYSIS_COMBINED_DIR = "9_analysis_combined"
 
 STAGES = {
@@ -31,5 +32,4 @@ STAGES = {
 DEFAULT_CONFIG_FP = "default_config.yaml"
 RUN_PIPELINE_FP = "run_pipeline.py"
 
-ANALYSIS_DIR = Path("8_analysis")
 CACHE_DIR = Path.home() / ".behavysis"

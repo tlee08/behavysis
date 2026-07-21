@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 import polars as pl
 from loguru import logger
+from pydantic import BaseModel
 from scipy.spatial import ConvexHull
 from scipy.spatial.distance import pdist
 
@@ -23,6 +24,19 @@ from behavysis.transforms.keypoint import check_bpts_exist
 if TYPE_CHECKING:
     from behavysis.constants import Array1D, Array2D
     from behavysis.models import ExperimentConfig, ExperimentMetadata
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Config
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+class FeaturesGenericConfig(BaseModel):
+    """Configuration for generic feature extraction."""
+
+    individuals: list[str]
+    bodyparts: list[str]
+    angles: list[tuple[str, str, str]]
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Rolling window divisors
@@ -194,7 +208,7 @@ def extract_features(
     pl.DataFrame
         Wide features DataFrame with frame index.
     """
-    cfg = config.require_extract_features()
+    cfg = config.require_extract_features().require("generic", FeaturesGenericConfig)
 
     check_bpts_exist(keypoints_df, cfg.bodyparts)
 

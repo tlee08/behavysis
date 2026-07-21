@@ -26,6 +26,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import polars as pl
+from pydantic import BaseModel
 from scipy.ndimage import (
     maximum_filter1d,
     minimum_filter1d,
@@ -34,6 +35,16 @@ from scipy.ndimage import (
 
 if TYPE_CHECKING:
     from behavysis.constants import Array1D, Array2D
+    from behavysis.models import ExperimentConfig, ExperimentMetadata
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Config
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+class FeaturesHpwConfig(BaseModel):
+    """Configuration for generic feature extraction."""
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Bodypart name constants
@@ -460,11 +471,14 @@ def _rolling_window_stats(
         m3 = uniform_filter1d(np.power(arr, 3), size=window, mode="nearest")
         m4 = uniform_filter1d(np.power(arr, 4), size=window, mode="nearest")
         mu4 = m4 - 4 * m * m3 + 6 * np.square(m) * m2 - 3 * np.power(m, 4)
-        kurt = np.divide(
-            mu4,
-            np.square(var) + _EPS,
-            out=np.zeros_like(mu4, dtype=np.float64),
-        ) - 3.0
+        kurt = (
+            np.divide(
+                mu4,
+                np.square(var) + _EPS,
+                out=np.zeros_like(mu4, dtype=np.float64),
+            )
+            - 3.0
+        )
     else:
         kurt = np.zeros_like(m)
 
@@ -497,11 +511,7 @@ def _compute_rolling_aggregates(
         Rolling feature arrays keyed as ``{name}_{stat}_w{frames}``.
     """
     roll_windows = sorted(
-        {
-            w
-            for d in ROLL_WINDOW_DIVISORS
-            if (w := max(2, int(fps / d))) <= n_frames / 2
-        }
+        {w for d in ROLL_WINDOW_DIVISORS if (w := max(2, int(fps / d))) <= n_frames / 2}
     )
 
     aggs: dict[str, Array1D] = {}
@@ -821,3 +831,16 @@ def compute_hpw_features(
     col_data |= {k: v.astype(np.float64) for k, v in features.items()}
 
     return pl.DataFrame(col_data)
+
+
+def hpw_extract_features(
+    keypoints_df: pl.DataFrame,
+    config: ExperimentConfig,  # noqa: ARG001
+    metadata: ExperimentMetadata,
+) -> pl.DataFrame:
+    """Protocol-compliant wrapper for HPW feature extraction."""
+    return compute_hpw_features(
+        keypoints_df,
+        fps=metadata.require_fps(),
+        px_per_mm=metadata.require_px_per_mm(),
+    )

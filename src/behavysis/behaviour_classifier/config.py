@@ -9,12 +9,12 @@ class ClassifierContract(YamlModel):
     """Shared classifier contract (contract.yaml per classifier).
 
     The single source of truth for what every model_type in the classifier
-    trains on: the behaviour and the feature contract (``individuals`` /
-    ``bodyparts``). Authored before training and never auto-modified.
+    trains on: the behaviour, the feature set name, and the evaluation
+    metric. Authored before training and never auto-modified.
     """
 
     behaviour_name: str
-
+    feature_set: str = "generic"
     eval_metric: str = "f2"
     eval_metric_higher_better: bool = True
 

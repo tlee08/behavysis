@@ -27,11 +27,11 @@ from behavysis.constants.pipeline import (
 from behavysis.funcs import (
     AnalyseFunc,
     CalculateParametersFunc,
+    ExtractFeaturesFunc,
     PreprocessFunc,
     analyse_behaviour,
-    classify_behaviour,
+    classify_single,
     combine_analysis,
-    extract_features,
     format_video,
     get_video_metadata,
     ma_dlc_run_single,
@@ -202,23 +202,34 @@ class Experiment:
         # Write
         write_df(keypoints_df, self.get_fp(PREPROCESSED_DIR), KEYPOINTS_SCHEMA)
 
-    @trace
-    def extract_features(self, *, overwrite: bool) -> None:
-        """Extracts features from the preprocessed dlc file."""
-        # Overwrite check
-        if not overwrite and self.get_fp(FEATURES_EXTRACTED_DIR).exists():
-            log_file_exists(self.get_fp(FEATURES_EXTRACTED_DIR))
-            return
-        # Process
-        keypoints_df = read_df(self.get_fp(PREPROCESSED_DIR), KEYPOINTS_SCHEMA)
-        features_df = extract_features(
-            keypoints_df=keypoints_df,
-            config=self.read_config(),
-            metadata=self.read_metadata(),
+    def get_features_fp(self, feature_set: str) -> Path:
+        """Returns the experiment's features file path for a named feature set."""
+        return (
+            self.root_dir
+            / FEATURES_EXTRACTED_DIR
+            / feature_set
+            / f"{self.name}.{STAGES[FEATURES_EXTRACTED_DIR]}"
         )
-        # Write
-        self.get_fp(FEATURES_EXTRACTED_DIR).parent.mkdir(parents=True, exist_ok=True)
-        features_df.write_parquet(self.get_fp(FEATURES_EXTRACTED_DIR))
+
+    @trace
+    def extract_features(
+        self, funcs: tuple[ExtractFeaturesFunc, ...], *, overwrite: bool
+    ) -> None:
+        """Extract features for each configured feature set."""
+        keypoints_df = read_df(self.get_fp(PREPROCESSED_DIR), KEYPOINTS_SCHEMA)
+        config = self.read_config()
+        metadata = self.read_metadata()
+        for func in funcs:
+            # Overwrite check
+            out_fp = self.get_features_fp(func.__name__)
+            if not overwrite and out_fp.exists():
+                log_file_exists(out_fp)
+                continue
+            # Process
+            features_df = func(keypoints_df, config, metadata)
+            # Save
+            out_fp.parent.mkdir(parents=True, exist_ok=True)
+            write_df(features_df, out_fp)
 
     @trace
     def classify_behaviour(self, *, overwrite: bool) -> None:
@@ -228,15 +239,19 @@ class Experiment:
             log_file_exists(self.get_fp(BEHAVIOUR_PREDICTED_DIR))
             return
         # Process
-        features_df = pl.read_parquet(self.get_fp(FEATURES_EXTRACTED_DIR))
-        behaviour_df = classify_behaviour(
-            features_df=features_df,
-            config=self.read_config(),
-            metadata=self.read_metadata(),
-        )
-        # Write
+        behaviour_df_ls = []
+        for model_config in self.read_config().require_classify_behaviour():
+            features_df = pl.read_parquet(
+                self.get_features_fp(model_config.feature_set)
+            )
+            behaviour_df_ls.append(
+                classify_single(model_config.contract_fp, features_df)
+            )
+        # Save
         write_df(
-            behaviour_df,
+            pl.concat(behaviour_df_ls)
+            if behaviour_df_ls
+            else pl.DataFrame(schema=BEHAVIOUR_PREDICTED_SCHEMA),
             self.get_fp(BEHAVIOUR_PREDICTED_DIR),
             BEHAVIOUR_PREDICTED_SCHEMA,
         )

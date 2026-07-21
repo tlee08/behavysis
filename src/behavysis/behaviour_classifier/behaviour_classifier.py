@@ -32,12 +32,10 @@ if TYPE_CHECKING:
 # ── initialising ─────────────────────────────────────────────────────
 
 
-def write_contract(  # noqa: PLR0913
+def write_contract(
     contract_fp: Path,
     behaviour_name: str,
-    individuals: list[str],
-    bodyparts: list[str],
-    angles: list[tuple[str, str, str]],
+    feature_set: str = "generic",
     *,
     overwrite: bool = False,
 ) -> ClassifierContract:
@@ -46,9 +44,7 @@ def write_contract(  # noqa: PLR0913
     if not contract_fp.exists() or overwrite:
         contract = ClassifierContract(
             behaviour_name=behaviour_name,
-            individuals=individuals,
-            bodyparts=bodyparts,
-            angles=angles,
+            feature_set=feature_set,
         )
         contract.write_yaml(contract_fp)
     # Read
