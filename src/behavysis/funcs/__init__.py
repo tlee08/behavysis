@@ -12,7 +12,11 @@ from .calculate_parameters import (
     stop_frame_from_likelihood,
 )
 from .combine_analysis import combine_analysis
-from .extract_features import ExtractFeaturesFunc, extract_features
+from .extract_features import (
+    ExtractFeaturesFunc,
+    extract_features,
+    hpw_extract_features,
+)
 from .format_video import format_video, get_video_metadata
 from .preprocess import (
     PreprocessFunc,
@@ -35,6 +39,7 @@ __all__ = [
     "extract_features",
     "format_video",
     "get_video_metadata",
+    "hpw_extract_features",
     "in_roi",
     "interpolate",
     "interpolate_stationary",
