@@ -180,8 +180,12 @@ class SklearnAdapter(BaseAdapter):
         # Predict
         frame = df.get_column(FRAME)
         prob = pl.Series(self.model.predict_proba(df_get_features(df))[:, 1])
+        # Get experiment column if it exists
+        experiment = None
+        if EXPERIMENT in df.columns:
+            experiment = df.get_column(EXPERIMENT)
         # Postprocess and return
-        return self._predict_postprocess(frame, prob)
+        return self._predict_postprocess(prob, frame, experiment)
 
     def save(self) -> None:
         """Save."""
@@ -289,8 +293,12 @@ class TabpfnAdapter(BaseAdapter):
         # Predict
         frame = df.get_column(FRAME)
         prob = pl.Series(self.model.predict_proba(df_get_features(df))[:, 1])
+        # Get experiment column if it exists
+        experiment = None
+        if EXPERIMENT in df.columns:
+            experiment = df.get_column(EXPERIMENT)
         # Postprocess and return
-        return self._predict_postprocess(frame, prob)
+        return self._predict_postprocess(prob, frame, experiment)
 
     def save(self) -> None:
         """Save."""
