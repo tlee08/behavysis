@@ -244,9 +244,7 @@ class Experiment:
             clf = ClassifierPaths(model_config.contract_fp.parent)
             contract = ClassifierContract.read_yaml(clf.contract_fp())
             features_df = read_df(self.get_features_fp(contract.feature_set))
-            behaviour_df_ls.append(
-                classify_single(clf, features_df)
-            )
+            behaviour_df_ls.append(classify_single(clf, features_df))
         # Save
         write_df(
             pl.concat(behaviour_df_ls)
