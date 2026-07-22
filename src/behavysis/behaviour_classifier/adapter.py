@@ -151,7 +151,6 @@ class SklearnAdapter(BaseAdapter):
         # 7. Find best pcutoff with val_idx and update recipe with best pcutoff value
         # Use per-bouts eval instead of per-frames eval
         y_df = self.predict(df).with_columns(
-            df.get_column(EXPERIMENT),
             df.get_column(ACTUAL),
             df.get_column(BOUT_ID),
         )
