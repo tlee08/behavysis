@@ -29,7 +29,7 @@ from behavysis.constants import (
 )
 from behavysis.schemas import BEHAVIOUR_PREDICTED_SCHEMA
 from behavysis.transforms import smooth_prob
-from behavysis.transforms.behaviour import smooth_bouts
+from behavysis.transforms.behaviour import smooth_pred_bout
 from behavysis.utils import get_gpu_device
 
 from .config import ModelRecipe
@@ -102,7 +102,7 @@ class BaseAdapter(ABC):
         df = df.with_columns((pl.col(PROB) > recipe.pcutoff).alias(PRED))
         # Smooth bouts by merging 3-frames-close, then dropping 3-frames large
         # Return
-        return smooth_bouts(df, min_gap=recipe.min_gap, min_bout=recipe.min_bout)
+        return smooth_pred_bout(df, min_gap=recipe.min_gap, min_bout=recipe.min_bout)
 
     @abstractmethod
     def save(self) -> None:

@@ -107,7 +107,7 @@ def smooth_prob(
     return df.with_columns(expr)
 
 
-def smooth_bouts(
+def smooth_pred_bout(
     df: pl.DataFrame,
     *,
     min_gap: int = 3,

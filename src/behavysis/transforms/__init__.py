@@ -16,7 +16,7 @@ from .behaviour import (
     import_boris_tsv,
     label_bouts,
     predicted_to_scored,
-    smooth_bouts,
+    smooth_pred_bout,
     smooth_prob,
     vect2bouts,
 )
@@ -36,7 +36,7 @@ __all__ = [
     "label_bouts",
     "make_binned",
     "predicted_to_scored",
-    "smooth_bouts",
+    "smooth_pred_bout",
     "smooth_prob",
     "summary_binned",
     "summary_binned_behaviour",
