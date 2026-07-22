@@ -98,10 +98,11 @@ class BaseAdapter(ABC):
         df = smooth_prob(
             df, smoothing_frames=recipe.smoothing_frames, agg_func="median"
         )
+        # Make pred from prob cutoff
+        df = df.with_columns((pl.col(PROB) > recipe.pcutoff).alias(PRED))
         # Smooth bouts by merging 3-frames-close, then dropping 3-frames large
-        df = smooth_bouts(df, min_gap=recipe.min_gap, min_bout=recipe.min_bout)
-        # Get preds from prob cutoff and return
-        return df.with_columns((pl.col(PROB) > recipe.pcutoff).alias(PRED))
+        # Return
+        return smooth_bouts(df, min_gap=recipe.min_gap, min_bout=recipe.min_bout)
 
     @abstractmethod
     def save(self) -> None:

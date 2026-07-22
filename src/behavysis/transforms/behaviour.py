@@ -116,17 +116,17 @@ def smooth_bouts(
     """Close short gaps, then remove short positive bouts."""
     # Label and merge short TRUE_NEG bouts
     df = label_bouts(df).with_columns(
-        pl.when((pl.col(ACTUAL) == TRUE_NEG) & (pl.len().over(BOUT_ID) <= min_gap))
+        pl.when((pl.col(PRED) == TRUE_NEG) & (pl.len().over(BOUT_ID) <= min_gap))
         .then(TRUE_POS)
-        .otherwise(pl.col(ACTUAL))
-        .alias(ACTUAL)
+        .otherwise(pl.col(PRED))
+        .alias(PRED)
     )
     # Label and drop short TRUE_POS bouts
     df = label_bouts(df).with_columns(
-        pl.when((pl.col(ACTUAL) == TRUE_POS) & (pl.len().over(BOUT_ID) <= min_bout))
+        pl.when((pl.col(PRED) == TRUE_POS) & (pl.len().over(BOUT_ID) <= min_bout))
         .then(TRUE_NEG)
-        .otherwise(pl.col(ACTUAL))
-        .alias(ACTUAL)
+        .otherwise(pl.col(PRED))
+        .alias(PRED)
     )
     # Drop label and return
     return df.drop(BOUT_ID)
