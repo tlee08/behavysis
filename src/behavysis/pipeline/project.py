@@ -1,5 +1,6 @@
 """Project class for batch processing multiple experiments."""
 
+import contextlib
 from collections.abc import Callable
 from pathlib import Path
 
@@ -271,8 +272,8 @@ class Project:
                 combined_csv_df = combined_df.to_pandas()
                 if BINNED in subdir2.stem:
                     # If binned
-                    _cols = [INDIVIDUAL, BIN_SEC, MEASURE, AGG]
-                    combined_csv_df = combined_csv_df.set_index([EXPERIMENT, *_cols])[
+                    _cols = [EXPERIMENT, INDIVIDUAL, MEASURE, AGG]
+                    combined_csv_df = combined_csv_df.set_index([BIN_SEC, *_cols])[
                         VALUE
                     ].unstack(_cols)
                 elif SUMMARY in subdir2.stem:
@@ -283,4 +284,5 @@ class Project:
                     ].unstack(_cols)
                 # Prepare in specific format
                 csv_fp = subdir1 / f"all_{subdir2.stem}.csv"
-                combined_csv_df.to_csv(csv_fp)
+                with contextlib.suppress(BaseException):
+                    combined_csv_df.to_csv(csv_fp)
