@@ -76,7 +76,9 @@ class BaseAdapter(ABC):
     def predict(self, df: pl.DataFrame) -> pl.DataFrame:
         """Return predicted probabilities + binary preds with smoothing."""
 
-    def _predict_postprocess(self, frame: pl.Series, prob: pl.Series) -> pl.DataFrame:
+    def _predict_postprocess(
+        self, prob: pl.Series, frame: pl.Series, experiment: pl.Series | None = None
+    ) -> pl.DataFrame:
         # Get recipe
         recipe = self._read_recipe()
         # Construct df
@@ -89,6 +91,9 @@ class BaseAdapter(ABC):
             },
             schema=BEHAVIOUR_PREDICTED_SCHEMA,
         )
+        # Add experiment column if given
+        if experiment:
+            df = df.with_columns(experiment.alias(EXPERIMENT))
         # Smooth frames with median filter
         df = smooth_prob(
             df, smoothing_frames=recipe.smoothing_frames, agg_func="median"

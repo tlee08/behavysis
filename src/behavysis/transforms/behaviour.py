@@ -98,8 +98,11 @@ def smooth_prob(
         msg = f"Unsupported aggregation: {agg_func}"
         raise ValueError(msg)
     # If multiple experiments in df, then group by them
+    group_cols = []
     if EXPERIMENT in df.columns:
-        expr = expr.over(EXPERIMENT)
+        group_cols.append(EXPERIMENT)
+    group_cols.append(BEHAVIOUR)
+    expr = expr.over(group_cols)
     # Compute and return
     return df.with_columns(expr)
 
