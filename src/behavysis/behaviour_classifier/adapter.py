@@ -132,7 +132,7 @@ class SklearnAdapter(BaseAdapter):
         # Hyperparameter selection stage
         # 2. Sort the df by EXPERIMENT, FRAME. Then compute bout_id
         df = df.sort([EXPERIMENT, FRAME])
-        df = label_bouts(df)
+        df = label_bouts(df, ACTUAL)
         # 4. hyperparameter selection on df. CV grouped-by-bout_id
         self.search.refit = False
         self.search.fit(
@@ -271,7 +271,7 @@ class TabpfnAdapter(BaseAdapter):
         # Full training stage. No hyperparameter tuning
         # 2. Sort the df by EXPERIMENT, FRAME. Then compute bout_id
         df = df.sort([EXPERIMENT, FRAME])
-        df = label_bouts(df)
+        df = label_bouts(df, ACTUAL)
         # 3. Init classifier
         self.model = TabPFNClassifier(
             **self.kwargs,

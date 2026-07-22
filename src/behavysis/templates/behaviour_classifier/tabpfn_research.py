@@ -57,7 +57,7 @@ def _(behaviour_name, clf):
         clf.labels_dir(),
         behaviour_name,
     )
-    df = label_bouts(df)
+    df = label_bouts(df, ACTUAL)
     return (df,)
 
 
@@ -132,6 +132,7 @@ def _(exp2_df, predictions):
         exp2_df.select([EXPERIMENT, FRAME, ACTUAL]).with_columns(
             pl.lit(predictions).alias(PROB), pl.lit(predictions).alias(PRED)
         ),
+        ACTUAL,
     )
 
     eval_df

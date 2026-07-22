@@ -117,7 +117,7 @@ def train_model(
         clf.labels_dir(),
         contract.behaviour_name,
     )
-    df = label_bouts(df)
+    df = label_bouts(df, ACTUAL)
 
     # Split into train / test (experiment-level grouping)
     train_idx, test_idx = stratified_split_by_group(

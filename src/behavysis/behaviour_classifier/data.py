@@ -149,7 +149,7 @@ def agg_eval_df_by_bouts(df: pl.DataFrame) -> pl.DataFrame:
     * ``bout_n_frames`` — bout duration in frames.
     """
     return (
-        label_bouts(df)
+        label_bouts(df, ACTUAL)
         .group_by(BOUT_ID)
         .agg(
             pl.col(ACTUAL).max(),

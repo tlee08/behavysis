@@ -45,7 +45,7 @@ if TYPE_CHECKING:
 COUNT = "count"
 
 
-def label_bouts(df: pl.DataFrame, *, label_col: str = ACTUAL) -> pl.DataFrame:
+def label_bouts(df: pl.DataFrame, label_col: str) -> pl.DataFrame:
     """Label contiguous behavioural bouts with globally unique IDs."""
     # If multiple experiments in df, then group by them
     group_cols = []
@@ -115,14 +115,14 @@ def smooth_bouts(
 ) -> pl.DataFrame:
     """Close short gaps, then remove short positive bouts."""
     # Label and merge short TRUE_NEG bouts
-    df = label_bouts(df).with_columns(
+    df = label_bouts(df, PRED).with_columns(
         pl.when((pl.col(PRED) == TRUE_NEG) & (pl.len().over(BOUT_ID) <= min_gap))
         .then(TRUE_POS)
         .otherwise(pl.col(PRED))
         .alias(PRED)
     )
     # Label and drop short TRUE_POS bouts
-    df = label_bouts(df).with_columns(
+    df = label_bouts(df, PRED).with_columns(
         pl.when((pl.col(PRED) == TRUE_POS) & (pl.len().over(BOUT_ID) <= min_bout))
         .then(TRUE_NEG)
         .otherwise(pl.col(PRED))
