@@ -15,7 +15,7 @@ from .combine_analysis import combine_analysis
 from .extract_features import (
     ExtractFeaturesFunc,
     extract_features,
-    hpw_extract_features,
+    hpw,
 )
 from .format_video import format_video, get_video_metadata
 from .preprocess import (

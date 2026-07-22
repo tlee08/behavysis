@@ -184,7 +184,7 @@ def _pct_rank(vals: Array1D) -> Array1D:
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
-def extract_features(
+def generic(
     keypoints_df: pl.DataFrame,
     config: ExperimentConfig,
     metadata: ExperimentMetadata,
@@ -212,7 +212,7 @@ def extract_features(
 
     check_bpts_exist(keypoints_df, cfg.bodyparts)
 
-    features_df = compute_features(
+    features_df = generic_compute(
         keypoints_df.filter(
             pl.col("individual").is_in(cfg.individuals),
             pl.col("bodypart").is_in(cfg.bodyparts),
@@ -232,7 +232,7 @@ def extract_features(
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
-def compute_features(  # noqa: PLR0913
+def generic_compute(  # noqa: PLR0913
     keypoints_df: pl.DataFrame,
     individuals: list[str],
     bodyparts: list[str],

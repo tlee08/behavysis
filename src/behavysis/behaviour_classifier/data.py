@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
 import numpy as np
 import polars as pl
@@ -22,6 +22,7 @@ from behavysis.constants import (
     UNSURE,
     Array1D,
 )
+from behavysis.transforms import label_bouts
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -104,21 +105,6 @@ def df_get_labels(df: pl.DataFrame) -> pl.Series:
 # ── bout-related splitting ─────────────────────────────────────────────────────
 
 
-def label_bouts(df: pl.DataFrame) -> pl.DataFrame:
-    """Add ``bout_id`` — integer label per contiguous (experiment, actual) run.
-
-    TODO: move to behavysis.transforms.behaviours -> works better there.
-    """
-    return df.sort([EXPERIMENT, FRAME]).with_columns(
-        (pl.col(ACTUAL) != pl.col(ACTUAL).shift(1))
-        .or_(pl.col(EXPERIMENT) != pl.col(EXPERIMENT).shift(1))
-        .cast(pl.Int64)
-        .cum_sum()
-        .backward_fill()
-        .alias(BOUT_ID)
-    )
-
-
 def stratified_split_by_group(
     df: pl.DataFrame,
     test_size: float,
@@ -163,7 +149,7 @@ def agg_eval_df_by_bouts(df: pl.DataFrame) -> pl.DataFrame:
     * ``bout_n_frames`` — bout duration in frames.
     """
     return (
-        label_bouts(df.sort([pl.col(EXPERIMENT), pl.col(FRAME)]))
+        label_bouts(df)
         .group_by(BOUT_ID)
         .agg(
             pl.col(ACTUAL).max(),
@@ -193,43 +179,3 @@ def df_resample(df: pl.DataFrame, resampler: BaseUnderSampler) -> pl.DataFrame:
 
 
 # ── y prob smoothing ──────────────────────────────────────────────────────────
-
-
-def smooth_prob(
-    y_df: pl.DataFrame,
-    smoothing_frames: int,
-    agg_func: Literal["mean", "median"],
-) -> pl.DataFrame:
-    """Smoothing "prob" per-experiment.
-
-    Assumes y_df is sorted with contiguous frames
-    (or contiguous frames within each "experiment").
-    Smoothing frames is either side of current.
-    """
-    # If no smoothing
-    if smoothing_frames <= 0:
-        return y_df
-    # Get window size
-    window_size = 2 * smoothing_frames + 1
-    # Make smoothing agg expression
-    expr = pl.col(PROB)
-    if agg_func == "mean":
-        expr = expr.rolling_mean(
-            window_size=window_size,
-            center=True,
-            min_samples=1,
-        )
-    elif agg_func == "median":
-        expr = expr.rolling_median(
-            window_size=window_size,
-            center=True,
-            min_samples=1,
-        )
-    else:
-        msg = f"Unsupported aggregation: {agg_func}"
-        raise ValueError(msg)
-    # If multiple experiments in df, then group by them
-    if EXPERIMENT in y_df.columns:
-        expr = expr.over(EXPERIMENT)
-    # Compute and return
-    return y_df.with_columns(expr)

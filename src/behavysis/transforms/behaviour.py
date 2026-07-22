@@ -4,7 +4,10 @@ Predicted: (frame, behaviour, prob, pred)
 Scored: (frame, behaviour, pred, actual, [sub_behaviour...])
 """
 
+from __future__ import annotations
+
 from pathlib import Path
+from typing import TYPE_CHECKING, Literal
 
 import numpy as np
 import pandas as pd
@@ -14,9 +17,12 @@ from loguru import logger
 from behavysis.constants import (
     ACTUAL,
     BEHAVIOUR,
+    BOUT_ID,
     DUR,
+    EXPERIMENT,
     FRAME,
     PRED,
+    PROB,
     START,
     STOP,
     TRUE_NEG,
@@ -32,9 +38,95 @@ from behavysis.models import (
 from behavysis.schemas import BEHAVIOUR_SCORED_BASE, write_df
 from behavysis.utils import log_file_exists
 
+if TYPE_CHECKING:
+    from pathlib import Path
+
+
 COUNT = "count"
 
-# TODO: simplify frames -> bouts -> frames transform logic. Use label_bouts logic
+
+def label_bouts(df: pl.DataFrame, *, label_col: str = ACTUAL) -> pl.DataFrame:
+    """Label contiguous behavioural bouts with globally unique IDs."""
+    # If multiple experiments in df, then group by them
+    group_cols = []
+    if EXPERIMENT in df.columns:
+        group_cols.append(EXPERIMENT)
+    group_cols.append(BEHAVIOUR)
+    # Define splitting
+    boundary = [
+        pl.col(label_col).ne_missing(pl.col(label_col).shift()),
+        *(pl.col(col).ne_missing(pl.col(col).shift()) for col in group_cols),
+    ]
+    # Return
+    return df.sort([*group_cols, FRAME]).with_columns(
+        pl.any_horizontal(boundary).fill_null(value=True).cum_sum().alias(BOUT_ID)
+    )
+
+
+def smooth_prob(
+    df: pl.DataFrame,
+    *,
+    smoothing_frames: int = 1,
+    agg_func: Literal["mean", "median"] = "median",
+) -> pl.DataFrame:
+    """Smoothing "prob" per-experiment.
+
+    Assumes y_df is sorted with contiguous frames
+    (or contiguous frames within each "experiment").
+    Smoothing frames is either side of current.
+    """
+    # If no smoothing
+    if smoothing_frames <= 0:
+        return df
+    # Get window size
+    window_size = 2 * smoothing_frames + 1
+    # Make smoothing agg expression
+    expr = pl.col(PROB)
+    if agg_func == "mean":
+        expr = expr.rolling_mean(
+            window_size=window_size,
+            center=True,
+            min_samples=1,
+        )
+    elif agg_func == "median":
+        expr = expr.rolling_median(
+            window_size=window_size,
+            center=True,
+            min_samples=1,
+        )
+    else:
+        msg = f"Unsupported aggregation: {agg_func}"
+        raise ValueError(msg)
+    # If multiple experiments in df, then group by them
+    if EXPERIMENT in df.columns:
+        expr = expr.over(EXPERIMENT)
+    # Compute and return
+    return df.with_columns(expr)
+
+
+def smooth_bouts(
+    df: pl.DataFrame,
+    *,
+    min_gap: int = 3,
+    min_bout: int = 3,
+) -> pl.DataFrame:
+    """Close short gaps, then remove short positive bouts."""
+    # Label and merge short TRUE_NEG bouts
+    df = label_bouts(df).with_columns(
+        pl.when((pl.col(ACTUAL) == TRUE_NEG) & (pl.len().over(BOUT_ID) <= min_gap))
+        .then(TRUE_POS)
+        .otherwise(pl.col(ACTUAL))
+        .alias(ACTUAL)
+    )
+    # Label and drop short TRUE_POS bouts
+    df = label_bouts(df).with_columns(
+        pl.when((pl.col(ACTUAL) == TRUE_POS) & (pl.len().over(BOUT_ID) <= min_bout))
+        .then(TRUE_NEG)
+        .otherwise(pl.col(ACTUAL))
+        .alias(ACTUAL)
+    )
+    # Drop label and return
+    return df.drop(BOUT_ID)
 
 
 def vect2bouts(vect: pl.Series, offset: int = 0) -> pl.DataFrame:

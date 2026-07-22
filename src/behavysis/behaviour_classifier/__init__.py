@@ -12,7 +12,6 @@ from .behaviour_classifier import (
 from .config import ActiveModel, ClassifierContract, ModelRecipe
 from .data import (
     load_all_data,
-    smooth_prob,
     stratified_split_by_group,
 )
 from .evaluation import make_eval_result
@@ -31,7 +30,6 @@ __all__ = [
     "make_eval_result_choose_model",
     "predict",
     "promote_best",
-    "smooth_prob",
     "stratified_split_by_group",
     "train_all_models",
     "train_model",

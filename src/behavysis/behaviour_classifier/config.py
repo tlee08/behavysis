@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pydantic import PositiveFloat, PositiveInt
+
 from behavysis.models.base import YamlModel
 
 
@@ -45,5 +47,8 @@ class ModelRecipe(YamlModel):
     downsample_n: int = 100_000
 
     target_recall: float = 0.98
-    pcutoff: float = 0.2
-    smoothing_frames: int = 1
+
+    pcutoff: PositiveFloat = 0.2
+    smoothing_frames: PositiveInt = 1
+    min_gap: PositiveInt = 3
+    min_bout: PositiveInt = 3

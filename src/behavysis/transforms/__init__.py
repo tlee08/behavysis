@@ -14,7 +14,9 @@ from .behaviour import (
     frames2bouts,
     get_bouts_struct,
     import_boris_tsv,
+    label_bouts,
     predicted_to_scored,
+    smooth_prob,
     vect2bouts,
 )
 from .keypoint import check_bpts_exist, convert_raw_dlc_to_keypoints, get_indivs_bpts
@@ -30,8 +32,10 @@ __all__ = [
     "get_bouts_struct",
     "get_indivs_bpts",
     "import_boris_tsv",
+    "label_bouts",
     "make_binned",
     "predicted_to_scored",
+    "smooth_prob",
     "summary_binned",
     "summary_binned_behaviour",
     "summary_binned_quantitative",

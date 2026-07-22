@@ -28,6 +28,8 @@ from behavysis.constants import (
     Array1D,
 )
 from behavysis.schemas import BEHAVIOUR_PREDICTED_SCHEMA
+from behavysis.transforms import smooth_prob
+from behavysis.transforms.behaviour import smooth_bouts
 from behavysis.utils import get_gpu_device
 
 from .config import ModelRecipe
@@ -36,7 +38,6 @@ from .data import (
     df_get_features,
     df_get_labels,
     label_bouts,
-    smooth_prob,
     stratified_split_by_group,
 )
 from .torch._helper import select_features
@@ -74,6 +75,28 @@ class BaseAdapter(ABC):
     @abstractmethod
     def predict(self, df: pl.DataFrame) -> pl.DataFrame:
         """Return predicted probabilities + binary preds with smoothing."""
+
+    def _predict_postprocess(self, frame: pl.Series, prob: pl.Series) -> pl.DataFrame:
+        # Get recipe
+        recipe = self._read_recipe()
+        # Construct df
+        df = pl.DataFrame(
+            {
+                FRAME: frame,
+                BEHAVIOUR: recipe.behaviour_name,
+                PROB: prob,
+                PRED: 0,  # placeholder
+            },
+            schema=BEHAVIOUR_PREDICTED_SCHEMA,
+        )
+        # Smooth frames with median filter
+        df = smooth_prob(
+            df, smoothing_frames=recipe.smoothing_frames, agg_func="median"
+        )
+        # Smooth bouts by merging 3-frames-close, then dropping 3-frames large
+        df = smooth_bouts(df, min_gap=recipe.min_gap, min_bout=recipe.min_bout)
+        # Get preds from prob cutoff and return
+        return df.with_columns((pl.col(PROB) > recipe.pcutoff).alias(PRED))
 
     @abstractmethod
     def save(self) -> None:
@@ -149,25 +172,11 @@ class SklearnAdapter(BaseAdapter):
         if self.model is None:
             msg = "model not yet trained."
             raise ValueError(msg)
-        # Get recipe
-        recipe = self._read_recipe()
         # Predict
         frame = df.get_column(FRAME)
-        prob = self.model.predict_proba(df_get_features(df))[:, 1]
-        # Construct df
-        y_df = pl.DataFrame(
-            {
-                FRAME: frame,
-                BEHAVIOUR: recipe.behaviour_name,
-                PROB: prob,
-                PRED: 0,  # placeholder. Must smooth first
-            },
-            schema=BEHAVIOUR_PREDICTED_SCHEMA,
-        )
-        # Smooth, threshold, and return
-        return smooth_prob(y_df, recipe.smoothing_frames, "median").with_columns(
-            (pl.col(PROB) > recipe.pcutoff).alias(PRED)
-        )
+        prob = pl.Series(self.model.predict_proba(df_get_features(df))[:, 1])
+        # Postprocess and return
+        return self._predict_postprocess(frame, prob)
 
     def save(self) -> None:
         """Save."""
@@ -272,25 +281,11 @@ class TabpfnAdapter(BaseAdapter):
         if self.model is None:
             msg = "model not yet trained."
             raise ValueError(msg)
-        # Get recipe
-        recipe = self._read_recipe()
         # Predict
         frame = df.get_column(FRAME)
-        prob = self.model.predict_proba(df_get_features(df))[:, 1]
-        # Construct df
-        y_df = pl.DataFrame(
-            {
-                FRAME: frame,
-                BEHAVIOUR: recipe.behaviour_name,
-                PROB: prob,
-                PRED: 0,  # placeholder. Must smooth first
-            },
-            schema=BEHAVIOUR_PREDICTED_SCHEMA,
-        )
-        # Smooth, threshold, and return
-        return smooth_prob(y_df, recipe.smoothing_frames, "median").with_columns(
-            (pl.col(PROB) > recipe.pcutoff).alias(PRED)
-        )
+        prob = pl.Series(self.model.predict_proba(df_get_features(df))[:, 1])
+        # Postprocess and return
+        return self._predict_postprocess(frame, prob)
 
     def save(self) -> None:
         """Save."""

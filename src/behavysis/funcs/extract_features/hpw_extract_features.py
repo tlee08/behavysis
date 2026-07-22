@@ -783,7 +783,7 @@ def _compute_withdrawal_features(
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
-def compute_hpw_features(
+def hpw_compute(
     keypoints_df: pl.DataFrame,
     fps: float,
     px_per_mm: float,
@@ -833,13 +833,13 @@ def compute_hpw_features(
     return pl.DataFrame(col_data)
 
 
-def hpw_extract_features(
+def hpw(
     keypoints_df: pl.DataFrame,
     config: ExperimentConfig,  # noqa: ARG001
     metadata: ExperimentMetadata,
 ) -> pl.DataFrame:
     """Protocol-compliant wrapper for HPW feature extraction."""
-    return compute_hpw_features(
+    return hpw_compute(
         keypoints_df,
         fps=metadata.require_fps(),
         px_per_mm=metadata.require_px_per_mm(),

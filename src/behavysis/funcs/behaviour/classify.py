@@ -25,6 +25,8 @@ def classify_single(
         ``(frame, behaviour, prob, pred)`` long-form predictions.
     """
     contract = ClassifierContract.read_yaml(clf.contract_fp())
-    result = predict(clf, features_df)
+    # Predict
+    result_df = predict(clf, features_df)
+    # Return
     logger.info("Completed {} classification.", contract.behaviour_name)
-    return result
+    return result_df

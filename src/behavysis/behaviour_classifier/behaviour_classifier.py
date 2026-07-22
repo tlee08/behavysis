@@ -22,11 +22,12 @@ from .config import ActiveModel, ClassifierContract, ModelRecipe
 from .data import label_bouts, load_all_data, stratified_split_by_group
 from .evaluation import EvalResult, make_eval_result
 from .registry import MODEL_REGISTRY
-from .storage import ClassifierPaths
 
 if TYPE_CHECKING:
     from collections.abc import Callable
     from pathlib import Path
+
+    from .storage import ClassifierPaths
 
 
 # ── initialising ─────────────────────────────────────────────────────
@@ -58,9 +59,7 @@ def list_models(clf: ClassifierPaths) -> list[str]:
     if not clf.models_dir().exists():
         return []
     return [
-        _i.stem
-        for _i in clf.models_dir().iterdir()
-        if clf.recipe_fp(_i.stem).exists()
+        _i.stem for _i in clf.models_dir().iterdir() if clf.recipe_fp(_i.stem).exists()
     ]
 
 

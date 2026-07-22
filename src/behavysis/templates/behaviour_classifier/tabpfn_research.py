@@ -131,7 +131,7 @@ def _(exp2_df, predictions):
     eval_df = label_bouts(
         exp2_df.select([EXPERIMENT, FRAME, ACTUAL]).with_columns(
             pl.lit(predictions).alias(PROB), pl.lit(predictions).alias(PRED)
-        )
+        ),
     )
 
     eval_df
