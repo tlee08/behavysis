@@ -4,7 +4,7 @@ from pathlib import Path
 
 import polars as pl
 
-from behavysis.constants import ACTUAL, DF_IO_FORMAT, FALSE_POS, FBF, UNSURE
+from behavysis.constants import ACTUAL, DF_IO_FORMAT, FBF, TRUE_NEG, TRUE_POS
 from behavysis.models import AnalysisResult, ExperimentConfig, ExperimentMetadata
 from behavysis.schemas import ANALYSIS_SCHEMA, write_df
 from behavysis.transforms.analysis import summary_binned_behaviour
@@ -18,26 +18,28 @@ def analyse_behaviour(
     """Takes a behaviour df and generates a summary and binned version of the data."""
     name = metadata.require_name()
 
-    # Set UNSURE vals to FALSE_POS
-    behaviour_df = behaviour_df.fill_null(0).with_columns(
-        pl.when(pl.col(ACTUAL) == UNSURE)
-        .then(FALSE_POS)
-        .otherwise(pl.col(ACTUAL))
+    # Set only TRUE_POS as 1 (TRUE_POS). Everything else set to 0 (TRUE_NEG)
+    behaviour_df = behaviour_df.with_columns(
+        pl.when(pl.col(ACTUAL) == TRUE_POS)
+        .then(TRUE_POS)
+        .otherwise(TRUE_NEG)
         .alias(ACTUAL),
     )
 
     id_vars = ["frame", "behaviour"]
     value_vars = [c for c in behaviour_df.columns if c not in id_vars]
 
-    analysis_df = behaviour_df.unpivot(
-        index=id_vars,
-        on=value_vars,
-        variable_name="measure",
-        value_name="value",
-    ).rename({"behaviour": "individual"})
-
-    analysis_df = analysis_df.with_columns(
-        pl.col("value").fill_null(0),
+    analysis_df = (
+        behaviour_df.unpivot(
+            index=id_vars,
+            on=value_vars,
+            variable_name="measure",
+            value_name="value",
+        )
+        .rename({"behaviour": "individual"})  # Just to fit analysis schema
+        .with_columns(
+            pl.col("value").fill_null(0).cast(pl.Float64),
+        )
     )
 
     return [
