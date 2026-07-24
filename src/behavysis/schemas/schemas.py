@@ -56,6 +56,14 @@ BEHAVIOUR_PREDICTED_SCHEMA: SchemaDict = {
     PRED: pl.Int64,
 }
 
+"""One row per (frame, behaviour) classifier prediction."""
+BEHAVIOUR_BATCHED_PREDICTED_SCHEMA: SchemaDict = {
+    FRAME: pl.Int64,
+    BEHAVIOUR: pl.Utf8,
+    PROB: pl.Float64,
+    PRED: pl.Int64,
+}
+
 # BehaviourScoredDf base columns; sub_behaviour columns are dynamic and validated
 # against BoutStruct at read/write boundaries.
 BEHAVIOUR_SCORED_BASE: SchemaDict = {

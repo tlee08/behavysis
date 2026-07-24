@@ -25,7 +25,10 @@ from behavysis.constants import (
     PRED,
     PROB,
 )
-from behavysis.schemas import BEHAVIOUR_PREDICTED_SCHEMA
+from behavysis.schemas import (
+    BEHAVIOUR_BATCHED_PREDICTED_SCHEMA,
+    BEHAVIOUR_PREDICTED_SCHEMA,
+)
 from behavysis.transforms import smooth_prob
 from behavysis.transforms.behaviour import smooth_pred_bout
 from behavysis.utils import get_gpu_device
@@ -98,7 +101,15 @@ class BaseAdapter(ABC):
         # Smooth bouts by merging 3-frames-close, then dropping 3-frames large
         df = smooth_pred_bout(df, min_gap=recipe.min_gap, min_bout=recipe.min_bout)
         # Return
-        return pl.DataFrame(df, schema=BEHAVIOUR_PREDICTED_SCHEMA)
+        if experiment is not None:
+            return pl.DataFrame(
+                df.select(list(BEHAVIOUR_BATCHED_PREDICTED_SCHEMA.keys())),
+                BEHAVIOUR_BATCHED_PREDICTED_SCHEMA,
+            )
+        return pl.DataFrame(
+            df.select(list(BEHAVIOUR_PREDICTED_SCHEMA)),
+            schema=BEHAVIOUR_PREDICTED_SCHEMA,
+        )
 
     @abstractmethod
     def save(self) -> None:
