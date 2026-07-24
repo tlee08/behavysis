@@ -74,8 +74,7 @@ def load_all_data(
         y_df = (
             pl.read_parquet(y_fps[name])
             .filter(pl.col(BEHAVIOUR) == behaviour_name)
-            .select(
-                FRAME,
+            .with_columns(
                 pl.col(ACTUAL).replace([FALSE_POS, UNSURE], [TRUE_NEG, TRUE_NEG]),
             )
         )
@@ -94,7 +93,9 @@ def load_all_data(
 
 def df_get_features(df: pl.DataFrame) -> pl.DataFrame:
     """Given a df, only return features (filters out metadata and label columns)."""
-    return df.drop([EXPERIMENT, FRAME, ACTUAL, BOUT_ID], strict=False).cast(pl.Float32)
+    return df.drop([EXPERIMENT, FRAME, BEHAVIOUR, ACTUAL, BOUT_ID], strict=False).cast(
+        pl.Float32
+    )
 
 
 def df_get_labels(df: pl.DataFrame) -> pl.Series:

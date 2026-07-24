@@ -49,6 +49,6 @@ class ModelRecipe(YamlModel):
     target_recall: float = 0.98
 
     pcutoff: PositiveFloat = 0.2
-    smoothing_frames: PositiveInt = 1
+    smoothing_frames: PositiveInt = 2
     min_gap: PositiveInt = 3
     min_bout: PositiveInt = 3

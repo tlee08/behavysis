@@ -9,7 +9,6 @@ import joblib
 import numpy as np
 import pandas as pd
 import polars as pl
-import torch
 from sklearn.base import clone
 from sklearn.metrics import precision_recall_curve
 from sklearn.pipeline import Pipeline
@@ -25,7 +24,6 @@ from behavysis.constants import (
     FRAME,
     PRED,
     PROB,
-    Array1D,
 )
 from behavysis.schemas import BEHAVIOUR_PREDICTED_SCHEMA
 from behavysis.transforms import smooth_prob
@@ -40,7 +38,6 @@ from .data import (
     label_bouts,
     stratified_split_by_group,
 )
-from .torch._helper import select_features
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -87,22 +84,21 @@ class BaseAdapter(ABC):
                 FRAME: frame,
                 BEHAVIOUR: recipe.behaviour_name,
                 PROB: prob,
-                PRED: 0,  # placeholder
             },
-            schema=BEHAVIOUR_PREDICTED_SCHEMA,
         )
         # Add experiment column if given
-        if experiment:
+        if experiment is not None:
             df = df.with_columns(experiment.alias(EXPERIMENT))
         # Smooth frames with median filter
         df = smooth_prob(
             df, smoothing_frames=recipe.smoothing_frames, agg_func="median"
         )
         # Make pred from prob cutoff
-        df = df.with_columns((pl.col(PROB) > recipe.pcutoff).alias(PRED))
+        df = df.with_columns((pl.col(PROB) > recipe.pcutoff).cast(pl.Int64).alias(PRED))
         # Smooth bouts by merging 3-frames-close, then dropping 3-frames large
+        df = smooth_pred_bout(df, min_gap=recipe.min_gap, min_bout=recipe.min_bout)
         # Return
-        return smooth_pred_bout(df, min_gap=recipe.min_gap, min_bout=recipe.min_bout)
+        return pl.DataFrame(df, schema=BEHAVIOUR_PREDICTED_SCHEMA)
 
     @abstractmethod
     def save(self) -> None:
@@ -336,63 +332,6 @@ class TorchAdapter(BaseAdapter):
         self.recipe_fp: Path = recipe_fp
         self.scaler: MinMaxScaler = MinMaxScaler()
         self.feature_mask: np.ndarray = np.ndarray([])
-
-    def fit(self, df: pl.DataFrame) -> pd.DataFrame:
-        """Fit."""
-        recipe = self._read_recipe()
-        # Preprocess
-        x = self.scaler.fit_transform(df_get_features(df))
-        self.feature_mask = select_features(
-            x, df_get_labels(df), recipe.variance_threshold, recipe.max_features
-        )
-        nfeatures = len(self.feature_mask)
-        # Train
-        return self.model.fit(
-            [x[:, self.feature_mask]],
-            [y],
-            [np.arange(x.shape[0])],
-            batch_size=recipe.batch_size,
-            epochs=recipe.epochs,
-            val_split=recipe.val_split,
-        )
-
-    def _raw_predict(self, df: pl.DataFrame) -> tuple[pl.Series, Array1D]:
-        x = df.drop(_META_COLS, strict=False).to_numpy()
-        frame = df.get_column(FRAME)
-        x = self.scaler.transform(x)[:, self.feature_mask]
-        prob = self.model.predict(x, None, batch_size=256)
-        return frame, prob
-
-    def save(self) -> None:
-        """Save."""
-        if self.model is None or self.scaler is None or self.feature_mask is None:
-            msg = "Cannot save unfitted torch model."
-            raise RuntimeError(msg)
-
-        model_dir = self.recipe_fp.parent
-        model_dir.mkdir(parents=True, exist_ok=True)
-        torch.save(self.model.state_dict(), self.recipe_fp.with_name("model.pt"))
-        joblib.dump(self.scaler, self.recipe_fp.with_name("scaler.joblib"))
-        np.save(self.recipe_fp.with_name("feature_mask.npy"), self.feature_mask)
-
-    @classmethod
-    def load(cls, recipe_fp: Path) -> Self:
-        """Reconstruct model + scaler + mask from version_dir artifacts.
-
-        Requires self.model_factory to be set (from MODEL_REGISTRY
-        instantiation before calling this method).
-        """
-        model = model.load_state_dict(
-            torch.load(
-                recipe_fp.with_name("model.pt"),
-                map_location=torch.device("cpu"),
-                weights_only=True,
-            )
-        )
-        inst = cls(recipe_fp)
-        inst.scaler = joblib.load(recipe_fp.with_name("scaler.joblib"))
-        inst.feature_mask = np.load(recipe_fp.with_name("feature_mask.npy"))
-        return inst
 
 
 # ── registry ─────────────────────────────────────────────────────────

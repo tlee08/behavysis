@@ -45,21 +45,23 @@ if TYPE_CHECKING:
 COUNT = "count"
 
 
-def label_bouts(df: pl.DataFrame, label_col: str) -> pl.DataFrame:
-    """Label contiguous behavioural bouts with globally unique IDs."""
-    # If multiple experiments in df, then group by them
+def get_group_cols(df: pl.DataFrame) -> list[str]:
+    """Get the columns to group behaviours by."""
+    # TODO: change when we add sub_behaviour column
     group_cols = []
     if EXPERIMENT in df.columns:
         group_cols.append(EXPERIMENT)
     group_cols.append(BEHAVIOUR)
-    # Define splitting
-    boundary = [
-        pl.col(label_col).ne_missing(pl.col(label_col).shift()),
-        *(pl.col(col).ne_missing(pl.col(col).shift()) for col in group_cols),
-    ]
+    return group_cols
+
+
+def label_bouts(df: pl.DataFrame, label_col: str) -> pl.DataFrame:
+    """Label contiguous behavioural bouts with globally unique IDs."""
+    # If multiple experiments in df, then group by them
+    group_cols = get_group_cols(df)
     # Return
     return df.sort([*group_cols, FRAME]).with_columns(
-        pl.any_horizontal(boundary).fill_null(value=True).cum_sum().alias(BOUT_ID)
+        pl.struct(*group_cols, label_col).rle_id().alias(BOUT_ID)
     )
 
 
@@ -98,13 +100,10 @@ def smooth_prob(
         msg = f"Unsupported aggregation: {agg_func}"
         raise ValueError(msg)
     # If multiple experiments in df, then group by them
-    group_cols = []
-    if EXPERIMENT in df.columns:
-        group_cols.append(EXPERIMENT)
-    group_cols.append(BEHAVIOUR)
+    group_cols = get_group_cols(df)
     expr = expr.over(group_cols)
-    # Compute and return
-    return df.with_columns(expr)
+    # Sort, compute and return
+    return df.sort([*group_cols, FRAME]).with_columns(expr)
 
 
 def smooth_pred_bout(
