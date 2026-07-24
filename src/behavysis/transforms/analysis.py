@@ -94,7 +94,7 @@ def agg_behaviour(df: pl.DataFrame, fps: float) -> pl.DataFrame:
             # "bout_dur_std": float(dur_sec.std(ddof=0)) if len(dur_sec) > 1 else 0.0,
             # "bout_dur_min": float(dur_sec.min()),
             # "bout_dur_Q1": float(dur_sec.quantile(0.25)),
-            "bout_dur_median": float(dur_sec.median()),
+            # "bout_dur_median": float(dur_sec.median()),
             # "bout_dur_Q3": float(dur_sec.quantile(0.75)),
             # "bout_dur_max": float(dur_sec.max()),
         }
