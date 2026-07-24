@@ -1,6 +1,5 @@
 """Project class for batch processing multiple experiments."""
 
-import contextlib
 from collections.abc import Callable
 from pathlib import Path
 
@@ -236,53 +235,42 @@ class Project:
 
     def collate_analysis(self) -> None:
         """Combine analysis across all experiments."""
-        logger.info("Collating binned analysis...")
         proj_analyse_dir = self.root_dir / ANALYSIS_DIR
         if not proj_analyse_dir.is_dir():
             return
-        # For each subdir, loop throught dirs in that subdir to
-        # combine dataframes
-        for subdir1 in proj_analyse_dir.iterdir():
-            if not subdir1.is_dir():
-                continue
-            for subdir2 in subdir1.iterdir():
-                df_ls = []
+        for analysis_dir in (d for d in proj_analyse_dir.iterdir() if d.is_dir()):
+            for data_dir in (d for d in analysis_dir.iterdir() if d.is_dir()):
+                dfs = []
                 for exp in self.experiments:
-                    # Construct filepath for experiment's analysis
-                    in_fp = subdir2 / f"{exp.name}.{DF_IO_FORMAT}"
-                    if in_fp.is_file():
-                        # Read
-                        df = read_df(in_fp)
-                        # Add experiment column
-                        df = df.with_columns(pl.lit(exp.name).alias(EXPERIMENT)).select(
-                            pl.col(EXPERIMENT), pl.all().exclude(EXPERIMENT)
+                    fp = data_dir / f"{exp.name}.{DF_IO_FORMAT}"
+                    if fp.is_file():
+                        dfs.append(
+                            read_df(fp).with_columns(pl.lit(exp.name).alias(EXPERIMENT))
                         )
-                        # Append to list
-                        df_ls.append(df)
-                # Skip if no data
-                if not df_ls:
+                if not dfs:
                     continue
-                # Concatenate data
-                combined_df = pl.concat(df_ls)
-                # Write Parquet
-                out_fp = subdir1 / f"all_{subdir2.stem}.{DF_IO_FORMAT}"
-                write_df(combined_df, out_fp)
+                combined_df = pl.concat(dfs)
+                write_df(
+                    combined_df, analysis_dir / f"all_{data_dir.stem}.{DF_IO_FORMAT}"
+                )
                 # Also write CSV, which has been formatted to wider
                 # (easier to view)
                 combined_csv_df = combined_df.to_pandas()
-                if BINNED in subdir2.stem:
+                if BINNED in data_dir.stem:
                     # If binned
                     _cols = [EXPERIMENT, INDIVIDUAL, MEASURE, AGG]
                     combined_csv_df = combined_csv_df.set_index([BIN_SEC, *_cols])[
                         VALUE
                     ].unstack(_cols)
-                elif SUMMARY in subdir2.stem:
+                elif SUMMARY in data_dir.stem:
                     # If summary
                     _cols = [INDIVIDUAL, MEASURE, AGG]
                     combined_csv_df = combined_csv_df.set_index([EXPERIMENT, *_cols])[
                         VALUE
                     ].unstack(_cols)
                 # Prepare in specific format
-                csv_fp = subdir1 / f"all_{subdir2.stem}.csv"
-                with contextlib.suppress(BaseException):
+                csv_fp = analysis_dir / f"all_{data_dir.stem}.csv"
+                try:
                     combined_csv_df.to_csv(csv_fp)
+                except Exception as e:
+                    logger.exception(e)
