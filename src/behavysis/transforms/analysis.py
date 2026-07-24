@@ -200,19 +200,13 @@ def summary_binned_behaviour(
         bins_ls=bins_sec_ls,
         cbins_ls=custom_bins_sec_ls,
     )
-
+    # Add latency
     latency_rows = _compute_latency(analysis_df, fps)
     if latency_rows:
         latency_df = pl.DataFrame(latency_rows, schema=SUMMARY_SCHEMA)
-        summary_df = agg_behaviour(analysis_df, fps)
-        summary_df = pl.concat([summary_df, latency_df])
-        results.append(
-            AnalysisResult(
-                relative_path=Path(SUMMARY) / f"{name}.{DF_IO_FORMAT}",
-                result=summary_df,
-                save_func=lambda fp, obj: write_df(obj, fp, SUMMARY_SCHEMA),
-            ),
-        )
+        # Assumes first element in results is the summary df
+        # NOTE: worthwhile making this more explicit and robust. But how?
+        results[0].result = pl.concat([results[0].result, latency_df])  # ty:ignore[invalid-argument-type]
     return results
 
 
