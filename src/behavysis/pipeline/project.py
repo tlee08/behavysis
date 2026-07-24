@@ -268,6 +268,9 @@ class Project:
                     combined_csv_df = combined_csv_df.set_index([EXPERIMENT, *_cols])[
                         VALUE
                     ].unstack(_cols)
+                else:
+                    # Otherwise, don't do anything
+                    break
                 # Prepare in specific format
                 csv_fp = analysis_dir / f"all_{data_dir.stem}.csv"
                 try:
