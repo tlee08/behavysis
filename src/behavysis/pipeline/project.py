@@ -270,7 +270,7 @@ class Project:
                     ].unstack(_cols)
                 else:
                     # Otherwise, don't do anything
-                    break
+                    continue
                 # Prepare in specific format
                 csv_fp = analysis_dir / f"all_{data_dir.stem}.csv"
                 try:
