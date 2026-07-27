@@ -58,6 +58,6 @@ def get_video_metadata(vid_fp: Path) -> VideoMetadata:
         video_metadata.total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
         video_metadata.fps = cap.get(cv2.CAP_PROP_FPS)
     else:
-        logger.warning("Cannot open video: %s", vid_fp)
+        logger.warning("Cannot open video: {}", vid_fp)
     cap.release()
     return video_metadata
