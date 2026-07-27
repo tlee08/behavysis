@@ -4,8 +4,10 @@ import contextlib
 import gc
 from collections.abc import Callable
 from functools import wraps
+from pathlib import Path
 
 import torch
+from loguru import logger
 
 
 def pass_exception(
@@ -25,6 +27,18 @@ def pass_exception(
 
     # Allow both @pass_exception and @pass_exception(exception=...)
     return decorator(_func) if _func else decorator
+
+
+def check_files_exist(*fp_ls: Path) -> bool:
+    """Quick-code check that given list of files must exist.
+
+    If not, then logs, and returns False.
+    """
+    not_exists = [fp for fp in fp_ls if not fp.exists()]
+    if len(not_exists) > 0:
+        logger.warning("Files do not exist: {}", not_exists)
+        return False
+    return True
 
 
 def get_gpu_device() -> str:

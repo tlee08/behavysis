@@ -44,7 +44,7 @@ from behavysis.schemas import (
     write_df,
 )
 from behavysis.transforms import predicted_to_scored
-from behavysis.utils import log_file_exists, trace
+from behavysis.utils import check_files_exist, log_file_exists, trace
 
 
 def _get_frame(vid_fp: Path, metadata: ExperimentMetadata) -> np.ndarray:
@@ -135,6 +135,9 @@ class Experiment:
         if not overwrite and self.get_fp(FORMATTED_VIDEO_DIR).exists():
             log_file_exists(self.get_fp(FORMATTED_VIDEO_DIR))
             return
+        # File-exists check
+        if not check_files_exist(self.get_fp(RAW_VIDEO_DIR)):
+            return
         # Process
         format_video(
             raw_vid_fp=self.get_fp(RAW_VIDEO_DIR),
@@ -162,6 +165,9 @@ class Experiment:
         if not overwrite and self.get_fp(KEYPOINTS_DIR).exists():
             log_file_exists(self.get_fp(KEYPOINTS_DIR))
             return
+        # File-exists check
+        if not check_files_exist(self.get_fp(FORMATTED_VIDEO_DIR)):
+            return
         # Process
         ma_dlc_run_single(
             vid_fp=self.get_fp(FORMATTED_VIDEO_DIR),
@@ -173,6 +179,10 @@ class Experiment:
     @trace
     def calculate_parameters(self, funcs: tuple[CalculateParametersFunc, ...]) -> None:
         """Calculate parameters of the keypoints file."""
+        # File-exists check
+        if not check_files_exist(self.get_fp(KEYPOINTS_DIR)):
+            return
+        # Process
         keypoints_df = read_df(self.get_fp(KEYPOINTS_DIR), KEYPOINTS_SCHEMA)
         metadata = self.read_metadata()
         for func in funcs:
@@ -190,6 +200,9 @@ class Experiment:
         # Overwrite check
         if not overwrite and self.get_fp(PREPROCESSED_DIR).exists():
             log_file_exists(self.get_fp(PREPROCESSED_DIR))
+            return
+        # File-exists check
+        if not check_files_exist(self.get_fp(KEYPOINTS_DIR)):
             return
         # Process
         keypoints_df = read_df(self.get_fp(KEYPOINTS_DIR), KEYPOINTS_SCHEMA)
@@ -216,6 +229,10 @@ class Experiment:
         self, funcs: tuple[ExtractFeaturesFunc, ...], *, overwrite: bool
     ) -> None:
         """Extract features for each configured feature set."""
+        # File-exists check
+        if not check_files_exist(self.get_fp(PREPROCESSED_DIR)):
+            return
+        # Process
         keypoints_df = read_df(self.get_fp(PREPROCESSED_DIR), KEYPOINTS_SCHEMA)
         config = self.read_config()
         metadata = self.read_metadata()
@@ -226,7 +243,11 @@ class Experiment:
                 log_file_exists(out_fp)
                 continue
             # Process
-            features_df = func(keypoints_df, config, metadata)
+            features_df = func(
+                keypoints_df=keypoints_df,
+                config=config,
+                metadata=metadata,
+            )
             # Save
             out_fp.parent.mkdir(parents=True, exist_ok=True)
             write_df(features_df, out_fp)
@@ -243,8 +264,9 @@ class Experiment:
         for model_config in self.read_config().require_classify_behaviour():
             clf = ClassifierPaths(model_config.contract_fp.parent)
             contract = ClassifierContract.read_yaml(clf.contract_fp())
-            features_df = read_df(self.get_features_fp(contract.feature_set))
-            behaviour_df_ls.append(classify_single(clf, features_df))
+            if check_files_exist(self.get_features_fp(contract.feature_set)):
+                features_df = read_df(self.get_features_fp(contract.feature_set))
+                behaviour_df_ls.append(classify_single(clf, features_df))
         # Save
         write_df(
             pl.concat(behaviour_df_ls)
@@ -260,6 +282,9 @@ class Experiment:
         # Overwrite check
         if not overwrite and self.get_fp(BEHAVIOUR_SCORED_DIR).exists():
             log_file_exists(self.get_fp(BEHAVIOUR_SCORED_DIR))
+            return
+        # File-exists check
+        if not check_files_exist(self.get_fp(BEHAVIOUR_PREDICTED_DIR)):
             return
         # Process
         # Read
@@ -287,7 +312,13 @@ class Experiment:
     @trace
     def analyse(self, funcs: tuple[AnalyseFunc, ...]) -> None:
         """Analyse preprocessed keypoints data."""
-        keypoints_df = read_df(self.get_fp(KEYPOINTS_DIR), KEYPOINTS_SCHEMA)
+        # File-exists check
+        if not check_files_exist(
+            self.get_fp(PREPROCESSED_DIR), self.get_fp(FORMATTED_VIDEO_DIR)
+        ):
+            return
+        # Process
+        keypoints_df = read_df(self.get_fp(PREPROCESSED_DIR), KEYPOINTS_SCHEMA)
         vid_frame = _get_frame(self.get_fp(FORMATTED_VIDEO_DIR), self.read_metadata())
         config = self.read_config()
         metadata = self.read_metadata()
@@ -299,6 +330,10 @@ class Experiment:
     @trace
     def analyse_behaviour(self) -> None:
         """Analyse scored behaviours."""
+        # File-exists check
+        if not check_files_exist(self.get_fp(BEHAVIOUR_SCORED_DIR)):
+            return
+        # Process
         behaviour_df = read_df(self.get_fp(BEHAVIOUR_SCORED_DIR))
         dst_dir = self.root_dir / ANALYSIS_DIR / "analyse_behaviour"
         for result in analyse_behaviour(
