@@ -4,15 +4,14 @@ __generated_with = "0.23.10"
 app = marimo.App(width="full")
 
 with app.setup:
-    import shutil
-    from pathlib import Path
     import io
+    from pathlib import Path
 
     import altair as alt
+    import joblib
     import marimo as mo
     import polars as pl
 
-    from behavysis import Project
     from behavysis.behaviour_classifier import (
         ClassifierPaths,
         list_models,
@@ -21,11 +20,10 @@ with app.setup:
         train_all_models,
         write_contract,
     )
-    import joblib
-    from behavysis.behaviour_classifier.data import df_get_features, load_all_data, df_get_labels
+    from behavysis.behaviour_classifier.data import (
+        load_all_data,
+    )
     from behavysis.behaviour_classifier.evaluation import compute_shap
-
-    from behavysis.constants import FEATURES_EXTRACTED_DIR
     from behavysis.transforms import boris_to_behaviour
     from behavysis.utils import configure_logger
 
@@ -44,9 +42,6 @@ def _():
     {clf_dir}/
         contract.yaml
         active.yaml                 # {model_name: xgb}
-        training_data/
-            5_features_extracted/
-            7_behaviour_scored/
         classifiers/
             rf/
                 recipe.yaml
@@ -54,11 +49,14 @@ def _():
                 evaluation/
             xgb/ ...
             logreg/ ...
+    
+    training_data/                 # elsewhere
+        5_features_extracted/
+        7_behaviour_scored/
     ```
 
     **assemble data → train → evaluate → set active**
     """)
-    return
 
 
 @app.cell
@@ -66,7 +64,6 @@ def _():
     mo.md("""
     ## 1. Configure — edit these
     """)
-    return
 
 
 @app.cell
@@ -78,16 +75,21 @@ def _():
     behaviour_name = "aggression"
 
     # Source project (must have completed extract_features stage).
-    training_project_dir = Path("/absolute/path/to/behavysis_project")
-    names_ls = [i.stem for i in (training_project_dir / "1_raw_videos").iterdir()]
+    training_data_dir = Path("/absolute/path/to/behavysis_project")
+    names_ls = [i.stem for i in (training_data_dir / "1_raw_videos").iterdir()]
 
     # Directory of BORIS .tsv exports (one per experiment).
     boris_dir = Path("/absolute/path/to/boris_tsvs")
 
     # Metrics to show in evaluation summary.
     view_metrics = [
-        "accuracy", "precision", "recall", "f1",
-        "roc_auc", "pr_auc", "gini",
+        "accuracy",
+        "precision",
+        "recall",
+        "f1",
+        "roc_auc",
+        "pr_auc",
+        "gini",
     ]
 
     overwrite = False
@@ -97,7 +99,7 @@ def _():
         clf_dir,
         names_ls,
         overwrite,
-        training_project_dir,
+        training_data_dir,
         view_metrics,
     )
 
@@ -111,43 +113,6 @@ def _(clf_dir):
 @app.cell
 def _():
     mo.md("""
-    ## 2. Assemble training data
-
-    Copy extracted features from the source project.
-    """)
-    return
-
-
-@app.cell
-def _(clf):
-    feats_dir = clf.features_dir("generic")
-    labels_dir = clf.labels_dir()
-    return feats_dir, labels_dir
-
-
-@app.cell
-def _(names_ls, training_project_dir):
-    proj = Project(training_project_dir)
-    proj.import_experiments(names_ls)
-    proj.experiments
-    return (proj,)
-
-
-@app.cell
-def _(feats_dir, overwrite, proj):
-    feats_dir.mkdir(parents=True, exist_ok=True)
-    for _exp in proj.experiments:
-        _src = _exp.get_fp(FEATURES_EXTRACTED_DIR)
-        _dst = feats_dir / _src.name
-        if overwrite or not _dst.exists():
-            shutil.copyfile(_src, _dst)
-    sorted(p.name for p in feats_dir.iterdir())
-    return
-
-
-@app.cell
-def _():
-    mo.md("""
     ### Labels from BORIS
 
     Convert BORIS `.tsv` exports into scored parquets, aligned to each
@@ -156,7 +121,6 @@ def _():
     *(If the source project is already scored, copy
     `7_behaviour_scored/*.parquet` into `clf.labels_dir()` instead.)*
     """)
-    return
 
 
 @app.cell
@@ -171,7 +135,6 @@ def _(behaviour_name, boris_dir, labels_dir, overwrite, proj):
             overwrite=overwrite,
         )
     sorted(p.name for p in labels_dir.iterdir())
-    return
 
 
 @app.cell
@@ -181,7 +144,6 @@ def _():
 
     Writes `contract.yaml`, then trains every registered model.
     """)
-    return
 
 
 @app.cell
@@ -190,13 +152,11 @@ def _(behaviour_name, clf):
         clf=clf,
         behaviour_name=behaviour_name,
     ).model_dump()
-    return
 
 
 @app.cell
-def _(clf, overwrite):
-    train_all_models(clf, overwrite=overwrite)
-    return
+def _(clf, training_data_dir, overwrite):
+    train_all_models(clf=clf, training_data_dir=training_data_dir, overwrite=overwrite)
 
 
 @app.cell
@@ -204,7 +164,6 @@ def _():
     mo.md("""
     ## 4. Evaluate
     """)
-    return
 
 
 @app.function
@@ -218,8 +177,7 @@ def show_chart_img(chart, width=300):
 def _(clf):
     trained_models = list_models(clf)
     _msg = (
-        f"Found **{len(trained_models)}** trained models: "
-        f"{', '.join(trained_models)}"
+        f"Found **{len(trained_models)}** trained models: {', '.join(trained_models)}"
     )
     mo.md(_msg)
     return (trained_models,)
@@ -243,7 +201,6 @@ def _():
     mo.md("""
     ### Metric summary
     """)
-    return
 
 
 @app.cell
@@ -254,13 +211,15 @@ def _(eval_all, view_metrics):
             for _split, _metrics in _res["report"].get(f"{_level}_report", {}).items():
                 for _metric in view_metrics:
                     if _metric in _metrics:
-                        rows.append({
-                            "level": _level,
-                            "split": _split,
-                            "metric": _metric,
-                            "model": _model,
-                            "value": _metrics[_metric],
-                        })
+                        rows.append(
+                            {
+                                "level": _level,
+                                "split": _split,
+                                "metric": _metric,
+                                "model": _model,
+                                "value": _metrics[_metric],
+                            }
+                        )
 
     metrics_df = pl.DataFrame(
         rows,
@@ -303,7 +262,6 @@ def _(metrics_df, view_metrics):
         .properties(height=200, width=200)
     )
     mo.ui.altair_chart(bar_chart)
-    return
 
 
 @app.cell
@@ -311,7 +269,6 @@ def _():
     mo.md("""
     ### ROC & PR curves
     """)
-    return
 
 
 @app.cell
@@ -365,7 +322,6 @@ def _(roc_df):
 
     # Must show as image, because too many points
     show_chart_img(roc_chart)
-    return
 
 
 @app.cell
@@ -386,7 +342,6 @@ def _(pr_df):
 
     # Must show as image, because too many points
     show_chart_img(pr_chart)
-    return
 
 
 @app.cell
@@ -394,7 +349,6 @@ def _():
     mo.md("""
     ### Bout health
     """)
-    return
 
 
 @app.cell
@@ -409,11 +363,13 @@ def _(eval_all):
             health_rows.append(_row)
         _eff = _res["report"].get("review_efficiency", {})
         for _split, _metrics in _eff.items():
-            eff_rows.append({
-                "model": _model,
-                "split": _split,
-                "efficiency": _metrics.get("efficiency", 0),
-            })
+            eff_rows.append(
+                {
+                    "model": _model,
+                    "split": _split,
+                    "efficiency": _metrics.get("efficiency", 0),
+                }
+            )
 
     health_df = pl.DataFrame(health_rows) if health_rows else None
     eff_df = pl.DataFrame(eff_rows) if eff_rows else None
@@ -423,7 +379,6 @@ def _(eval_all):
 @app.cell
 def _(health_df):
     mo.ui.table(health_df, page_size=20) if health_df is not None else None
-    return
 
 
 @app.cell
@@ -444,14 +399,12 @@ def _(health_df):
         .properties(height=200, width=200)
     )
     mo.ui.altair_chart(health_chart)
-    return
 
 
 @app.cell
 def _(eff_df):
     mo.md("**Review efficiency** = pred_pos / true_pos")
     mo.ui.table(eff_df, page_size=20) if eff_df is not None else None
-    return
 
 
 @app.cell
@@ -459,7 +412,6 @@ def _():
     mo.md("""
     ### Per-model detail
     """)
-    return
 
 
 @app.cell
@@ -482,7 +434,6 @@ def _(eval_all):
     mo.accordion(accordion_items, multiple=True) if accordion_items else mo.md(
         "No per-model detail charts."
     )
-    return
 
 
 @app.cell
@@ -490,7 +441,6 @@ def _():
     mo.md("""
     ### Model Explainability
     """)
-    return
 
 
 @app.cell
@@ -506,7 +456,6 @@ def _(clf, behaviour_name):
     # Get SHAP
     result = compute_shap(model, df)
     result
-    return
 
 
 @app.cell
@@ -521,13 +470,11 @@ def _():
     model_name: rf
     ```
     """)
-    return
 
 
 @app.cell
 def _(clf):
     promote_best(clf)
-    return
 
 
 @app.cell
@@ -543,7 +490,6 @@ def _():
           sub_behaviour: []
     ```
     """)
-    return
 
 
 if __name__ == "__main__":

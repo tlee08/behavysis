@@ -64,17 +64,15 @@ class ClassifierPaths:
 
     # ── training data ────────────────────────────────────────────────────
 
-    def training_data_dir(self) -> Path:
-        """training_data_dir."""
-        return self.root_dir() / TRAINING_DATA
-
-    def features_dir(self, feature_set: str) -> Path:
+    @classmethod
+    def features_dir(cls, training_data_dir: Path, feature_set: str) -> Path:
         """features_dir."""
-        return self.training_data_dir() / FEATURES_EXTRACTED_DIR / feature_set
+        return training_data_dir / FEATURES_EXTRACTED_DIR / feature_set
 
-    def labels_dir(self) -> Path:
+    @classmethod
+    def labels_dir(cls, training_data_dir: Path) -> Path:
         """labels_dir."""
-        return self.training_data_dir() / BEHAVIOUR_SCORED_DIR
+        return training_data_dir / BEHAVIOUR_SCORED_DIR
 
     # ── model level ─────────────────────────────────────────────────-----
 

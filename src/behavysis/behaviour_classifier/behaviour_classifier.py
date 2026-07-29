@@ -70,6 +70,7 @@ def list_models(clf: ClassifierPaths) -> list[str]:
 def train_model(
     clf: ClassifierPaths,
     model_name: str,
+    training_data_dir: Path,
     *,
     overwrite: bool = False,
     factory: Callable[[Path], BaseAdapter] | None = None,
@@ -81,6 +82,10 @@ def train_model(
             The classifier directory layout.
         model_name (str):
             model name (also used for `MODEL_REGISTRY` if factory not given).
+        training_data_dir (str):
+            Path to training data directory.
+            Expects directory contents to be in
+            behavysis project format.
         overwrite (bool, optional):
             Allow retraining an existing model. Defaults to False.
         factory (Callable[[Path], BaseAdapter] | None, optional):
@@ -113,8 +118,8 @@ def train_model(
 
     # Load and align data
     df = load_all_data(
-        clf.features_dir(contract.feature_set),
-        clf.labels_dir(),
+        clf.features_dir(training_data_dir, contract.feature_set),
+        clf.labels_dir(training_data_dir),
         contract.behaviour_name,
     )
     df = label_bouts(df, ACTUAL)
@@ -157,10 +162,17 @@ def train_model(
     return model_dir
 
 
-def train_all_models(clf: ClassifierPaths, *, overwrite: bool = False) -> list[Path]:
+def train_all_models(
+    clf: ClassifierPaths, training_data_dir: Path, *, overwrite: bool = False
+) -> list[Path]:
     """Train the routine model set."""
     return [
-        pass_exception(trace(train_model))(clf, model_name, overwrite=overwrite)
+        pass_exception(trace(train_model))(
+            clf=clf,
+            model_name=model_name,
+            training_data_dir=training_data_dir,
+            overwrite=overwrite,
+        )
         for model_name in MODEL_REGISTRY
     ]
 
