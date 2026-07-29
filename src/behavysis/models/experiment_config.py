@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from pydantic import BaseModel, ConfigDict, PositiveFloat, PositiveInt
+from pydantic import BaseModel, ConfigDict, NonNegativeFloat, PositiveFloat, PositiveInt
 
 from behavysis.models.base import YamlModel
 
@@ -60,8 +60,8 @@ class FormatVideoConfig(BaseModel):
     width_px: PositiveInt | None = None
     height_px: PositiveInt | None = None
     fps: PositiveFloat | None = None
-    start_sec: PositiveFloat | None = None
-    stop_sec: PositiveFloat | None = None
+    start_sec: NonNegativeFloat | None = None
+    stop_sec: NonNegativeFloat | None = None
 
 
 class RunDlcConfig(BaseModel):

@@ -1,6 +1,6 @@
 """Experiment configuration models for the behavysis pipeline."""
 
-from pydantic import BaseModel, ConfigDict, PositiveFloat, PositiveInt
+from pydantic import BaseModel, ConfigDict, NonNegativeInt, PositiveFloat, PositiveInt
 
 from behavysis.models.base import YamlModel
 
@@ -30,7 +30,7 @@ class VideoMetadata(BaseModel):
     width_px: PositiveInt | None = None
     height_px: PositiveInt | None = None
     fps: PositiveFloat | None = None
-    total_frames: PositiveInt | None = None
+    total_frames: NonNegativeInt | None = None
 
 
 class ExperimentMetadata(YamlModel):
@@ -40,9 +40,9 @@ class ExperimentMetadata(YamlModel):
 
     name: str | None = None
     px_per_mm: PositiveFloat | None = None
-    start_frame: PositiveInt | None = None
-    stop_frame: PositiveInt | None = None
-    dur_frames: PositiveInt | None = None
+    start_frame: NonNegativeInt | None = None
+    stop_frame: NonNegativeInt | None = None
+    dur_frames: NonNegativeInt | None = None
     raw_video: VideoMetadata = VideoMetadata()
     formatted_video: VideoMetadata = VideoMetadata()
 
@@ -85,6 +85,15 @@ class ExperimentMetadata(YamlModel):
                 "calculate_parameters.stop_frame_from_*()",
             )
         return self.stop_frame
+
+    def require_dur_frames(self) -> NonNegativeInt:
+        """Dur frames."""
+        if self.dur_frames is None:
+            msg = "dur_frames"
+            raise MetadataNotReadyError(
+                msg, "calculate_parameters.dur_frames_from_likelihood()"
+            )
+        return self.dur_frames
 
     def require_fps(self) -> PositiveFloat:
         """Formatted vid fps."""

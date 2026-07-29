@@ -93,11 +93,11 @@ def trace(_func: Callable | None = None, *, level: LogLevel = "INFO") -> Callabl
                 try:
                     result = func(*args, **kwargs)
                     elapsed = time.perf_counter() - t0
-                    logger.log(level, "← done ({:.2f}s)", elapsed)
+                    logger.log(level, "- done ({:.2f}s)", elapsed)
                     return result
                 except Exception:
                     elapsed = time.perf_counter() - t0
-                    logger.exception("✗ FAILED after {:.2f}s", elapsed)
+                    logger.exception("- FAILED after {:.2f}s", elapsed)
                     raise
 
         return wrapper

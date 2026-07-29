@@ -164,7 +164,7 @@ def _(behaviour_name, boris_dir, labels_dir, overwrite, proj):
     labels_dir.mkdir(parents=True, exist_ok=True)
     for _exp in proj.experiments:
         boris_to_behaviour(
-            src_fp=boris_dir / f"{_exp.name}.tsv",
+            src_fp=boris_dir / f"{_exp.name}.csv",
             dst_fp=labels_dir / f"{_exp.name}.parquet",
             metadata=_exp.read_metadata(),
             behaviour_ls=[behaviour_name],
