@@ -403,7 +403,7 @@ def import_boris_csv(
         pl.read_csv(fp)
         .rename({"Behavior": BEHAVIOUR})
         .with_columns(
-            (pl.col("Time") * 60).round().cast(pl.Int64).alias(FRAME),
+            (pl.col("Time") * fps).round().cast(pl.Int64).alias(FRAME),
             pl.col("Behavior type").str.strip_chars().str.to_uppercase().alias("type"),
         )
     )
