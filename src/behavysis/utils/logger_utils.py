@@ -1,3 +1,5 @@
+"""Logger utilities."""
+
 import functools
 import sys
 import time
@@ -91,6 +93,7 @@ def trace(_func: Callable | None = None, *, level: LogLevel = "INFO") -> Callabl
             with logger.contextualize(**extras):
                 t0 = time.perf_counter()
                 try:
+                    logger.log(level, "running...")
                     result = func(*args, **kwargs)
                     elapsed = time.perf_counter() - t0
                     logger.log(level, "- done ({:.2f}s)", elapsed)
@@ -104,12 +107,3 @@ def trace(_func: Callable | None = None, *, level: LogLevel = "INFO") -> Callabl
 
     # allows both @trace and @trace(level=...)
     return decorator(_func) if _func else decorator
-
-
-def log_file_exists(fp: Path | str | None = None) -> None:
-    """Log a file-exists warning message."""
-    fp_str = f", {fp}, " if fp else " "
-    logger.warning(
-        f"Output file{fp_str}already exists - not overwriting file.\n"
-        "To overwrite, specify `overwrite=True`."
-    )

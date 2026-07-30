@@ -44,7 +44,7 @@ from behavysis.schemas import (
     write_df,
 )
 from behavysis.transforms import predicted_to_scored
-from behavysis.utils import check_files_exist, log_file_exists, trace
+from behavysis.utils import has_output_files, missing_input_files, trace
 
 
 def _get_frame(vid_fp: Path, metadata: ExperimentMetadata) -> np.ndarray:
@@ -101,6 +101,15 @@ class Experiment:
         """Returns the experiment's file path from the given folder."""
         return self.root_dir / folder / f"{self.name}.{STAGES[folder]}"
 
+    def get_features_fp(self, feature_set: str) -> Path:
+        """Returns the experiment's features file path for a named feature set."""
+        return (
+            self.root_dir
+            / FEATURES_EXTRACTED_DIR
+            / feature_set
+            / f"{self.name}.{STAGES[FEATURES_EXTRACTED_DIR]}"
+        )
+
     def read_config(self) -> ExperimentConfig:
         """Returns the experiment's config."""
         return ExperimentConfig.read_yaml(self.get_fp(CONFIG_DIR))
@@ -124,27 +133,19 @@ class Experiment:
         overwrite: bool,
     ) -> None:
         """Copy the default configs to this project."""
-        # Overwrite check
-        if not overwrite and self.get_fp(CONFIG_DIR).exists():
-            log_file_exists(self.get_fp(CONFIG_DIR))
+        if not overwrite and has_output_files(self.get_fp(CONFIG_DIR)):
             return
-        # Parsing in the new config to see if it is valid
         ExperimentConfig.read_yaml(default_config_fp)
-        # Overwriting the config file with the new config
         self.get_fp(CONFIG_DIR).parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(default_config_fp, self.get_fp(CONFIG_DIR))
 
     @trace
     def format_video(self, *, overwrite: bool) -> None:
         """Formats the video with ffmpeg to fit the formatted config."""
-        # Overwrite check
-        if not overwrite and self.get_fp(FORMATTED_VIDEO_DIR).exists():
-            log_file_exists(self.get_fp(FORMATTED_VIDEO_DIR))
+        if not overwrite and has_output_files(self.get_fp(FORMATTED_VIDEO_DIR)):
             return
-        # File-exists check
-        if not check_files_exist(self.get_fp(RAW_VIDEO_DIR)):
+        if missing_input_files(self.get_fp(RAW_VIDEO_DIR)):
             return
-        # Process
         format_video(
             raw_vid_fp=self.get_fp(RAW_VIDEO_DIR),
             formatted_vid_fp=self.get_fp(FORMATTED_VIDEO_DIR),
@@ -156,25 +157,18 @@ class Experiment:
     @trace
     def get_video_metadata(self) -> None:
         """Get vid metadata and save."""
-        # Read
         metadata = self.read_metadata()
-        # Update
         metadata.raw_video = get_video_metadata(self.get_fp(RAW_VIDEO_DIR))
         metadata.formatted_video = get_video_metadata(self.get_fp(FORMATTED_VIDEO_DIR))
-        # Write
         self.write_metadata(metadata)
 
     @trace
     def run_dlc(self, gputouse: int | None, *, overwrite: bool) -> None:
         """Run the DLC model on the formatted video."""
-        # Overwrite check
-        if not overwrite and self.get_fp(KEYPOINTS_DIR).exists():
-            log_file_exists(self.get_fp(KEYPOINTS_DIR))
+        if not overwrite and has_output_files(self.get_fp(KEYPOINTS_DIR)):
             return
-        # File-exists check
-        if not check_files_exist(self.get_fp(FORMATTED_VIDEO_DIR)):
+        if missing_input_files(self.get_fp(FORMATTED_VIDEO_DIR)):
             return
-        # Process
         ma_dlc_run_single(
             vid_fp=self.get_fp(FORMATTED_VIDEO_DIR),
             keypoints_dir=self.root_dir / KEYPOINTS_DIR,
@@ -185,10 +179,8 @@ class Experiment:
     @trace
     def calculate_parameters(self, funcs: tuple[CalculateParametersFunc, ...]) -> None:
         """Calculate parameters of the keypoints file."""
-        # File-exists check
-        if not check_files_exist(self.get_fp(KEYPOINTS_DIR)):
+        if missing_input_files(self.get_fp(KEYPOINTS_DIR)):
             return
-        # Process
         keypoints_df = read_df(self.get_fp(KEYPOINTS_DIR), KEYPOINTS_SCHEMA)
         metadata = self.read_metadata()
         for func in funcs:
@@ -203,14 +195,10 @@ class Experiment:
     @trace
     def preprocess(self, funcs: tuple[PreprocessFunc, ...], *, overwrite: bool) -> None:
         """Preprocessing pipeline for keypoints data."""
-        # Overwrite check
-        if not overwrite and self.get_fp(PREPROCESSED_DIR).exists():
-            log_file_exists(self.get_fp(PREPROCESSED_DIR))
+        if not overwrite and has_output_files(self.get_fp(PREPROCESSED_DIR)):
             return
-        # File-exists check
-        if not check_files_exist(self.get_fp(KEYPOINTS_DIR)):
+        if missing_input_files(self.get_fp(KEYPOINTS_DIR)):
             return
-        # Process
         keypoints_df = read_df(self.get_fp(KEYPOINTS_DIR), KEYPOINTS_SCHEMA)
         for func in funcs:
             keypoints_df = func(
@@ -221,34 +209,20 @@ class Experiment:
         # Write
         write_df(keypoints_df, self.get_fp(PREPROCESSED_DIR), KEYPOINTS_SCHEMA)
 
-    def get_features_fp(self, feature_set: str) -> Path:
-        """Returns the experiment's features file path for a named feature set."""
-        return (
-            self.root_dir
-            / FEATURES_EXTRACTED_DIR
-            / feature_set
-            / f"{self.name}.{STAGES[FEATURES_EXTRACTED_DIR]}"
-        )
-
     @trace
     def extract_features(
         self, funcs: tuple[ExtractFeaturesFunc, ...], *, overwrite: bool
     ) -> None:
         """Extract features for each configured feature set."""
-        # File-exists check
-        if not check_files_exist(self.get_fp(PREPROCESSED_DIR)):
+        if missing_input_files(self.get_fp(PREPROCESSED_DIR)):
             return
-        # Process
         keypoints_df = read_df(self.get_fp(PREPROCESSED_DIR), KEYPOINTS_SCHEMA)
         config = self.read_config()
         metadata = self.read_metadata()
         for func in funcs:
-            # Overwrite check
             out_fp = self.get_features_fp(func.__name__)
-            if not overwrite and out_fp.exists():
-                log_file_exists(out_fp)
+            if not overwrite and has_output_files(out_fp):
                 continue
-            # Process
             features_df = func(
                 keypoints_df=keypoints_df,
                 config=config,
@@ -261,18 +235,16 @@ class Experiment:
     @trace
     def classify_behaviour(self, *, overwrite: bool) -> None:
         """Classify behaviours using trained models."""
-        # Overwrite check
-        if not overwrite and self.get_fp(BEHAVIOUR_PREDICTED_DIR).exists():
-            log_file_exists(self.get_fp(BEHAVIOUR_PREDICTED_DIR))
+        if not overwrite and has_output_files(self.get_fp(BEHAVIOUR_PREDICTED_DIR)):
             return
-        # Process
         behaviour_df_ls = []
         for model_config in self.read_config().require_classify_behaviour():
             clf = ClassifierPaths(model_config.contract_fp.parent)
             contract = ClassifierContract.read_yaml(clf.contract_fp())
-            if check_files_exist(self.get_features_fp(contract.feature_set)):
-                features_df = read_df(self.get_features_fp(contract.feature_set))
-                behaviour_df_ls.append(classify_single(clf, features_df))
+            if missing_input_files(self.get_features_fp(contract.feature_set)):
+                continue
+            features_df = read_df(self.get_features_fp(contract.feature_set))
+            behaviour_df_ls.append(classify_single(clf, features_df))
         # Save
         write_df(
             pl.concat(behaviour_df_ls)
@@ -285,20 +257,15 @@ class Experiment:
     @trace
     def export_behaviour(self, *, overwrite: bool) -> None:
         """Export predicted behaviours to scored behaviours."""
-        # Overwrite check
-        if not overwrite and self.get_fp(BEHAVIOUR_SCORED_DIR).exists():
-            log_file_exists(self.get_fp(BEHAVIOUR_SCORED_DIR))
+        if not overwrite and has_output_files(self.get_fp(BEHAVIOUR_SCORED_DIR)):
             return
-        # File-exists check
-        if not check_files_exist(self.get_fp(BEHAVIOUR_PREDICTED_DIR)):
+        if missing_input_files(self.get_fp(BEHAVIOUR_PREDICTED_DIR)):
             return
-        # Process
         # Read
         behaviour_predicted_df = read_df(
             self.get_fp(BEHAVIOUR_PREDICTED_DIR),
             BEHAVIOUR_PREDICTED_SCHEMA,
         )
-        # Make list of bouts (behaviour and sub-behaviour)
         config = self.read_config()
         bouts_struct = [
             BoutStruct(
@@ -309,21 +276,17 @@ class Experiment:
             )
             for model_config in config.require_classify_behaviour()
         ]
-        # Convert predicted to scored
         behaviour_scored_df = predicted_to_scored(behaviour_predicted_df, bouts_struct)
-        # Write
         self.get_fp(BEHAVIOUR_SCORED_DIR).parent.mkdir(parents=True, exist_ok=True)
         behaviour_scored_df.write_parquet(self.get_fp(BEHAVIOUR_SCORED_DIR))
 
     @trace
     def analyse(self, funcs: tuple[AnalyseFunc, ...]) -> None:
         """Analyse preprocessed keypoints data."""
-        # File-exists check
-        if not check_files_exist(
+        if missing_input_files(
             self.get_fp(PREPROCESSED_DIR), self.get_fp(FORMATTED_VIDEO_DIR)
         ):
             return
-        # Process
         keypoints_df = read_df(self.get_fp(PREPROCESSED_DIR), KEYPOINTS_SCHEMA)
         vid_frame = _get_frame(self.get_fp(FORMATTED_VIDEO_DIR), self.read_metadata())
         config = self.read_config()
@@ -336,10 +299,8 @@ class Experiment:
     @trace
     def analyse_behaviour(self) -> None:
         """Analyse scored behaviours."""
-        # File-exists check
-        if not check_files_exist(self.get_fp(BEHAVIOUR_SCORED_DIR)):
+        if missing_input_files(self.get_fp(BEHAVIOUR_SCORED_DIR)):
             return
-        # Process
         behaviour_df = read_df(self.get_fp(BEHAVIOUR_SCORED_DIR))
         dst_dir = self.root_dir / ANALYSIS_DIR / "analyse_behaviour"
         for result in analyse_behaviour(

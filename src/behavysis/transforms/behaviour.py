@@ -35,7 +35,7 @@ from behavysis.models import (
     ExperimentMetadata,
 )
 from behavysis.schemas import BEHAVIOUR_SCORED_BASE, write_df
-from behavysis.utils import log_file_exists
+from behavysis.utils import has_output_files
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -467,8 +467,7 @@ def boris_to_behaviour(  # noqa: PLR0913
     fps: int = 50,
 ) -> None:
     """Import BORIS CSV and write scored behaviour parquet."""
-    if not overwrite and dst_fp.exists():
-        log_file_exists(dst_fp)
+    if not overwrite and has_output_files(dst_fp):
         return
 
     df = import_boris_csv(
