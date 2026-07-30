@@ -37,7 +37,7 @@ def has_output_files(*fp_ls: Path) -> bool:
     exists_ls = [fp for fp in fp_ls if fp.exists()]
     if exists_ls:
         logger.warning(
-            "File(s) already exists - not overwriting file: {}",
+            "File(s) already exists - not overwriting: {}",
             exists_ls,
         )
         return True
