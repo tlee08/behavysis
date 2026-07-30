@@ -46,7 +46,7 @@ COUNT = "count"
 
 def get_group_cols(df: pl.DataFrame) -> list[str]:
     """Get the columns to group behaviours by."""
-    # TODO: change when we add sub_behaviour column
+    # TODO: change when we add sub_behaviour column (to group on sub-behav too)
     group_cols = []
     if EXPERIMENT in df.columns:
         group_cols.append(EXPERIMENT)
@@ -361,7 +361,7 @@ def bouts2frames(bouts: Bouts) -> pl.DataFrame:
     return df
 
 
-def import_boris_csv(
+def import_boris_csv(  # noqa: PLR0913
     fp: Path,
     behaviour_ls: list[str],
     start_frame: int,
@@ -456,7 +456,7 @@ def import_boris_csv(
     return pl.concat(fbf_df_ls)
 
 
-def boris_to_behaviour(
+def boris_to_behaviour(  # noqa: PLR0913
     src_fp: Path,
     dst_fp: Path,
     metadata: ExperimentMetadata,

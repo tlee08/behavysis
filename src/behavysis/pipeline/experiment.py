@@ -120,8 +120,14 @@ class Experiment:
     def update_config(
         self,
         default_config_fp: Path,
+        *,
+        overwrite: bool,
     ) -> None:
         """Copy the default configs to this project."""
+        # Overwrite check
+        if not overwrite and self.get_fp(CONFIG_DIR).exists():
+            log_file_exists(self.get_fp(CONFIG_DIR))
+            return
         # Parsing in the new config to see if it is valid
         ExperimentConfig.read_yaml(default_config_fp)
         # Overwriting the config file with the new config

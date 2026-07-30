@@ -21,9 +21,9 @@ def format_video(
     if cfg.start_sec:
         cmd += ["-ss", str(cfg.start_sec)]
     cmd += ["-i", str(raw_vid_fp)]
-    filters = []
     width = cfg.width_px
     height = cfg.height_px
+    filters = []
     if width or height:
         filters.append(f"scale={width or -1}:{height or -1}")
     if filters:

@@ -117,11 +117,12 @@ class Project:
         exp_ls_msg = "".join([f"\n    - {exp.name}" for exp in self.experiments])
         logger.info(f"Experiments imported:{exp_ls_msg}")
 
-    def update_config(self, default_config_fp: Path) -> None:
+    def update_config(self, default_config_fp: Path, *, overwrite: bool) -> None:
         """Update the config for all experiments."""
         self._run(
             Experiment.update_config,
             default_config_fp=default_config_fp,
+            overwrite=overwrite,
         )
 
     def format_video(self, *, overwrite: bool) -> None:
