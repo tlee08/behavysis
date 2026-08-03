@@ -1,0 +1,103 @@
+# =============================================================================
+# Hind Paw Withdrawal
+# =============================================================================
+#
+# Hind paw withdrawal and rearing
+# =============================================================================
+
+_bpts_front: &bpts_front
+  - nose
+  - ear_r
+  - ear_l
+_bpts_hind: &bpts_hind
+  - nose
+  - ear_r
+  - ear_l
+  - mid_back
+  - lower_back
+  - tail_base
+_bpts_all: &bpts_all
+  - nose
+  - ear_r
+  - ear_l
+  # front paw
+  - front_toe_r
+  - front_knee_r
+  - front_toe_l
+  - front_knee_l
+  # hind paw
+  - hind_toe_r
+  - hind_heel_r
+  - hind_knee_r
+  - hind_toe_l
+  - hind_heel_l
+  - hind_knee_l
+  # back and tail
+  - mid_back
+  - lower_back
+  - tail_base
+  - tail_tip
+_bpts_corners: &bpts_corners
+  - arena_r
+  - arena_l
+_individuals: &individuals
+  - rat
+
+format_video:
+  width_px: 540
+  height_px: 960
+  fps: 50
+  start_sec: null
+  stop_sec: null
+
+run_dlc:
+  model_fp: /absolute/path/to/DLC_model/config.yaml
+
+calculate_parameters:
+  from_likelihood:
+    bodyparts: *bpts_hind
+    window_sec: 0.5
+    pcutoff: 0.5
+  stop_frame_from_dur:
+    dur_sec: 6000
+  px_per_mm:
+    pt_a: arena_r
+    pt_b: arena_l
+    dist_mm: 100
+    pcutoff: 0.3
+
+preprocess:
+  interpolate:
+    pcutoff: 0.5
+
+extract_features:
+  generic:
+    bodyparts: *bpts_all
+    individuals: *individuals
+    angles:
+      - [hind_toe_r, hind_heel_r, hind_knee_r]
+      - [hind_toe_l, hind_heel_l, hind_knee_l]
+  hpw: {}
+
+classify_behaviour:
+  - contract_fp: /absolute/path/to/behaviour_classifier/contract.yaml
+    sub_behaviour: []
+
+analyse:
+  bins_sec_ls: [30, 60, 120]
+  custom_bins_sec_ls: []
+  speed:
+    smoothing_sec: 1.0
+    bodyparts: *bpts_front
+  distance:
+    smoothing_sec: 1.0
+    bodyparts: *bpts_front
+  in_roi:
+    - roi_name: in_centre
+      is_in: true
+      padding_mm: 0
+      roi_corners: *bpts_corners
+      bodyparts: *bpts_front
+  social_distance:
+    smoothing_sec: 1.0
+    bodyparts: *bpts_front

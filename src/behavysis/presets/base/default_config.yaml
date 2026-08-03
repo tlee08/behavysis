@@ -1,0 +1,107 @@
+# =============================================================================
+# Behavysis Project Configuration — Reference
+# =============================================================================
+#
+# Every field is REQUIRED but can be `null` if not using that stage.
+# Underscore-prefixed keys (_*) define reusable YAML anchors — kept by parser,
+# silently ignored by the config validator.
+# =============================================================================
+
+# ---- Anchors ----
+_bpts_front: &bpts_front
+  - Nose
+  - LeftEar
+  - RightEar
+  - NeckBase
+  - BodyCentre
+_bpts_centre: &bpts_centre
+  - NeckBase
+  - BodyCentre
+  - TailBase
+_bpts_all: &bpts_all
+  - Nose
+  - LeftEar
+  - RightEar
+  - NeckBase
+  - BodyCentre
+  - TailBase
+  - TailMid
+  - TailTip
+_bpts_corners: &bpts_corners
+  - TopLeft
+  - TopRight
+  - BottomRight
+  - BottomLeft
+_individuals: &individuals
+  - mouse
+
+# ---- Format raw .mp4 to standard resolution/fps (stage 2) ----
+format_video:
+  width_px: 960
+  height_px: 540
+  fps: 15.0
+  start_sec: null # trim from start, or null
+  stop_sec: null # trim from end, or null
+
+# ---- DeepLabCut keypoint tracking (stage 3) ----
+run_dlc:
+  model_fp: /absolute/path/to/DLC_model/config.yaml
+
+# ---- Calculate auto-parameters from keypoints ----
+calculate_parameters:
+  start_frame_from_likelihood:
+    bodyparts: *bpts_all
+    window_sec: 1.0
+    pcutoff: 0.8
+  stop_frame_from_dur:
+    dur_sec: 600
+  stop_frame_from_likelihood:
+    bodyparts: *bpts_all
+    window_sec: 1.0
+    pcutoff: 0.8
+  dur_frames_from_likelihood:
+    bodyparts: *bpts_all
+    window_sec: 1.0
+    pcutoff: 0.8
+  px_per_mm:
+    pt_a: TopLeft
+    pt_b: TopRight
+    dist_mm: 400
+    pcutoff: 0.3
+
+# ---- Preprocess keypoints (stage 4) ----
+preprocess:
+  start_stop_trim: {}
+  interpolate:
+    pcutoff: 0.5
+  interpolate_stationary: {}
+
+# ---- Extract features for behaviour classifier (stage 5) ----
+extract_features:
+  generic:
+    bodyparts: *bpts_all
+    individuals: *individuals
+    angles:
+      - [Nose, BodyCentre, TailBase1]
+
+# ---- Behaviour classification (stage 6) ----
+classify_behaviour:
+  - contract_fp: /absolute/path/to/behaviour_classifier/contract.yaml
+    sub_behaviour: []
+
+# ---- Quantitative analysis (stage 8) ----
+analyse:
+  bins_sec_ls: [30, 60, 120]
+  custom_bins_sec_ls: [60, 120, 300, 600]
+  distance:
+    smoothing_sec: 1.0
+    bodyparts: *bpts_centre
+  in_roi:
+    - roi_name: in_centre
+      is_in: true
+      padding_mm: 0.0
+      roi_corners: *bpts_corners
+      bodyparts: *bpts_front
+  social_distance:
+    smoothing_sec: 1.0
+    bodyparts: *bpts_centre

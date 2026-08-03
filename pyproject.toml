@@ -8,24 +8,31 @@ readme = "README.md"
 license = "GPL-3.0-or-later"
 dependencies = [
     "dask[complete]>=2026.1.2",
-    "graphviz>=0.21",
     "ipykernel>=7.2.0",
     "jinja2>=3.1.6",
+    "loguru>=0.7.3",
+    "marimo[recommended]>=0.23.10",
     "natsort>=8.4.0",
     "numpy>=2.4.3",
     "opencv-python>=4.13.0.92",
     "pandas>=2.3.3",
+    "polars>=1.41.2",
     "pyarrow>=23.0.1",
     "pydantic>=2.12.5",
     "pyqtgraph>=0.14.0",
     "pyside6>=6.10.2",
     "scikit-learn>=1.8.0",
+    "imbalanced-learn>=0.12",
     "scipy>=1.17.1",
     "seaborn>=0.13.2",
-    "streamlit>=1.55.0",
-    "tables>=3.11.1",
     "torch>=2.10.0",
     "tqdm>=4.67.3",
+    "xgboost>=3.3.0",
+    "altair>=6.2.2",
+    "vl-convert-python>=1.9.0.post1",
+    "vegafusion>=2.0.3",
+    "tabpfn>=8.1.0",
+    "shap>=0.52.0",
 ]
 
 [project.urls]
@@ -37,43 +44,71 @@ Documentation = "https://tlee08.github.io/behavysis"
 dev = [
     "mkdocs-material>=9.7.5",
     "mkdocstrings-python>=2.0.3",
+    "pyclean>=3.7.0",
     "pymdown-extensions>=10.21",
     "pytest>=9.0.2",
     "ruff>=0.15.6",
+    "zensical>=0.0.52",
 ]
 
 [project.scripts]
 behavysis-init = "behavysis.scripts.init:main"
 behavysis-make-project = "behavysis.scripts.make_project:main"
-behavysis-project-gui = "behavysis.scripts.project_gui:run_script"
-behavysis-viewer = "behavysis.viewer.__main__:main"
+behavysis-train-behaviour-classifier = "behavysis.scripts.train_behaviour_classifier:main"
 behavysis-make-dlc-builder = "behavysis.scripts.make_dlc_builder:main"
 
 [build-system]
 requires = ["uv_build>=0.10.11,<0.11.0"]
 build-backend = "uv_build"
 
+[tool.ruff]
+include = ["src/**/*.py"]
+extend-exclude = [
+    "src/behavysis/presets/*/run_pipeline.py",
+    "src/behavysis/templates/*.py",
+]
+
 [tool.ruff.lint]
 select = ["ALL"]
 ignore = [
-    "T201",
-    "BLE001",
-    "RET504",
-    "TRY300",
-    "TC003",
-    "TC001",
-    "TC002",
+    # "T201",
+    # "BLE001",
+    # "RET504",
+    # "TRY300",
+    # "TC003",
+    # "TC001",
+    # "TC002",
     "COM812",
-    "ARG003",
-    "D100",
-    "PLR0913",
-    "ARG002",
-    "S101",
-    "ANN002",
-    "ANN003",
+    # "ARG003",
+    # "D100",
+    # "PLR0913",
+    # "ARG002",
+    # "S101",
+    # "ANN002",
+    # "ANN003",
+    # "S603",
+    # "PLR0913",
+    # "PLR2004",
 ]
 fixable = ["ALL"]
 unfixable = []
+exclude = ["tests/*"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning",
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "gpu: marks tests that require GPU",
+]

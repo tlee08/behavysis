@@ -1,0 +1,85 @@
+# =============================================================================
+# Open Field — Single Mouse
+# =============================================================================
+#
+# Standard open field test: one mouse, measures distance,
+# and thigmotaxis (in_roi).
+#
+# Edit the DLC model path and arena measurements, then run the notebook.
+# =============================================================================
+
+_bpts_front: &bpts_front
+  - Nose
+  - LeftEar
+  - RightEar
+  - NeckBase
+  - BodyCentre
+_bpts_centre: &bpts_centre
+  - NeckBase
+  - BodyCentre
+  - TailBase
+_bpts_all: &bpts_all
+  - Nose
+  - LeftEar
+  - RightEar
+  - NeckBase
+  - BodyCentre
+  - TailBase
+  - TailMid
+  - TailTip
+_bpts_corners: &bpts_corners
+  - TopLeft
+  - TopRight
+  - BottomRight
+  - BottomLeft
+_individuals: &individuals
+  - mouse
+
+format_video:
+  width_px: 960
+  height_px: 540
+  fps: 15.0
+  start_sec: null
+  stop_sec: null
+
+run_dlc:
+  model_fp: /absolute/path/to/DLC_model/config.yaml
+
+calculate_parameters:
+  from_likelihood:
+    bodyparts: *bpts_all
+    window_sec: 1.0
+    pcutoff: 0.8
+  stop_frame_from_dur:
+    dur_sec: 7800
+  px_per_mm:
+    pt_a: TopLeft
+    pt_b: TopRight
+    dist_mm: 400
+    pcutoff: 0.3
+
+preprocess:
+  interpolate:
+    pcutoff: 0.5
+
+extract_features: null
+
+classify_behaviour: null
+
+analyse:
+  bins_sec_ls: [30, 60, 120]
+  custom_bins_sec_ls: []
+  distance:
+    smoothing_sec: 1.0
+    bodyparts: *bpts_centre
+  in_roi:
+    - roi_name: thigmotaxis
+      is_in: false
+      padding_mm: -20.0
+      roi_corners: *bpts_corners
+      bodyparts: *bpts_front
+    - roi_name: in_centre
+      is_in: true
+      padding_mm: -50
+      roi_corners: *bpts_corners
+      bodyparts: *bpts_front

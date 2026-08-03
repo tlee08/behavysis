@@ -1,0 +1,94 @@
+# =============================================================================
+# Two-Mouse Social Interaction
+# =============================================================================
+#
+# Social interaction test: two mice (one marked, one unmarked).
+# Measures distance, social distance, and thigmotaxis.
+# =============================================================================
+
+_bpts_front: &bpts_front
+  - Nose
+  - LeftEar
+  - RightEar
+  - BodyCentre
+_bpts_centre: &bpts_centre
+  - LeftFlankMid
+  - BodyCentre
+  - RightFlankMid
+  - LeftFlankRear
+  - RightFlankRear
+  - TailBase1
+_bpts_all: &bpts_all
+  - LeftEar
+  - RightEar
+  - Nose
+  - BodyCentre
+  - LeftFlankMid
+  - RightFlankMid
+  - TailBase1
+  - TailTip4
+_bpts_corners: &bpts_corners
+  - TopLeft
+  - TopRight
+  - BottomLeft
+  - BottomRight
+_individuals: &individuals
+  - mouse1marked
+  - mouse2unmarked
+
+format_video:
+  width_px: 960
+  height_px: 540
+  fps: 15.0
+  start_sec: null
+  stop_sec: null
+
+run_dlc:
+  model_fp: /absolute/path/to/DLC_model/config.yaml
+
+calculate_parameters:
+  from_likelihood:
+    bodyparts: *bpts_all
+    window_sec: 1.0
+    pcutoff: 0.8
+  stop_frame_from_dur:
+    dur_sec: 900
+  px_per_mm:
+    pt_a: TopLeft
+    pt_b: TopRight
+    dist_mm: 400
+
+preprocess:
+  interpolate:
+    pcutoff: 0.5
+
+extract_features:
+  bodyparts: *bpts_all
+  individuals: *individuals
+
+classify_behaviour:
+  - clf_fp: /absolute/path/to/behaviour_classifier/contract.yaml
+    pcutoff: 0.5
+    min_empty_window_secs: 0.2
+    sub_behaviour: []
+
+analyse:
+  bins_sec_ls: [30, 60, 120]
+  custom_bins_sec_ls: []
+  distance:
+    smoothing_sec: 1.0
+    bodyparts: *bpts_centre
+  in_roi:
+    - roi_name: thigmotaxis
+      is_in: false
+      padding_mm: -20.0
+      roi_corners: *bpts_corners
+      bodyparts: *bpts_front
+    - roi_name: in_centre
+      is_in: true
+      padding_mm: -50
+      roi_corners: *bpts_corners
+      bodyparts: *bpts_front
+  social_distance:
+    smoothing_sec: 1.0
+    bodyparts: *bpts_centre

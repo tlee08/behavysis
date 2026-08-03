@@ -1,17 +1,17 @@
-from behavysis.utils.template_utils import import_static_templates_script
+"""Make DLC builder."""
+
+from pathlib import Path
+
+from behavysis.utils.template_utils import confirm, save_template
 
 
 def main() -> None:
-    """Makes a script to build a DeepLabCut model."""
-    import_static_templates_script(
-        description="Make DLC Model Script",
-        templates_ls=["dlc_builder.ipynb"],
-        pkg_name="behavysis",
-        pkg_subdir="templates",
-        root_dir=".",
-        to_overwrite=False,
-        dialogue=True,
-    )
+    """Make DLC builder."""
+    if not confirm("Create DLC builder script in current directory?"):
+        return
+    if Path("dlc_builder.py").exists() and not confirm("Overwrite existing file?"):
+        return
+    save_template("dlc_builder/dlc_builder.py", Path("dlc_builder.py"))
 
 
 if __name__ == "__main__":

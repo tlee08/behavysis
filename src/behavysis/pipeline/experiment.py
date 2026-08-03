@@ -1,565 +1,315 @@
-"""_summary_"""
+"""Experiment class for processing a single experiment in the behavysis pipeline."""
 
-import os
-import traceback
-from collections.abc import Callable
-from typing import Any
+import shutil
+from pathlib import Path
 
+import cv2
 import numpy as np
+import polars as pl
 
+from behavysis.behaviour_classifier import ClassifierContract, ClassifierPaths
 from behavysis.constants import (
+    ANALYSIS_COMBINED_DIR,
     ANALYSIS_DIR,
-    FileExts,
-    Folders,
+    CONFIG_DIR,
+    FORMATTED_VIDEO_DIR,
+    KEYPOINTS_DIR,
+    METADATA_DIR,
+    RAW_VIDEO_DIR,
+    STAGES,
 )
-from behavysis.models.experiment_configs import AutoConfigs, ExperimentConfigs
-from behavysis.processes.analyse_behavs import AnalyseBehavs
-from behavysis.processes.classify_behavs import ClassifyBehavs
-from behavysis.processes.combine_analysis import CombineAnalysis
-from behavysis.processes.evaluate_vid import EvaluateVid
-from behavysis.processes.export import Export
-from behavysis.processes.extract_features import ExtractFeatures
-from behavysis.processes.format_vid import FormatVid
-from behavysis.processes.run_dlc import RunDLC
-from behavysis.processes.update_configs import UpdateConfigs
-from behavysis.utils.logging_utils import (
-    get_io_obj_content,
-    init_logger_file,
-    init_logger_io_obj,
+from behavysis.constants.pipeline import (
+    BEHAVIOUR_PREDICTED_DIR,
+    BEHAVIOUR_SCORED_DIR,
+    FEATURES_EXTRACTED_DIR,
+    PREPROCESSED_DIR,
 )
+from behavysis.funcs import (
+    AnalyseFunc,
+    CalculateParametersFunc,
+    ExtractFeaturesFunc,
+    PreprocessFunc,
+    analyse_behaviour,
+    classify_single,
+    combine_analysis,
+    format_video,
+    get_video_metadata,
+    ma_dlc_run_single,
+)
+from behavysis.models import BoutStruct, ExperimentConfig, ExperimentMetadata
+from behavysis.schemas import (
+    BEHAVIOUR_PREDICTED_SCHEMA,
+    KEYPOINTS_SCHEMA,
+    read_df,
+    write_df,
+)
+from behavysis.transforms import predicted_to_scored
+from behavysis.utils import has_output_files, missing_input_files, trace
+
+
+def _get_frame(vid_fp: Path, metadata: ExperimentMetadata) -> np.ndarray:
+    """Extract frame 150 (0-indexed 149) for background plots, or black frame."""
+    cap = cv2.VideoCapture(str(vid_fp))
+    cap.set(cv2.CAP_PROP_POS_FRAMES, 149)
+    ret, frame = cap.read()
+    cap.release()
+    if not ret:
+        return np.zeros(
+            (metadata.require_height_px(), metadata.require_width_px(), 3),
+            dtype=np.uint8,
+        )
+    return frame
 
 
 class Experiment:
-    """Behavysis Pipeline class for a single experiment.
+    """Behavysis Pipeline class for a single experiment."""
 
-    Encompasses the entire process including:
-    - Raw mp4 file import.
-    - mp4 file formatting (px and fps).
-    - DLC keypoints inference.
-    - Feature wrangling (start time detection, more features like average body position).
-    - Interpretable behaviour results.
-    - Other quantitative analysis.
+    name: str
+    root_dir: Path
 
-    Parameters
-    ----------
-    name : str
-        _description_
-    root_dir : str
-        _description_
-
-    Raises:
-    ------
-    ValueError
-        ValueError: `root_dir` does not exist or `name` does not exist in the `root_dir` folder.
-    """
-
-    logger = init_logger_file()
-
-    def __init__(self, name: str, root_dir: str) -> None:
-        """Make a Experiment instance."""
-        # Assertion: root_dir mus† exist
-        if not os.path.isdir(root_dir):
-            raise ValueError(
-                f'Cannot find the project folder named "{root_dir}".\nPlease specify a folder that exists.'
-            )
-        # Setting up instance variables
+    def __init__(self, name: str, root_dir: str | Path) -> None:
+        """Initialises the experiment with the given name and root directory."""
         self.name = name
-        self.root_dir = os.path.abspath(root_dir)
-        # Assertion: name must correspond to at least one file in root_dir
-        file_exists_ls = [os.path.isfile(self.get_fp(f)) for f in Folders]
-        if not np.any(file_exists_ls):
-            folders_ls_msg = "".join([f"\n    - {f.value}" for f in Folders])
-            raise ValueError(
-                f'No files named "{name}" exist in "{root_dir}".\n'
-                f'Please specify a file that exists in "{root_dir}", '
-                f"in one of the following folder WITH the correct file extension name:{folders_ls_msg}"
+        self.root_dir = Path(root_dir)
+        # Check root_dir exists
+        if not self.root_dir.is_dir():
+            msg = (
+                f'Project folder not found: "{root_dir}"\n'
+                f"  Create a new project with: behavysis-make-project"
             )
+            raise ValueError(msg)
+        # Check experiment name exists in root_dir
+        if not np.any([self.get_fp(f).is_file() for f in STAGES]):
+            folders_ls_msg = "".join([f"\n    - {f}" for f in STAGES])
+            msg = (
+                f'No files named "{name}" found in "{root_dir}".\n'
+                f"  Expected files in one of these folders:{folders_ls_msg}\n"
+                "  Tip: Check the experiment name matches your file names "
+                "(without extension)."
+            )
+            raise ValueError(msg)
+        # Set initial metadata
+        metadata = self.read_metadata()
+        metadata.name = self.name
+        self.write_metadata(metadata)
 
-    #####################################################################
-    #               GET/CHECK FILEPATH METHODS
-    #####################################################################
+    def get_log_context(self) -> dict:
+        """Log context for loguru context."""
+        return {"experiment": str(self.name)}
 
-    def get_fp(self, _folder: Folders | str) -> str:
-        """Returns the experiment's file path from the given folder.
+    def get_fp(self, folder: str) -> Path:
+        """Returns the experiment's file path from the given folder."""
+        return self.root_dir / folder / f"{self.name}.{STAGES[folder]}"
 
-        Parameters
-        ----------
-        folder_str : str
-            The folder to return the experiment document's filepath for.
-
-        Returns:
-        -------
-        str
-            The experiment document's filepath.
-
-        Raises:
-        ------
-        ValueError
-            ValueError: Folder name is not valid. Refer to Folders Enum for valid folder names.
-        """
-        # Getting Folder item
-        if isinstance(_folder, str):
-            try:
-                folder = Folders(_folder)
-            except ValueError:
-                folders_ls_msg = "".join([f"\n    - {f.value}" for f in Folders])
-                raise ValueError(
-                    f"{_folder} is not a valid experiment folder name.\n"
-                    f"Please only specify one of the following folders:{folders_ls_msg}"
-                )
-        else:
-            folder = _folder
-        # Getting file extension from enum
-        file_ext: FileExts = getattr(FileExts, folder.name)
-        # Getting experiment filepath for given folder
-        fp = os.path.join(self.root_dir, folder.value, f"{self.name}.{file_ext.value}")
-        return fp
-
-    #####################################################################
-    #               EXPERIMENT PROCESSING SCAFFOLD METHODS
-    #####################################################################
-
-    def _proc_scaff(
-        self,
-        funcs: tuple[Callable, ...],
-        *args: Any,
-        **kwargs: Any,
-    ) -> dict[str, str]:
-        """All processing runs through here.
-        This method ensures that the stdout and diagnostics dict are correctly generated.
-
-        Parameters
-        ----------
-        funcs : tuple[Callable, ...]
-            List of functions.
-
-        Returns:
-        -------
-        dict[str, str]
-            Diagnostics dictionary, with description of each function's outcome.
-
-        Notes:
-        -----
-        Each func in `funcs` is called in the form:
-        ```
-        func(*args, **kwargs)
-        ```
-        """
-        f_names_ls_msg = "".join([f"\n    - {f.__name__}" for f in funcs])
-        self.logger.info(f"Processing experiment, {self.name}, with:{f_names_ls_msg}")
-        # Setting up diagnostics dict
-        dd = {"experiment": self.name}
-        # Running functions and saving outcome to diagnostics dict
-        for f in funcs:
-            f_name = f.__name__
-            # Getting logger and corresponding io object
-            f_logger, f_io_obj = init_logger_io_obj(f_name)
-            # Running each func and saving outcome
-            try:
-                f(*args, **kwargs)
-                # f_logger.info(success_msg())
-            except Exception as e:
-                f_logger.error(e)
-                self.logger.debug(traceback.format_exc())
-            # Adding to diagnostics dict
-            dd[f_name] = get_io_obj_content(f_io_obj)
-            # Clearing io object
-            f_io_obj.truncate(0)
-        self.logger.info(
-            f"Finished processing experiment, {self.name}, with:{f_names_ls_msg}"
-        )
-        return dd
-
-    #####################################################################
-    #                        CONFIG FILE METHODS
-    #####################################################################
-
-    def update_configs(self, default_configs_fp: str, overwrite: str) -> dict:
-        """Initialises the JSON config files with the given configurations in `configs`.
-        It can be specified whether or not to overwrite existing configuration values.
-
-        Parameters
-        ----------
-        default_configs_fp : str
-            The JSON configs filepath to add/overwrite to the experiment's current configs file.
-        overwrite : {"set", "reset"}
-            Specifies how to overwrite existing configurations.
-            If `add`, only parameters in `configs` not already in the config files are added.
-            If `set`, all parameters in `configs` are set in the config files (overwriting).
-            If `reset`, the config files are completely replaced by `configs`.
-
-        Returns:
-        -------
-        dict
-            Diagnostics dictionary, with description of each function's outcome.
-        """
-        return self._proc_scaff(
-            (UpdateConfigs.update_configs,),
-            configs_fp=self.get_fp(Folders.CONFIGS),
-            default_configs_fp=default_configs_fp,
-            overwrite=overwrite,
+    def get_features_fp(self, feature_set: str) -> Path:
+        """Returns the experiment's features file path for a named feature set."""
+        return (
+            self.root_dir
+            / FEATURES_EXTRACTED_DIR
+            / feature_set
+            / f"{self.name}.{STAGES[FEATURES_EXTRACTED_DIR]}"
         )
 
-    #####################################################################
-    #                    FORMATTING VIDEO METHODS
-    #####################################################################
+    def read_config(self) -> ExperimentConfig:
+        """Returns the experiment's config."""
+        return ExperimentConfig.read_yaml(self.get_fp(CONFIG_DIR))
 
-    def format_vid(self, overwrite: bool) -> dict:
-        """Formats the video with ffmpeg to fit the formatted configs (e.g. fps and resolution_px).
-        Once the formatted video is produced, the configs dict and *configs.json file are
-        updated with the formatted video's metadata.
+    def read_metadata(self) -> ExperimentMetadata:
+        """Returns the experiment's metadata."""
+        if not self.get_fp(METADATA_DIR).exists():
+            return ExperimentMetadata()
+        return ExperimentMetadata.read_yaml(self.get_fp(METADATA_DIR))
 
-        Parameters
-        ----------
-        funcs : tuple[Callable, ...]
-            _description_
-        overwrite : bool
-            Whether to overwrite the output file (if it exists).
+    def write_metadata(self, metadata: ExperimentMetadata) -> None:
+        """Save the experiment's metadata to disk."""
+        self.get_fp(METADATA_DIR).parent.mkdir(parents=True, exist_ok=True)
+        metadata.write_yaml(self.get_fp(METADATA_DIR))
 
-        Returns:
-        -------
-        dict
-            Diagnostics dictionary, with description of each function's outcome.
+    @trace
+    def update_config(self, default_config_fp: Path, *, overwrite: bool) -> None:
+        """Copy the default configs to this project."""
+        if not overwrite and has_output_files(self.get_fp(CONFIG_DIR)):
+            return
+        ExperimentConfig.read_yaml(default_config_fp)
+        self.get_fp(CONFIG_DIR).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(default_config_fp, self.get_fp(CONFIG_DIR))
 
-        Notes:
-        -----
-        Can call any methods from `FormatVid`.
-        """
-        return self._proc_scaff(
-            (FormatVid.format_vid,),
-            raw_vid_fp=self.get_fp(Folders.RAW_VID),
-            formatted_vid_fp=self.get_fp(Folders.FORMATTED_VID),
-            configs_fp=self.get_fp(Folders.CONFIGS),
-            overwrite=overwrite,
+    @trace
+    def format_video(self, *, overwrite: bool) -> None:
+        """Formats the video with ffmpeg to fit the formatted config."""
+        if not overwrite and has_output_files(self.get_fp(FORMATTED_VIDEO_DIR)):
+            return
+        if missing_input_files(self.get_fp(RAW_VIDEO_DIR)):
+            return
+        format_video(
+            raw_vid_fp=self.get_fp(RAW_VIDEO_DIR),
+            formatted_vid_fp=self.get_fp(FORMATTED_VIDEO_DIR),
+            config=self.read_config(),
         )
+        # Update metadata
+        self.get_video_metadata()
 
-    def get_vid_metadata(self) -> dict:
-        """Gets the video metadata for the raw and formatted video files.
+    @trace
+    def get_video_metadata(self) -> None:
+        """Get vid metadata and save."""
+        metadata = self.read_metadata()
+        metadata.raw_video = get_video_metadata(self.get_fp(RAW_VIDEO_DIR))
+        metadata.formatted_video = get_video_metadata(self.get_fp(FORMATTED_VIDEO_DIR))
+        self.write_metadata(metadata)
 
-        Parameters
-        ----------
-        overwrite : bool
-            _description_
-
-        Returns:
-        -------
-        dict
-            _description_
-        """
-        return self._proc_scaff(
-            (FormatVid.get_vids_metadata,),
-            raw_vid_fp=self.get_fp(Folders.RAW_VID),
-            formatted_vid_fp=self.get_fp(Folders.FORMATTED_VID),
-            configs_fp=self.get_fp(Folders.CONFIGS),
-        )
-
-    #####################################################################
-    #                      DLC KEYPOINTS METHODS
-    #####################################################################
-
-    def run_dlc(self, gputouse: int | None, overwrite: bool) -> dict:
-        """Run the DLC model on the formatted video to generate a DLC annotated video
-        and DLC h5 file for all experiments.
-
-        Parameters
-        ----------
-        gputouse : int
-            _description_
-        overwrite : bool
-            Whether to overwrite the output file (if it exists).
-
-        Returns:
-        -------
-        dict
-            Diagnostics dictionary, with description of each function's outcome.
-
-        Notes:
-        -----
-        Can call any methods from `RunDLC`.
-        """
-        return self._proc_scaff(
-            (RunDLC.ma_dlc_run_single,),
-            formatted_vid_fp=self.get_fp(Folders.FORMATTED_VID),
-            keypoints_fp=self.get_fp(Folders.KEYPOINTS),
-            configs_fp=self.get_fp(Folders.CONFIGS),
+    @trace
+    def run_dlc(self, gputouse: int | None, *, overwrite: bool) -> None:
+        """Run the DLC model on the formatted video."""
+        if not overwrite and has_output_files(self.get_fp(KEYPOINTS_DIR)):
+            return
+        if missing_input_files(self.get_fp(FORMATTED_VIDEO_DIR)):
+            return
+        ma_dlc_run_single(
+            vid_fp=self.get_fp(FORMATTED_VIDEO_DIR),
+            keypoints_dir=self.root_dir / KEYPOINTS_DIR,
+            config=self.read_config(),
             gputouse=gputouse,
-            overwrite=overwrite,
         )
 
-    def calculate_parameters(self, funcs: tuple[Callable, ...]) -> dict:
-        """A pipeline to calculate the parameters of the keypoints file, which will
-        assist in preprocessing the keypoints data.
+    @trace
+    def calculate_parameters(self, funcs: tuple[CalculateParametersFunc, ...]) -> None:
+        """Calculate parameters of the keypoints file."""
+        if missing_input_files(self.get_fp(KEYPOINTS_DIR)):
+            return
+        keypoints_df = read_df(self.get_fp(KEYPOINTS_DIR), KEYPOINTS_SCHEMA)
+        metadata = self.read_metadata()
+        for func in funcs:
+            metadata = func(
+                keypoints_df=keypoints_df,
+                config=self.read_config(),
+                metadata=metadata,
+            )
+        # Write
+        self.write_metadata(metadata)
 
-        Parameters
-        ----------
-        funcs : tuple[Callable, ...]
-            _description_
+    @trace
+    def preprocess(self, funcs: tuple[PreprocessFunc, ...], *, overwrite: bool) -> None:
+        """Preprocessing pipeline for keypoints data."""
+        if not overwrite and has_output_files(self.get_fp(PREPROCESSED_DIR)):
+            return
+        if missing_input_files(self.get_fp(KEYPOINTS_DIR)):
+            return
+        keypoints_df = read_df(self.get_fp(KEYPOINTS_DIR), KEYPOINTS_SCHEMA)
+        for func in funcs:
+            keypoints_df = func(
+                keypoints_df=keypoints_df,
+                config=self.read_config(),
+                metadata=self.read_metadata(),
+            )
+        # Write
+        write_df(keypoints_df, self.get_fp(PREPROCESSED_DIR), KEYPOINTS_SCHEMA)
 
-        Returns:
-        -------
-        Dict
-            Diagnostics dictionary, with description of each function's outcome.
+    @trace
+    def extract_features(
+        self, funcs: tuple[ExtractFeaturesFunc, ...], *, overwrite: bool
+    ) -> None:
+        """Extract features for each configured feature set."""
+        if missing_input_files(self.get_fp(PREPROCESSED_DIR)):
+            return
+        keypoints_df = read_df(self.get_fp(PREPROCESSED_DIR), KEYPOINTS_SCHEMA)
+        config = self.read_config()
+        metadata = self.read_metadata()
+        for func in funcs:
+            out_fp = self.get_features_fp(func.__name__)
+            if not overwrite and has_output_files(out_fp):
+                continue
+            features_df = func(
+                keypoints_df=keypoints_df,
+                config=config,
+                metadata=metadata,
+            )
+            # Save
+            out_fp.parent.mkdir(parents=True, exist_ok=True)
+            write_df(features_df, out_fp)
 
-        Notes:
-        -----
-        Can call any methods from `CalculateParams`.
-        """
-        return self._proc_scaff(
-            funcs,
-            keypoints_fp=self.get_fp(Folders.KEYPOINTS),
-            configs_fp=self.get_fp(Folders.CONFIGS),
+    @trace
+    def classify_behaviour(self, *, overwrite: bool) -> None:
+        """Classify behaviours using trained models."""
+        if not overwrite and has_output_files(self.get_fp(BEHAVIOUR_PREDICTED_DIR)):
+            return
+        behaviour_df_ls = []
+        for model_config in self.read_config().require_classify_behaviour():
+            clf = ClassifierPaths(model_config.contract_fp.parent)
+            contract = ClassifierContract.read_yaml(clf.contract_fp())
+            if missing_input_files(self.get_features_fp(contract.feature_set)):
+                continue
+            features_df = read_df(self.get_features_fp(contract.feature_set))
+            behaviour_df_ls.append(classify_single(clf, features_df))
+        # Save
+        write_df(
+            pl.concat(behaviour_df_ls)
+            if behaviour_df_ls
+            else pl.DataFrame(schema=BEHAVIOUR_PREDICTED_SCHEMA),
+            self.get_fp(BEHAVIOUR_PREDICTED_DIR),
+            BEHAVIOUR_PREDICTED_SCHEMA,
         )
 
-    def collate_auto_configs(self) -> dict:
-        """Collates the auto-configs of the experiment into the main configs file."""
-        dd = {"experiment": self.name}
-        # Reading the experiment's configs file
-        f_logger, f_io_obj = init_logger_io_obj()
-        try:
-            configs = ExperimentConfigs.read_json(self.get_fp(Folders.CONFIGS))
-            f_logger.debug("Reading configs file.")
-            # f_logger.info(success_msg())
-            dd["reading_configs"] = get_io_obj_content(f_io_obj)
-        except FileNotFoundError:
-            f_logger.error("no configs file found.")
-            dd["reading_configs"] = get_io_obj_content(f_io_obj)
-            return dd
-        # Getting all the auto fields from the configs file
-        configs_auto_field_keys = AutoConfigs.get_field_names()
-        for field_key_ls in configs_auto_field_keys:
-            value = configs.auto
-            for key in field_key_ls:
-                value = getattr(value, key)
-            dd["_".join(field_key_ls)] = value  # type: ignore
-        return dd
-
-    def preprocess(self, funcs: tuple[Callable, ...], overwrite: bool) -> dict:
-        """A preprocessing pipeline method to convert raw keypoints data into preprocessed
-        keypoints data that is ready for ML analysis.
-        All functs passed in must have the format func(df, dict) -> df. Possible funcs
-        are given in preprocessing.py
-        The preprocessed data is saved to the project's preprocessed folder.
-
-        Parameters
-        ----------
-        funcs : tuple[Callable, ...]
-            _description_
-        overwrite : bool
-            Whether to overwrite the output file (if it exists).
-
-        Returns:
-        -------
-        dict
-            Diagnostics dictionary, with description of each function's outcome.
-
-        Notes:
-        -----
-        Can call any methods from `Preprocess`.
-        """
-        # Exporting keypoints df to preprocessed folder
-        dd0 = self._proc_scaff(
-            (Export.df2df,),
-            src_fp=self.get_fp(Folders.KEYPOINTS),
-            dst_fp=self.get_fp(Folders.PREPROCESSED),
-            overwrite=overwrite,
+    @trace
+    def export_behaviour(self, *, overwrite: bool) -> None:
+        """Export predicted behaviours to scored behaviours."""
+        if not overwrite and has_output_files(self.get_fp(BEHAVIOUR_SCORED_DIR)):
+            return
+        if missing_input_files(self.get_fp(BEHAVIOUR_PREDICTED_DIR)):
+            return
+        # Read
+        behaviour_predicted_df = read_df(
+            self.get_fp(BEHAVIOUR_PREDICTED_DIR),
+            BEHAVIOUR_PREDICTED_SCHEMA,
         )
-        # If there is an error or warning (indicates not to ovewrite) in logger, return early
-        if (
-            "ERROR" in dd0[Export.df2df.__name__]
-            or "WARNING" in dd0[Export.df2df.__name__]
+        config = self.read_config()
+        bouts_struct = [
+            BoutStruct(
+                behaviour=ClassifierContract.read_yaml(
+                    model_config.contract_fp
+                ).behaviour_name,
+                sub_behaviour=model_config.sub_behaviour,
+            )
+            for model_config in config.require_classify_behaviour()
+        ]
+        behaviour_scored_df = predicted_to_scored(behaviour_predicted_df, bouts_struct)
+        self.get_fp(BEHAVIOUR_SCORED_DIR).parent.mkdir(parents=True, exist_ok=True)
+        behaviour_scored_df.write_parquet(self.get_fp(BEHAVIOUR_SCORED_DIR))
+
+    @trace
+    def analyse(self, funcs: tuple[AnalyseFunc, ...]) -> None:
+        """Analyse preprocessed keypoints data."""
+        if missing_input_files(
+            self.get_fp(PREPROCESSED_DIR), self.get_fp(FORMATTED_VIDEO_DIR)
         ):
-            return dd0
-        # Feeding through preprocessing functions
-        dd1 = self._proc_scaff(
-            funcs,
-            src_fp=self.get_fp(Folders.PREPROCESSED),
-            dst_fp=self.get_fp(Folders.PREPROCESSED),
-            configs_fp=self.get_fp(Folders.CONFIGS),
-            overwrite=True,
-        )
-        return {**dd0, **dd1}
+            return
+        keypoints_df = read_df(self.get_fp(PREPROCESSED_DIR), KEYPOINTS_SCHEMA)
+        vid_frame = _get_frame(self.get_fp(FORMATTED_VIDEO_DIR), self.read_metadata())
+        config = self.read_config()
+        metadata = self.read_metadata()
+        for func in funcs:
+            dst_dir = self.root_dir / ANALYSIS_DIR / func.__name__
+            for result in func(keypoints_df, vid_frame, config, metadata):
+                result.save(dst_dir)
 
-    #####################################################################
-    #                 SIMBA BEHAVIOUR CLASSIFICATION METHODS
-    #####################################################################
+    @trace
+    def analyse_behaviour(self) -> None:
+        """Analyse scored behaviours."""
+        if missing_input_files(self.get_fp(BEHAVIOUR_SCORED_DIR)):
+            return
+        behaviour_df = read_df(self.get_fp(BEHAVIOUR_SCORED_DIR))
+        dst_dir = self.root_dir / ANALYSIS_DIR / "analyse_behaviour"
+        for result in analyse_behaviour(
+            behaviour_df,
+            self.read_config(),
+            self.read_metadata(),
+        ):
+            result.save(dst_dir)
 
-    def extract_features(self, overwrite: bool) -> dict:
-        """Extracts features from the preprocessed dlc file to generate many more features.
-        This dataframe of derived features will be input for a ML classifier to detect
-        particularly trained behaviours.
-
-        Parameters
-        ----------
-        overwrite : bool
-            Whether to overwrite the output file (if it exists).
-
-        Returns:
-        -------
-        dict
-            Diagnostics dictionary, with description of each function's outcome.
-        """
-        return self._proc_scaff(
-            (ExtractFeatures.extract_features,),
-            keypoints_fp=self.get_fp(Folders.PREPROCESSED),
-            features_fp=self.get_fp(Folders.FEATURES_EXTRACTED),
-            configs_fp=self.get_fp(Folders.CONFIGS),
-            overwrite=overwrite,
-        )
-
-    def classify_behavs(self, overwrite: bool) -> dict:
-        """Given model config files in the BehavClassifier format, generates beahviour predidctions
-        on the given extracted features dataframe.
-
-        Parameters
-        ----------
-        overwrite : bool
-            Whether to overwrite the output file (if it exists).
-
-        Returns:
-        -------
-        dict
-            Diagnostics dictionary, with description of each function's outcome.
-        """
-        return self._proc_scaff(
-            (ClassifyBehavs.classify_behavs,),
-            features_fp=self.get_fp(Folders.FEATURES_EXTRACTED),
-            behavs_fp=self.get_fp(Folders.PREDICTED_BEHAVS),
-            configs_fp=self.get_fp(Folders.CONFIGS),
-            overwrite=overwrite,
-        )
-
-    def export_behavs(self, overwrite: bool) -> dict:
-        """_summary_
-
-        Parameters
-        ----------
-        overwrite : bool
-            _description_
-
-        Returns:
-        -------
-        dict
-            _description_
-        """
-        # Exporting 6_predicted_behavs df to 7_scored_behavs folder
-        return self._proc_scaff(
-            (Export.predictedbehavs2scoredbehavs,),
-            src_fp=self.get_fp(Folders.PREDICTED_BEHAVS),
-            dst_fp=self.get_fp(Folders.SCORED_BEHAVS),
-            configs_fp=self.get_fp(Folders.CONFIGS),
-            overwrite=overwrite,
-        )
-
-    #####################################################################
-    #                     SIMPLE ANALYSIS METHODS
-    #####################################################################
-
-    def analyse(self, funcs: tuple[Callable, ...]) -> dict:
-        """An ML pipeline method to analyse the preprocessed DLC data.
-        Possible funcs are given in analysis.py.
-        The preprocessed data is saved to the project's analysis folder.
-
-        Parameters
-        ----------
-        funcs : tuple[Callable, ...]
-            _description_
-
-        Returns:
-        -------
-        dict
-            Diagnostics dictionary, with description of each function's outcome.
-
-        Notes:
-        -----
-        Can call any methods from `Analyse`.
-        """
-        return self._proc_scaff(
-            funcs,
-            keypoints_fp=self.get_fp(Folders.PREPROCESSED),
-            formatted_vid_fp=self.get_fp(Folders.FORMATTED_VID),
-            dst_dir=os.path.join(self.root_dir, ANALYSIS_DIR),
-            configs_fp=self.get_fp(Folders.CONFIGS),
-        )
-
-    def analyse_behavs(self) -> dict:
-        """An ML pipeline method to analyse the preprocessed DLC data.
-        Possible funcs are given in analysis.py.
-        The preprocessed data is saved to the project's analysis folder.
-
-        Returns:
-        -------
-        dict
-            Diagnostics dictionary, with description of each function's outcome.
-
-        Notes:
-        -----
-        Can call any methods from `Analyse`.
-        """
-        return self._proc_scaff(
-            (AnalyseBehavs.analyse_behavs,),
-            behavs_fp=self.get_fp(Folders.SCORED_BEHAVS),
-            dst_dir=os.path.join(self.root_dir, ANALYSIS_DIR),
-            configs_fp=self.get_fp(Folders.CONFIGS),
-        )
-
-    def combine_analysis(self) -> dict:
-        """Combine the experiment's analysis in each fbf into a single df"""
-        # TODO: make new subfolder called combined_analysis and make ONLY(??) fbf analysis.
-        return self._proc_scaff(
-            (CombineAnalysis.combine_analysis,),
-            analysis_dir=os.path.join(self.root_dir, ANALYSIS_DIR),
-            analysis_combined_fp=self.get_fp(Folders.ANALYSIS_COMBINED),
-            configs_fp=self.get_fp(Folders.CONFIGS),
-            overwrite=True,  # TODO: remove overwrite
-        )
-
-    #####################################################################
-    #           EVALUATING DLC ANALYSIS AND BEHAV CLASSIFICATION
-    #####################################################################
-
-    def evaluate_vid(self, overwrite: bool) -> dict:
-        """Evaluating preprocessed DLC data and scored_behavs data.
-
-        Parameters
-        ----------
-        funcs : _type_
-            _description_
-        overwrite : bool
-            Whether to overwrite the output file (if it exists).
-
-        Returns:
-        -------
-        dict
-            Diagnostics dictionary, with description of each function's outcome.
-        """
-        return self._proc_scaff(
-            (EvaluateVid.evaluate_vid,),
-            formatted_vid_fp=self.get_fp(Folders.FORMATTED_VID),
-            keypoints_fp=self.get_fp(Folders.PREPROCESSED),  # Folders.PREPROCESSED
-            analysis_combined_fp=self.get_fp(Folders.ANALYSIS_COMBINED),
-            eval_vid_fp=self.get_fp(Folders.EVALUATE_VID),
-            configs_fp=self.get_fp(Folders.CONFIGS),
-            overwrite=overwrite,
-        )
-
-    def export2csv(self, src_dir: str, dst_dir: str, overwrite: bool) -> dict:
-        """_summary_
-
-        Parameters
-        ----------
-        src_dir : str
-            _description_
-        dst_dir : str
-            _description_
-
-        Returns:
-        -------
-        dict
-            _description_
-        """
-        return self._proc_scaff(
-            (Export.df2csv,),
-            src_fp=self.get_fp(src_dir),
-            dst_fp=os.path.join(dst_dir, f"{self.name}.csv"),
-            overwrite=overwrite,
+    @trace
+    def combine_analysis(self) -> None:
+        """Combine the experiment's analysis into a single df."""
+        combine_analysis(
+            name=self.name,
+            analysis_combined_fp=self.get_fp(ANALYSIS_COMBINED_DIR),
+            analysis_dir=self.root_dir / ANALYSIS_DIR,
         )
