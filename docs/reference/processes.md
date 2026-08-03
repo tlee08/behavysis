@@ -4,7 +4,7 @@
 
 ::: behavysis.funcs.extract_features
 
-::: behavysis.funcs.classify_behaviour
+::: behavysis.funcs.behaviour.classify
 
 ::: behavysis.funcs.analyse_behaviour
 

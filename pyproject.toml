@@ -48,6 +48,7 @@ dev = [
     "pymdown-extensions>=10.21",
     "pytest>=9.0.2",
     "ruff>=0.15.6",
+    "zensical>=0.0.52",
 ]
 
 [project.scripts]

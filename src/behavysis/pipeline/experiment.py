@@ -126,12 +126,7 @@ class Experiment:
         metadata.write_yaml(self.get_fp(METADATA_DIR))
 
     @trace
-    def update_config(
-        self,
-        default_config_fp: Path,
-        *,
-        overwrite: bool,
-    ) -> None:
+    def update_config(self, default_config_fp: Path, *, overwrite: bool) -> None:
         """Copy the default configs to this project."""
         if not overwrite and has_output_files(self.get_fp(CONFIG_DIR)):
             return
