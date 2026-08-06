@@ -6,7 +6,7 @@ import polars as pl
 from pydantic import BaseModel, PositiveFloat
 
 from behavysis.models import ExperimentConfig, ExperimentMetadata
-from behavysis.transforms.keypoint import check_bpts_exist, get_indivs_bpts
+from behavysis.transforms import check_bpts_exist, get_indivs_bpts
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Config Models

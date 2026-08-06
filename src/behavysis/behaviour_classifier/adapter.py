@@ -29,8 +29,7 @@ from behavysis.schemas import (
     BEHAVIOUR_BATCHED_PREDICTED_SCHEMA,
     BEHAVIOUR_PREDICTED_SCHEMA,
 )
-from behavysis.transforms import smooth_prob
-from behavysis.transforms.behaviour import smooth_pred_bout
+from behavysis.transforms import smooth_pred_bout, smooth_prob
 from behavysis.utils import get_gpu_device
 
 from .config import ModelRecipe

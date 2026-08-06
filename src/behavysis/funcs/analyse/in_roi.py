@@ -10,12 +10,23 @@ import numpy as np
 import polars as pl
 from pydantic import BaseModel
 
-from behavysis.constants import DF_IO_FORMAT, FBF
-from behavysis.funcs.analyse._helper import _bodypart_avg_xy
-from behavysis.funcs.analyse._summary import summary_binned_behaviour
-from behavysis.models import AnalysisResult
+from behavysis.constants import (
+    BODYPART,
+    DF_IO_FORMAT,
+    FBF,
+    FRAME,
+    INDIVIDUAL,
+    LIKELIHOOD,
+    MEASURE,
+    VALUE,
+    X,
+    Y,
+)
 from behavysis.schemas import ANALYSIS_SCHEMA, write_df
-from behavysis.transforms.keypoint import check_bpts_exist, get_indivs_bpts
+from behavysis.transforms import bodypart_avg_xy, check_bpts_exist, get_indivs_bpts
+
+from ._helper import AnalysisResult
+from ._summary import summary_binned_behaviour
 
 if TYPE_CHECKING:
     from behavysis.models import ExperimentConfig, ExperimentMetadata
@@ -76,37 +87,37 @@ def in_roi(
 
         corners_rows = []
         for pt in roi_corners:
-            avg = keypoints_df.filter(pl.col("bodypart") == pt).select(
-                pl.col("x").mean().alias("x"),
-                pl.col("y").mean().alias("y"),
+            avg = keypoints_df.filter(pl.col(BODYPART) == pt).select(
+                pl.col(X).mean().alias(X),
+                pl.col(Y).mean().alias(Y),
             )
             corners_rows.append(avg)
 
         corners_i = pl.concat(corners_rows)
-        if "likelihood" in corners_i.columns:
-            corners_i = corners_i.drop("likelihood")
+        if LIKELIHOOD in corners_i.columns:
+            corners_i = corners_i.drop(LIKELIHOOD)
 
-        roi_center = corners_i.select(pl.col("x").mean(), pl.col("y").mean())
+        roi_center = corners_i.select(pl.col(X).mean(), pl.col(Y).mean())
         cx, cy = roi_center.row(0)
 
         adjusted = []
         for row in corners_i.iter_rows(named=True):
-            theta = np.arctan2(row["y"] - cy, row["x"] - cx)
+            theta = np.arctan2(row[Y] - cy, row[X] - cx)
             adjusted.append(
                 {
-                    "x": row["x"] + padding_px * np.cos(theta),
-                    "y": row["y"] + padding_px * np.sin(theta),
+                    X: row[X] + padding_px * np.cos(theta),
+                    Y: row[Y] + padding_px * np.sin(theta),
                 },
             )
         corners_i = pl.DataFrame(adjusted)
 
         for indiv in indivs:
-            avg = _bodypart_avg_xy(keypoints_df, indiv, bpts)
+            avg = bodypart_avg_xy(keypoints_df, indiv, bpts)
             avg_positions_by_indiv[indiv] = avg
 
-            frames = avg.select("frame").to_series().to_numpy()
-            xs = avg.select("x").to_series().to_numpy()
-            ys = avg.select("y").to_series().to_numpy()
+            frames = avg.select(FRAME).to_series().to_numpy()
+            xs = avg.select(X).to_series().to_numpy()
+            ys = avg.select(Y).to_series().to_numpy()
 
             in_roi_mask = _pts_in_roi(xs, ys, corners_i)
             if not is_in:
@@ -115,18 +126,18 @@ def in_roi(
             for f, val in zip(frames, in_roi_mask, strict=True):
                 all_analysis_rows.append(
                     {
-                        "frame": int(f),
-                        "individual": indiv,
-                        "measure": roi_name,
-                        "value": float(val),
+                        FRAME: int(f),
+                        INDIVIDUAL: indiv,
+                        MEASURE: roi_name,
+                        VALUE: float(val),
                     },
                 )
 
         all_corners_rows.extend(
             {
                 "roi": roi_name,
-                "x": row["x"],
-                "y": row["y"],
+                X: row[X],
+                Y: row[Y],
             }
             for row in corners_i.iter_rows(named=True)
         )
@@ -159,7 +170,7 @@ def in_roi(
             relative_path=Path("roi_corners") / f"{name}.{DF_IO_FORMAT}",
             result=corners_df,
             save_func=lambda fp, obj: write_df(
-                obj, fp, {"roi": pl.Utf8, "x": pl.Float64, "y": pl.Float64}
+                obj, fp, {"roi": pl.Utf8, X: pl.Float64, Y: pl.Float64}
             ),
         ),
     ]
@@ -241,18 +252,18 @@ def _draw_scatter_points(
 
     in_roi_mask = (
         analysis_df.filter(
-            pl.col("individual") == indiv,
-            pl.col("measure") == roi_name,
+            pl.col(INDIVIDUAL) == indiv,
+            pl.col(MEASURE) == roi_name,
         )
-        .sort("frame")
-        .select("value")
+        .sort(FRAME)
+        .select(VALUE)
         .to_series()
         .to_numpy()
     )
 
-    frames_pos = pos.select("frame").to_series().to_numpy()
-    xs = pos.select("x").to_series().to_numpy()
-    ys = pos.select("y").to_series().to_numpy()
+    frames_pos = pos.select(FRAME).to_series().to_numpy()
+    xs = pos.select(X).to_series().to_numpy()
+    ys = pos.select(Y).to_series().to_numpy()
 
     label_set = set()
     overlay = img.copy()
@@ -277,7 +288,7 @@ def _draw_roi_polygon(
     if roi_corners.height == 0:
         return []
     pts = np.array(
-        [[int(row["x"]), int(row["y"])] for row in roi_corners.iter_rows(named=True)],
+        [[int(row[X]), int(row[Y])] for row in roi_corners.iter_rows(named=True)],
         dtype=np.int32,
     )
     cv2.polylines(img, [pts], isClosed=True, color=RED, thickness=2)
@@ -291,11 +302,9 @@ def _pt_in_roi(pt_x: float, pt_y: float, corners_df: pl.DataFrame) -> bool:
     for i in range(n):
         c1 = corners_df.row(i, named=True)
         c2 = corners_df.row((i + 1) % n, named=True)
-        y_between = (c1["y"] > pt_y) != (c2["y"] > pt_y)
+        y_between = (c1[Y] > pt_y) != (c2[Y] > pt_y)
         if y_between:
-            x_int = (c2["x"] - c1["x"]) * (pt_y - c1["y"]) / (c2["y"] - c1["y"]) + c1[
-                "x"
-            ]
+            x_int = (c2[X] - c1[X]) * (pt_y - c1[Y]) / (c2[Y] - c1[Y]) + c1[X]
             if pt_x < x_int:
                 crossings += 1
     return crossings % 2 == 1
@@ -308,8 +317,8 @@ def _pts_in_roi(
 ) -> np.ndarray:
     """Vectorized point-in-polygon using ray casting on numpy arrays."""
     n = corners_df.height
-    cx = corners_df.select("x").to_numpy()
-    cy = corners_df.select("y").to_numpy()
+    cx = corners_df.select(X).to_numpy()
+    cy = corners_df.select(Y).to_numpy()
 
     crossings = np.zeros(len(px_arr), dtype=np.int32)
     for i in range(n):

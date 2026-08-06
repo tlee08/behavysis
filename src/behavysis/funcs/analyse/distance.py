@@ -8,12 +8,21 @@ from typing import TYPE_CHECKING
 import polars as pl
 from pydantic import BaseModel, PositiveFloat
 
-from behavysis.constants import DF_IO_FORMAT, FBF
-from behavysis.funcs.analyse._helper import _bodypart_avg_xy
-from behavysis.funcs.analyse._summary import summary_binned_quantitative
-from behavysis.models import AnalysisResult
+from behavysis.constants import (
+    DF_IO_FORMAT,
+    FBF,
+    FRAME,
+    INDIVIDUAL,
+    MEASURE,
+    VALUE,
+    X,
+    Y,
+)
 from behavysis.schemas import ANALYSIS_SCHEMA, write_df
-from behavysis.transforms.keypoint import check_bpts_exist, get_indivs_bpts
+from behavysis.transforms import bodypart_avg_xy, check_bpts_exist, get_indivs_bpts
+
+from ._helper import AnalysisResult
+from ._summary import summary_binned_quantitative
 
 if TYPE_CHECKING:
     from behavysis.models import ExperimentConfig, ExperimentMetadata
@@ -79,12 +88,12 @@ def _compute_movement(
     results = []
 
     for indiv in indivs:
-        avg = _bodypart_avg_xy(keypoints_df, indiv, bpts)
+        avg = bodypart_avg_xy(keypoints_df, indiv, bpts)
 
         dist = (
             avg.with_columns(
                 (
-                    avg.select("x")
+                    avg.select(X)
                     .to_series()
                     .rolling_mean(window_size=jitter_frames, min_samples=1, center=True)
                     .diff()
@@ -92,7 +101,7 @@ def _compute_movement(
                     .alias("x_delta")
                 ),
                 (
-                    avg.select("y")
+                    avg.select(Y)
                     .to_series()
                     .rolling_mean(window_size=jitter_frames, min_samples=1, center=True)
                     .diff()
@@ -114,15 +123,11 @@ def _compute_movement(
         )
 
         dist_long = dist.select(
-            pl.col("frame"),
-            pl.lit(indiv).alias("individual"),
+            pl.col(FRAME),
+            pl.lit(indiv).alias(INDIVIDUAL),
             pl.col("DistMM"),
             pl.col("DistMMSmoothed"),
-        ).unpivot(
-            index=["frame", "individual"],
-            variable_name="measure",
-            value_name="value",
-        )
+        ).unpivot(index=[FRAME, INDIVIDUAL], variable_name=MEASURE, value_name=VALUE)
 
         results.append(dist_long)
 

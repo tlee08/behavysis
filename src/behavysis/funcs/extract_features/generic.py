@@ -19,7 +19,7 @@ from pydantic import BaseModel
 from scipy.spatial import ConvexHull
 from scipy.spatial.distance import pdist
 
-from behavysis.transforms.keypoint import check_bpts_exist
+from behavysis.transforms import check_bpts_exist
 
 if TYPE_CHECKING:
     from behavysis.constants import Array1D, Array2D

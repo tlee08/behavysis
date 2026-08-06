@@ -4,10 +4,22 @@ from pathlib import Path
 
 import polars as pl
 
-from behavysis.constants import ACTUAL, DF_IO_FORMAT, FBF, TRUE_NEG, TRUE_POS
-from behavysis.models import AnalysisResult, ExperimentConfig, ExperimentMetadata
+from behavysis.constants import (
+    ACTUAL,
+    BEHAVIOUR,
+    DF_IO_FORMAT,
+    FBF,
+    FRAME,
+    INDIVIDUAL,
+    MEASURE,
+    TRUE_NEG,
+    TRUE_POS,
+    VALUE,
+)
+from behavysis.models import ExperimentConfig, ExperimentMetadata
 from behavysis.schemas import ANALYSIS_SCHEMA, write_df
 
+from ._helper import AnalysisResult
 from ._summary import summary_binned_behaviour
 
 
@@ -27,20 +39,15 @@ def analyse_behaviour(
         .alias(ACTUAL),
     )
 
-    id_vars = ["frame", "behaviour"]
+    id_vars = [FRAME, BEHAVIOUR]
     value_vars = [c for c in behaviour_df.columns if c not in id_vars]
 
     analysis_df = (
         behaviour_df.unpivot(
-            index=id_vars,
-            on=value_vars,
-            variable_name="measure",
-            value_name="value",
+            index=id_vars, on=value_vars, variable_name=MEASURE, value_name=VALUE
         )
-        .rename({"behaviour": "individual"})
-        .with_columns(
-            pl.col("value").fill_null(0).cast(pl.Float64),
-        )
+        .rename({BEHAVIOUR: INDIVIDUAL})
+        .with_columns(pl.col(VALUE).fill_null(0).cast(pl.Float64))
     )
 
     return [

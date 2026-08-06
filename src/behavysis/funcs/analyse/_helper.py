@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Protocol
+from typing import TYPE_CHECKING, Protocol
 
-import polars as pl
+from pydantic import BaseModel
 
 if TYPE_CHECKING:
-    from behavysis.models import AnalysisResult, ExperimentConfig, ExperimentMetadata
+    from collections.abc import Callable
+    from pathlib import Path
+
+    from behavysis.models import ExperimentConfig, ExperimentMetadata
 
 
 class AnalyseFunc(Protocol):
@@ -19,28 +22,30 @@ class AnalyseFunc(Protocol):
         self,
         config: ExperimentConfig,
         metadata: ExperimentMetadata,
-        **kwargs: Any,  # noqa: ANN401
+        **kwargs: object,
     ) -> list[AnalysisResult]:
         """Protocol for analyse functions."""
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# Helpers
-# ═══════════════════════════════════════════════════════════════════════════════
+class AnalysisResult(BaseModel):
+    """A serializable analysis result with self-contained save logic.
 
+    Attributes:
+    ----------
+    relative_path : Path
+        Path relative to the analysis output directory.
+    result : object
+        The computed data (DataFrame, numpy array, matplotlib figure, etc.).
+    save_func : Callable[[Path, object], None]
+        Function that saves ``result`` to the given absolute file path.
+    """
 
-def _bodypart_avg_xy(
-    df: pl.DataFrame,
-    indiv: str,
-    bpts: list[str],
-) -> pl.DataFrame:
-    """Average x and y coordinates across bodyparts per frame for an individual."""
-    return (
-        df.filter(
-            pl.col("individual") == indiv,
-            pl.col("bodypart").is_in(bpts),
-        )
-        .group_by("frame")
-        .agg([pl.col("x").mean().alias("x"), pl.col("y").mean().alias("y")])
-        .sort("frame")
-    )
+    relative_path: Path
+    result: object
+    save_func: Callable[[Path, object], None]
+
+    def save(self, dst_dir: Path) -> None:
+        """Save result to ``dst_dir / self.relative_path``."""
+        full_path = dst_dir / self.relative_path
+        full_path.parent.mkdir(parents=True, exist_ok=True)
+        self.save_func(full_path, self.result)

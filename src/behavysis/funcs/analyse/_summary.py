@@ -19,9 +19,10 @@ from behavysis.constants import (
     MEASURE,
     SUMMARY,
 )
-from behavysis.models import AnalysisResult
 from behavysis.schemas import BINNED_SCHEMA, SUMMARY_SCHEMA, write_df
-from behavysis.transforms.behaviour import vect2bouts
+from behavysis.transforms import vect2bouts
+
+from ._helper import AnalysisResult
 
 
 def agg_quantitative(df: pl.DataFrame, fps: float) -> pl.DataFrame:

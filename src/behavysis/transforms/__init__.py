@@ -10,9 +10,10 @@ from .behaviour import (
     smooth_prob,
     vect2bouts,
 )
-from .keypoint import check_bpts_exist, get_indivs_bpts
+from .keypoint import bodypart_avg_xy, check_bpts_exist, get_indivs_bpts
 
 __all__ = [
+    "bodypart_avg_xy",
     "bouts2frames",
     "check_bpts_exist",
     "frames2bouts",
