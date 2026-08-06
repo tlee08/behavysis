@@ -4,7 +4,6 @@ from collections.abc import Callable
 from pathlib import Path
 
 import dask
-import numpy as np
 import polars as pl
 from dask.distributed import LocalCluster
 from loguru import logger
@@ -30,7 +29,7 @@ from behavysis.funcs import (
     ExtractFeaturesFunc,
     PreprocessFunc,
 )
-from behavysis.funcs.run_dlc import ma_dlc_run_batch
+from behavysis.funcs.run_dlc import dlc_run_ma
 from behavysis.pipeline import Experiment
 from behavysis.schemas import read_df, write_df
 from behavysis.utils import cluster_process, get_gpu_device_ids, pass_exception
@@ -139,36 +138,34 @@ class Project:
         )
 
     def run_dlc(self, gputouse: int | None = None, *, overwrite: bool) -> None:
-        """Run DLC on all experiments with GPU batching."""
+        """Run DLC on all experiments with GPU batching.
+
+        Unique from other methods,
+        this method runs DLC in parallel using dask,
+        with each process assigned to a specific GPU.
+        If gputouse is None,
+        it will automatically detect available GPUs and
+        assign them to processes in a round-robin fashion.
+        """
         gputouse_ls = get_gpu_device_ids() if gputouse is None else [gputouse]
+        gputouse_ls = gputouse_ls or [None]
         nprocs = len(gputouse_ls)
         # Get list of experiment to run
-        # Consider overwrite flag and if keypoints dfs exist
         exp_ls = self.experiments
         if not overwrite:
             exp_ls = [exp for exp in exp_ls if not exp.get_fp(KEYPOINTS_DIR).is_file()]
         if not exp_ls:
             return
-        # Validating that all dlc config_yaml_fp are the same
-        dlc_config_fp_set = {
-            exp.read_config().require_run_dlc().model_fp for exp in exp_ls
-        }
-        if len(dlc_config_fp_set) != 1:
-            logger.warning("All experiments must have the same DLC config file")
-            return
-        dlc_config_fp = dlc_config_fp_set.pop()
-        # Splitting into nprocs batches
-        exp_batches = np.array_split(np.array(exp_ls), nprocs)
         # Running DLC
         with cluster_process(LocalCluster(n_workers=nprocs, threads_per_worker=1)):
             delayed_tasks = [
-                dask.delayed(ma_dlc_run_batch)(
-                    vid_fp_ls=[exp.get_fp(FORMATTED_VIDEO_DIR) for exp in batch],
-                    keypoints_dir=self.root_dir / KEYPOINTS_DIR,
-                    dlc_config_fp=dlc_config_fp,
-                    gputouse=gpu,
+                dask.delayed(dlc_run_ma)(
+                    vid_fp=exp.get_fp(FORMATTED_VIDEO_DIR),
+                    keypoints_fp=exp.get_fp(KEYPOINTS_DIR),
+                    config=exp.read_config(),
+                    gputouse=gputouse_ls[i % nprocs],
                 )
-                for gpu, batch in zip(gputouse_ls, exp_batches, strict=False)
+                for i, exp in enumerate(exp_ls)
             ]
             list(dask.compute(*delayed_tasks))
 
@@ -199,14 +196,10 @@ class Project:
 
     def classify_behaviour(self, *, overwrite: bool) -> None:
         """Classify behaviours for all experiments."""
-        # Temporarily use single processing due to IO issues
-        nprocs = self.nprocs
-        self.nprocs = 1
         self._run(
             Experiment.classify_behaviour,
             overwrite=overwrite,
         )
-        self.nprocs = nprocs
 
     def export_behaviour(self, *, overwrite: bool) -> None:
         """Export predicted behaviours for all experiments."""

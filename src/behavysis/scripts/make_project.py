@@ -14,7 +14,7 @@ from behavysis.constants import (
     RUN_PIPELINE_FP,
     STAGES,
 )
-from behavysis.presets import PRESET_DESCRIPTIONS
+from behavysis.templates.presets import PRESET_DESCRIPTIONS
 from behavysis.utils import confirm
 
 _PRESETS_ROOT = Path(str(files("behavysis"))) / "presets"

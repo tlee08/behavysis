@@ -32,9 +32,9 @@ from behavysis.funcs import (
     analyse_behaviour,
     classify_single,
     combine_analysis,
+    dlc_run_ma,
     format_video,
     get_video_metadata,
-    ma_dlc_run_single,
 )
 from behavysis.models import BoutStruct, ExperimentConfig, ExperimentMetadata
 from behavysis.schemas import (
@@ -164,9 +164,9 @@ class Experiment:
             return
         if missing_input_files(self.get_fp(FORMATTED_VIDEO_DIR)):
             return
-        ma_dlc_run_single(
+        dlc_run_ma(
             vid_fp=self.get_fp(FORMATTED_VIDEO_DIR),
-            keypoints_dir=self.root_dir / KEYPOINTS_DIR,
+            keypoints_fp=self.get_fp(KEYPOINTS_DIR),
             config=self.read_config(),
             gputouse=gputouse,
         )

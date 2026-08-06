@@ -7,9 +7,10 @@ import tempfile
 from pathlib import Path
 
 import pandas as pd
+import polars as pl
 from loguru import logger
 
-from behavysis.constants import CACHE_DIR, DF_IO_FORMAT
+from behavysis.constants import CACHE_DIR
 from behavysis.models import ExperimentConfig
 from behavysis.schemas import KEYPOINTS_SCHEMA, write_df
 from behavysis.transforms import convert_raw_dlc_to_keypoints
@@ -18,44 +19,22 @@ from behavysis.utils import save_template
 DLC_HDF_KEY = "data"
 
 
-def ma_dlc_run_single(
+def dlc_run_ma(
     vid_fp: Path,
-    keypoints_dir: Path,
+    keypoints_fp: Path,
     config: ExperimentConfig,
     gputouse: int | None,
 ) -> None:
     """Running DLC script to generate a keypoints dataframe from a single video."""
-    # Derive more parameters
+    # Using a temporary directory to store the DLC output files
     with tempfile.TemporaryDirectory(dir=CACHE_DIR) as _out_dir:
         out_dir = Path(_out_dir)
         # Running the DLC subprocess (in a separate conda env)
-        _run_dlc_subproc(
-            config.require_run_dlc().model_fp,
-            [vid_fp],
-            out_dir,
-            gputouse,
-        )
-        # Exporting the h5 to chosen file format
-        _export2df(vid_fp.stem, out_dir, keypoints_dir)
-
-
-def ma_dlc_run_batch(
-    vid_fp_ls: list[Path],
-    keypoints_dir: Path,
-    dlc_config_fp: Path,
-    gputouse: int | None,
-) -> None:
-    """Running DLC to generate a keypoints dataframe from a single video."""
-    # If there are no videos to process, return
-    if len(vid_fp_ls) == 0:
-        return
-    with tempfile.TemporaryDirectory(dir=CACHE_DIR) as _out_dir:
-        out_dir = Path(_out_dir)
-        # Running the DLC subprocess (in a separate conda env)
-        _run_dlc_subproc(dlc_config_fp, vid_fp_ls, out_dir, gputouse)
-        # Exporting the h5 to chosen file format
-        for vid_fp in vid_fp_ls:
-            _export2df(vid_fp.stem, out_dir, keypoints_dir)
+        _run_dlc_subproc(config.require_run_dlc().model_fp, [vid_fp], out_dir, gputouse)
+        # Converting the h5 to long
+        df = _export2df(vid_fp.stem, out_dir)
+        # Write to file
+        write_df(df, keypoints_fp, KEYPOINTS_SCHEMA)
 
 
 def _run_dlc_subproc(
@@ -89,10 +68,10 @@ def _run_dlc_subproc(
         "python",
         str(script_fp),
     ]
-    subprocess.run(cmd, check=True)
+    subprocess.run(cmd, check=True)  # noqa: S603
 
 
-def _export2df(name: str, src_dir: Path, dst_dir: Path) -> None:
+def _export2df(name: str, src_dir: Path) -> pl.DataFrame:
     """Export DLC h5 output to Polars long-form parquet.
 
     Reads pandas MultiIndex h5, unstacks to long form, drops the scorer level
@@ -104,19 +83,13 @@ def _export2df(name: str, src_dir: Path, dst_dir: Path) -> None:
     ]
     if len(name_fp_ls) == 0:
         msg = f"No .h5 file found for {name}."
-        logger.warning(msg)
-        return
+        raise ValueError(msg)
     if len(name_fp_ls) != 1:
         msg = f"Multiple .h5 files found for {name}. Expected only 1."
-        logger.warning(msg)
-        return
-
+        raise ValueError(msg)
     # Get the only value in the 1-element list
     name_fp = src_dir / name_fp_ls[0]
     # Read h5 as pandas (DLC outputs pandas MultiIndex columns)
     df = pd.DataFrame(pd.read_hdf(name_fp))
-    # Impute na values with 0
-    df = convert_raw_dlc_to_keypoints(df)
-    # Write to file
-    write_df(df, dst_dir / f"{name}.{DF_IO_FORMAT}", KEYPOINTS_SCHEMA)
-    logger.info("Outputted DLC file.")
+    # Convert and return
+    return convert_raw_dlc_to_keypoints(df)

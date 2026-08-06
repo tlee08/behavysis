@@ -20,7 +20,7 @@ from .preprocess import (
     interpolate_stationary,
     start_stop_trim,
 )
-from .run_dlc import ma_dlc_run_batch, ma_dlc_run_single
+from .run_dlc import dlc_run_ma
 
 __all__ = [
     "AnalyseFunc",
@@ -31,6 +31,7 @@ __all__ = [
     "classify_single",
     "combine_analysis",
     "distance",
+    "dlc_run_ma",
     "dur_frames_from_likelihood",
     "format_video",
     "generic",
@@ -39,8 +40,6 @@ __all__ = [
     "in_roi",
     "interpolate",
     "interpolate_stationary",
-    "ma_dlc_run_batch",
-    "ma_dlc_run_single",
     "px_per_mm",
     "social_distance",
     "start_frame_from_csv",
