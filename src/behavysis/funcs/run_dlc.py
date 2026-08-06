@@ -10,10 +10,9 @@ import pandas as pd
 import polars as pl
 from loguru import logger
 
-from behavysis.constants import CACHE_DIR
+from behavysis.constants import BODYPART, CACHE_DIR, FRAME, INDIVIDUAL, LIKELIHOOD, X, Y
 from behavysis.models import ExperimentConfig
 from behavysis.schemas import KEYPOINTS_SCHEMA, write_df
-from behavysis.transforms import convert_raw_dlc_to_keypoints
 from behavysis.utils import save_template
 
 DLC_HDF_KEY = "data"
@@ -93,3 +92,27 @@ def _export2df(name: str, src_dir: Path) -> pl.DataFrame:
     df = pd.DataFrame(pd.read_hdf(name_fp))
     # Convert and return
     return convert_raw_dlc_to_keypoints(df)
+
+
+def convert_raw_dlc_to_keypoints(df: pd.DataFrame) -> pl.DataFrame:
+    """Convert keypoints from old to new format."""
+    # Impute na values with 0
+    df = df.fillna(0)
+    # Drop scorer level (always single value, useless)
+    df.columns = df.columns.droplevel("scorer")
+    # Name index as "frame"
+    df.index.name = FRAME
+    # Stack bodyparts + individuals + coords into rows, then unstack coords
+    # to get x, y, likelihood as columns
+    df = (
+        df.stack(["individuals", "bodyparts", "coords"]).unstack("coords").reset_index()  # noqa: PD010, PD013
+    )
+    # Convert to Polars long form
+    return pl.from_pandas(df.reset_index()).select(
+        pl.col(FRAME).cast(pl.Int64),
+        pl.col("individuals").alias(INDIVIDUAL),
+        pl.col("bodyparts").alias(BODYPART),
+        pl.col(X).cast(pl.Float64),
+        pl.col(Y).cast(pl.Float64),
+        pl.col(LIKELIHOOD).cast(pl.Float64),
+    )

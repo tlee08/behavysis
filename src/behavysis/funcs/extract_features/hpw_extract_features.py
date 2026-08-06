@@ -548,14 +548,14 @@ def _compute_cross_features(
     """
     f: dict[str, Array1D] = {}
 
-    # ── X01: body stillness — rolling std of hind body vertical velocity ──
+    # -- X01: body stillness — rolling std of hind body vertical velocity --
     w15 = features[W15_HIND_BODY_VERTICAL_V_MM_S]
     w15_mean = _smooth_uniform(w15, body_stillness_frames)
     w15_mean_sq = _smooth_uniform(np.square(w15), body_stillness_frames)
     w15_var = np.maximum(w15_mean_sq - np.square(w15_mean), 0.0)
     f[X01_BODY_STILLNESS_MM_S] = _ffill_bfill_1d(np.sqrt(w15_var))
 
-    # ── X02/X03: paw lift ratio — elevation vs velocity smooth ──
+    # -- X02/X03: paw lift ratio — elevation vs velocity smooth --
     # High ratio = paw elevated but slow → holding paw up (withdrawal)
     # Low ratio  = paw moving fast relative to height → stepping/walking
     for elev_key, vy_key, cross_key in [
@@ -606,18 +606,18 @@ def _compute_rearing_features(
     """
     f: dict[str, Array1D] = {}
 
-    # ── R01: back angle from horizontal ──
+    # -- R01: back angle from horizontal --
     mb_x, mb_y = xy[MID_BACK]
     lb_x, lb_y = xy[LOWER_BACK]
     dx = lb_x - mb_x
     dy = lb_y - mb_y
     f[R01_BACK_ANGLE_DEG] = _angle_from_horizontal_deg(dx, dy)
 
-    # ── R02: nose elevation above floor ──
+    # -- R02: nose elevation above floor --
     nose_x, nose_y = xy[NOSE]
     f[R02_NOSE_ELEVATION_MM] = (floor_y - nose_y) / px_per_mm
 
-    # ── R03: body elongation ratio ──
+    # -- R03: body elongation ratio --
     body_vertical = floor_y - nose_y  # nose above floor
     body_horizontal = np.abs(
         nose_x - np.mean([xy[TAIL_BASE][0], xy[TAIL_TIP][0]], axis=0)
@@ -629,19 +629,19 @@ def _compute_rearing_features(
         where=body_horizontal > _EPS,
     )
 
-    # ── R04: centroid vertical velocity ──
+    # -- R04: centroid vertical velocity --
     all_y = [xy[bp][1] for bp in ALL_BODYPARTS]
     centroid_y = np.mean(np.column_stack(all_y), axis=1)
     f[R04_CENTROID_VERTICAL_VELOCITY_MM_S] = _vertical_velocity(
         centroid_y, px_per_mm, fps
     )
 
-    # ── R05: front paw elevation relative to hind paws ──
+    # -- R05: front paw elevation relative to hind paws --
     front_toe_mean_y = np.mean([xy[FRONT_TOE_R][1], xy[FRONT_TOE_L][1]], axis=0)
     hind_toe_mean_y = np.mean([xy[HIND_TOE_R][1], xy[HIND_TOE_L][1]], axis=0)
     f[R05_FRONT_PAW_ELEVATION_MM] = (hind_toe_mean_y - front_toe_mean_y) / px_per_mm
 
-    # ── R06: nose vertical velocity ──
+    # -- R06: nose vertical velocity --
     f[R06_NOSE_VERTICAL_VELOCITY_MM_S] = _vertical_velocity(nose_y, px_per_mm, fps)
 
     return f
@@ -678,7 +678,7 @@ def _compute_withdrawal_features(
     """
     f: dict[str, Array1D] = {}
 
-    # ── Per-paw kinematics ──
+    # -- Per-paw kinematics --
     paws: list[tuple[str, str, str, str, str, str, str, str, str, str, str, str]] = [
         (
             "r",
@@ -756,7 +756,7 @@ def _compute_withdrawal_features(
         peak_win = max(1, int(fps * _VY_PEAK_WINDOW_SEC))
         f[peak_key] = _local_peak(np.abs(vy), peak_win)
 
-    # ── Asymmetry features ──
+    # -- Asymmetry features --
     r_elev = f[W04_R_PAW_ELEVATION_MM]
     l_elev = f[W10_L_PAW_ELEVATION_MM]
     f[W13_PAW_ELEVATION_ASYMMETRY_MM] = np.abs(r_elev - l_elev)
@@ -765,12 +765,12 @@ def _compute_withdrawal_features(
     l_vy = paw_vy["l"]
     f[W14_PAW_VERTICAL_V_ASYMMETRY_MM_S] = np.abs(r_vy - l_vy)
 
-    # ── Hind body vertical velocity (control signal: what the body is doing) ──
+    # -- Hind body vertical velocity (control signal: what the body is doing) --
     body_y_arrays = [xy[bp][1] for bp in [MID_BACK, LOWER_BACK, TAIL_BASE, TAIL_TIP]]
     hind_body_y = np.mean(np.column_stack(body_y_arrays), axis=1)
     f[W15_HIND_BODY_VERTICAL_V_MM_S] = _vertical_velocity(hind_body_y, px_per_mm, fps)
 
-    # ── Paw velocity relative to body (paw minus body = isolated paw movement) ──
+    # -- Paw velocity relative to body (paw minus body = isolated paw movement) --
     body_vy = f[W15_HIND_BODY_VERTICAL_V_MM_S]
     f[W16_R_PAW_RELATIVE_VERTICAL_V_MM_S] = r_vy - body_vy
     f[W17_L_PAW_RELATIVE_VERTICAL_V_MM_S] = l_vy - body_vy

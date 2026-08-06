@@ -7,7 +7,7 @@ import cv2
 import numpy as np
 import polars as pl
 
-from behavysis.behaviour_classifier import ClassifierContract, ClassifierPaths
+from behavysis.behaviour_classifier import ClassifierPaths
 from behavysis.constants import (
     ANALYSIS_COMBINED_DIR,
     ANALYSIS_DIR,
@@ -29,8 +29,7 @@ from behavysis.funcs import (
     CalculateParametersFunc,
     ExtractFeaturesFunc,
     PreprocessFunc,
-    analyse_behaviour,
-    classify_single,
+    classify_behaviour,
     combine_analysis,
     dlc_run_ma,
     format_video,
@@ -223,7 +222,6 @@ class Experiment:
                 config=config,
                 metadata=metadata,
             )
-            # Save
             out_fp.parent.mkdir(parents=True, exist_ok=True)
             write_df(features_df, out_fp)
 
@@ -234,13 +232,12 @@ class Experiment:
             return
         behaviour_df_ls = []
         for model_config in self.read_config().require_classify_behaviour():
-            clf = ClassifierPaths(model_config.contract_fp.parent)
-            contract = ClassifierContract.read_yaml(clf.contract_fp())
-            if missing_input_files(self.get_features_fp(contract.feature_set)):
+            contract_fp = model_config.contract_fp
+            clf = ClassifierPaths(contract_fp)
+            if missing_input_files(self.get_features_fp(clf.contract().feature_set)):
                 continue
-            features_df = read_df(self.get_features_fp(contract.feature_set))
-            behaviour_df_ls.append(classify_single(clf, features_df))
-        # Save
+            features_df = read_df(self.get_features_fp(clf.contract().feature_set))
+            behaviour_df_ls.append(classify_behaviour(contract_fp, features_df))
         write_df(
             pl.concat(behaviour_df_ls)
             if behaviour_df_ls
@@ -256,17 +253,15 @@ class Experiment:
             return
         if missing_input_files(self.get_fp(BEHAVIOUR_PREDICTED_DIR)):
             return
-        # Read
         behaviour_predicted_df = read_df(
-            self.get_fp(BEHAVIOUR_PREDICTED_DIR),
-            BEHAVIOUR_PREDICTED_SCHEMA,
+            self.get_fp(BEHAVIOUR_PREDICTED_DIR), BEHAVIOUR_PREDICTED_SCHEMA
         )
         config = self.read_config()
         bouts_struct = [
             BoutStruct(
-                behaviour=ClassifierContract.read_yaml(
-                    model_config.contract_fp
-                ).behaviour_name,
+                behaviour=ClassifierPaths(model_config.contract_fp)
+                .contract()
+                .behaviour_name,
                 sub_behaviour=model_config.sub_behaviour,
             )
             for model_config in config.require_classify_behaviour()
@@ -277,33 +272,22 @@ class Experiment:
 
     @trace
     def analyse(self, funcs: tuple[AnalyseFunc, ...]) -> None:
-        """Analyse preprocessed keypoints data."""
-        if missing_input_files(
-            self.get_fp(PREPROCESSED_DIR), self.get_fp(FORMATTED_VIDEO_DIR)
-        ):
-            return
-        keypoints_df = read_df(self.get_fp(PREPROCESSED_DIR), KEYPOINTS_SCHEMA)
-        vid_frame = _get_frame(self.get_fp(FORMATTED_VIDEO_DIR), self.read_metadata())
+        """Analyse preprocessed keypoints and/or scored behaviours."""
         config = self.read_config()
         metadata = self.read_metadata()
+        kwargs: dict[str, object] = {}
+        if self.get_fp(PREPROCESSED_DIR).is_file():
+            kwargs["keypoints_df"] = read_df(
+                self.get_fp(PREPROCESSED_DIR), KEYPOINTS_SCHEMA
+            )
+        if self.get_fp(FORMATTED_VIDEO_DIR).is_file():
+            kwargs["vid_frame"] = _get_frame(self.get_fp(FORMATTED_VIDEO_DIR), metadata)
+        if self.get_fp(BEHAVIOUR_SCORED_DIR).is_file():
+            kwargs["behaviour_df"] = read_df(self.get_fp(BEHAVIOUR_SCORED_DIR))
         for func in funcs:
             dst_dir = self.root_dir / ANALYSIS_DIR / func.__name__
-            for result in func(keypoints_df, vid_frame, config, metadata):
+            for result in func(config, metadata, **kwargs):
                 result.save(dst_dir)
-
-    @trace
-    def analyse_behaviour(self) -> None:
-        """Analyse scored behaviours."""
-        if missing_input_files(self.get_fp(BEHAVIOUR_SCORED_DIR)):
-            return
-        behaviour_df = read_df(self.get_fp(BEHAVIOUR_SCORED_DIR))
-        dst_dir = self.root_dir / ANALYSIS_DIR / "analyse_behaviour"
-        for result in analyse_behaviour(
-            behaviour_df,
-            self.read_config(),
-            self.read_metadata(),
-        ):
-            result.save(dst_dir)
 
     @trace
     def combine_analysis(self) -> None:

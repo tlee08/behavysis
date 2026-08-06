@@ -2,13 +2,11 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Protocol
+from typing import TYPE_CHECKING, Any, Protocol
 
 import polars as pl
 
 if TYPE_CHECKING:
-    import numpy as np
-
     from behavysis.models import AnalysisResult, ExperimentConfig, ExperimentMetadata
 
 
@@ -19,10 +17,9 @@ class AnalyseFunc(Protocol):
 
     def __call__(
         self,
-        keypoints_df: pl.DataFrame,
-        vid_frame: np.ndarray[tuple[int, int, int], np.dtype[np.uint8]],
         config: ExperimentConfig,
         metadata: ExperimentMetadata,
+        **kwargs: Any,  # noqa: ANN401
     ) -> list[AnalysisResult]:
         """Protocol for analyse functions."""
 

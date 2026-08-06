@@ -1,7 +1,7 @@
-"""Aggregated analysis functions operating on Polars long-form DataFrames.
+"""Analysis result orchestration: binned summaries and AnalysisResult wrapping.
 
-All functions operate on DataFrames conforming to ANALYSIS_SCHEMA:
-(frame, individual, measure, value).
+These functions consume analysis DataFrames, apply aggregate/binning transforms,
+and wrap results in AnalysisResult objects with save semantics.
 """
 
 from collections.abc import Callable
@@ -21,8 +21,7 @@ from behavysis.constants import (
 )
 from behavysis.models import AnalysisResult
 from behavysis.schemas import BINNED_SCHEMA, SUMMARY_SCHEMA, write_df
-
-from .behaviour import vect2bouts
+from behavysis.transforms.behaviour import vect2bouts
 
 
 def agg_quantitative(df: pl.DataFrame, fps: float) -> pl.DataFrame:
@@ -200,13 +199,10 @@ def summary_binned_behaviour(
         bins_ls=bins_sec_ls,
         cbins_ls=custom_bins_sec_ls,
     )
-    # Add latency
     latency_rows = _compute_latency(analysis_df, fps)
     if latency_rows:
         latency_df = pl.DataFrame(latency_rows, schema=SUMMARY_SCHEMA)
-        # Assumes first element in results is the summary df
-        # NOTE: worthwhile making this more explicit and robust. But how?
-        results[0].result = pl.concat([results[0].result, latency_df])  # ty:ignore[invalid-argument-type]
+        results[0].result = pl.concat([results[0].result, latency_df])
     return results
 
 
@@ -232,7 +228,7 @@ def _compute_latency(analysis_df: pl.DataFrame, fps: float) -> list[dict]:
     return latency_rows
 
 
-def summary_binned(
+def summary_binned(  # noqa: PLR0913
     analysis_df: pl.DataFrame,
     name: str,
     fps: float,

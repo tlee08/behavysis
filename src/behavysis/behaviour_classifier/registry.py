@@ -23,7 +23,7 @@ from behavysis.utils import get_gpu_device
 
 from .adapter import BaseAdapter, SklearnAdapter, TabpfnAdapter
 
-# ── registry ─────────────────────────────────────────────────────────
+# -- registry ---------------------------------------------------------
 
 
 MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
@@ -282,4 +282,4 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
     ),
 }
 
-# ── registry ─────────────────────────────────────────────────────────
+# -- registry ---------------------------------------------------------

@@ -9,16 +9,14 @@ import polars as pl
 from pydantic import BaseModel, PositiveFloat
 
 from behavysis.constants import DF_IO_FORMAT, FBF
+from behavysis.funcs.analyse._summary import summary_binned_quantitative
 from behavysis.models import AnalysisResult
 from behavysis.schemas import ANALYSIS_SCHEMA, write_df
-from behavysis.transforms.analysis import summary_binned_quantitative
 from behavysis.transforms.keypoint import check_bpts_exist, get_indivs_bpts
 
 from ._helper import _bodypart_avg_xy
 
 if TYPE_CHECKING:
-    import numpy as np
-
     from behavysis.models import ExperimentConfig, ExperimentMetadata
 
 
@@ -30,10 +28,10 @@ class SocialDistanceConfig(BaseModel):
 
 
 def social_distance(
-    keypoints_df: pl.DataFrame,
-    vid_frame: np.ndarray,  # noqa: ARG001
     config: ExperimentConfig,
     metadata: ExperimentMetadata,
+    *,
+    keypoints_df: pl.DataFrame,
 ) -> list[AnalysisResult]:
     """Determines the social distance between two individuals."""
     name = metadata.require_name()

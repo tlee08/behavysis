@@ -18,12 +18,13 @@ from sklearn.metrics import (
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 
-from behavysis.behaviour_classifier.data import (
+from behavysis.constants import ACTUAL, BOUT, FRAME, PRED, PROB
+
+from .data import (
     agg_eval_df_by_bouts,
     df_get_features,
     df_get_labels,
 )
-from behavysis.constants import ACTUAL, BOUT, FRAME, PRED, PROB
 
 NIL = "nil"
 BEHAV = "behav"

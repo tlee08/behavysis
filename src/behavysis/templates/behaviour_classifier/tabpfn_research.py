@@ -4,7 +4,6 @@ __generated_with = "0.23.10"
 app = marimo.App(width="full")
 
 with app.setup:
-    import os
     from pathlib import Path
 
     import altair as alt
@@ -38,12 +37,12 @@ with app.setup:
 
 @app.cell
 def _():
-    clf_dir = Path.cwd()
+    contract_fp = Path.cwd() / "contract.yaml"
     behaviour_name = "aggression"
 
-    clf = ClassifierPaths(clf_dir)
+    clf = ClassifierPaths(contract_fp)
     contract_fp = clf.contract_fp()
-    feats_dst = clf.features_dir("generic")
+    feats_dst = clf.features_dir()
     labels_dst = clf.labels_dir()
     labels_dst.mkdir(parents=True, exist_ok=True)
     return behaviour_name, clf
@@ -53,7 +52,7 @@ def _():
 def _(behaviour_name, clf):
     # Load and align data
     df = load_all_data(
-        clf.features_dir("generic"),
+        clf.features_dir(),
         clf.labels_dir(),
         behaviour_name,
     )
@@ -67,7 +66,6 @@ def _(df):
     train_idx, test_idx = stratified_split_by_group(df, 0.2, EXPERIMENT, 42)
     train_df = df[train_idx].sort([EXPERIMENT, FRAME])
     test_df = df[test_idx].sort([EXPERIMENT, FRAME])
-    return
 
 
 @app.cell
@@ -115,7 +113,6 @@ def _():
 @app.cell
 def _(clf, exp1_df):
     clf.fit(df_get_features(exp1_df), df_get_labels(exp1_df))
-    return
 
 
 @app.cell
@@ -144,7 +141,6 @@ def _(eval_df):
     res = make_eval_result({"test": eval_df})
 
     res
-    return
 
 
 if __name__ == "__main__":

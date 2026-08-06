@@ -12,9 +12,9 @@ from pydantic import BaseModel
 
 from behavysis.constants import DF_IO_FORMAT, FBF
 from behavysis.funcs.analyse._helper import _bodypart_avg_xy
+from behavysis.funcs.analyse._summary import summary_binned_behaviour
 from behavysis.models import AnalysisResult
 from behavysis.schemas import ANALYSIS_SCHEMA, write_df
-from behavysis.transforms.analysis import summary_binned_behaviour
 from behavysis.transforms.keypoint import check_bpts_exist, get_indivs_bpts
 
 if TYPE_CHECKING:
@@ -44,10 +44,11 @@ POINT_ALPHA = 0.4
 
 
 def in_roi(
-    keypoints_df: pl.DataFrame,
-    vid_frame: np.ndarray,
     config: ExperimentConfig,
     metadata: ExperimentMetadata,
+    *,
+    keypoints_df: pl.DataFrame,
+    vid_frame: np.ndarray,
 ) -> list[AnalysisResult]:
     """Determines frames where subject is inside ROI from average bpts."""
     name = metadata.require_name()

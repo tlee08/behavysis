@@ -62,10 +62,10 @@ The decorator is a pure observability tool, not a control flow mechanism.
 
 ```
 schemas/
-├── schemas.py          ← Schema dicts + read_df/write_df  (182 lines) ✅
-├── analysis_agg.py     ← agg_quantitative, make_binned, summary_binned (348 lines) ❌ NOT a schema
-├── behaviour.py        ← vect2bouts, bouts2frames, predicted2scored (362 lines) ❌ NOT a schema
-└── keypoints.py        ← check_bpts_exist, get_indivs_bpts (49 lines)    ❌ NOT a schema
+├-- schemas.py          ← Schema dicts + read_df/write_df  (182 lines) ✅
+├-- analysis_agg.py     ← agg_quantitative, make_binned, summary_binned (348 lines) ❌ NOT a schema
+├-- behaviour.py        ← vect2bouts, bouts2frames, predicted2scored (362 lines) ❌ NOT a schema
+└-- keypoints.py        ← check_bpts_exist, get_indivs_bpts (49 lines)    ❌ NOT a schema
 ```
 
 710 of 941 lines in the `schemas/` package are **domain transformation functions**, not schemas. `from behavysis.schemas import vect2bouts` is semantically wrong — the caller is importing business logic from what it believes is a schema definitions module.

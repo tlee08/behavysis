@@ -30,7 +30,7 @@ if TYPE_CHECKING:
     from imblearn.under_sampling.base import BaseUnderSampler
 
 
-# ── loading ─────────────────────────────────────────────────────
+# -- loading -----------------------------------------------------
 
 
 def load_all_data(
@@ -88,7 +88,7 @@ def load_all_data(
     return pl.concat(pieces, how="diagonal_relaxed")
 
 
-# ── X and y df preparing ─────────────────────────────────────────────────────
+# -- X and y df preparing -----------------------------------------------------
 
 
 def df_get_features(df: pl.DataFrame) -> pl.DataFrame:
@@ -103,7 +103,7 @@ def df_get_labels(df: pl.DataFrame) -> pl.Series:
     return df[ACTUAL]
 
 
-# ── bout-related splitting ─────────────────────────────────────────────────────
+# -- bout-related splitting -----------------------------------------------------
 
 
 def stratified_split_by_group(
@@ -164,7 +164,7 @@ def agg_eval_df_by_bouts(df: pl.DataFrame) -> pl.DataFrame:
     )
 
 
-# ── preprocessing ─────────────────────────────────────────────────────────────
+# -- preprocessing -------------------------------------------------------------
 
 
 def df_resample(df: pl.DataFrame, resampler: BaseUnderSampler) -> pl.DataFrame:
@@ -179,4 +179,4 @@ def df_resample(df: pl.DataFrame, resampler: BaseUnderSampler) -> pl.DataFrame:
     return df[sub_idx]
 
 
-# ── y prob smoothing ──────────────────────────────────────────────────────────
+# -- y prob smoothing ----------------------------------------------------------

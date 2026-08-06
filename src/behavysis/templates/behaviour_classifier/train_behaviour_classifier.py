@@ -24,7 +24,6 @@ with app.setup:
         load_all_data,
     )
     from behavysis.behaviour_classifier.evaluation import compute_shap
-    from behavysis.transforms import boris_to_behaviour
     from behavysis.utils import configure_logger
 
     configure_logger()
@@ -69,13 +68,14 @@ def _():
 @app.cell
 def _():
     # Classifier root directory.
-    clf_dir = Path("/absolute/path/to/behaviour_classifier")
+    contract_fp = Path("/absolute/path/to/behaviour_classifier/contract.yaml")
 
     # Behaviour to classify — written to contract.yaml.
     behaviour_name = "aggression"
 
     # Source project (must have completed extract_features stage).
     training_data_dir = Path("/absolute/path/to/behavysis_project")
+    feature_set = "generic"
     names_ls = [i.stem for i in (training_data_dir / "1_raw_videos").iterdir()]
 
     # Directory of BORIS .tsv exports (one per experiment).
@@ -96,45 +96,13 @@ def _():
     return (
         behaviour_name,
         boris_dir,
-        clf_dir,
+        contract_fp,
+        feature_set,
         names_ls,
         overwrite,
         training_data_dir,
         view_metrics,
     )
-
-
-@app.cell
-def _(clf_dir):
-    clf = ClassifierPaths(clf_dir)
-    return (clf,)
-
-
-@app.cell
-def _():
-    mo.md("""
-    ### Labels from BORIS
-
-    Convert BORIS `.tsv` exports into scored parquets, aligned to each
-    experiment's metadata (fps, frame range).
-
-    *(If the source project is already scored, copy
-    `7_behaviour_scored/*.parquet` into `clf.labels_dir()` instead.)*
-    """)
-
-
-@app.cell
-def _(behaviour_name, boris_dir, labels_dir, overwrite, proj):
-    labels_dir.mkdir(parents=True, exist_ok=True)
-    for _exp in proj.experiments:
-        boris_to_behaviour(
-            src_fp=boris_dir / f"{_exp.name}.csv",
-            dst_fp=labels_dir / f"{_exp.name}.parquet",
-            metadata=_exp.read_metadata(),
-            behaviour_ls=[behaviour_name],
-            overwrite=overwrite,
-        )
-    sorted(p.name for p in labels_dir.iterdir())
 
 
 @app.cell
@@ -147,16 +115,25 @@ def _():
 
 
 @app.cell
-def _(behaviour_name, clf):
+def _(behaviour_name, contract_fp, training_data_dir, feature_set, overwrite):
     write_contract(
-        clf=clf,
+        contract_fp=contract_fp,
         behaviour_name=behaviour_name,
-    ).model_dump()
+        training_project_path=training_data_dir,
+        feature_set=feature_set,
+        overwrite=overwrite,
+    ).contract().model_dump()
 
 
 @app.cell
-def _(clf, training_data_dir, overwrite):
-    train_all_models(clf=clf, training_data_dir=training_data_dir, overwrite=overwrite)
+def _(contract_fp):
+    clf = ClassifierPaths(contract_fp)
+    return (clf,)
+
+
+@app.cell
+def _(contract_fp, overwrite):
+    train_all_models(contract_fp, overwrite=overwrite)
 
 
 @app.cell
@@ -174,8 +151,8 @@ def show_chart_img(chart, width=300):
 
 
 @app.cell
-def _(clf):
-    trained_models = list_models(clf)
+def _(contract_fp):
+    trained_models = list_models(contract_fp)
     _msg = (
         f"Found **{len(trained_models)}** trained models: {', '.join(trained_models)}"
     )
@@ -184,7 +161,7 @@ def _(clf):
 
 
 @app.cell
-def _(clf, trained_models):
+def _(contract_fp, clf, trained_models):
     # Load eval for every model that has both train and test eval parquets.
     eval_all = {}
     for _model in trained_models:
@@ -192,7 +169,7 @@ def _(clf, trained_models):
         if (_eval_dir / "train_eval.parquet").exists() and (
             _eval_dir / "test_eval.parquet"
         ).exists():
-            eval_all[_model] = make_eval_result_choose_model(clf, _model)
+            eval_all[_model] = make_eval_result_choose_model(contract_fp, _model)
     return (eval_all,)
 
 
@@ -473,8 +450,8 @@ def _():
 
 
 @app.cell
-def _(clf):
-    promote_best(clf)
+def _(contract_fp):
+    promote_best(contract_fp)
 
 
 @app.cell

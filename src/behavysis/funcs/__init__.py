@@ -1,7 +1,6 @@
 """Pipeline stage functions."""
 
-from .analyse import AnalyseFunc, distance, in_roi, social_distance
-from .behaviour import analyse_behaviour, classify_single
+from .analyse import AnalyseFunc, analyse_behaviour, distance, in_roi, social_distance
 from .calculate_parameters import (
     CalculateParametersFunc,
     dur_frames_from_likelihood,
@@ -11,6 +10,7 @@ from .calculate_parameters import (
     stop_frame_from_dur,
     stop_frame_from_likelihood,
 )
+from .classify_behaviour import classify_behaviour
 from .combine_analysis import combine_analysis
 from .extract_features import ExtractFeaturesFunc, generic, hpw
 from .format_video import format_video, get_video_metadata
@@ -28,7 +28,7 @@ __all__ = [
     "ExtractFeaturesFunc",
     "PreprocessFunc",
     "analyse_behaviour",
-    "classify_single",
+    "classify_behaviour",
     "combine_analysis",
     "distance",
     "dlc_run_ma",

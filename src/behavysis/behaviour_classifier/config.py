@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from pydantic import PositiveFloat, PositiveInt
 
 from behavysis.models.base import YamlModel
@@ -16,6 +18,7 @@ class ClassifierContract(YamlModel):
     """
 
     behaviour_name: str
+    training_project_path: Path
     feature_set: str = "generic"
     eval_metric: str = "f2"
     eval_metric_higher_better: bool = True

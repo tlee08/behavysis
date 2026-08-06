@@ -345,7 +345,7 @@ class TorchAdapter(BaseAdapter):
         self.feature_mask: np.ndarray = np.ndarray([])
 
 
-# ── registry ─────────────────────────────────────────────────────────
+# -- registry ---------------------------------------------------------
 
 
 MODEL_TYPES_TO_CLASS: dict[str, type[BaseAdapter]] = {

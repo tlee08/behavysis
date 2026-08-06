@@ -1,4 +1,4 @@
-"""Analyse Behaviours."""
+"""Analysing behaviours: converts scored behaviour to analysis DataFrames."""
 
 from pathlib import Path
 
@@ -7,18 +7,19 @@ import polars as pl
 from behavysis.constants import ACTUAL, DF_IO_FORMAT, FBF, TRUE_NEG, TRUE_POS
 from behavysis.models import AnalysisResult, ExperimentConfig, ExperimentMetadata
 from behavysis.schemas import ANALYSIS_SCHEMA, write_df
-from behavysis.transforms.analysis import summary_binned_behaviour
+
+from ._summary import summary_binned_behaviour
 
 
 def analyse_behaviour(
-    behaviour_df: pl.DataFrame,
     config: ExperimentConfig,
     metadata: ExperimentMetadata,
+    *,
+    behaviour_df: pl.DataFrame,
 ) -> list[AnalysisResult]:
     """Takes a behaviour df and generates a summary and binned version of the data."""
     name = metadata.require_name()
 
-    # Set only TRUE_POS as 1 (TRUE_POS). Everything else set to 0 (TRUE_NEG)
     behaviour_df = behaviour_df.with_columns(
         pl.when(pl.col(ACTUAL) == TRUE_POS)
         .then(TRUE_POS)
@@ -36,7 +37,7 @@ def analyse_behaviour(
             variable_name="measure",
             value_name="value",
         )
-        .rename({"behaviour": "individual"})  # Just to fit analysis schema
+        .rename({"behaviour": "individual"})
         .with_columns(
             pl.col("value").fill_null(0).cast(pl.Float64),
         )

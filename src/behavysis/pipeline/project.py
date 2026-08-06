@@ -215,12 +215,6 @@ class Project:
             funcs=funcs,
         )
 
-    def analyse_behaviour(self) -> None:
-        """Analyse behaviours for all experiments."""
-        self._run(
-            Experiment.analyse_behaviour,
-        )
-
     def combine_analysis(self) -> None:
         """Combine analysis for all experiments."""
         self._run(

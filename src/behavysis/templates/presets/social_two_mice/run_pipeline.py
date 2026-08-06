@@ -10,6 +10,7 @@ with app.setup:
 
     from behavysis import Project
     from behavysis.funcs import (
+        analyse_behaviour,
         distance,
         dur_frames_from_likelihood,
         in_roi,
@@ -149,14 +150,8 @@ def _():
 
 @app.cell
 def _(proj):
-    proj.analyse_behaviour()
-    return
-
-
-@app.cell
-def _(proj):
     proj.analyse(
-        funcs=(distance, in_roi, social_distance),
+        funcs=(analyse_behaviour, distance, in_roi, social_distance),
     )
     return
 

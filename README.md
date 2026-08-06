@@ -76,13 +76,13 @@ Organize your project folder like this:
 
 ```
 my_project/
-├── 0_configs/          # Configuration files (auto-generated)
-├── 1_raw_vid/          # Your raw video files (.mp4)
-├── 2_formatted_vid/    # Formatted videos (auto-generated)
-├── 3_keypoints/        # DLC pose data (auto-generated)
-├── 4_preprocessed/     # Cleaned data (auto-generated)
-│   └── ...
-└── 9_analysis_combined/ # Final analysis (auto-generated)
+├-- 0_configs/          # Configuration files (auto-generated)
+├-- 1_raw_vid/          # Your raw video files (.mp4)
+├-- 2_formatted_vid/    # Formatted videos (auto-generated)
+├-- 3_keypoints/        # DLC pose data (auto-generated)
+├-- 4_preprocessed/     # Cleaned data (auto-generated)
+│   └-- ...
+└-- 9_analysis_combined/ # Final analysis (auto-generated)
 ```
 
 ### 2. Running Analysis
@@ -131,14 +131,14 @@ proj.analyse((
 
 ## Key Concepts for New Users
 
-| Term | Description |
-|------|-------------|
-| **Experiment** | A single video recording and its associated data |
-| **Project** | A collection of experiments processed together |
-| **Keypoints** | Tracked body parts (nose, ears, body center, etc.) |
-| **Configs** | JSON files that control all processing parameters |
-| **Features** | Derived measurements (speed, distances, angles) |
-| **Scored Behaviors** | Human-verified behavior annotations for training |
+| Term                 | Description                                        |
+| -------------------- | -------------------------------------------------- |
+| **Experiment**       | A single video recording and its associated data   |
+| **Project**          | A collection of experiments processed together     |
+| **Keypoints**        | Tracked body parts (nose, ears, body center, etc.) |
+| **Configs**          | JSON files that control all processing parameters  |
+| **Features**         | Derived measurements (speed, distances, angles)    |
+| **Scored Behaviors** | Human-verified behavior annotations for training   |
 
 ---
 
@@ -146,12 +146,12 @@ proj.analyse((
 
 The documentation is organized following the [Diátaxis](https://diataxis.fr/) framework:
 
-| Section | Purpose |
-|---------|---------|
-| **[Tutorials](https://tlee08.github.io/behavysis/tutorials/setup/)** | Step-by-step learning for newcomers |
-| **[How-to Guides](https://tlee08.github.io/behavysis/examples/analysis/)** | Task-oriented recipes |
-| **[Reference](https://tlee08.github.io/behavysis/reference/behavysis/)** | API documentation |
-| **[Installation](https://tlee08.github.io/behavysis/installation/installing/)** | Setup and configuration |
+| Section                                                                         | Purpose                             |
+| ------------------------------------------------------------------------------- | ----------------------------------- |
+| **[Tutorials](https://tlee08.github.io/behavysis/tutorials/setup/)**            | Step-by-step learning for newcomers |
+| **[How-to Guides](https://tlee08.github.io/behavysis/examples/analysis/)**      | Task-oriented recipes               |
+| **[Reference](https://tlee08.github.io/behavysis/reference/behavysis/)**        | API documentation                   |
+| **[Installation](https://tlee08.github.io/behavysis/installation/installing/)** | Setup and configuration             |
 
 ---
 
@@ -169,7 +169,7 @@ If you use behavysis in your research, please cite:
 
 And the foundational work this package builds upon:
 
-- **DeepLabCut**: Mathis et al. (2018) *Nature Neuroscience*
+- **DeepLabCut**: Mathis et al. (2018) _Nature Neuroscience_
 - **SimBA**: Nilsson et al. — [github.com/sgoldenlab/simba](https://github.com/sgoldenlab/simba)
 
 ---

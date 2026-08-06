@@ -22,40 +22,41 @@ from .config import ActiveModel, ClassifierContract, ModelRecipe
 from .data import label_bouts, load_all_data, stratified_split_by_group
 from .evaluation import EvalResult, make_eval_result
 from .registry import MODEL_REGISTRY
+from .storage import ClassifierPaths
 
 if TYPE_CHECKING:
     from collections.abc import Callable
     from pathlib import Path
 
-    from .storage import ClassifierPaths
 
-
-# ── initialising ─────────────────────────────────────────────────────
+# -- initialising -----------------------------------------------------
 
 
 def write_contract(
-    clf: ClassifierPaths,
+    contract_fp: Path,
     behaviour_name: str,
-    feature_set: str = "generic",
+    training_project_path: Path,
+    feature_set: str,
     *,
-    overwrite: bool = False,
-) -> ClassifierContract:
+    overwrite: bool,
+) -> ClassifierPaths:
     """Make contract for classifier."""
-    contract_fp = clf.contract_fp()
     if not contract_fp.exists() or overwrite:
         contract = ClassifierContract(
             behaviour_name=behaviour_name,
+            training_project_path=training_project_path,
             feature_set=feature_set,
         )
         contract.write_yaml(contract_fp)
-    return ClassifierContract.read_yaml(contract_fp)
+    return ClassifierPaths(contract_fp)
 
 
-# ── model discovery ───────────────────────────────────────────────
+# -- model discovery -----------------------------------------------
 
 
-def list_models(clf: ClassifierPaths) -> list[str]:
+def list_models(contract_fp: Path) -> list[str]:
     """List all models."""
+    clf = ClassifierPaths(contract_fp)
     if not clf.models_dir().exists():
         return []
     return [
@@ -63,29 +64,24 @@ def list_models(clf: ClassifierPaths) -> list[str]:
     ]
 
 
-# ── training ─────────────────────────────────────────────────────────
+# -- training ---------------------------------------------------------
 
 
 @clean_memory
 def train_model(
-    clf: ClassifierPaths,
+    contract_fp: Path,
     model_name: str,
-    training_data_dir: Path,
     *,
-    overwrite: bool = False,
+    overwrite: bool,
     factory: Callable[[Path], BaseAdapter] | None = None,
 ) -> Path:
     """Train.
 
     Args:
-        clf (ClassifierPaths):
-            The classifier directory layout.
+        contract_fp (Path):
+            Path to the classifier contract YAML file.
         model_name (str):
             model name (also used for `MODEL_REGISTRY` if factory not given).
-        training_data_dir (str):
-            Path to training data directory.
-            Expects directory contents to be in
-            behavysis project format.
         overwrite (bool, optional):
             Allow retraining an existing model. Defaults to False.
         factory (Callable[[Path], BaseAdapter] | None, optional):
@@ -95,11 +91,10 @@ def train_model(
         Path: `model_dir` path.
     """
     # Define paths
+    clf = ClassifierPaths(contract_fp)
     model_dir = clf.model_dir(model_name)
     eval_dir = clf.eval_dir(model_name)
     recipe_fp = clf.recipe_fp(model_name)
-    # Get contract data
-    contract = ClassifierContract.read_yaml(clf.contract_fp())
     # Check overwrite
     if eval_dir.exists() and not overwrite:
         return model_dir
@@ -109,7 +104,7 @@ def train_model(
     # Write recipe if not exists
     if not recipe_fp.exists():
         ModelRecipe(
-            behaviour_name=contract.behaviour_name,
+            behaviour_name=clf.contract().behaviour_name,
             model_name=model_name,
             model_type=MODEL_TYPES_TO_STRING[type(adapter)],
         ).write_yaml(recipe_fp)
@@ -118,9 +113,7 @@ def train_model(
 
     # Load and align data
     df = load_all_data(
-        clf.features_dir(training_data_dir, contract.feature_set),
-        clf.labels_dir(training_data_dir),
-        contract.behaviour_name,
+        clf.features_dir(), clf.labels_dir(), clf.contract().behaviour_name
     )
     df = label_bouts(df, ACTUAL)
 
@@ -132,7 +125,7 @@ def train_model(
     test_df = df.gather(test_idx).sort([EXPERIMENT, FRAME])
 
     # Train
-    logger.info("Training {}", contract.behaviour_name)
+    logger.info("Training {}", clf.contract().behaviour_name)
     adapter.fit(train_df)
 
     # Save model
@@ -151,7 +144,7 @@ def train_model(
         test_df.get_column(EXPERIMENT), test_df.get_column(ACTUAL)
     ).write_parquet(eval_dir / "test_eval.parquet")
     # Further evaluation
-    res = make_eval_result_choose_model(clf, model_name)
+    res = make_eval_result_choose_model(clf.contract_fp(), model_name)
     # Save. Only report and charts, not df
     for _name, _report in res["report"].items():
         (eval_dir / f"{_name}.yaml").write_text(yaml.dump(_report))
@@ -162,35 +155,32 @@ def train_model(
     return model_dir
 
 
-def train_all_models(
-    clf: ClassifierPaths, training_data_dir: Path, *, overwrite: bool = False
-) -> list[Path]:
+def train_all_models(contract_fp: Path, *, overwrite: bool) -> list[Path]:
     """Train the routine model set."""
     return [
         pass_exception(trace(train_model))(
-            clf=clf,
+            contract_fp=contract_fp,
             model_name=model_name,
-            training_data_dir=training_data_dir,
             overwrite=overwrite,
         )
         for model_name in MODEL_REGISTRY
     ]
 
 
-# ── set best model ───────────────────────────────────────────────────
+# -- set best model ---------------------------------------------------
 
 
-def promote_best(clf: ClassifierPaths) -> ActiveModel:
+def promote_best(contract_fp: Path) -> ActiveModel:
     """Promote the model with the best evaluation metric."""
-    contract = ClassifierContract.read_yaml(clf.contract_fp())
+    clf = ClassifierPaths(contract_fp)
     # Get eval_metric values for each model
     scores = []
-    for model_name in list_models(clf):
+    for model_name in list_models(contract_fp):
         report_fp = clf.eval_dir(model_name) / f"{BOUT}_report.yaml"
         if not report_fp.exists():
             continue
         report = yaml.safe_load(report_fp.read_text())
-        score = report.get("test", {}).get(contract.eval_metric)
+        score = report.get("test", {}).get(clf.contract().eval_metric)
         if score is not None:
             scores.append((model_name, score))
     # Get best model, given the list of eval_metric scores
@@ -199,21 +189,22 @@ def promote_best(clf: ClassifierPaths) -> ActiveModel:
         raise FileNotFoundError(msg)
     model_name, score = (
         max(scores, key=lambda x: x[1])
-        if contract.eval_metric_higher_better
+        if clf.contract().eval_metric_higher_better
         else min(scores, key=lambda x: x[1])
     )
     # Update active.yaml
     active = ActiveModel(model_name=model_name)
     active.write_yaml(clf.active_fp())
-    logger.info(f"Promoted {model_name} ({contract.eval_metric}={score})")
+    logger.info(f"Promoted {model_name} ({clf.contract().eval_metric}={score})")
     return active
 
 
-# ── retrieve model ────────────────────────────────────────────────────────
+# -- retrieve model --------------------------------------------------------
 
 
-def load_adapter(clf: ClassifierPaths, model_name: str) -> BaseAdapter:
+def load_adapter(contract_fp: Path, model_name: str) -> BaseAdapter:
     """Load adapter, given classifier layout and model name."""
+    clf = ClassifierPaths(contract_fp)
     recipe_fp = clf.recipe_fp(model_name)
     # Check if model exists
     if not recipe_fp.exists():
@@ -225,45 +216,39 @@ def load_adapter(clf: ClassifierPaths, model_name: str) -> BaseAdapter:
     return MODEL_TYPES_TO_CLASS[recipe.model_type].load(recipe_fp)
 
 
-# ── inference ────────────────────────────────────────────────────────
+# -- inference --------------------------------------------------------
 
 
 @clean_memory
 def predict_choose_model(
-    clf: ClassifierPaths,
-    model_name: str,
-    x_df: pl.DataFrame,
+    contract_fp: Path, model_name: str, x_df: pl.DataFrame
 ) -> pl.DataFrame:
     """Run inference with a specific model on a wide features DataFrame.
 
     ``x_df`` has a ``frame`` column plus feature columns.
     Returns a long-form DataFrame with ``(frame, behaviour, prob, pred)``.
     """
-    adapter = load_adapter(clf, model_name)
+    adapter = load_adapter(contract_fp, model_name)
     return adapter.predict(x_df)
 
 
-def predict(
-    clf: ClassifierPaths,
-    x_df: pl.DataFrame,
-) -> pl.DataFrame:
+def predict(contract_fp: Path, x_df: pl.DataFrame) -> pl.DataFrame:
     """Run inference with the active model on a wide features DataFrame.
 
     ``x_df`` has a ``frame`` column plus feature columns.
     Returns a long-form DataFrame with ``(frame, behaviour, prob, pred)``.
     """
+    clf = ClassifierPaths(contract_fp)
     active = ActiveModel.read_yaml(clf.active_fp())
-    return predict_choose_model(clf, active.model_name, x_df)
+    return predict_choose_model(contract_fp, active.model_name, x_df)
 
 
-# ── other helpers ─────────────────────────────────────────────────
+# -- other helpers -------------------------------------------------
 
 
-def make_eval_result_choose_model(
-    clf: ClassifierPaths,
-    model_name: str,
-) -> EvalResult:
+def make_eval_result_choose_model(contract_fp: Path, model_name: str) -> EvalResult:
     """Run make_eval_report by giving a model's filepath."""
+    clf = ClassifierPaths(contract_fp)
     eval_dir = clf.eval_dir(model_name)
     return make_eval_result(
         {

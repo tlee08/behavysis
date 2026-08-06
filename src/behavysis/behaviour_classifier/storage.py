@@ -7,9 +7,6 @@ folders.  Each training run produces a flat model directory::
     {clf_dir}/
         contract.yaml                  # shared behaviour + feature contract
         active.yaml                    # model to use
-        training_data/
-            5_features_extracted/
-            7_behaviour_scored/
         models/
             rf/
                 recipe.yaml            # human-authored recipe
@@ -19,6 +16,9 @@ folders.  Each training run produces a flat model directory::
                 ...
             xgb/
                 ...
+    {path/to/my/training_data}/
+        5_features_extracted/
+        7_behaviour_scored/
 """
 
 from __future__ import annotations
@@ -27,7 +27,7 @@ from typing import TYPE_CHECKING
 
 from behavysis.constants import BEHAVIOUR_SCORED_DIR, FEATURES_EXTRACTED_DIR
 
-from .config import ActiveModel
+from .config import ActiveModel, ClassifierContract
 
 MODELS_DIR = "models"
 TRAINING_DATA = "training_data"
@@ -39,42 +39,55 @@ if TYPE_CHECKING:
 class ClassifierPaths:
     """Path helper for a classifier's on-disk layout."""
 
-    def __init__(self, root_dir: Path) -> None:
-        """__init__."""
-        if not root_dir.exists():
-            msg = f"Classifier root directory does not exist:{root_dir}"
-            raise FileNotFoundError(msg)
-        self._root_dir = root_dir.resolve()
+    _contract_fp: Path
 
-    # ── root ────────────────────────────────────────────────────---------
+    def __init__(self, contract_fp: Path) -> None:
+        """__init__."""
+        self._contract_fp = contract_fp
+        self._contract = ClassifierContract.read_yaml(contract_fp)
+
+    # -- contract contents ------------------------------------------------
+
+    def contract(self) -> ClassifierContract:
+        """Contract."""
+        return self._contract
+
+    # -- root -------------------------------------------------------------
 
     def root_dir(self) -> Path:
         """root_dir."""
-        return self._root_dir
+        return self._contract_fp.parent
 
-    # ── root level ─────────────────────────────────────────────────------
+    # -- root level -------------------------------------------------------
 
     def contract_fp(self) -> Path:
         """Shared behaviour + feature contract."""
-        return self.root_dir() / "contract.yaml"
+        return self._contract_fp
 
     def active_fp(self) -> Path:
         """Stores which model to use."""
         return self.root_dir() / "active.yaml"
 
-    # ── training data ────────────────────────────────────────────────────
+    # -- training data ----------------------------------------------------
 
-    @classmethod
-    def features_dir(cls, training_data_dir: Path, feature_set: str) -> Path:
+    def features_dir(self) -> Path:
         """features_dir."""
-        return training_data_dir / FEATURES_EXTRACTED_DIR / feature_set
+        return (
+            self.root_dir()
+            / self.contract().training_project_path
+            / FEATURES_EXTRACTED_DIR
+            / self.contract().feature_set
+        )
 
-    @classmethod
-    def labels_dir(cls, training_data_dir: Path) -> Path:
+    def labels_dir(self) -> Path:
         """labels_dir."""
-        return training_data_dir / BEHAVIOUR_SCORED_DIR
+        return (
+            self.root_dir()
+            / self.contract().training_project_path
+            / BEHAVIOUR_SCORED_DIR
+        )
 
-    # ── model level ─────────────────────────────────────────────────-----
+    # -- model level ------------------------------------------------------
 
     def models_dir(self) -> Path:
         """models_dir."""
@@ -92,7 +105,7 @@ class ClassifierPaths:
         """eval_dir."""
         return self.model_dir(model_name) / "evaluation"
 
-    # ── active model ─────────────────────────────────────────────────----
+    # -- active model -----------------------------------------------------
 
     def active_model_dir(self) -> Path:
         """Directory for a training run: models/{name}."""

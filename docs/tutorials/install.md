@@ -36,18 +36,18 @@ This creates:
 
 ```
 .
-├── default_config.yaml     ← edit this
-├── run_pipeline.py         ← open this
-├── 0_config/
-├── 1_raw_videos/           ← put .mp4 files here
-├── 2_formatted_videos/
-├── 3_keypoints/
-├── 4_preprocessed/
-├── 5_features_extracted/
-├── 6_behaviour_predicted/
-├── 7_behaviour_scored/
-├── 8_analysis/
-└── 9_analysis_combined/
+├-- default_config.yaml     ← edit this
+├-- run_pipeline.py         ← open this
+├-- 0_config/
+├-- 1_raw_videos/           ← put .mp4 files here
+├-- 2_formatted_videos/
+├-- 3_keypoints/
+├-- 4_preprocessed/
+├-- 5_features_extracted/
+├-- 6_behaviour_predicted/
+├-- 7_behaviour_scored/
+├-- 8_analysis/
+└-- 9_analysis_combined/
 ```
 
 ## Edit the config
