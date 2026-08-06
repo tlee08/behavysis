@@ -279,9 +279,7 @@ class TabpfnAdapter(BaseAdapter):
         df = df.sort([EXPERIMENT, FRAME])
         df = label_bouts(df, ACTUAL)
         # 3. Init classifier
-        self.model = TabPFNClassifier(
-            **self.kwargs,
-        )
+        self.model = TabPFNClassifier(**self.kwargs)
         # 4. Fit classifier on sub_df
         self.model.fit(df_get_features(df), df_get_labels(df))
         # 5. Set pcutoff as hardcoded 0.5 (tabpfn sorts itself out)
