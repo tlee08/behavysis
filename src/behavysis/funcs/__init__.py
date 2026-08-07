@@ -20,7 +20,7 @@ from .preprocess import (
     interpolate_stationary,
     start_stop_trim,
 )
-from .run_dlc import dlc_run_ma
+from .run_dlc import run_dlc_ma
 
 __all__ = [
     "AnalyseFunc",
@@ -31,7 +31,6 @@ __all__ = [
     "classify_behaviour",
     "combine_analysis",
     "distance",
-    "dlc_run_ma",
     "dur_frames_from_likelihood",
     "format_video",
     "generic",
@@ -41,6 +40,7 @@ __all__ = [
     "interpolate",
     "interpolate_stationary",
     "px_per_mm",
+    "run_dlc_ma",
     "social_distance",
     "start_frame_from_csv",
     "start_frame_from_likelihood",

@@ -67,6 +67,7 @@ def list_models(contract_fp: Path) -> list[str]:
 # -- training ---------------------------------------------------------
 
 
+@trace
 @clean_memory
 def train_model(
     contract_fp: Path,

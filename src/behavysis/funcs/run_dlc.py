@@ -18,7 +18,7 @@ from behavysis.utils import save_template
 DLC_HDF_KEY = "data"
 
 
-def dlc_run_ma(
+def run_dlc_ma(
     vid_fp: Path,
     keypoints_fp: Path,
     config: ExperimentConfig,
