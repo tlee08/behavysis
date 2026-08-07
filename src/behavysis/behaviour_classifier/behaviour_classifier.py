@@ -66,6 +66,7 @@ def list_models(clf: ClassifierPaths) -> list[str]:
 # ── training ─────────────────────────────────────────────────────────
 
 
+@trace
 @clean_memory
 def train_model(
     clf: ClassifierPaths,
@@ -167,7 +168,7 @@ def train_all_models(
 ) -> list[Path]:
     """Train the routine model set."""
     return [
-        pass_exception(trace(train_model))(
+        pass_exception(train_model)(
             clf=clf,
             model_name=model_name,
             training_data_dir=training_data_dir,

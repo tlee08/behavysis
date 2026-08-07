@@ -16,7 +16,6 @@ from behavysis.constants import (
     BINNED,
     DF_IO_FORMAT,
     EXPERIMENT,
-    FORMATTED_VIDEO_DIR,
     INDIVIDUAL,
     KEYPOINTS_DIR,
     MEASURE,
@@ -29,7 +28,6 @@ from behavysis.funcs import (
     ExtractFeaturesFunc,
     PreprocessFunc,
 )
-from behavysis.funcs.run_dlc import dlc_run_ma
 from behavysis.pipeline import Experiment
 from behavysis.schemas import read_df, write_df
 from behavysis.utils import cluster_process, get_gpu_device_ids, pass_exception
@@ -159,11 +157,10 @@ class Project:
         # Running DLC
         with cluster_process(LocalCluster(n_workers=nprocs, threads_per_worker=1)):
             delayed_tasks = [
-                dask.delayed(dlc_run_ma)(
-                    vid_fp=exp.get_fp(FORMATTED_VIDEO_DIR),
-                    keypoints_fp=exp.get_fp(KEYPOINTS_DIR),
-                    config=exp.read_config(),
+                dask.delayed(pass_exception(Experiment.run_dlc))(
+                    exp,
                     gputouse=gputouse_ls[i % nprocs],
+                    overwrite=overwrite,
                 )
                 for i, exp in enumerate(exp_ls)
             ]
