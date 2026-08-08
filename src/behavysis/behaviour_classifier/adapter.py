@@ -134,32 +134,31 @@ class SklearnAdapter(BaseAdapter):
     def fit(self, df: pl.DataFrame) -> pd.DataFrame:
         """Fit."""
         recipe = self._read_recipe()
-        label_col = ACTUAL
         df = df.sort([EXPERIMENT, FRAME])
-        df = label_bouts(df, label_col)
+        df = label_bouts(df, label_col=ACTUAL)
         self.search.refit = False
         self.search.fit(
-            df_get_features(df, label_col=label_col),
-            df_get_labels(df, label_col=label_col),
+            df_get_features(df),
+            df_get_labels(df),
             groups=df.get_column(BOUT_ID).to_numpy(),
         )
         train_idx, val_idx = stratified_split_by_group(
-            df, recipe.val_split, BOUT_ID, recipe.seed, label_col=label_col
+            df, recipe.val_split, BOUT_ID, recipe.seed
         )
         train_df = df.gather(train_idx)
         self.model = clone(self.search.estimator).set_params(**self.search.best_params_)
         self.model.fit(
-            df_get_features(train_df, label_col=label_col),
-            df_get_labels(train_df, label_col=label_col),
+            df_get_features(train_df),
+            df_get_labels(train_df),
         )
         y_df = self.predict(df).with_columns(
-            df.get_column(label_col),
+            df.get_column(ACTUAL),
             df.get_column(BOUT_ID),
         )
         y_val_df = y_df.gather(val_idx)
-        y_val_bouts_df = agg_eval_df_by_bouts(y_val_df, label_col=label_col)
+        y_val_bouts_df = agg_eval_df_by_bouts(y_val_df)
         _, recall, thresholds = precision_recall_curve(
-            y_val_bouts_df.get_column(label_col),
+            y_val_bouts_df.get_column(ACTUAL),
             y_val_bouts_df.get_column(PROB),
             drop_intermediate=True,
         )
@@ -270,13 +269,12 @@ class TabpfnAdapter(BaseAdapter):
     def fit(self, df: pl.DataFrame) -> pd.DataFrame:
         """Fit."""
         recipe = self._read_recipe()
-        label_col = ACTUAL
         df = df.sort([EXPERIMENT, FRAME])
-        df = label_bouts(df, label_col)
+        df = label_bouts(df, ACTUAL)
         self.model = TabPFNClassifier(**self.kwargs)
         self.model.fit(
-            df_get_features(df, label_col=label_col),
-            df_get_labels(df, label_col=label_col),
+            df_get_features(df),
+            df_get_labels(df),
         )
         # 5. Set pcutoff as hardcoded 0.5 (tabpfn sorts itself out)
         recipe.pcutoff = 0.5
@@ -292,9 +290,7 @@ class TabpfnAdapter(BaseAdapter):
             raise ValueError(msg)
         # Predict
         frame = df.get_column(FRAME)
-        prob = pl.Series(
-            self.model.predict_proba(df_get_features(df, label_col=ACTUAL))[:, 1]
-        )
+        prob = pl.Series(self.model.predict_proba(df_get_features(df))[:, 1])
         # Get experiment column if it exists
         experiment = None
         if EXPERIMENT in df.columns:

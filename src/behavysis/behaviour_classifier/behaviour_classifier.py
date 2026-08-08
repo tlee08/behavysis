@@ -113,15 +113,14 @@ def train_model(
     recipe = ModelRecipe.read_yaml(recipe_fp)
 
     # Load and align data
-    label_col = ACTUAL
     df = load_all_data(
         clf.features_dir(), clf.labels_dir(), clf.contract().behaviour_name
     )
-    df = label_bouts(df, label_col)
+    df = label_bouts(df, ACTUAL)
 
     # Split into train / test (experiment-level grouping)
     train_idx, test_idx = stratified_split_by_group(
-        df, recipe.test_split, EXPERIMENT, recipe.seed, label_col=label_col
+        df, recipe.test_split, EXPERIMENT, recipe.seed
     )
     train_df = df.gather(train_idx).sort([EXPERIMENT, FRAME])
     test_df = df.gather(test_idx).sort([EXPERIMENT, FRAME])
@@ -140,10 +139,10 @@ def train_model(
     eval_dir.mkdir(parents=True, exist_ok=True)
     # Predictions
     adapter.predict(train_df).with_columns(
-        train_df.get_column(EXPERIMENT), train_df.get_column(label_col)
+        train_df.get_column(EXPERIMENT), train_df.get_column(ACTUAL)
     ).write_parquet(eval_dir / "train_eval.parquet")
     adapter.predict(test_df).with_columns(
-        test_df.get_column(EXPERIMENT), test_df.get_column(label_col)
+        test_df.get_column(EXPERIMENT), test_df.get_column(ACTUAL)
     ).write_parquet(eval_dir / "test_eval.parquet")
     # Further evaluation
     res = make_eval_result_choose_model(clf.contract_fp(), model_name)

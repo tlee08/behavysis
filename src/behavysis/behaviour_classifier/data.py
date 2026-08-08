@@ -13,12 +13,11 @@ from behavysis.constants import (
     BEHAVIOUR,
     BOUT_ID,
     EXPERIMENT,
-    FALSE_POS,
     FRAME,
     PRED,
     PROB,
     TRUE_NEG,
-    UNSURE,
+    TRUE_POS,
     Array1D,
 )
 from behavysis.transforms import label_bouts
@@ -53,8 +52,9 @@ def load_all_data(
         x_df = pl.read_parquet(x_fps[name])
         y_df = pl.read_parquet(y_fps[name]).select(
             FRAME,
-            pl.col(behaviour_name)
-            .replace([FALSE_POS, UNSURE], [TRUE_NEG, TRUE_NEG])
+            pl.when(pl.col(behaviour_name) == TRUE_POS)
+            .then(TRUE_POS)
+            .otherwise(TRUE_NEG)
             .alias(ACTUAL),
         )
         aligned = x_df.join(y_df, on=FRAME, how="inner")
@@ -68,16 +68,16 @@ def load_all_data(
 # ── X and y extracting ───────────────────────────────────────────────
 
 
-def df_get_features(df: pl.DataFrame, *, label_col: str) -> pl.DataFrame:
+def df_get_features(df: pl.DataFrame, *, label_col: str = ACTUAL) -> pl.DataFrame:
     """Given a df, return only features (drops metadata and label columns)."""
     return df.drop(
         [EXPERIMENT, FRAME, BEHAVIOUR, BOUT_ID, label_col], strict=False
     ).cast(pl.Float32)
 
 
-def df_get_labels(df: pl.DataFrame, *, label_col: str) -> pl.Series:
+def df_get_labels(df: pl.DataFrame, *, label_col: str = ACTUAL) -> pl.Series:
     """Given a df, return only the labels."""
-    return df[label_col]
+    return df.get_column(label_col)
 
 
 # ── splitting ────────────────────────────────────────────────────────
@@ -89,12 +89,12 @@ def stratified_split_by_group(
     group_name: str,
     random_state: int = 42,
     *,
-    label_col: str,
+    label_col: str = ACTUAL,
 ) -> tuple[Array1D, Array1D]:
     """Split into train/test, grouping contiguous label runs together."""
     idx = np.arange(len(df))
-    y = df[label_col].to_numpy()
-    groups = df[group_name].to_numpy()
+    y = df.get_column(label_col).to_numpy()
+    groups = df.get_column(group_name).to_numpy()
 
     n_splits = max(2, int(1 / test_size))
     sgkf = StratifiedGroupKFold(
@@ -107,7 +107,7 @@ def stratified_split_by_group(
 # ── bout aggregation ─────────────────────────────────────────────────
 
 
-def agg_eval_df_by_bouts(df: pl.DataFrame, *, label_col: str) -> pl.DataFrame:
+def agg_eval_df_by_bouts(df: pl.DataFrame, *, label_col: str = ACTUAL) -> pl.DataFrame:
     """Aggregate per-frame eval data to per-bout rows."""
     return (
         label_bouts(df, label_col)
@@ -128,10 +128,13 @@ def agg_eval_df_by_bouts(df: pl.DataFrame, *, label_col: str) -> pl.DataFrame:
 
 
 def df_resample(
-    df: pl.DataFrame, resampler: BaseUnderSampler, *, label_col: str
+    df: pl.DataFrame,
+    resampler: BaseUnderSampler,
+    *,
+    label_col: str = ACTUAL,
 ) -> pl.DataFrame:
     """Resample."""
     idx = np.arange(len(df)).reshape(-1, 1)
     sub_idx, _ = resampler.fit_resample(idx, df_get_labels(df, label_col=label_col))
     sub_idx = sub_idx.reshape(-1)
-    return df[sub_idx]
+    return df.gather(sub_idx)

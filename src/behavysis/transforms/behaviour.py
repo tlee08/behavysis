@@ -72,13 +72,9 @@ def smooth_prob(
     window_size = 2 * smoothing_frames + 1
     expr = pl.col(PROB)
     if agg_func == "mean":
-        expr = expr.rolling_mean(
-            window_size=window_size, center=True, min_samples=1
-        )
+        expr = expr.rolling_mean(window_size=window_size, center=True, min_samples=1)
     elif agg_func == "median":
-        expr = expr.rolling_median(
-            window_size=window_size, center=True, min_samples=1
-        )
+        expr = expr.rolling_median(window_size=window_size, center=True, min_samples=1)
     else:
         msg = f"Unsupported aggregation: {agg_func}"
         raise ValueError(msg)
@@ -185,7 +181,7 @@ def frames2bouts(
     bouts_ls: list[Bout] = []
 
     for behaviour, ref in classify_behaviour.items():
-        values = df[behaviour].sort(FRAME).to_numpy()
+        values = df.sort(FRAME).get_column(behaviour).to_numpy()
         bout_mask = np.isin(values, [TRUE_POS, UNSURE])
 
         if not bout_mask.any():
@@ -199,7 +195,7 @@ def frames2bouts(
             dur_val = row[DUR]
 
             bout_slice = df.filter(pl.col(FRAME).is_between(bout_start, bout_stop))
-            actual_vals = bout_slice[behaviour]
+            actual_vals = bout_slice.get_column(behaviour)
             actual_mode = int(
                 actual_vals.value_counts().sort(COUNT, descending=True).row(0)[0]
             )
@@ -207,7 +203,7 @@ def frames2bouts(
             sub_behaviour = {}
             for sub in ref.sub_behaviour:
                 if sub in df.columns:
-                    vals = bout_slice[sub].drop_nulls()
+                    vals = bout_slice.get_column(sub).drop_nulls()
                     if len(vals) > 0:
                         sub_behaviour[sub] = int(
                             vals.value_counts().sort(COUNT, descending=True).row(0)[0]
@@ -242,8 +238,10 @@ def bouts2frames(bouts: Bouts) -> pl.DataFrame:
     classify_behaviour = _bouts_struct_to_classify(bouts.bout_struct)
     schema = make_scored_schema(classify_behaviour)
 
-    rows = [{FRAME: int(f)} | {col: TRUE_NEG for col in schema if col != FRAME}
-            for f in frames]
+    rows = [
+        {FRAME: int(f)} | {col: TRUE_NEG for col in schema if col != FRAME}
+        for f in frames
+    ]
     df = pl.DataFrame(rows, schema=schema)
 
     for bout in bouts.bouts:
@@ -288,71 +286,3 @@ def _bouts_struct_to_classify(
         bs.behaviour: ClassifierRef(sub_behaviour=bs.sub_behaviour)
         for bs in bouts_struct
     }
-
-
-def import_boris_csv(
-    fp: str,
-    behaviour_ls: list[str],
-    start_frame: int,
-    stop_frame: int,
-    fps: int,
-    *,
-    point_window_sec: float = 0.0,
-    pos_value: int = TRUE_POS,
-) -> pl.DataFrame:
-    """Import BORIS CSV to wide-format scored DataFrame.
-
-    Returns a DataFrame with columns: ``FRAME`` + one column per behaviour
-    in ``behaviour_ls``.
-    """
-    from loguru import logger
-
-    df_boris = (
-        pl.read_csv(fp)
-        .rename({"Behavior": BEHAVIOUR})
-        .with_columns(
-            (pl.col("Time") * fps).round().cast(pl.Int64).alias(FRAME),
-            pl.col("Behavior type").str.strip_chars().str.to_uppercase().alias("type"),
-        )
-    )
-
-    boris_behaviours = df_boris[BEHAVIOUR].unique().to_list()
-    missing = [b for b in behaviour_ls if b not in boris_behaviours]
-    if missing:
-        logger.warning(
-            "Behaviours not in BORIS file: {}\nBORIS: {}",
-            missing,
-            boris_behaviours,
-        )
-
-    window = int(point_window_sec * fps)
-    frames = np.arange(start_frame, stop_frame, dtype=np.int64)
-
-    result = pl.DataFrame({FRAME: frames.astype(np.int64)})
-
-    for behaviour in behaviour_ls:
-        vals = pl.Series(behaviour, [TRUE_NEG] * len(frames), dtype=pl.Int64)
-        evts_df = df_boris.filter(pl.col(BEHAVIOUR) == behaviour).sort(FRAME)
-
-        for row in evts_df.iter_rows(named=True):
-            f = int(row[FRAME])
-            typ = row["type"]
-            if typ in ("START", "STOP"):
-                val = pos_value if typ == "START" else TRUE_NEG
-                vals = pl.Series(
-                    [val if i >= f - start_frame else vals[i]
-                     for i in range(len(vals))],
-                    dtype=pl.Int64,
-                )
-            elif typ == "POINT":
-                lo = max(f - window, start_frame)
-                hi = min(f + window, stop_frame - 1)
-                vals = pl.Series(
-                    [pos_value if start_frame + i >= lo and start_frame + i <= hi
-                     else vals[i] for i in range(len(vals))],
-                    dtype=pl.Int64,
-                )
-
-        result = result.with_columns(vals.alias(behaviour))
-
-    return result
