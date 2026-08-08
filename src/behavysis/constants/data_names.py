@@ -30,7 +30,6 @@ BEHAVIOUR = "behaviour"
 
 PROB = "prob"
 PRED = "pred"
-ACTUAL = "actual"
 
 TRUE_POS = 1
 TRUE_NEG = 0

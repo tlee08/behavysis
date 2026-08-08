@@ -6,8 +6,9 @@ from pathlib import Path
 import cv2
 import numpy as np
 import polars as pl
+from loguru import logger
 
-from behavysis.behaviour_classifier import ClassifierPaths
+from behavysis.behaviour_classifier import ClassifierContract, ClassifierPaths
 from behavysis.constants import (
     ANALYSIS_COMBINED_DIR,
     ANALYSIS_DIR,
@@ -29,13 +30,15 @@ from behavysis.funcs import (
     CalculateParametersFunc,
     ExtractFeaturesFunc,
     PreprocessFunc,
-    classify_behaviour,
     combine_analysis,
     format_video,
     get_video_metadata,
     run_dlc_ma,
 )
-from behavysis.models import BoutStruct, ExperimentConfig, ExperimentMetadata
+from behavysis.funcs import (
+    classify_behaviour as classify_behaviour_func,
+)
+from behavysis.models import ExperimentConfig, ExperimentMetadata
 from behavysis.schemas import (
     BEHAVIOUR_PREDICTED_SCHEMA,
     KEYPOINTS_SCHEMA,
@@ -231,13 +234,13 @@ class Experiment:
         if not overwrite and has_output_files(self.get_fp(BEHAVIOUR_PREDICTED_DIR)):
             return
         behaviour_df_ls = []
-        for model_config in self.read_config().require_classify_behaviour():
-            contract_fp = model_config.contract_fp
+        for ref in self.read_config().require_classify_behaviour().values():
+            contract_fp = ref.contract_fp
             clf = ClassifierPaths(contract_fp)
             if missing_input_files(self.get_features_fp(clf.contract().feature_set)):
                 continue
             features_df = read_df(self.get_features_fp(clf.contract().feature_set))
-            behaviour_df_ls.append(classify_behaviour(contract_fp, features_df))
+            behaviour_df_ls.append(classify_behaviour_func(contract_fp, features_df))
         write_df(
             pl.concat(behaviour_df_ls)
             if behaviour_df_ls
@@ -256,17 +259,18 @@ class Experiment:
         behaviour_predicted_df = read_df(
             self.get_fp(BEHAVIOUR_PREDICTED_DIR), BEHAVIOUR_PREDICTED_SCHEMA
         )
-        config = self.read_config()
-        bouts_struct = [
-            BoutStruct(
-                behaviour=ClassifierPaths(model_config.contract_fp)
-                .contract()
-                .behaviour_name,
-                sub_behaviour=model_config.sub_behaviour,
+        classify_behaviour = self.read_config().require_classify_behaviour()
+        for name, ref in classify_behaviour.items():
+            contract_name = (
+                ClassifierContract.read_yaml(ref.contract_fp).behaviour_name
             )
-            for model_config in config.require_classify_behaviour()
-        ]
-        behaviour_scored_df = predicted_to_scored(behaviour_predicted_df, bouts_struct)
+            if name != contract_name:
+                logger.warning(
+                    f"Behaviour key '{name}' overrides contract name '{contract_name}'"
+                )
+        behaviour_scored_df = predicted_to_scored(
+            behaviour_predicted_df, classify_behaviour
+        )
         self.get_fp(BEHAVIOUR_SCORED_DIR).parent.mkdir(parents=True, exist_ok=True)
         behaviour_scored_df.write_parquet(self.get_fp(BEHAVIOUR_SCORED_DIR))
 
@@ -281,9 +285,13 @@ class Experiment:
                 self.get_fp(PREPROCESSED_DIR), KEYPOINTS_SCHEMA
             )
         if self.get_fp(FORMATTED_VIDEO_DIR).is_file():
-            kwargs["vid_frame"] = _get_frame(self.get_fp(FORMATTED_VIDEO_DIR), metadata)
+            kwargs["vid_frame"] = _get_frame(
+                self.get_fp(FORMATTED_VIDEO_DIR), metadata
+            )
         if self.get_fp(BEHAVIOUR_SCORED_DIR).is_file():
             kwargs["behaviour_df"] = read_df(self.get_fp(BEHAVIOUR_SCORED_DIR))
+            if config.classify_behaviour is not None:
+                kwargs["classify_behaviour"] = config.classify_behaviour
         for func in funcs:
             dst_dir = self.root_dir / ANALYSIS_DIR / func.__name__
             for result in func(config, metadata, **kwargs):

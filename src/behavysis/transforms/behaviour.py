@@ -1,18 +1,17 @@
 """Behaviour utility functions operating on Polars DataFrames.
 
-Predicted: (frame, behaviour, prob, pred)
-Scored: (frame, behaviour, pred, actual, [sub_behaviour...])
+Predicted (long):     (frame, behaviour, prob, pred)
+Scored (fully wide):   (frame, <behaviour1>, <sub1a>, <behaviour2>, ...)
 """
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 import numpy as np
 import polars as pl
 
 from behavysis.constants import (
-    ACTUAL,
     BEHAVIOUR,
     BOUT_ID,
     DUR,
@@ -31,14 +30,16 @@ from behavysis.models import (
     Bouts,
     BoutStruct,
 )
-from behavysis.schemas import BEHAVIOUR_SCORED_BASE
+from behavysis.schemas import make_scored_schema
+
+if TYPE_CHECKING:
+    from behavysis.models import ClassifierRef
 
 COUNT = "count"
 
 
 def get_group_cols(df: pl.DataFrame) -> list[str]:
     """Get the columns to group behaviours by."""
-    # TODO: change when we add sub_behaviour column (to group on sub-behav too)
     group_cols = []
     if EXPERIMENT in df.columns:
         group_cols.append(EXPERIMENT)
@@ -48,9 +49,7 @@ def get_group_cols(df: pl.DataFrame) -> list[str]:
 
 def label_bouts(df: pl.DataFrame, label_col: str) -> pl.DataFrame:
     """Label contiguous behavioural bouts with globally unique IDs."""
-    # If multiple experiments in df, then group by them
     group_cols = get_group_cols(df)
-    # Return
     return df.sort([*group_cols, FRAME]).with_columns(
         pl.struct(*group_cols, label_col).rle_id().alias(BOUT_ID)
     )
@@ -68,32 +67,23 @@ def smooth_prob(
     (or contiguous frames within each "experiment").
     Smoothing frames is either side of current.
     """
-    # If no smoothing
     if smoothing_frames <= 0:
         return df
-    # Get window size
     window_size = 2 * smoothing_frames + 1
-    # Make smoothing agg expression
     expr = pl.col(PROB)
     if agg_func == "mean":
         expr = expr.rolling_mean(
-            window_size=window_size,
-            center=True,
-            min_samples=1,
+            window_size=window_size, center=True, min_samples=1
         )
     elif agg_func == "median":
         expr = expr.rolling_median(
-            window_size=window_size,
-            center=True,
-            min_samples=1,
+            window_size=window_size, center=True, min_samples=1
         )
     else:
         msg = f"Unsupported aggregation: {agg_func}"
         raise ValueError(msg)
-    # If multiple experiments in df, then group by them
     group_cols = get_group_cols(df)
     expr = expr.over(group_cols)
-    # Sort, compute and return
     return df.sort([*group_cols, FRAME]).with_columns(expr)
 
 
@@ -104,39 +94,23 @@ def smooth_pred_bout(
     min_bout: int = 3,
 ) -> pl.DataFrame:
     """Close short gaps, then remove short positive bouts."""
-    # Label and merge short TRUE_NEG bouts
     df = label_bouts(df, PRED).with_columns(
         pl.when((pl.col(PRED) == TRUE_NEG) & (pl.len().over(BOUT_ID) <= min_gap))
         .then(TRUE_POS)
         .otherwise(pl.col(PRED))
         .alias(PRED)
     )
-    # Label and drop short TRUE_POS bouts
     df = label_bouts(df, PRED).with_columns(
         pl.when((pl.col(PRED) == TRUE_POS) & (pl.len().over(BOUT_ID) <= min_bout))
         .then(TRUE_NEG)
         .otherwise(pl.col(PRED))
         .alias(PRED)
     )
-    # Drop label and return
     return df.drop(BOUT_ID)
 
 
 def vect2bouts(vect: pl.Series, offset: int = 0) -> pl.DataFrame:
-    """Convert boolean vector to bouts DataFrame with start, stop, dur columns.
-
-    Parameters
-    ----------
-    vect : pl.Series
-        Boolean series where True indicates a bout frame.
-    offset : int
-        Frame offset to add to start/stop values.
-
-    Returns:
-    -------
-    pl.DataFrame
-        DataFrame with ``start``, ``stop``, ``dur`` columns.
-    """
+    """Convert boolean vector to bouts DataFrame with start, stop, dur columns."""
     if vect.is_empty():
         return pl.DataFrame(schema={START: pl.Int64, STOP: pl.Int64, DUR: pl.Int64})
     z = np.concatenate(([TRUE_NEG], vect.to_numpy(), [TRUE_NEG]))
@@ -151,130 +125,92 @@ def vect2bouts(vect: pl.Series, offset: int = 0) -> pl.DataFrame:
     )
 
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# Predicted → scored (long → fully wide)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
 def predicted_to_scored(
     df: pl.DataFrame,
-    bouts_struct: list[BoutStruct],
+    classify_behaviour: dict[str, ClassifierRef],
 ) -> pl.DataFrame:
-    """Convert predicted behaviour DataFrame to scored behaviour DataFrame.
+    """Convert predicted (long) to scored (fully wide) DataFrame.
 
-    Parameters
-    ----------
-    df : pl.DataFrame
-        Predicted behaviour DataFrame (BEHAVIOUR_PREDICTED_SCHEMA).
-    bouts_struct : list[BoutStruct]
-        Bout structure definitions from config.
+    For each behaviour in ``classify_behaviour``, pivot the ``PRED``
+    column into a behaviour-named column:
+    - ``PRED == TRUE_POS`` → ``UNSURE`` (predicted bout, not yet scored)
+    - otherwise → copy the PRED value (usually TRUE_NEG or FALSE_POS)
 
-    Returns:
-    -------
-    pl.DataFrame
-        Scored behaviour DataFrame with pred, actual, and sub_behaviour columns.
+    Sub-behaviour columns are initialised to ``TRUE_NEG``.
     """
-    # TODO: also return column schema for data validation later
-    result_df = df.select([FRAME, BEHAVIOUR, PRED])
-    result_df = result_df.with_columns(
-        pl.when(pl.col(PRED) == TRUE_POS)
-        .then(pl.lit(UNSURE))
-        .otherwise(pl.col(PRED))
-        .alias(ACTUAL),
-    )
-    result_df = result_df.drop(PRED)
-    for bout_struct in bouts_struct:
-        for user_col in bout_struct.sub_behaviour:
-            result_df = result_df.with_columns(pl.lit(TRUE_NEG).alias(user_col))
-    return result_df
+    frames = df.select(FRAME).unique().sort(FRAME)
+    result_df = pl.DataFrame({FRAME: frames.get_column(FRAME)})
 
-
-def get_bouts_struct(df: pl.DataFrame) -> list[BoutStruct]:
-    """Extract BoutStruct from DataFrame columns.
-
-    Parameters
-    ----------
-    df : pl.DataFrame
-        Scored behaviour DataFrame.
-
-    Returns:
-    -------
-    list[BoutStruct]
-        Bout structure definitions.
-    """
-    base_cols = {FRAME, BEHAVIOUR, ACTUAL}
-    user_cols = [c for c in df.columns if c not in base_cols]
-
-    behaviours_ls = df.select(BEHAVIOUR).unique().sort(BEHAVIOUR).to_series().to_list()
-
-    bouts_struct = []
-    for behaviour in behaviours_ls:
-        sub_behaviour_ls = []
-        for col in user_cols:
-            null_count = (
-                df.filter(pl.col(BEHAVIOUR) == behaviour)
-                .select(
-                    pl.col(col).null_count(),
-                )
-                .item()
-            )
-            total = df.filter(pl.col(BEHAVIOUR) == behaviour).height
-            if total > 0 and null_count < total:
-                sub_behaviour_ls.append(col)
-        bouts_struct.append(
-            BoutStruct(behaviour=behaviour, sub_behaviour=sub_behaviour_ls),
+    for behaviour, ref in classify_behaviour.items():
+        b_df = df.filter(pl.col(BEHAVIOUR) == behaviour).select(
+            FRAME,
+            pl.when(pl.col(PRED) == TRUE_POS)
+            .then(pl.lit(UNSURE))
+            .otherwise(pl.col(PRED))
+            .alias(behaviour),
         )
+        result_df = result_df.join(b_df, on=FRAME, how="left")
+        result_df = result_df.with_columns(pl.col(behaviour).fill_null(TRUE_NEG))
 
-    return bouts_struct
+        for sub in ref.sub_behaviour:
+            result_df = result_df.with_columns(pl.lit(TRUE_NEG).alias(sub))
+
+    expected_schema = make_scored_schema(classify_behaviour)
+    return result_df.select(list(expected_schema.keys()))
 
 
-def frames2bouts(df: pl.DataFrame) -> Bouts:
-    """Convert frame-level scored DataFrame to Bouts model.
+# ═══════════════════════════════════════════════════════════════════════════════
+# Scored ↔ Bouts (fully wide ↔ bout model)
+# ═══════════════════════════════════════════════════════════════════════════════
 
-    Parameters
-    ----------
-    df : pl.DataFrame
-        Scored behaviour DataFrame.
 
-    Returns:
-    -------
-    Bouts
-        Bouts model with start, stop, and list of Bout objects.
+def frames2bouts(
+    df: pl.DataFrame,
+    classify_behaviour: dict[str, ClassifierRef],
+) -> Bouts:
+    """Convert fully-wide scored DataFrame to Bouts model.
+
+    For each behaviour column, reads values directly.
+    Bouts are detected from any value in ``{TRUE_POS, UNSURE}``.
     """
     start_frame = df.select(FRAME).min().item()
     stop_frame = df.select(FRAME).max().item() + 1
-    behaviours_ls = df.select(BEHAVIOUR).unique().sort(BEHAVIOUR).to_series().to_list()
 
-    bouts_struct = get_bouts_struct(df)
-    bouts_ls = []
+    bouts_struct = _classify_to_bouts_struct(classify_behaviour)
+    bouts_ls: list[Bout] = []
 
-    for behaviour in behaviours_ls:
-        behaviour_df = df.filter(pl.col(BEHAVIOUR) == behaviour).sort(FRAME)
-        pred_bool = behaviour_df.select(PRED).to_series() == TRUE_POS
+    for behaviour, ref in classify_behaviour.items():
+        values = df[behaviour].sort(FRAME).to_numpy()
+        bout_mask = np.isin(values, [TRUE_POS, UNSURE])
 
-        if pred_bool.sum() == 0:
+        if not bout_mask.any():
             continue
 
-        frame_offset = behaviour_df.select(FRAME).min().item()
-        bouts_df = vect2bouts(pred_bool, offset=frame_offset)
+        bouts_df = vect2bouts(pl.Series(bout_mask), offset=start_frame)
 
         for row in bouts_df.iter_rows(named=True):
             bout_start = row[START]
             bout_stop = row[STOP]
             dur_val = row[DUR]
 
-            bout_slice = behaviour_df.filter(
-                pl.col(FRAME).is_between(bout_start, bout_stop),
-            )
-            actual_vals = bout_slice.select(ACTUAL).to_series()
+            bout_slice = df.filter(pl.col(FRAME).is_between(bout_start, bout_stop))
+            actual_vals = bout_slice[behaviour]
             actual_mode = int(
-                actual_vals.value_counts().sort(COUNT, descending=True).row(0)[0],
+                actual_vals.value_counts().sort(COUNT, descending=True).row(0)[0]
             )
 
             sub_behaviour = {}
-            for col in [
-                c for c in df.columns if c not in {FRAME, BEHAVIOUR, PRED, ACTUAL}
-            ]:
-                if col in bout_slice.columns:
-                    vals = bout_slice.select(col).to_series().drop_nulls()
+            for sub in ref.sub_behaviour:
+                if sub in df.columns:
+                    vals = bout_slice[sub].drop_nulls()
                     if len(vals) > 0:
-                        sub_behaviour[col] = int(
-                            vals.value_counts().sort(COUNT, descending=True).row(0)[0],
+                        sub_behaviour[sub] = int(
+                            vals.value_counts().sort(COUNT, descending=True).row(0)[0]
                         )
 
             bouts_ls.append(
@@ -285,7 +221,7 @@ def frames2bouts(df: pl.DataFrame) -> Bouts:
                     behaviour=behaviour,
                     actual=actual_mode,
                     sub_behaviour=sub_behaviour,
-                ),
+                )
             )
 
     return Bouts(
@@ -297,53 +233,27 @@ def frames2bouts(df: pl.DataFrame) -> Bouts:
 
 
 def bouts2frames(bouts: Bouts) -> pl.DataFrame:
-    """Convert Bouts model to frame-level scored DataFrame.
+    """Convert Bouts model to fully-wide scored DataFrame.
 
-    Parameters
-    ----------
-    bouts : Bouts
-        Bouts model with start, stop, and list of Bout objects.
-
-    Returns:
-    -------
-    pl.DataFrame
-        Long-form scored behaviour DataFrame.
+    One row per frame. All behaviour/sub_behaviour columns initialised to
+    ``TRUE_NEG``, then filled in from bout data.
     """
-    behaviours = [b.behaviour for b in bouts.bout_struct]
-    user_cols = list({col for b in bouts.bout_struct for col in b.sub_behaviour})
-
     frames = np.arange(bouts.start, bouts.stop, dtype=np.int64)
-    rows = []
+    classify_behaviour = _bouts_struct_to_classify(bouts.bout_struct)
+    schema = make_scored_schema(classify_behaviour)
 
-    for behaviour in behaviours:
-        for f in frames:
-            row = {
-                FRAME: int(f),
-                BEHAVIOUR: behaviour,
-                PRED: TRUE_NEG,
-                ACTUAL: TRUE_NEG,
-            }
-            for col in user_cols:
-                row[col] = TRUE_NEG
-            rows.append(row)
-
-    df = pl.DataFrame(
-        rows,
-        schema={**BEHAVIOUR_SCORED_BASE, **dict.fromkeys(user_cols, pl.Int64)},
-    )
+    rows = [{FRAME: int(f)} | {col: TRUE_NEG for col in schema if col != FRAME}
+            for f in frames]
+    df = pl.DataFrame(rows, schema=schema)
 
     for bout in bouts.bouts:
-        mask = (
-            (pl.col(FRAME) >= bout.start)
-            & (pl.col(FRAME) <= bout.stop)
-            & (pl.col(BEHAVIOUR) == bout.behaviour)
-        )
+        mask = (pl.col(FRAME) >= bout.start) & (pl.col(FRAME) <= bout.stop)
+
         df = df.with_columns(
-            pl.when(mask).then(pl.lit(TRUE_POS)).otherwise(pl.col(PRED)).alias(PRED),
             pl.when(mask)
             .then(pl.lit(bout.actual))
-            .otherwise(pl.col(ACTUAL))
-            .alias(ACTUAL),
+            .otherwise(pl.col(bout.behaviour))
+            .alias(bout.behaviour),
         )
         for k, v in bout.sub_behaviour.items():
             df = df.with_columns(
@@ -351,3 +261,98 @@ def bouts2frames(bouts: Bouts) -> pl.DataFrame:
             )
 
     return df
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Helpers
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+def _classify_to_bouts_struct(
+    classify_behaviour: dict[str, ClassifierRef],
+) -> list[BoutStruct]:
+    """Convert classify_behaviour dict to list of BoutStruct."""
+    return [
+        BoutStruct(behaviour=behaviour, sub_behaviour=ref.sub_behaviour)
+        for behaviour, ref in classify_behaviour.items()
+    ]
+
+
+def _bouts_struct_to_classify(
+    bouts_struct: list[BoutStruct],
+) -> dict[str, ClassifierRef]:
+    """Convert list of BoutStruct back to classify_behaviour dict."""
+    from behavysis.models import ClassifierRef
+
+    return {
+        bs.behaviour: ClassifierRef(sub_behaviour=bs.sub_behaviour)
+        for bs in bouts_struct
+    }
+
+
+def import_boris_csv(
+    fp: str,
+    behaviour_ls: list[str],
+    start_frame: int,
+    stop_frame: int,
+    fps: int,
+    *,
+    point_window_sec: float = 0.0,
+    pos_value: int = TRUE_POS,
+) -> pl.DataFrame:
+    """Import BORIS CSV to wide-format scored DataFrame.
+
+    Returns a DataFrame with columns: ``FRAME`` + one column per behaviour
+    in ``behaviour_ls``.
+    """
+    from loguru import logger
+
+    df_boris = (
+        pl.read_csv(fp)
+        .rename({"Behavior": BEHAVIOUR})
+        .with_columns(
+            (pl.col("Time") * fps).round().cast(pl.Int64).alias(FRAME),
+            pl.col("Behavior type").str.strip_chars().str.to_uppercase().alias("type"),
+        )
+    )
+
+    boris_behaviours = df_boris[BEHAVIOUR].unique().to_list()
+    missing = [b for b in behaviour_ls if b not in boris_behaviours]
+    if missing:
+        logger.warning(
+            "Behaviours not in BORIS file: {}\nBORIS: {}",
+            missing,
+            boris_behaviours,
+        )
+
+    window = int(point_window_sec * fps)
+    frames = np.arange(start_frame, stop_frame, dtype=np.int64)
+
+    result = pl.DataFrame({FRAME: frames.astype(np.int64)})
+
+    for behaviour in behaviour_ls:
+        vals = pl.Series(behaviour, [TRUE_NEG] * len(frames), dtype=pl.Int64)
+        evts_df = df_boris.filter(pl.col(BEHAVIOUR) == behaviour).sort(FRAME)
+
+        for row in evts_df.iter_rows(named=True):
+            f = int(row[FRAME])
+            typ = row["type"]
+            if typ in ("START", "STOP"):
+                val = pos_value if typ == "START" else TRUE_NEG
+                vals = pl.Series(
+                    [val if i >= f - start_frame else vals[i]
+                     for i in range(len(vals))],
+                    dtype=pl.Int64,
+                )
+            elif typ == "POINT":
+                lo = max(f - window, start_frame)
+                hi = min(f + window, stop_frame - 1)
+                vals = pl.Series(
+                    [pos_value if start_frame + i >= lo and start_frame + i <= hi
+                     else vals[i] for i in range(len(vals))],
+                    dtype=pl.Int64,
+                )
+
+        result = result.with_columns(vals.alias(behaviour))
+
+    return result

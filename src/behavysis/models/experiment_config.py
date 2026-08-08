@@ -109,7 +109,7 @@ class ExperimentConfig(YamlModel):
     calculate_parameters: CalculateParametersConfig | None
     preprocess: PreprocessConfig | None
     extract_features: ExtractFeaturesConfig | None
-    classify_behaviour: list[ClassifierRef] | None
+    classify_behaviour: dict[str, ClassifierRef] | None
     analyse: AnalyseConfig | None
 
     def require_format_video(self) -> FormatVideoConfig:
@@ -147,7 +147,7 @@ class ExperimentConfig(YamlModel):
             raise ConfigNotConfiguredError(msg)
         return self.extract_features
 
-    def require_classify_behaviour(self) -> list[ClassifierRef]:
+    def require_classify_behaviour(self) -> dict[str, ClassifierRef]:
         """Require the classify_behaviour config."""
         if self.classify_behaviour is None:
             msg = "classify_behaviour"

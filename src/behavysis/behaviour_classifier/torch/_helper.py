@@ -4,9 +4,9 @@ import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_selection import VarianceThreshold
 
-from behavysis.constants import ACTUAL, EXPERIMENT, FRAME, Array1D, Array2D
+from behavysis.constants import EXPERIMENT, FRAME, Array1D, Array2D
 
-_META_COLS = [EXPERIMENT, FRAME, ACTUAL]
+_META_COLS = [EXPERIMENT, FRAME]
 
 
 def select_features(

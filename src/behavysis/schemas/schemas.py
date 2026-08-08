@@ -9,7 +9,6 @@ from pathlib import Path
 import polars as pl
 
 from behavysis.constants import (
-    ACTUAL,
     AGG,
     ANALYSIS,
     BEHAVIOUR,
@@ -26,6 +25,7 @@ from behavysis.constants import (
     X,
     Y,
 )
+from behavysis.models import ClassifierRef
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Core schema dicts
@@ -56,21 +56,36 @@ BEHAVIOUR_PREDICTED_SCHEMA: SchemaDict = {
     PRED: pl.Int64,
 }
 
-"""One row per (frame, behaviour) classifier prediction."""
+"""Batched predictions across experiments (classification batch)."""
 BEHAVIOUR_BATCHED_PREDICTED_SCHEMA: SchemaDict = {
+    EXPERIMENT: pl.Utf8,
     FRAME: pl.Int64,
     BEHAVIOUR: pl.Utf8,
     PROB: pl.Float64,
     PRED: pl.Int64,
 }
 
-# BehaviourScoredDf base columns; sub_behaviour columns are dynamic and validated
-# against BoutStruct at read/write boundaries.
-BEHAVIOUR_SCORED_BASE: SchemaDict = {
-    FRAME: pl.Int64,
-    BEHAVIOUR: pl.Utf8,
-    ACTUAL: pl.Int64,
-}
+
+def make_scored_schema(classify_behaviour: dict[str, ClassifierRef]) -> SchemaDict:
+    """Build the fully-wide scored schema from config.
+
+    One row per frame. Columns are behaviour names and sub-behaviour names
+    defined in ``classify_behaviour``, all Int64 (TRUE_POS/TRUE_NEG/UNSURE values).
+    """
+    schema: SchemaDict = {FRAME: pl.Int64}
+    for behaviour, ref in classify_behaviour.items():
+        schema[behaviour] = pl.Int64
+        for sub in ref.sub_behaviour:
+            schema[sub] = pl.Int64
+    return schema
+
+
+def make_batched_scored_schema(
+    classify_behaviour: dict[str, ClassifierRef],
+) -> SchemaDict:
+    """Build the scored schema with EXPERIMENT for batched data."""
+    schema: SchemaDict = {EXPERIMENT: pl.Utf8, **make_scored_schema(classify_behaviour)}
+    return schema
 
 """One row per (frame, individual, measure) value. Frame-by-frame analysis."""
 ANALYSIS_SCHEMA: SchemaDict = {

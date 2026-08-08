@@ -14,12 +14,12 @@ import polars as pl
 import yaml
 from loguru import logger
 
-from behavysis.constants import ACTUAL, BOUT, EXPERIMENT, FRAME
+from behavysis.constants import BOUT, EXPERIMENT, FRAME
 from behavysis.utils import clean_memory, pass_exception, trace
 
 from .adapter import MODEL_TYPES_TO_CLASS, MODEL_TYPES_TO_STRING, BaseAdapter
 from .config import ActiveModel, ClassifierContract, ModelRecipe
-from .data import label_bouts, load_all_data, stratified_split_by_group
+from .data import ACTUAL, label_bouts, load_all_data, stratified_split_by_group
 from .evaluation import EvalResult, make_eval_result
 from .registry import MODEL_REGISTRY
 from .storage import ClassifierPaths
@@ -113,14 +113,15 @@ def train_model(
     recipe = ModelRecipe.read_yaml(recipe_fp)
 
     # Load and align data
+    label_col = ACTUAL
     df = load_all_data(
         clf.features_dir(), clf.labels_dir(), clf.contract().behaviour_name
     )
-    df = label_bouts(df, ACTUAL)
+    df = label_bouts(df, label_col)
 
     # Split into train / test (experiment-level grouping)
     train_idx, test_idx = stratified_split_by_group(
-        df, recipe.test_split, EXPERIMENT, recipe.seed
+        df, recipe.test_split, EXPERIMENT, recipe.seed, label_col=label_col
     )
     train_df = df.gather(train_idx).sort([EXPERIMENT, FRAME])
     test_df = df.gather(test_idx).sort([EXPERIMENT, FRAME])
@@ -139,10 +140,10 @@ def train_model(
     eval_dir.mkdir(parents=True, exist_ok=True)
     # Predictions
     adapter.predict(train_df).with_columns(
-        train_df.get_column(EXPERIMENT), train_df.get_column(ACTUAL)
+        train_df.get_column(EXPERIMENT), train_df.get_column(label_col)
     ).write_parquet(eval_dir / "train_eval.parquet")
     adapter.predict(test_df).with_columns(
-        test_df.get_column(EXPERIMENT), test_df.get_column(ACTUAL)
+        test_df.get_column(EXPERIMENT), test_df.get_column(label_col)
     ).write_parquet(eval_dir / "test_eval.parquet")
     # Further evaluation
     res = make_eval_result_choose_model(clf.contract_fp(), model_name)

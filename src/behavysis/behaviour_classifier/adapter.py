@@ -17,7 +17,6 @@ from tabpfn import TabPFNClassifier, load_fitted_tabpfn_model, save_fitted_tabpf
 from xgboost import XGBClassifier
 
 from behavysis.constants import (
-    ACTUAL,
     BEHAVIOUR,
     BOUT_ID,
     EXPERIMENT,
@@ -34,6 +33,7 @@ from behavysis.utils import get_gpu_device
 
 from .config import ModelRecipe
 from .data import (
+    ACTUAL,
     agg_eval_df_by_bouts,
     df_get_features,
     df_get_labels,
@@ -102,7 +102,7 @@ class BaseAdapter(ABC):
         # Return
         if experiment is not None:
             return pl.DataFrame(
-                df.select(list(BEHAVIOUR_BATCHED_PREDICTED_SCHEMA.keys())),
+                df.select(list(BEHAVIOUR_BATCHED_PREDICTED_SCHEMA)),
                 BEHAVIOUR_BATCHED_PREDICTED_SCHEMA,
             )
         return pl.DataFrame(
@@ -133,38 +133,33 @@ class SklearnAdapter(BaseAdapter):
 
     def fit(self, df: pl.DataFrame) -> pd.DataFrame:
         """Fit."""
-        # 1. Read recipe
         recipe = self._read_recipe()
-        # Hyperparameter selection stage
-        # 2. Sort the df by EXPERIMENT, FRAME. Then compute bout_id
+        label_col = ACTUAL
         df = df.sort([EXPERIMENT, FRAME])
-        df = label_bouts(df, ACTUAL)
-        # 4. hyperparameter selection on df. CV grouped-by-bout_id
+        df = label_bouts(df, label_col)
         self.search.refit = False
         self.search.fit(
-            df_get_features(df),
-            df_get_labels(df),
+            df_get_features(df, label_col=label_col),
+            df_get_labels(df, label_col=label_col),
             groups=df.get_column(BOUT_ID).to_numpy(),
         )
-        # Full training stage
-        # 5. Make train-val split by bouts (to programatically find best pcutoff)
         train_idx, val_idx = stratified_split_by_group(
-            df, recipe.val_split, BOUT_ID, recipe.seed
+            df, recipe.val_split, BOUT_ID, recipe.seed, label_col=label_col
         )
         train_df = df.gather(train_idx)
-        # 6. Refit best pipeline on train_df
         self.model = clone(self.search.estimator).set_params(**self.search.best_params_)
-        self.model.fit(df_get_features(train_df), df_get_labels(train_df))
-        # 7. Find best pcutoff with val_idx and update recipe with best pcutoff value
-        # Use per-bouts eval instead of per-frames eval
+        self.model.fit(
+            df_get_features(train_df, label_col=label_col),
+            df_get_labels(train_df, label_col=label_col),
+        )
         y_df = self.predict(df).with_columns(
-            df.get_column(ACTUAL),
+            df.get_column(label_col),
             df.get_column(BOUT_ID),
         )
         y_val_df = y_df.gather(val_idx)
-        y_val_bouts_df = agg_eval_df_by_bouts(y_val_df)
+        y_val_bouts_df = agg_eval_df_by_bouts(y_val_df, label_col=label_col)
         _, recall, thresholds = precision_recall_curve(
-            y_val_bouts_df.get_column(ACTUAL),
+            y_val_bouts_df.get_column(label_col),
             y_val_bouts_df.get_column(PROB),
             drop_intermediate=True,
         )
@@ -185,7 +180,9 @@ class SklearnAdapter(BaseAdapter):
             raise ValueError(msg)
         # Predict
         frame = df.get_column(FRAME)
-        prob = pl.Series(self.model.predict_proba(df_get_features(df))[:, 1])
+        prob = pl.Series(
+            self.model.predict_proba(df_get_features(df, label_col=ACTUAL))[:, 1]
+        )
         # Get experiment column if it exists
         experiment = None
         if EXPERIMENT in df.columns:
@@ -272,16 +269,15 @@ class TabpfnAdapter(BaseAdapter):
 
     def fit(self, df: pl.DataFrame) -> pd.DataFrame:
         """Fit."""
-        # 1. Read recipe
         recipe = self._read_recipe()
-        # Full training stage. No hyperparameter tuning
-        # 2. Sort the df by EXPERIMENT, FRAME. Then compute bout_id
+        label_col = ACTUAL
         df = df.sort([EXPERIMENT, FRAME])
-        df = label_bouts(df, ACTUAL)
-        # 3. Init classifier
+        df = label_bouts(df, label_col)
         self.model = TabPFNClassifier(**self.kwargs)
-        # 4. Fit classifier on sub_df
-        self.model.fit(df_get_features(df), df_get_labels(df))
+        self.model.fit(
+            df_get_features(df, label_col=label_col),
+            df_get_labels(df, label_col=label_col),
+        )
         # 5. Set pcutoff as hardcoded 0.5 (tabpfn sorts itself out)
         recipe.pcutoff = 0.5
         self._write_recipe(recipe)
@@ -296,7 +292,9 @@ class TabpfnAdapter(BaseAdapter):
             raise ValueError(msg)
         # Predict
         frame = df.get_column(FRAME)
-        prob = pl.Series(self.model.predict_proba(df_get_features(df))[:, 1])
+        prob = pl.Series(
+            self.model.predict_proba(df_get_features(df, label_col=ACTUAL))[:, 1]
+        )
         # Get experiment column if it exists
         experiment = None
         if EXPERIMENT in df.columns:

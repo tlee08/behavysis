@@ -10,7 +10,6 @@ from .bodypoints import (
     INDIVS_SINGLE,
 )
 from .data_names import (
-    ACTUAL,
     AGG,
     ANALYSIS,
     BEHAVIOUR,
@@ -69,7 +68,6 @@ from .plot import PLOT_DPI, PLOT_STYLE
 from .types import Array1D, Array2D
 
 __all__ = [
-    "ACTUAL",
     "AGG",
     "ANALYSIS",
     "ANALYSIS_COMBINED_DIR",

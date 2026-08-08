@@ -10,7 +10,6 @@ import polars as pl
 from sklearn.model_selection import StratifiedGroupKFold
 
 from behavysis.constants import (
-    ACTUAL,
     BEHAVIOUR,
     BOUT_ID,
     EXPERIMENT,
@@ -25,12 +24,12 @@ from behavysis.constants import (
 from behavysis.transforms import label_bouts
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
     from imblearn.under_sampling.base import BaseUnderSampler
 
+ACTUAL = "actual"
 
-# -- loading -----------------------------------------------------
+
+# ── loading ───────────────────────────────────────────────────────────
 
 
 def load_all_data(
@@ -40,28 +39,10 @@ def load_all_data(
 ) -> pl.DataFrame:
     """Load features and scored labels, aligned by frame per experiment.
 
-    Each experiment's features parquet is inner-joined with its scored
-    labels parquet on ``frame``, guaranteeing row-for-row alignment.
-    The result is a single DataFrame with columns:
+    Renames the behaviour column to ``"actual"`` for internal classifier use.
 
-    - ``experiment`` — experiment name (from parquet filename stem)
-    - ``frame`` — frame number
-    - ``actual`` — label (unsure replaced with false positive)
-    - one column per feature (Float64)
-
-    Parameters
-    ----------
-    x_dir : Path
-        Directory of feature parquet files (``5_features_extracted/``).
-    y_dir : Path
-        Directory of scored behaviour parquet files (``7_behaviour_scored/``).
-    behaviour_name : str
-        Target behaviour to extract as the ``actual`` column.
-
-    Returns:
-    -------
-    pl.DataFrame
-        Aligned training data with metadata + feature columns.
+    Returns a DataFrame with columns:
+        EXPERIMENT, FRAME, actual, ...feature columns
     """
     x_fps = {fp.stem: fp for fp in sorted(x_dir.iterdir())}
     y_fps = {fp.stem: fp for fp in sorted(y_dir.iterdir())}
@@ -70,40 +51,36 @@ def load_all_data(
     pieces: list[pl.DataFrame] = []
     for name in common:
         x_df = pl.read_parquet(x_fps[name])
-
-        y_df = (
-            pl.read_parquet(y_fps[name])
-            .filter(pl.col(BEHAVIOUR) == behaviour_name)
-            .with_columns(
-                pl.col(ACTUAL).replace([FALSE_POS, UNSURE], [TRUE_NEG, TRUE_NEG]),
-            )
+        y_df = pl.read_parquet(y_fps[name]).select(
+            FRAME,
+            pl.col(behaviour_name)
+            .replace([FALSE_POS, UNSURE], [TRUE_NEG, TRUE_NEG])
+            .alias(ACTUAL),
         )
-
         aligned = x_df.join(y_df, on=FRAME, how="inner")
         if aligned.height == 0:
             continue
-
         pieces.append(aligned.with_columns(pl.lit(name).alias(EXPERIMENT)))
 
     return pl.concat(pieces, how="diagonal_relaxed")
 
 
-# -- X and y df preparing -----------------------------------------------------
+# ── X and y extracting ───────────────────────────────────────────────
 
 
-def df_get_features(df: pl.DataFrame) -> pl.DataFrame:
-    """Given a df, only return features (filters out metadata and label columns)."""
-    return df.drop([EXPERIMENT, FRAME, BEHAVIOUR, ACTUAL, BOUT_ID], strict=False).cast(
-        pl.Float32
-    )
+def df_get_features(df: pl.DataFrame, *, label_col: str) -> pl.DataFrame:
+    """Given a df, return only features (drops metadata and label columns)."""
+    return df.drop(
+        [EXPERIMENT, FRAME, BEHAVIOUR, BOUT_ID, label_col], strict=False
+    ).cast(pl.Float32)
 
 
-def df_get_labels(df: pl.DataFrame) -> pl.Series:
+def df_get_labels(df: pl.DataFrame, *, label_col: str) -> pl.Series:
     """Given a df, return only the labels."""
-    return df[ACTUAL]
+    return df[label_col]
 
 
-# -- bout-related splitting -----------------------------------------------------
+# ── splitting ────────────────────────────────────────────────────────
 
 
 def stratified_split_by_group(
@@ -111,13 +88,12 @@ def stratified_split_by_group(
     test_size: float,
     group_name: str,
     random_state: int = 42,
+    *,
+    label_col: str,
 ) -> tuple[Array1D, Array1D]:
-    """Split into train/test, grouping contiguous label runs together.
-
-    Group name like: "bout_id", "experiment"
-    """
+    """Split into train/test, grouping contiguous label runs together."""
     idx = np.arange(len(df))
-    y = df[ACTUAL].to_numpy()
+    y = df[label_col].to_numpy()
     groups = df[group_name].to_numpy()
 
     n_splits = max(2, int(1 / test_size))
@@ -128,32 +104,16 @@ def stratified_split_by_group(
     return train_idx, test_idx
 
 
-def agg_eval_df_by_bouts(df: pl.DataFrame) -> pl.DataFrame:
-    """Aggregate per-frame eval data to per-bout rows.
+# ── bout aggregation ─────────────────────────────────────────────────
 
-    Each row represents one contiguous run (bout) of ACTUAL labels.  The
-    aggregation preserves:
 
-    * ``ACTUAL.max()`` — whether the bout is a real behavioural episode (1)
-        or a non-behaviour gap (0).  This is the ground-truth label at bout
-        level.
-    * ``PROB.max()`` / ``PROB.mean()`` — peak and average model confidence
-        across the bout.  Useful for ROC/PR curves (max) and for gauging
-        how consistently the model recognises the behaviour (mean).
-    * ``PRED.max()`` — whether *any* frame in the bout was predicted
-        positive (standard SimBA bout-level match).
-    * ``PRED.mean()`` — fraction of bout frames predicted positive.
-        Answers: "how much of this bout did the model actually cover?"
-        A bout with ``PRED.mean() < 0.5`` means the model missed more than
-        half its frames, even if ``PRED.max() == 1``.  This enables
-        IoU-style evaluation with custom coverage thresholds.
-    * ``bout_n_frames`` — bout duration in frames.
-    """
+def agg_eval_df_by_bouts(df: pl.DataFrame, *, label_col: str) -> pl.DataFrame:
+    """Aggregate per-frame eval data to per-bout rows."""
     return (
-        label_bouts(df, ACTUAL)
+        label_bouts(df, label_col)
         .group_by(BOUT_ID)
         .agg(
-            pl.col(ACTUAL).max(),
+            pl.col(label_col).max(),
             pl.col(PROB).max(),
             pl.col(PROB).mean().alias(f"{PROB}_mean"),
             pl.col(PRED).max(),
@@ -164,19 +124,14 @@ def agg_eval_df_by_bouts(df: pl.DataFrame) -> pl.DataFrame:
     )
 
 
-# -- preprocessing -------------------------------------------------------------
+# ── preprocessing ────────────────────────────────────────────────────
 
 
-def df_resample(df: pl.DataFrame, resampler: BaseUnderSampler) -> pl.DataFrame:
+def df_resample(
+    df: pl.DataFrame, resampler: BaseUnderSampler, *, label_col: str
+) -> pl.DataFrame:
     """Resample."""
-    # Make idx (has to be in shape (n,1))
     idx = np.arange(len(df)).reshape(-1, 1)
-    # Sample and get sampled IDs
-    sub_idx, _ = resampler.fit_resample(idx, df_get_labels(df))
-    # Convert idx back to shape (n)
+    sub_idx, _ = resampler.fit_resample(idx, df_get_labels(df, label_col=label_col))
     sub_idx = sub_idx.reshape(-1)
-    # Get sampled df
     return df[sub_idx]
-
-
-# -- y prob smoothing ----------------------------------------------------------

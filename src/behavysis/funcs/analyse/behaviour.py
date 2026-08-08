@@ -5,8 +5,6 @@ from pathlib import Path
 import polars as pl
 
 from behavysis.constants import (
-    ACTUAL,
-    BEHAVIOUR,
     DF_IO_FORMAT,
     FBF,
     FRAME,
@@ -16,7 +14,7 @@ from behavysis.constants import (
     TRUE_POS,
     VALUE,
 )
-from behavysis.models import ExperimentConfig, ExperimentMetadata
+from behavysis.models import ClassifierRef, ExperimentConfig, ExperimentMetadata
 from behavysis.schemas import ANALYSIS_SCHEMA, write_df
 
 from ._helper import AnalysisResult
@@ -28,26 +26,41 @@ def analyse_behaviour(
     metadata: ExperimentMetadata,
     *,
     behaviour_df: pl.DataFrame,
+    classify_behaviour: dict[str, ClassifierRef],
 ) -> list[AnalysisResult]:
-    """Takes a behaviour df and generates a summary and binned version of the data."""
+    """Takes a wide-format behaviour df and generates summary + binned analysis."""
     name = metadata.require_name()
 
-    behaviour_df = behaviour_df.with_columns(
-        pl.when(pl.col(ACTUAL) == TRUE_POS)
-        .then(TRUE_POS)
-        .otherwise(TRUE_NEG)
-        .alias(ACTUAL),
-    )
-
-    id_vars = [FRAME, BEHAVIOUR]
-    value_vars = [c for c in behaviour_df.columns if c not in id_vars]
-
-    analysis_df = (
-        behaviour_df.unpivot(
-            index=id_vars, on=value_vars, variable_name=MEASURE, value_name=VALUE
+    rows: list[dict] = []
+    for behaviour, ref in classify_behaviour.items():
+        behaviour_vals = (
+            behaviour_df.select(
+                FRAME,
+                pl.when(pl.col(behaviour) == TRUE_POS)
+                .then(TRUE_POS)
+                .otherwise(TRUE_NEG)
+                .alias(VALUE),
+            )
+            .with_columns(pl.lit(behaviour).alias(MEASURE))
         )
-        .rename({BEHAVIOUR: INDIVIDUAL})
-        .with_columns(pl.col(VALUE).fill_null(0).cast(pl.Float64))
+        rows.append(behaviour_vals)
+
+        for sub in ref.sub_behaviour:
+            sub_vals = (
+                behaviour_df.select(
+                    FRAME,
+                    pl.when(pl.col(sub) == TRUE_POS)
+                    .then(TRUE_POS)
+                    .otherwise(TRUE_NEG)
+                    .alias(VALUE),
+                )
+                .with_columns(pl.lit(sub).alias(MEASURE))
+            )
+            rows.append(sub_vals)
+
+    analysis_df = pl.concat(rows).rename({MEASURE: INDIVIDUAL}).with_columns(
+        pl.col(INDIVIDUAL),
+        pl.col(VALUE).cast(pl.Float64),
     )
 
     return [
