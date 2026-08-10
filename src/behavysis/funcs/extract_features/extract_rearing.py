@@ -216,7 +216,9 @@ def extract_rearing(
     metadata: ExperimentMetadata,
 ) -> pl.DataFrame:
     """Protocol-compliant wrapper for rearing feature extraction."""
-    cfg = config.require_extract_features().require("rearing", ExtractRearingConfig)
+    cfg = config.require_extract_features().require(
+        "extract_rearing", ExtractRearingConfig
+    )
     return rearing_compute(
         keypoints_df,
         fps=metadata.require_fps(),

@@ -208,7 +208,9 @@ def extract_generic(
     pl.DataFrame
         Wide features DataFrame with frame index.
     """
-    cfg = config.require_extract_features().require("generic", ExtractGenericConfig)
+    cfg = config.require_extract_features().require(
+        "extract_generic", ExtractGenericConfig
+    )
 
     check_bpts_exist(keypoints_df, cfg.bodyparts)
 
