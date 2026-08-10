@@ -38,7 +38,7 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
             {
                 "clf__max_depth": [1],
             },
-            cv=2,
+            cv=StratifiedGroupKFold(n_splits=3, shuffle=True, random_state=42),
             n_jobs=1,
             verbose=3,
         ),
