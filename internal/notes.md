@@ -16,20 +16,20 @@ The pipeline supports multiple named feature extractors stored in subdirectories
 
 ## HPW Feature Extraction ✅
 
-Implemented as `funcs/extract_features/hpw_extract_features.py`. Computes rearing (R01-R06) and hind-paw withdrawal (W01-W19) features plus cross-features (X01-X03) with rolling-window aggregates.
+Implemented as `funcs/extract_features/hpw.py`. Computes rearing (R01-R06) and hind-paw withdrawal (W01-W19) features plus cross-features (X01-X03) with rolling-window aggregates.
 
 Config model `FeaturesHpwConfig` is empty — all features always computed, no user-facing toggles.
 
 ### Rearing features (reference)
 
-| Feature | Formula |
-|---|---|
-| `back_angle_deg` | Angle of back relative to horizontal |
-| `nose_elevation_mm` | Nose height above estimated floor |
-| `body_elongation_ratio` | Height / length |
-| `centroid_vertical_velocity_mm_s` | Per-frame change in body-centroid Y |
-| `front_paw_elevation_mm` | Front paw height above hind heel |
-| `nose_vertical_velocity_mm_s` | Per-frame change in nose Y |
+| Feature                           | Formula                              |
+| --------------------------------- | ------------------------------------ |
+| `back_angle_deg`                  | Angle of back relative to horizontal |
+| `nose_elevation_mm`               | Nose height above estimated floor    |
+| `body_elongation_ratio`           | Height / length                      |
+| `centroid_vertical_velocity_mm_s` | Per-frame change in body-centroid Y  |
+| `front_paw_elevation_mm`          | Front paw height above hind heel     |
+| `nose_vertical_velocity_mm_s`     | Per-frame change in nose Y           |
 
 ### Hind paw flinch features (reference)
 
@@ -52,6 +52,7 @@ class SyncStereoConfig(BaseModel):
 **X-coordinate normalization**: Flip camera B's x-coordinates (`x = frame_width - x`) before merging so both views share a consistent coordinate frame.
 
 **Risks**:
+
 - Likelihood-based merge loses information when both views are good (no 3D triangulation)
 - X-coordinate flipping assumes symmetric camera placement
 - 30-60 fps may miss sub-100ms flinch transients

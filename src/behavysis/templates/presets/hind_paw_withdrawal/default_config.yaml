@@ -80,7 +80,8 @@ extract_features:
   hpw: {}
 
 classify_behaviour:
-  - contract_fp: /absolute/path/to/behaviour_classifier/contract.yaml
+  hpw:
+    contract_fp: /absolute/path/to/behaviour_classifier/contract.yaml
     sub_behaviour: []
 
 analyse:

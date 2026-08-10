@@ -71,7 +71,8 @@ extract_features:
       - [Nose, BodyCentre, TailBase1]
 
 classify_behaviour:
-  - contract_fp: /absolute/path/to/behaviour_classifier/contract.yaml
+  aggression:
+    contract_fp: /absolute/path/to/behaviour_classifier/contract.yaml
     sub_behaviour: []
 
 analyse:

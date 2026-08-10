@@ -9,15 +9,15 @@ grouped into two behaviour-specific batteries:
 
 - **Rearing** (R01-R06): vertical posture, body elongation, upward movement.
 - **Hind Paw Withdrawal** (W01-W19): paw vertical/horizontal kinematics,
-  elevation above estimated floor, heel-toe distance, paw asymmetry,
-  and body-stillness control features that help distinguish isolated
-  paw lifts from stepping/walking.
+    elevation above estimated floor, heel-toe distance, paw asymmetry,
+    and body-stillness control features that help distinguish isolated
+    paw lifts from stepping/walking.
 
 Coordinate convention (image space):
-  x -> rightward positive, y -> downward positive.
-  "Upward" movement in the world = y *decreases* in image space.
-  Features report upward velocity/acceleration as *positive* values
-  (i.e. we negate the raw image-space derivatives).
+    x -> rightward positive, y -> downward positive.
+    "Upward" movement in the world = y *decreases* in image space.
+    Features report upward velocity/acceleration as *positive* values
+    (i.e. we negate the raw image-space derivatives).
 """
 
 from __future__ import annotations
