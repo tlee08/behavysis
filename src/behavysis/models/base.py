@@ -16,4 +16,4 @@ class YamlModel(BaseModel):
     def write_yaml(self, fp: Path) -> None:
         """Write the model to a YAML file."""
         fp.parent.mkdir(parents=True, exist_ok=True)
-        fp.write_text(yaml.dump(self.model_dump(), default_flow_style=False))
+        fp.write_text(yaml.dump(self.model_dump(mode="json"), default_flow_style=False))
