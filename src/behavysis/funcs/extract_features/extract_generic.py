@@ -30,7 +30,7 @@ if TYPE_CHECKING:
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
-class FeaturesGenericConfig(BaseModel):
+class ExtractGenericConfig(BaseModel):
     """Configuration for generic feature extraction."""
 
     individuals: list[str]
@@ -208,7 +208,7 @@ def extract_generic(
     pl.DataFrame
         Wide features DataFrame with frame index.
     """
-    cfg = config.require_extract_features().require("generic", FeaturesGenericConfig)
+    cfg = config.require_extract_features().require("generic", ExtractGenericConfig)
 
     check_bpts_exist(keypoints_df, cfg.bodyparts)
 
