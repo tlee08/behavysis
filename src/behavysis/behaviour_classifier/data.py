@@ -114,6 +114,8 @@ def agg_eval_df_by_bouts(df: pl.DataFrame, *, label_col: str = ACTUAL) -> pl.Dat
         label_bouts(df, label_col)
         .group_by(BOUT_ID)
         .agg(
+            pl.col(EXPERIMENT).first(),
+            pl.col(FRAME).first().alias("bout_start_frame"),
             pl.col(label_col).max(),
             pl.col(PROB).max(),
             pl.col(PROB).mean().alias(f"{PROB}_mean"),
