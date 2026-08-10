@@ -7,11 +7,13 @@ Designed for DeepLabCut multi-animal keypoint tracking with 17 bodyparts
 Features are computed from KEYPOINTS_SCHEMA long-form DataFrames and
 grouped into two behaviour-specific batteries:
 
-- **Rearing** (R01-R06): vertical posture, body elongation, upward movement.
-- **Hind Paw Withdrawal** (W01-W19): paw vertical/horizontal kinematics,
-    elevation above estimated floor, heel-toe distance, paw asymmetry,
-    and body-stillness control features that help distinguish isolated
-    paw lifts from stepping/walking.
+- **Rearing** (R01-R08): back angle, head elevation, body elongation,
+    centroid velocity, front paw elevation, head velocity, whole-body tilt.
+- **Hind Paw Withdrawal** (W01-W29): paw vertical/horizontal kinematics,
+    elevation above estimated floor, heel-toe distance, knee posture,
+    paw velocity direction, paw area, asymmetry, and body-stillness
+    control features that help distinguish isolated paw lifts from
+    stepping/walking.
 
 Coordinate convention (image space):
     x -> rightward positive, y -> downward positive.
@@ -105,25 +107,30 @@ HIND_PAW_L_BPTS = [HIND_TOE_L, HIND_HEEL_L, HIND_KNEE_L]
 HIND_PAW_ALL_BPTS = HIND_PAW_R_BPTS + HIND_PAW_L_BPTS
 BACK_BPTS = [MID_BACK, LOWER_BACK]
 TAIL_BPTS = [TAIL_BASE, TAIL_TIP]
+BOTTOM_BPTS = [LOWER_BACK, TAIL_BASE]  # body points that stay near floor
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Feature name constants — Rearing
 # ═══════════════════════════════════════════════════════════════════════════════
 
 R01_BACK_ANGLE_DEG = "R01_back_angle_deg"
-R02_NOSE_ELEVATION_MM = "R02_nose_elevation_mm"
+R02_HEAD_ELEVATION_MM = "R02_head_elevation_mm"
 R03_BODY_ELONGATION_RATIO = "R03_body_elongation_ratio"
 R04_CENTROID_VERTICAL_VELOCITY_MM_S = "R04_centroid_vertical_velocity_mm_s"
 R05_FRONT_PAW_ELEVATION_MM = "R05_front_paw_elevation_mm"
-R06_NOSE_VERTICAL_VELOCITY_MM_S = "R06_nose_vertical_velocity_mm_s"
+R06_HEAD_VERTICAL_VELOCITY_MM_S = "R06_head_vertical_velocity_mm_s"
+R07_WHOLE_BODY_ANGLE_DEG = "R07_whole_body_angle_deg"
+R08_UPPER_BODY_ANGLE_DEG = "R08_upper_body_angle_deg"
 
 REARING_FEATURES: list[str] = [
     R01_BACK_ANGLE_DEG,
-    R02_NOSE_ELEVATION_MM,
+    R02_HEAD_ELEVATION_MM,
     R03_BODY_ELONGATION_RATIO,
     R04_CENTROID_VERTICAL_VELOCITY_MM_S,
     R05_FRONT_PAW_ELEVATION_MM,
-    R06_NOSE_VERTICAL_VELOCITY_MM_S,
+    R06_HEAD_VERTICAL_VELOCITY_MM_S,
+    R07_WHOLE_BODY_ANGLE_DEG,
+    R08_UPPER_BODY_ANGLE_DEG,
 ]
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -155,6 +162,20 @@ W17_L_PAW_RELATIVE_VERTICAL_V_MM_S = "W17_l_paw_relative_vertical_velocity_mm_s"
 W18_R_PAW_VY_PEAK_MM_S = "W18_r_paw_vy_peak_mm_s"
 W19_L_PAW_VY_PEAK_MM_S = "W19_l_paw_vy_peak_mm_s"
 
+# --- Right paw extended ---
+W20_R_KNEE_ELEVATION_MM = "W20_r_knee_elevation_mm"
+W21_R_KNEE_TOE_ANGLE_DEG = "W21_r_knee_toe_angle_deg"
+W22_R_KNEE_HIP_DIST_MM = "W22_r_knee_hip_dist_mm"
+W23_R_PAW_VELOCITY_DIRECTION_DEG = "W23_r_paw_velocity_direction_deg"
+W24_R_PAW_AREA_MM2 = "W24_r_paw_area_mm2"
+
+# --- Left paw extended ---
+W25_L_KNEE_ELEVATION_MM = "W25_l_knee_elevation_mm"
+W26_L_KNEE_TOE_ANGLE_DEG = "W26_l_knee_toe_angle_deg"
+W27_L_KNEE_HIP_DIST_MM = "W27_l_knee_hip_dist_mm"
+W28_L_PAW_VELOCITY_DIRECTION_DEG = "W28_l_paw_velocity_direction_deg"
+W29_L_PAW_AREA_MM2 = "W29_l_paw_area_mm2"
+
 WITHDRAWAL_FEATURES: list[str] = [
     W01_R_PAW_VERTICAL_V_MM_S,
     W02_R_PAW_HORIZONTAL_V_MM_S,
@@ -175,6 +196,16 @@ WITHDRAWAL_FEATURES: list[str] = [
     W17_L_PAW_RELATIVE_VERTICAL_V_MM_S,
     W18_R_PAW_VY_PEAK_MM_S,
     W19_L_PAW_VY_PEAK_MM_S,
+    W20_R_KNEE_ELEVATION_MM,
+    W21_R_KNEE_TOE_ANGLE_DEG,
+    W22_R_KNEE_HIP_DIST_MM,
+    W23_R_PAW_VELOCITY_DIRECTION_DEG,
+    W24_R_PAW_AREA_MM2,
+    W25_L_KNEE_ELEVATION_MM,
+    W26_L_KNEE_TOE_ANGLE_DEG,
+    W27_L_KNEE_HIP_DIST_MM,
+    W28_L_PAW_VELOCITY_DIRECTION_DEG,
+    W29_L_PAW_AREA_MM2,
 ]
 
 ALL_HPW_FEATURES: list[str] = REARING_FEATURES + WITHDRAWAL_FEATURES
@@ -187,14 +218,14 @@ _POS_SMOOTH_WINDOW: int = 3  # frames — light smoothing of raw positions
 _VEL_SMOOTH_WINDOW: int = 3  # frames — smoothing before computing acceleration
 _FLOOR_ROLL_WINDOW_SEC: float = 5.0  # seconds for rolling floor estimate
 _VY_PEAK_WINDOW_SEC: float = 0.2  # seconds for local vy peak detection
+_HOLD_VY_SCALE_MM_S: float = 100.0  # mm/s — vy above this suppresses hold score
 _EPS: float = 1e-6  # small constant for safe division
-_MIN_KURT_WINDOW: int = 4  # minimum window frames for valid kurtosis
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Rolling window parameters
 # ═══════════════════════════════════════════════════════════════════════════════
 
-ROLL_WINDOW_DIVISORS: list[float] = [2, 5, 6, 7.5, 15]
+ROLL_WINDOW_DIVISORS: list[float] = [1, 1.5, 2, 4, 7.5, 15]
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Cross-feature name constants
@@ -203,11 +234,15 @@ ROLL_WINDOW_DIVISORS: list[float] = [2, 5, 6, 7.5, 15]
 X01_BODY_STILLNESS_MM_S = "X01_body_stillness_mm_s"
 X02_R_PAW_LIFT_RATIO = "X02_r_paw_lift_ratio"
 X03_L_PAW_LIFT_RATIO = "X03_l_paw_lift_ratio"
+X04_R_PAW_HOLD_SCORE_MM = "X04_r_paw_hold_score_mm"
+X05_L_PAW_HOLD_SCORE_MM = "X05_l_paw_hold_score_mm"
 
 CROSS_FEATURES: list[str] = [
     X01_BODY_STILLNESS_MM_S,
     X02_R_PAW_LIFT_RATIO,
     X03_L_PAW_LIFT_RATIO,
+    X04_R_PAW_HOLD_SCORE_MM,
+    X05_L_PAW_HOLD_SCORE_MM,
 ]
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -414,18 +449,26 @@ def _euclidean(
 
 
 def _estimate_floor_y(
-    hind_paw_y_arrays: list[Array1D],
+    arena_xy: dict[str, tuple[Array1D, Array1D]],
+    xy: dict[str, tuple[Array1D, Array1D]],
     fps: float,
 ) -> Array1D:
-    """Estimate floor y-position (image coords, y ↑ downward).
+    """Estimate floor y-position from static arena markers.
 
-    Takes all hind paw bodypart y-arrays, computes a per-frame robust
-    maximum (90th percentile across bodyparts), then applies a heavy
-    rolling mean to produce a slowly-moving floor reference.
+    Uses arena_r and arena_l (glass plate edge markers) as the primary
+    floor reference.  Falls back to a rolling 90th-percentile estimate
+    from BOTTOM_BPTS if arena markers are unavailable.
     """
-    stacked = np.column_stack(hind_paw_y_arrays)
+    arena_y = np.mean([arena_xy[ARENA_R][1], arena_xy[ARENA_L][1]], axis=0)
+
+    if np.isfinite(arena_y).any():
+        floor_y_val = np.median(arena_y[np.isfinite(arena_y)])
+        return np.full_like(arena_y, floor_y_val)
+
+    bottom_y = [xy[bp][1] for bp in BOTTOM_BPTS]
+    stacked = np.column_stack(bottom_y)
     floor_raw = np.percentile(stacked, 90, axis=1)
-    roll_frames = max(1, int(fps * _FLOOR_ROLL_WINDOW_SEC))
+    roll_frames = max(1, min(int(fps * _FLOOR_ROLL_WINDOW_SEC), len(floor_raw)))
     floor = _smooth_uniform(floor_raw, roll_frames)
     floor[:roll_frames] = floor[roll_frames]
     return floor
@@ -440,7 +483,7 @@ def _rolling_window_stats(
     arr: Array1D,
     window: int,
 ) -> dict[str, Array1D]:
-    """Compute rolling mean, std, min, max, and excess kurtosis.
+    """Compute rolling mean, std, min, and max.
 
     Uses scipy.ndimage filters — vectorized, centered windows,
     ``mode="nearest"`` for edge handling (no NaN at boundaries).
@@ -455,7 +498,7 @@ def _rolling_window_stats(
     Returns:
     -------
     dict[str, Array1D]
-        ``{"_mean", "_std", "_min", "_max", "_kurt"}`` arrays.
+        ``{"_mean", "_std", "_min", "_max"}`` arrays.
     """
     m = uniform_filter1d(arr, size=window, mode="nearest")
     lo = minimum_filter1d(arr, size=window, mode="nearest")
@@ -465,24 +508,7 @@ def _rolling_window_stats(
     var = np.maximum(m2 - np.square(m), 0.0)
     std = np.sqrt(var)
 
-    # Excess kurtosis: E[(X-u)^4] / sigma^4 - 3
-    # Requires >= _MIN_KURT_WINDOW samples; zeroed for smaller windows.
-    if window >= _MIN_KURT_WINDOW:
-        m3 = uniform_filter1d(np.power(arr, 3), size=window, mode="nearest")
-        m4 = uniform_filter1d(np.power(arr, 4), size=window, mode="nearest")
-        mu4 = m4 - 4 * m * m3 + 6 * np.square(m) * m2 - 3 * np.power(m, 4)
-        kurt = (
-            np.divide(
-                mu4,
-                np.square(var) + _EPS,
-                out=np.zeros_like(mu4, dtype=np.float64),
-            )
-            - 3.0
-        )
-    else:
-        kurt = np.zeros_like(m)
-
-    return {"_mean": m, "_std": std, "_min": lo, "_max": hi, "_kurt": kurt}
+    return {"_mean": m, "_std": std, "_min": lo, "_max": hi}
 
 
 def _compute_rolling_aggregates(
@@ -518,7 +544,7 @@ def _compute_rolling_aggregates(
     for wf in roll_windows:
         for key, arr in features.items():
             stats = _rolling_window_stats(arr, wf)
-            for stat_name in ("_mean", "_std", "_min", "_max", "_kurt"):
+            for stat_name in ("_mean", "_std", "_min", "_max"):
                 aggs[f"{key}{stat_name}_w{wf}"] = _ffill_bfill_1d(stats[stat_name])
 
     return aggs
@@ -572,6 +598,18 @@ def _compute_cross_features(
             )
         )
 
+    # -- X04/X05: hold score — elevation weighted by velocity decay --
+    # High = paw elevated AND slow (holding); Low = paw moving (withdrawal/stepping)
+    for elev_key, vy_key, cross_key in [
+        (W04_R_PAW_ELEVATION_MM, W01_R_PAW_VERTICAL_V_MM_S, X04_R_PAW_HOLD_SCORE_MM),
+        (W10_L_PAW_ELEVATION_MM, W07_L_PAW_VERTICAL_V_MM_S, X05_L_PAW_HOLD_SCORE_MM),
+    ]:
+        elev_smooth = _smooth_uniform(features[elev_key], body_stillness_frames)
+        vy_smooth = _smooth_uniform(features[vy_key], body_stillness_frames)
+        f[cross_key] = _ffill_bfill_1d(
+            elev_smooth * np.exp(-np.abs(vy_smooth) / _HOLD_VY_SCALE_MM_S)
+        )
+
     return f
 
 
@@ -606,6 +644,12 @@ def _compute_rearing_features(
     """
     f: dict[str, Array1D] = {}
 
+    head_x = np.mean([xy[NOSE][0], xy[EAR_R][0], xy[EAR_L][0]], axis=0)
+    head_y = np.mean([xy[NOSE][1], xy[EAR_R][1], xy[EAR_L][1]], axis=0)
+
+    bottom_x = np.mean([xy[LOWER_BACK][0], xy[TAIL_BASE][0]], axis=0)
+    bottom_y = np.mean([xy[LOWER_BACK][1], xy[TAIL_BASE][1]], axis=0)
+
     # -- R01: back angle from horizontal --
     mb_x, mb_y = xy[MID_BACK]
     lb_x, lb_y = xy[LOWER_BACK]
@@ -613,18 +657,15 @@ def _compute_rearing_features(
     dy = lb_y - mb_y
     f[R01_BACK_ANGLE_DEG] = _angle_from_horizontal_deg(dx, dy)
 
-    # -- R02: nose elevation above floor --
-    nose_x, nose_y = xy[NOSE]
-    f[R02_NOSE_ELEVATION_MM] = (floor_y - nose_y) / px_per_mm
+    # -- R02: head elevation above floor --
+    f[R02_HEAD_ELEVATION_MM] = (floor_y - head_y) / px_per_mm
 
     # -- R03: body elongation ratio --
-    body_vertical = floor_y - nose_y  # nose above floor
-    body_horizontal = np.abs(
-        nose_x - np.mean([xy[TAIL_BASE][0], xy[TAIL_TIP][0]], axis=0)
-    )
+    body_vertical = bottom_y - head_y
+    body_horizontal = np.abs(head_x - bottom_x)
     f[R03_BODY_ELONGATION_RATIO] = np.divide(
         body_vertical,
-        body_horizontal,
+        body_horizontal + _EPS,
         out=np.zeros_like(body_vertical, dtype=np.float64),
         where=body_horizontal > _EPS,
     )
@@ -641,8 +682,18 @@ def _compute_rearing_features(
     hind_toe_mean_y = np.mean([xy[HIND_TOE_R][1], xy[HIND_TOE_L][1]], axis=0)
     f[R05_FRONT_PAW_ELEVATION_MM] = (hind_toe_mean_y - front_toe_mean_y) / px_per_mm
 
-    # -- R06: nose vertical velocity --
-    f[R06_NOSE_VERTICAL_VELOCITY_MM_S] = _vertical_velocity(nose_y, px_per_mm, fps)
+    # -- R06: head vertical velocity --
+    f[R06_HEAD_VERTICAL_VELOCITY_MM_S] = _vertical_velocity(head_y, px_per_mm, fps)
+
+    # -- R07: whole-body angle (bottom→head vector from horizontal) --
+    f[R07_WHOLE_BODY_ANGLE_DEG] = _angle_from_horizontal_deg(
+        head_x - bottom_x, head_y - bottom_y,
+    )
+
+    # -- R08: upper-body angle (LOWER_BACK→head vector from horizontal) --
+    f[R08_UPPER_BODY_ANGLE_DEG] = _angle_from_horizontal_deg(
+        head_x - lb_x, head_y - lb_y,
+    )
 
     return f
 
@@ -679,7 +730,7 @@ def _compute_withdrawal_features(
     f: dict[str, Array1D] = {}
 
     # -- Per-paw kinematics --
-    paws: list[tuple[str, str, str, str, str, str, str, str, str, str, str, str]] = [
+    paws = [
         (
             "r",
             HIND_TOE_R,
@@ -692,6 +743,11 @@ def _compute_withdrawal_features(
             W05_R_PAW_HEEL_TOE_DIST_MM,
             W06_R_PAW_VERTICAL_A_MM_S2,
             W18_R_PAW_VY_PEAK_MM_S,
+            W20_R_KNEE_ELEVATION_MM,
+            W21_R_KNEE_TOE_ANGLE_DEG,
+            W22_R_KNEE_HIP_DIST_MM,
+            W23_R_PAW_VELOCITY_DIRECTION_DEG,
+            W24_R_PAW_AREA_MM2,
         ),
         (
             "l",
@@ -705,6 +761,11 @@ def _compute_withdrawal_features(
             W11_L_PAW_HEEL_TOE_DIST_MM,
             W12_L_PAW_VERTICAL_A_MM_S2,
             W19_L_PAW_VY_PEAK_MM_S,
+            W25_L_KNEE_ELEVATION_MM,
+            W26_L_KNEE_TOE_ANGLE_DEG,
+            W27_L_KNEE_HIP_DIST_MM,
+            W28_L_PAW_VELOCITY_DIRECTION_DEG,
+            W29_L_PAW_AREA_MM2,
         ),
     ]
 
@@ -715,7 +776,7 @@ def _compute_withdrawal_features(
         side,
         toe_bp,
         heel_bp,
-        _knee_bp,
+        knee_bp,
         vy_key,
         vx_key,
         ratio_key,
@@ -723,9 +784,15 @@ def _compute_withdrawal_features(
         ht_key,
         a_key,
         peak_key,
+        knee_elev_key,
+        knee_toe_angle_key,
+        knee_hip_dist_key,
+        vel_dir_key,
+        paw_area_key,
     ) in paws:
         toe_x, toe_y = xy[toe_bp]
         heel_x, heel_y = xy[heel_bp]
+        knee_x, knee_y = xy[knee_bp]
 
         # Use toe for velocity (most distal, best signal for lift)
         vy = _vertical_velocity(toe_y, px_per_mm, fps)
@@ -755,6 +822,28 @@ def _compute_withdrawal_features(
         # Local vy peak envelope
         peak_win = max(1, int(fps * _VY_PEAK_WINDOW_SEC))
         f[peak_key] = _local_peak(np.abs(vy), peak_win)
+
+        # Knee elevation above floor
+        f[knee_elev_key] = (floor_y - knee_y) / px_per_mm
+
+        # Knee-toe angle: vector from knee→toe relative to horizontal
+        f[knee_toe_angle_key] = _angle_from_horizontal_deg(
+            toe_x - knee_x, toe_y - knee_y,
+        )
+
+        # Knee-hip distance (hip ≈ LOWER_BACK)
+        lb_x, lb_y = xy[LOWER_BACK]
+        f[knee_hip_dist_key] = _euclidean(knee_x, knee_y, lb_x, lb_y, px_per_mm)
+
+        # Paw velocity direction: atan2(vy, |vx|) — 0°=forward, ±90°=vertical
+        f[vel_dir_key] = np.degrees(np.arctan2(vy, np.abs(vx) + _EPS))
+
+        # Paw area: triangle(toe, heel, knee) in mm²
+        cross = (
+            (toe_x - heel_x) * (knee_y - heel_y)
+            - (toe_y - heel_y) * (knee_x - heel_x)
+        )
+        f[paw_area_key] = 0.5 * np.abs(cross) / (px_per_mm * px_per_mm)
 
     # -- Asymmetry features --
     r_elev = f[W04_R_PAW_ELEVATION_MM]
@@ -808,10 +897,8 @@ def hpw_compute(
     """
     xy = _get_bodypart_xy_dict(keypoints_df, ALL_BODYPARTS)
 
-    floor_y = _estimate_floor_y(
-        [xy[bp][1] for bp in HIND_PAW_ALL_BPTS],
-        fps,
-    )
+    arena_xy = _get_bodypart_xy_dict(keypoints_df, ARENA_BPTS)
+    floor_y = _estimate_floor_y(arena_xy, xy, fps)
 
     features: dict[str, Array1D] = {}
     features |= _compute_rearing_features(xy, floor_y, px_per_mm, fps)
