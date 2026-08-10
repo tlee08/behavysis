@@ -68,13 +68,13 @@ def _():
 @app.cell
 def _():
     # Classifier root directory.
-    contract_fp = Path("/absolute/path/to/behaviour_classifier/contract.yaml")
+    contract_fp = Path("path/to/behaviour_classifier/contract.yaml")
 
     # Behaviour to classify — written to contract.yaml.
     behaviour_name = "aggression"
 
     # Source project (must have completed extract_features stage).
-    training_data_dir = Path("/absolute/path/to/behavysis_project")
+    training_data_dir = Path("path/to/behavysis_project")
     feature_set = "extract_generic"
     names_ls = [i.stem for i in (training_data_dir / "1_raw_videos").iterdir()]
 

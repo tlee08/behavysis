@@ -41,6 +41,8 @@ def write_contract(
     overwrite: bool,
 ) -> ClassifierPaths:
     """Make contract for classifier."""
+    contract_fp = contract_fp.expanduser().resolve()
+    training_project_path = training_project_path.expanduser().resolve()
     if not contract_fp.exists() or overwrite:
         contract = ClassifierContract(
             behaviour_name=behaviour_name,
