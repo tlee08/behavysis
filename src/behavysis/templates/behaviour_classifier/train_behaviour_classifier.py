@@ -78,9 +78,6 @@ def _():
     feature_set = "extract_generic"
     names_ls = [i.stem for i in (training_data_dir / "1_raw_videos").iterdir()]
 
-    # Directory of BORIS .tsv exports (one per experiment).
-    boris_dir = Path("/absolute/path/to/boris_tsvs")
-
     # Metrics to show in evaluation summary.
     view_metrics = [
         "accuracy",
@@ -95,7 +92,6 @@ def _():
     overwrite = False
     return (
         behaviour_name,
-        boris_dir,
         contract_fp,
         feature_set,
         names_ls,
