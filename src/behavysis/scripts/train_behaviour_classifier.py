@@ -4,18 +4,17 @@ from pathlib import Path
 
 from behavysis.utils.template_utils import confirm, save_template
 
-_TEMPLATE = "behaviour_classifier/train_behaviour_classifier.py"
-_DST = "train_behaviour_classifier.py"
-
 
 def main() -> None:
     """Scaffold the marimo training notebook in the current directory."""
     if not confirm("Create training notebook in current directory?"):
         return
-    if Path(_DST).exists() and not confirm(f"Overwrite existing {_DST}?"):
+    template_fp = Path("behaviour_classifier") / "train_behaviour_classifier.py"
+    dst_fp = Path("train_behaviour_classifier.py")
+    if Path(dst_fp).exists() and not confirm(f"Overwrite existing {dst_fp}?"):
         return
-    save_template(_TEMPLATE, Path(_DST))
-    _print_next_steps(Path(_DST).resolve())
+    save_template(template_fp, dst_fp)
+    _print_next_steps(Path(dst_fp).resolve())
 
 
 def _print_next_steps(dst: Path) -> None:

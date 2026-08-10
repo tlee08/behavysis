@@ -19,16 +19,16 @@ def confirm(prompt: str, *, default: bool = False) -> bool:
         print("Please enter 'y' or 'n'.")  # noqa: T201
 
 
-def render_template(template_name: str, **kwargs: object) -> str:
+def render_template(template_fp: Path, **kwargs: object) -> str:
     """Render a template to a string."""
     env = Environment(
         loader=PackageLoader("behavysis", "templates"),
         autoescape=False,  # noqa: S701
     )
-    return env.get_template(template_name).render(**kwargs)
+    return env.get_template(str(template_fp)).render(**kwargs)
 
 
-def save_template(template_name: str, dst: Path, **kwargs: object) -> None:
+def save_template(template_fp: Path, dst: Path, **kwargs: object) -> None:
     """Render and save a template."""
     dst.parent.mkdir(parents=True, exist_ok=True)
-    dst.write_text(render_template(template_name, **kwargs))
+    dst.write_text(render_template(template_fp, **kwargs))
