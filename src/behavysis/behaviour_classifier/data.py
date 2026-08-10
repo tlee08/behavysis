@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -23,6 +22,8 @@ from behavysis.constants import (
 from behavysis.transforms import label_bouts
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from imblearn.under_sampling.base import BaseUnderSampler
 
 ACTUAL = "actual"

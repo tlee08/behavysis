@@ -25,6 +25,7 @@ class TorchModel(nn.Module, ABC):
     window_frames: int
 
     def __init__(self, nfeatures: int, window_frames: int) -> None:
+        """Init."""
         super().__init__()
         self.nfeatures = nfeatures
         self.window_frames = window_frames
@@ -32,14 +33,19 @@ class TorchModel(nn.Module, ABC):
 
     @property
     @abstractmethod
-    def criterion(self) -> nn.Module: ...
+    def criterion(self) -> nn.Module:
+        """Criterion."""
+        ...
 
     @property
     @abstractmethod
-    def optimizer(self) -> optim.Optimizer: ...
+    def optimizer(self) -> optim.Optimizer:
+        """Optimizer."""
+        ...
 
     @property
     def device(self) -> torch.device:
+        """Device."""
         return self._device
 
     def to_device(self, device: torch.device | None = None) -> None:

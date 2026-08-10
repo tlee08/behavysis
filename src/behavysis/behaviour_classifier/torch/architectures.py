@@ -9,6 +9,7 @@ class DNN1(TorchModel):
     """Shallow feedforward network."""
 
     def __init__(self, nfeatures: int, window_frames: int) -> None:
+        """Init."""
         super().__init__(nfeatures, window_frames)
         flat_size = (window_frames * 2 + 1) * nfeatures
         self.flatten = nn.Flatten()
@@ -23,13 +24,16 @@ class DNN1(TorchModel):
 
     @property
     def criterion(self) -> nn.Module:
+        """Criterion."""
         return self._criterion
 
     @property
     def optimizer(self) -> optim.Optimizer:
+        """Optimizer."""
         return self._optimizer
 
-    def forward(self, x):
+    def forward(self, x) -> object:
+        """Forward."""
         return self.sigmoid1(
             self.fc2(self.dropout1(self.relu1(self.fc1(self.flatten(x)))))
         )

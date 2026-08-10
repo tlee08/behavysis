@@ -32,7 +32,7 @@ def select_features(
             n_estimators=200, max_depth=8, random_state=42, n_jobs=-1, verbose=1
         )
         rf.fit(x[:, keep], y)
-        top = np.argsort(rf.feature_importances_)[::-1][: config.max_features]
+        top = np.argsort(rf.feature_importances_)[::-1][:max_features]
         keep = np.sort(keep[top])
 
     return keep

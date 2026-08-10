@@ -45,7 +45,7 @@ def format_video(
     ]
     formatted_vid_fp.parent.mkdir(parents=True, exist_ok=True)
     # Running format vid with ffmpeg
-    subprocess.run(cmd, check=True)
+    subprocess.run(cmd, check=True)  # noqa: S603
 
 
 def get_video_metadata(vid_fp: Path) -> VideoMetadata:

@@ -87,6 +87,7 @@ def make_batched_scored_schema(
     schema: SchemaDict = {EXPERIMENT: pl.Utf8, **make_scored_schema(classify_behaviour)}
     return schema
 
+
 """One row per (frame, individual, measure) value. Frame-by-frame analysis."""
 ANALYSIS_SCHEMA: SchemaDict = {
     FRAME: pl.Int64,

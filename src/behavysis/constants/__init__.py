@@ -1,14 +1,5 @@
 """Constants package for behavysis."""
 
-from .bodypoints import (
-    BPMAP_SIMBA,
-    BPTS_CENTRE,
-    BPTS_CORNERS,
-    BPTS_FRONT,
-    BPTS_SIMBA,
-    INDIVS_SIMBA,
-    INDIVS_SINGLE,
-)
 from .data_names import (
     AGG,
     ANALYSIS,
@@ -80,11 +71,6 @@ __all__ = [
     "BODYPART",
     "BOUT",
     "BOUT_ID",
-    "BPMAP_SIMBA",
-    "BPTS_CENTRE",
-    "BPTS_CORNERS",
-    "BPTS_FRONT",
-    "BPTS_SIMBA",
     "CACHE_DIR",
     "CONFIG",
     "CONFIG_DIR",
@@ -102,8 +88,6 @@ __all__ = [
     "FORMATTED_VIDEO_DIR",
     "FRAME",
     "INDIVIDUAL",
-    "INDIVS_SIMBA",
-    "INDIVS_SINGLE",
     "KEYPOINTS_DIR",
     "LIKELIHOOD",
     "MEASURE",

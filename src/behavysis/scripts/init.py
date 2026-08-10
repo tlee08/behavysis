@@ -21,7 +21,7 @@ def main() -> None:
             # 'pip install "git+https://github.com/DeepLabCut/DeepLabCut.git@pytorch_dlc#egg=deeplabcut[gui,modelzoo,wandb]"'
         ),
     ]:
-        subprocess.run(cmd_str, shell=True)
+        subprocess.run(cmd_str, shell=True)  # noqa: PLW1510, S602
 
 
 if __name__ == "__main__":

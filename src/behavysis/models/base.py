@@ -1,3 +1,5 @@
+"""YAML model base class for Pydantic models."""
+
 from pathlib import Path
 from typing import Self
 

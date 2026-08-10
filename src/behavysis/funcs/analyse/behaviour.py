@@ -31,36 +31,34 @@ def analyse_behaviour(
     """Takes a wide-format behaviour df and generates summary + binned analysis."""
     name = metadata.require_name()
 
-    rows: list[dict] = []
+    rows: list[pl.DataFrame] = []
     for behaviour, ref in classify_behaviour.items():
-        behaviour_vals = (
-            behaviour_df.select(
-                FRAME,
-                pl.when(pl.col(behaviour) == TRUE_POS)
-                .then(TRUE_POS)
-                .otherwise(TRUE_NEG)
-                .alias(VALUE),
-            )
-            .with_columns(pl.lit(behaviour).alias(MEASURE))
-        )
+        behaviour_vals = behaviour_df.select(
+            FRAME,
+            pl.when(pl.col(behaviour) == TRUE_POS)
+            .then(TRUE_POS)
+            .otherwise(TRUE_NEG)
+            .alias(VALUE),
+        ).with_columns(pl.lit(behaviour).alias(MEASURE))
         rows.append(behaviour_vals)
 
         for sub in ref.sub_behaviour:
-            sub_vals = (
-                behaviour_df.select(
-                    FRAME,
-                    pl.when(pl.col(sub) == TRUE_POS)
-                    .then(TRUE_POS)
-                    .otherwise(TRUE_NEG)
-                    .alias(VALUE),
-                )
-                .with_columns(pl.lit(sub).alias(MEASURE))
-            )
+            sub_vals = behaviour_df.select(
+                FRAME,
+                pl.when(pl.col(sub) == TRUE_POS)
+                .then(TRUE_POS)
+                .otherwise(TRUE_NEG)
+                .alias(VALUE),
+            ).with_columns(pl.lit(sub).alias(MEASURE))
             rows.append(sub_vals)
 
-    analysis_df = pl.concat(rows).rename({MEASURE: INDIVIDUAL}).with_columns(
-        pl.col(INDIVIDUAL),
-        pl.col(VALUE).cast(pl.Float64),
+    analysis_df = (
+        pl.concat(rows)
+        .rename({MEASURE: INDIVIDUAL})
+        .with_columns(
+            pl.col(INDIVIDUAL),
+            pl.col(VALUE).cast(pl.Float64),
+        )
     )
 
     return [

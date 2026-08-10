@@ -261,9 +261,7 @@ class Experiment:
         )
         classify_behaviour = self.read_config().require_classify_behaviour()
         for name, ref in classify_behaviour.items():
-            contract_name = (
-                ClassifierContract.read_yaml(ref.contract_fp).behaviour_name
-            )
+            contract_name = ClassifierContract.read_yaml(ref.contract_fp).behaviour_name
             if name != contract_name:
                 logger.warning(
                     f"Behaviour key '{name}' overrides contract name '{contract_name}'"
@@ -285,9 +283,7 @@ class Experiment:
                 self.get_fp(PREPROCESSED_DIR), KEYPOINTS_SCHEMA
             )
         if self.get_fp(FORMATTED_VIDEO_DIR).is_file():
-            kwargs["vid_frame"] = _get_frame(
-                self.get_fp(FORMATTED_VIDEO_DIR), metadata
-            )
+            kwargs["vid_frame"] = _get_frame(self.get_fp(FORMATTED_VIDEO_DIR), metadata)
         if self.get_fp(BEHAVIOUR_SCORED_DIR).is_file():
             kwargs["behaviour_df"] = read_df(self.get_fp(BEHAVIOUR_SCORED_DIR))
             if config.classify_behaviour is not None:
