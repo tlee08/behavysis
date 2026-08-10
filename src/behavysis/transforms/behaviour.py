@@ -6,7 +6,7 @@ Scored (fully wide):   (frame, <behaviour1>, <sub1a>, <behaviour2>, ...)
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal
+from typing import Literal
 
 import numpy as np
 import polars as pl
@@ -25,15 +25,8 @@ from behavysis.constants import (
     TRUE_POS,
     UNSURE,
 )
-from behavysis.models import (
-    Bout,
-    Bouts,
-    BoutStruct,
-)
+from behavysis.models import Bout, Bouts, BoutStruct, ClassifierRef
 from behavysis.schemas import make_scored_schema
-
-if TYPE_CHECKING:
-    from behavysis.models import ClassifierRef
 
 COUNT = "count"
 
@@ -43,7 +36,8 @@ def get_group_cols(df: pl.DataFrame) -> list[str]:
     group_cols = []
     if EXPERIMENT in df.columns:
         group_cols.append(EXPERIMENT)
-    group_cols.append(BEHAVIOUR)
+    if BEHAVIOUR in df.columns:
+        group_cols.append(BEHAVIOUR)
     return group_cols
 
 
@@ -280,8 +274,6 @@ def _bouts_struct_to_classify(
     bouts_struct: list[BoutStruct],
 ) -> dict[str, ClassifierRef]:
     """Convert list of BoutStruct back to classify_behaviour dict."""
-    from behavysis.models import ClassifierRef
-
     return {
         bs.behaviour: ClassifierRef(sub_behaviour=bs.sub_behaviour)
         for bs in bouts_struct
