@@ -75,7 +75,7 @@ def _():
 
     # Source project (must have completed extract_features stage).
     training_data_dir = Path("/absolute/path/to/behavysis_project")
-    feature_set = "generic"
+    feature_set = "extract_generic"
     names_ls = [i.stem for i in (training_data_dir / "1_raw_videos").iterdir()]
 
     # Directory of BORIS .tsv exports (one per experiment).

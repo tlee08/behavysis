@@ -6,9 +6,9 @@ The pipeline supports multiple named feature extractors stored in subdirectories
 
 ```
 5_features_extracted/
-    generic/
+    extract_generic/
         exp1.parquet
-    hpw/
+    extract_hpw/
         exp1.parquet
 ```
 
@@ -16,7 +16,7 @@ The pipeline supports multiple named feature extractors stored in subdirectories
 
 ## HPW Feature Extraction ✅
 
-Implemented as `funcs/extract_features/hpw.py`. Computes rearing (R01-R06) and hind-paw withdrawal (W01-W19) features plus cross-features (X01-X03) with rolling-window aggregates.
+Implemented as `funcs/extract_features/extract_hpw.py`. Computes rearing (R01-R06) and hind-paw withdrawal (W01-W19) features plus cross-features (X01-X03) with rolling-window aggregates.
 
 Config model `FeaturesHpwConfig` is empty — all features always computed, no user-facing toggles.
 

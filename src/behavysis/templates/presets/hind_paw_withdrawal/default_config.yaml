@@ -71,13 +71,13 @@ preprocess:
     pcutoff: 0.5
 
 extract_features:
-  generic:
+  extract_generic:
     bodyparts: *bpts_all
     individuals: *individuals
     angles:
       - [hind_toe_r, hind_heel_r, hind_knee_r]
       - [hind_toe_l, hind_heel_l, hind_knee_l]
-  hpw: {}
+  extract_hpw: {}
 
 classify_behaviour:
   hpw:

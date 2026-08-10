@@ -12,7 +12,7 @@ from .calculate_parameters import (
 )
 from .classify_behaviour import classify_behaviour
 from .combine_analysis import combine_analysis
-from .extract_features import ExtractFeaturesFunc, generic, hpw
+from .extract_features import ExtractFeaturesFunc, extract_generic, extract_hpw
 from .format_video import format_video, get_video_metadata
 from .preprocess import (
     PreprocessFunc,
@@ -32,10 +32,10 @@ __all__ = [
     "combine_analysis",
     "distance",
     "dur_frames_from_likelihood",
+    "extract_generic",
+    "extract_hpw",
     "format_video",
-    "generic",
     "get_video_metadata",
-    "hpw",
     "in_roi",
     "interpolate",
     "interpolate_stationary",

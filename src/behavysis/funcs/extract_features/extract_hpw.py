@@ -833,7 +833,7 @@ def hpw_compute(
     return pl.DataFrame(col_data)
 
 
-def hpw(
+def extract_hpw(
     keypoints_df: pl.DataFrame,
     config: ExperimentConfig,  # noqa: ARG001
     metadata: ExperimentMetadata,

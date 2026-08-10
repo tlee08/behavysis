@@ -64,7 +64,7 @@ preprocess:
     pcutoff: 0.5
 
 extract_features:
-  generic:
+  extract_generic:
     bodyparts: *bpts_all
     individuals: *individuals
     angles:

@@ -184,7 +184,7 @@ def _pct_rank(vals: Array1D) -> Array1D:
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
-def generic(
+def extract_generic(
     keypoints_df: pl.DataFrame,
     config: ExperimentConfig,
     metadata: ExperimentMetadata,
