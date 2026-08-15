@@ -23,7 +23,7 @@ import numpy as np
 import polars as pl
 from pydantic import BaseModel
 
-from ._shared import (
+from ._helper import (
     _EPS,
     ALL_BODYPARTS,
     ARENA_BPTS,

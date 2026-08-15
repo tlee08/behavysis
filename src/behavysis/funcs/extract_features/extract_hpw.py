@@ -29,7 +29,7 @@ import numpy as np
 import polars as pl
 from pydantic import BaseModel
 
-from ._shared import (
+from ._helper import (
     _EPS,
     _VY_PEAK_WINDOW_SEC,
     ALL_BODYPARTS,

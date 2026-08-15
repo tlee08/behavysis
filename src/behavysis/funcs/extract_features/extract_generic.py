@@ -14,12 +14,13 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import polars as pl
-from loguru import logger
 from pydantic import BaseModel
 from scipy.spatial import ConvexHull
 from scipy.spatial.distance import pdist
 
 from behavysis.transforms import check_bpts_exist
+
+from ._helper import _euclidean, _ffill_bfill_2d
 
 if TYPE_CHECKING:
     from behavysis.constants import Array1D, Array2D
@@ -74,17 +75,6 @@ AGG_SUFFIXES = (
 # ═══════════════════════════════════════════════════════════════════════════════
 # Vectorized math helpers (generic, reusable)
 # ═══════════════════════════════════════════════════════════════════════════════
-
-
-def _euclidean(
-    ax: Array1D,
-    ay: Array1D,
-    bx: Array1D,
-    by: Array1D,
-    px_per_mm: float,
-) -> Array1D:
-    """Vectorized Euclidean distance between two point sets, scaled to mm."""
-    return np.hypot(ax - bx, ay - by) / px_per_mm
 
 
 def _movement_frame_to_frame(ax: Array1D, ay: Array1D, px_per_mm: float) -> Array1D:
@@ -152,22 +142,6 @@ def _roll_median_mean(
     }
 
 
-def _ffill_bfill(arr: Array2D) -> Array2D:
-    """Forward-fill then backward-fill NaN values along axis 0."""
-    mask = np.isnan(arr)
-    if not mask.any():
-        return arr
-    idx = np.where(~mask, np.arange(mask.shape[0])[:, None], 0)
-    np.maximum.accumulate(idx, axis=0, out=idx)
-    arr = np.take_along_axis(arr, idx, axis=0)
-    mask = np.isnan(arr)
-    if mask.any():
-        idx = np.where(~mask, np.arange(mask.shape[0])[:, None], mask.shape[0] - 1)
-        np.minimum.accumulate(idx[::-1], axis=0, out=idx[::-1])
-        arr = np.take_along_axis(arr, idx, axis=0)
-    return arr
-
-
 def _pct_rank(vals: Array1D) -> Array1D:
     """Percentile rank (replicating pandas .rank(pct=True))."""
     n = len(vals)
@@ -214,7 +188,7 @@ def extract_generic(
 
     check_bpts_exist(keypoints_df, cfg.bodyparts)
 
-    features_df = generic_compute(
+    return generic_compute(
         keypoints_df.filter(
             pl.col("individual").is_in(cfg.individuals),
             pl.col("bodypart").is_in(cfg.bodyparts),
@@ -225,8 +199,6 @@ def extract_generic(
         fps=metadata.require_fps(),
         px_per_mm=metadata.require_px_per_mm(),
     )
-    logger.info("Exported features to disk.")
-    return features_df
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -345,7 +317,7 @@ def _pivot_to_wide(
             y_vals = bp_data.select("y").to_series().to_numpy()
             arr[pos, 2 * bp_i] = x_vals
             arr[pos, 2 * bp_i + 1] = y_vals
-        arrs[indiv] = _ffill_bfill(arr)
+        arrs[indiv] = _ffill_bfill_2d(arr)
 
     n_prob_cols = len(individuals) * n_bp
     arr_prob = np.full((n_frames, n_prob_cols), np.nan, dtype=np.float64)
@@ -359,7 +331,7 @@ def _pivot_to_wide(
             p_vals = bp_data.select("likelihood").to_series().to_numpy()
             prob_col = ind_i * n_bp + bp_i
             arr_prob[pos, prob_col] = p_vals
-    arr_prob = _ffill_bfill(arr_prob)
+    arr_prob = _ffill_bfill_2d(arr_prob)
 
     return arrs, arr_prob
 
