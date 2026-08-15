@@ -11,7 +11,7 @@ Features are grouped into one behaviour-specific battery:
     upper-body angle.
 
 A robust bottom reference is computed from likelihood-filtered
-hind-paw and back bodyparts so that rearing posture can be estimated
+hind-paw bodyparts so that rearing posture can be estimated
 even when the back/tail are occluded (e.g. rat facing the camera).
 """
 
@@ -90,6 +90,12 @@ REARING_FEATURES: list[str] = [
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
+def _nanmean(arrays: list[Array1D]) -> Array1D:
+    """Column-wise mean of stacked 1D arrays, ignoring NaN."""
+    with np.errstate(all="ignore"):
+        return np.nanmean(np.column_stack(arrays), axis=1)
+
+
 def _compute_rearing_features(  # noqa: PLR0913
     xy: dict[str, tuple[Array1D, Array1D]],
     floor_y: Array1D,
@@ -101,8 +107,8 @@ def _compute_rearing_features(  # noqa: PLR0913
     """Compute all rearing features."""
     f: dict[str, Array1D] = {}
 
-    head_x = np.mean([xy[NOSE][0], xy[EAR_R][0], xy[EAR_L][0]], axis=0)
-    head_y = np.mean([xy[NOSE][1], xy[EAR_R][1], xy[EAR_L][1]], axis=0)
+    head_x = _nanmean([xy[NOSE][0], xy[EAR_R][0], xy[EAR_L][0]])
+    head_y = _nanmean([xy[NOSE][1], xy[EAR_R][1], xy[EAR_L][1]])
 
     # -- R01: back angle from horizontal --
     mb_x, mb_y = xy[MID_BACK]
@@ -117,23 +123,18 @@ def _compute_rearing_features(  # noqa: PLR0913
     # -- R03: body elongation ratio --
     body_vertical = bottom_y - head_y
     body_horizontal = np.abs(head_x - bottom_x)
-    f[R03_BODY_ELONGATION_RATIO] = np.divide(
-        body_vertical,
-        body_horizontal + _EPS,
-        out=np.zeros_like(body_vertical, dtype=np.float64),
-        where=body_horizontal > _EPS,
-    )
+    f[R03_BODY_ELONGATION_RATIO] = np.divide(body_vertical, body_horizontal + _EPS)
 
     # -- R04: centroid vertical velocity --
     all_y = [xy[bp][1] for bp in ALL_BODYPARTS]
-    centroid_y = np.mean(np.column_stack(all_y), axis=1)
+    centroid_y = _nanmean(all_y)
     f[R04_CENTROID_VERTICAL_VELOCITY_MM_S] = _vertical_velocity(
         centroid_y, px_per_mm, fps
     )
 
     # -- R05: front paw elevation relative to hind paws --
-    front_toe_mean_y = np.mean([xy[FRONT_TOE_R][1], xy[FRONT_TOE_L][1]], axis=0)
-    hind_toe_mean_y = np.mean([xy[HIND_TOE_R][1], xy[HIND_TOE_L][1]], axis=0)
+    front_toe_mean_y = _nanmean([xy[FRONT_TOE_R][1], xy[FRONT_TOE_L][1]])
+    hind_toe_mean_y = _nanmean([xy[HIND_TOE_R][1], xy[HIND_TOE_L][1]])
     f[R05_FRONT_PAW_ELEVATION_MM] = (hind_toe_mean_y - front_toe_mean_y) / px_per_mm
 
     # -- R06: head vertical velocity --
@@ -183,7 +184,7 @@ def rearing_compute(
     pl.DataFrame
         Wide features DataFrame with ``frame`` column + all feature columns.
     """
-    xy = _get_bodypart_xy_dict(keypoints_df, ALL_BODYPARTS, RAT_INDIVIDUAL)
+    xy = _get_bodypart_xy_dict(keypoints_df, ALL_BODYPARTS, RAT_INDIVIDUAL, pcutoff)
 
     arena_xy = _get_bodypart_xy_dict(keypoints_df, ARENA_BPTS, ARENA_INDIVIDUAL)
     floor_y = _estimate_floor_y(arena_xy, xy, fps)

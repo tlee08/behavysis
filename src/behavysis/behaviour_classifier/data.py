@@ -24,8 +24,6 @@ from behavysis.transforms import label_bouts
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from imblearn.under_sampling.base import BaseUnderSampler
-
 ACTUAL = "actual"
 
 
@@ -130,14 +128,56 @@ def agg_eval_df_by_bouts(df: pl.DataFrame, *, label_col: str = ACTUAL) -> pl.Dat
 # ── preprocessing ────────────────────────────────────────────────────
 
 
-def df_resample(
+def df_stride_sample(
     df: pl.DataFrame,
-    resampler: BaseUnderSampler,
+    stride_frames: int,
+) -> pl.DataFrame:
+    """Bout-aware stride sampling.
+
+    Keeps every ``stride_frames``-th frame *within each bout* (a contiguous
+    run of the label inside an experiment), so every bout contributes at
+    least one frame and short bouts are never dropped.  Assumes ``df`` is
+    already bout-labelled (has a ``BOUT_ID`` column).
+    """
+    if stride_frames <= 1:
+        return df
+    return (
+        df.sort([EXPERIMENT, FRAME])
+        .with_columns(pl.int_range(pl.len()).over([EXPERIMENT, BOUT_ID]).alias("_i"))
+        .filter(pl.col("_i") % stride_frames == 0)
+        .drop("_i")
+    )
+
+
+def df_under_sample_by_group(
+    df: pl.DataFrame,
+    strategy: float,
     *,
     label_col: str = ACTUAL,
+    group_col: str = EXPERIMENT,
+    seed: int = 42,
 ) -> pl.DataFrame:
-    """Resample."""
-    idx = np.arange(len(df)).reshape(-1, 1)
-    sub_idx, _ = resampler.fit_resample(idx, df_get_labels(df, label_col=label_col))
-    sub_idx = sub_idx.reshape(-1)
-    return df.gather(sub_idx)
+    """Random under-sampling of the majority class, per group.
+
+    Keeps every minority sample and, within each group, ``ceil(n_minority /
+    strategy)`` majority samples chosen uniformly at random.  ``strategy``
+    follows imblearn's ``sampling_strategy`` float convention (the desired
+    ratio of the minority class over the majority class after sampling).
+    Grouping guarantees no group (experiment) is under-represented after
+    sampling.  Groups with no minority keep a single majority sample.
+    """
+    if strategy is None:
+        return df
+    rng = np.random.default_rng(seed)
+    pieces: list[pl.DataFrame] = []
+    for sub in df.partition_by([group_col], maintain_order=True):
+        minority = sub.filter(pl.col(label_col) == 1)
+        majority = sub.filter(pl.col(label_col) == 0)
+        n_keep = int(np.ceil(minority.height / strategy)) if minority.height > 0 else 1
+        n_keep = min(n_keep, majority.height)
+        if n_keep < majority.height:
+            majority = majority.gather(
+                rng.choice(majority.height, size=n_keep, replace=False)
+            )
+        pieces.append(pl.concat([minority, majority]))
+    return pl.concat(pieces).sort([group_col, FRAME], maintain_order=True)

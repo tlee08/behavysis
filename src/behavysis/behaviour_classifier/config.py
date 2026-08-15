@@ -41,16 +41,21 @@ class ModelRecipe(YamlModel):
     behaviour_name: str
 
     model_type: str
-
     model_name: str
 
+    # Train/val/test split parameters
     seed: int = 42
     test_split: float = 0.2
     val_split: float = 0.2
-    downsample_n: int = 100_000
 
+    # Sub-sampling parameters
+    stride_frames: PositiveInt = 8
+    under_sampling_strategy: PositiveFloat | None = 1.0
+
+    # Pcutoff calibration (affects the pcutoff value used at inference time)
     target_recall: float = 0.98
 
+    # Prediction post-processing parameters
     pcutoff: PositiveFloat = 0.2
     smoothing_frames: PositiveInt = 2
     min_gap: PositiveInt = 3

@@ -94,11 +94,6 @@ BACK_BPTS = [MID_BACK, LOWER_BACK]
 TAIL_BPTS = [TAIL_BASE, TAIL_TIP]
 BOTTOM_BPTS = [LOWER_BACK, TAIL_BASE]
 
-# Broad set of bodyparts used for robust bottom-reference computation.
-# Includes hind paw points so the bottom reference is still available when
-# the back/tail are occluded (e.g. rat facing camera during rearing).
-FLOOR_BPTS = HIND_PAW_ALL_BPTS + BOTTOM_BPTS
-
 # ═══════════════════════════════════════════════════════════════════════════════
 # Smoothing / derivative parameters
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -203,11 +198,25 @@ def _get_bodypart_xy_dict(
     keypoints_df: pl.DataFrame,
     bodyparts: list[str],
     individual: str,
+    pcutoff: float | None = None,
 ) -> dict[str, tuple[Array1D, Array1D]]:
-    """Return {bodypart: (x_array, y_array)} for a list of bodyparts."""
+    """Return ``{bodypart: (x, y)}`` for a list of bodyparts.
+
+    When ``pcutoff`` is given, positions whose likelihood is below
+    ``pcutoff`` (or missing) are set to NaN so they propagate through the
+    feature pipeline instead of being silently forward/backward filled.
+    """
     result: dict[str, tuple[Array1D, Array1D]] = {}
     for bp in bodyparts:
-        x_arr, y_arr, _ = _extract_bodypart_xy(keypoints_df, bp, individual)
+        if pcutoff is None:
+            x_arr, y_arr, _ = _extract_bodypart_xy(keypoints_df, bp, individual)
+        else:
+            x_arr, y_arr, lik_arr, _ = _extract_bodypart_xyl(
+                keypoints_df, bp, individual
+            )
+            mask = (lik_arr < pcutoff) | ~np.isfinite(lik_arr)
+            x_arr = np.where(mask, np.nan, x_arr)
+            y_arr = np.where(mask, np.nan, y_arr)
         result[bp] = (x_arr, y_arr)
     return result
 
@@ -255,10 +264,21 @@ def _ffill_bfill_2d(arr: Array2D) -> Array2D:
 
 
 def _smooth_uniform(arr: Array1D, window: int) -> Array1D:
-    """Apply uniform (boxcar) smoothing to a 1D array."""
+    """Apply uniform (boxcar) smoothing to a 1D array.
+
+    NaN-aware: NaN values are ignored within each window, and an all-NaN
+    window yields NaN.  Identical to ``uniform_filter1d`` for NaN-free input.
+    """
     if window <= 1:
         return arr.copy()
-    return uniform_filter1d(arr.astype(np.float64), size=window, mode="nearest")
+    arr = np.asarray(arr, dtype=np.float64)
+    mask = np.isfinite(arr)
+    if mask.all():
+        return uniform_filter1d(arr, size=window, mode="nearest")
+    a0 = np.where(mask, arr, 0.0)
+    cnt = uniform_filter1d(mask.astype(np.float64), size=window, mode="nearest")
+    out = uniform_filter1d(a0, size=window, mode="nearest") / np.maximum(cnt, _EPS)
+    return np.where(cnt > 0, out, np.nan)
 
 
 def _vertical_velocity(
@@ -391,21 +411,24 @@ def _compute_bottom_reference(
     keypoints_df: pl.DataFrame,
     pcutoff: float,
 ) -> tuple[Array1D, Array1D]:
-    """Robust bottom reference (x, y) from likelihood-filtered bodyparts.
+    """Hind-paw bottom reference (x, y), NaN where all paws are occluded.
 
-    At each frame, averages (x, y) of bodyparts in FLOOR_BPTS whose
-    likelihood exceeds ``pcutoff``.  When no point passes the threshold
-    the reference is forward-filled from the nearest valid frame.
+    Averages (x, y) of the hind-paw bodyparts whose likelihood exceeds
+    ``pcutoff``.  During rearing the hind paws stay planted on the floor,
+    so they anchor the true base of the animal (the back/tail rise and are
+    deliberately excluded).  No forward-fill: an all-occluded frame yields
+    NaN so the occlusion propagates through the feature pipeline.
     """
     n_frames = keypoints_df.select("frame").unique().sort("frame").to_series().len()
 
     bottom_x = np.full(n_frames, np.nan, dtype=np.float64)
     bottom_y = np.full(n_frames, np.nan, dtype=np.float64)
 
-    # Accumulate present points per frame
     count = np.zeros(n_frames, dtype=np.int32)
-    for bp in FLOOR_BPTS:
-        x_arr, y_arr, lik_arr, _ = _extract_bodypart_xyl(keypoints_df, bp)
+    for bp in HIND_PAW_ALL_BPTS:
+        x_arr, y_arr, lik_arr, _ = _extract_bodypart_xyl(
+            keypoints_df, bp, RAT_INDIVIDUAL
+        )
         valid = (lik_arr > pcutoff) & np.isfinite(x_arr) & np.isfinite(y_arr)
         bottom_x[valid] = np.nansum(
             np.column_stack([bottom_x[valid], x_arr[valid]]), axis=1
@@ -419,26 +442,7 @@ def _compute_bottom_reference(
     if present.any():
         bottom_x[present] /= count[present].astype(np.float64)
         bottom_y[present] /= count[present].astype(np.float64)
-    else:
-        # Fallback: no points pass the likelihood threshold —
-        # use all positions ignoring likelihood
-        for bp in FLOOR_BPTS:
-            x_arr, y_arr, _, _ = _extract_bodypart_xyl(keypoints_df, bp)
-            valid_all = np.isfinite(x_arr) & np.isfinite(y_arr)
-            bottom_x[valid_all] = np.nansum(
-                np.column_stack([bottom_x[valid_all], x_arr[valid_all]]), axis=1
-            )
-            bottom_y[valid_all] = np.nansum(
-                np.column_stack([bottom_y[valid_all], y_arr[valid_all]]), axis=1
-            )
-            count[valid_all] += 1
-        present = count > 0
-        if present.any():
-            bottom_x[present] /= count[present].astype(np.float64)
-            bottom_y[present] /= count[present].astype(np.float64)
 
-    bottom_x = _ffill_bfill_1d(bottom_x)
-    bottom_y = _ffill_bfill_1d(bottom_y)
     return bottom_x, bottom_y
 
 
@@ -451,22 +455,33 @@ def _rolling_window_stats(
     arr: Array1D,
     window: int,
 ) -> dict[str, Array1D]:
-    """Compute rolling mean, std, min, and max.
+    """NaN-aware rolling mean, std, min, max.
 
-    Uses scipy.ndimage filters -- vectorized, centered windows,
-    ``mode="nearest"`` for edge handling (no NaN at boundaries).
+    Centred windows with ``mode="nearest"`` edge handling, matching the
+    scipy filters for NaN-free input.  NaN values are ignored within each
+    window; an all-NaN window yields NaN.
 
     Returns ``{"_mean", "_std", "_min", "_max"}`` arrays.
     """
-    m = uniform_filter1d(arr, size=window, mode="nearest")
-    lo = minimum_filter1d(arr, size=window, mode="nearest")
-    hi = maximum_filter1d(arr, size=window, mode="nearest")
-
-    m2 = uniform_filter1d(np.square(arr), size=window, mode="nearest")
+    arr = np.asarray(arr, dtype=np.float64)
+    mask = np.isfinite(arr)
+    cnt = uniform_filter1d(mask.astype(np.float64), size=window, mode="nearest")
+    a0 = np.where(mask, arr, 0.0)
+    m = uniform_filter1d(a0, size=window, mode="nearest") / np.maximum(cnt, _EPS)
+    m2 = uniform_filter1d(
+        np.where(mask, arr * arr, 0.0), size=window, mode="nearest"
+    ) / np.maximum(cnt, _EPS)
     var = np.maximum(m2 - np.square(m), 0.0)
     std = np.sqrt(var)
-
-    return {"_mean": m, "_std": std, "_min": lo, "_max": hi}
+    lo = minimum_filter1d(np.where(mask, arr, np.inf), size=window, mode="nearest")
+    hi = maximum_filter1d(np.where(mask, arr, -np.inf), size=window, mode="nearest")
+    valid = cnt > 0
+    return {
+        "_mean": np.where(valid, m, np.nan),
+        "_std": np.where(valid, std, np.nan),
+        "_min": np.where(valid, lo, np.nan),
+        "_max": np.where(valid, hi, np.nan),
+    }
 
 
 def _compute_rolling_aggregates(
@@ -491,6 +506,6 @@ def _compute_rolling_aggregates(
         for key, arr in features.items():
             stats = _rolling_window_stats(arr, wf)
             for stat_name in ("_mean", "_std", "_min", "_max"):
-                aggs[f"{key}{stat_name}_w{wf}"] = _ffill_bfill_1d(stats[stat_name])
+                aggs[f"{key}{stat_name}_w{wf}"] = stats[stat_name]
 
     return aggs

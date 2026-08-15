@@ -3,7 +3,7 @@
 from collections.abc import Callable
 from pathlib import Path
 
-from imblearn.over_sampling import SMOTE, RandomOverSampler
+from imblearn.over_sampling import RandomOverSampler
 from imblearn.pipeline import Pipeline as ImbPipeline
 from imblearn.under_sampling import RandomUnderSampler
 from sklearn.calibration import CalibratedClassifierCV
@@ -166,47 +166,6 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
                 "clf__skip_drop": [0.3, 0.5, 0.7],
             },
             n_iter=100,
-            scoring="average_precision",
-            cv=StratifiedGroupKFold(n_splits=3, shuffle=True, random_state=42),
-            random_state=42,
-            n_jobs=1,
-            verbose=3,
-        ),
-    ),
-    "xgb_smote": lambda recipe_fp: SklearnAdapter(
-        recipe_fp,
-        search=RandomizedSearchCV(
-            ImbPipeline(
-                [
-                    ("var_filter", VarianceThreshold(threshold=0.0)),
-                    ("smote", SMOTE(sampling_strategy="auto", random_state=42)),
-                    (
-                        "clf",
-                        XGBClassifier(
-                            tree_method="hist",
-                            device=get_gpu_device(),
-                            eval_metric="aucpr",
-                            grow_policy="lossguide",
-                            n_jobs=-1,
-                            random_state=42,
-                            verbosity=2,
-                        ),
-                    ),
-                ]
-            ),
-            {
-                "smote__k_neighbors": [3, 5, 7],
-                "clf__n_estimators": [800, 1200],
-                "clf__learning_rate": [0.02, 0.05, 0.1],
-                "clf__max_depth": [4, 6, 8, 10],
-                "clf__max_leaves": [31, 63, 127],
-                "clf__min_child_weight": [10, 30, 50],
-                "clf__subsample": [0.6, 0.8],
-                "clf__colsample_bytree": [0.3, 0.5, 0.7],
-                "clf__reg_lambda": [1.0, 3.0, 10.0],
-                "clf__scale_pos_weight": [1, 3, 7],
-            },
-            n_iter=60,
             scoring="average_precision",
             cv=StratifiedGroupKFold(n_splits=3, shuffle=True, random_state=42),
             random_state=42,

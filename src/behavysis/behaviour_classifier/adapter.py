@@ -37,6 +37,8 @@ from .data import (
     agg_eval_df_by_bouts,
     df_get_features,
     df_get_labels,
+    df_stride_sample,
+    df_under_sample_by_group,
     label_bouts,
     stratified_split_by_group,
 )
@@ -136,26 +138,36 @@ class SklearnAdapter(BaseAdapter):
         recipe = self._read_recipe()
         df = df.sort([EXPERIMENT, FRAME])
         df = label_bouts(df, label_col=ACTUAL)
-        self.search.refit = False
-        self.search.fit(
-            df_get_features(df),
-            df_get_labels(df),
-            groups=df.get_column(EXPERIMENT).to_numpy(),
-        )
+        # Split full-resolution data into train/val experiments (for pcutoff).
         train_idx, val_idx = stratified_split_by_group(
             df, recipe.val_split, EXPERIMENT, recipe.seed
         )
         train_df = df.gather(train_idx)
+        val_df = df.gather(val_idx)
+        # Downsample the training data
+        train_df = df_stride_sample(train_df, recipe.stride_frames)
+        if recipe.under_sampling_strategy is not None:
+            train_df = df_under_sample_by_group(
+                train_df,
+                recipe.under_sampling_strategy,
+                seed=recipe.seed,
+            )
+        self.search.refit = False
+        self.search.fit(
+            df_get_features(train_df),
+            df_get_labels(train_df),
+            groups=train_df.get_column(EXPERIMENT).to_numpy(),
+        )
         self.model = clone(self.search.estimator).set_params(**self.search.best_params_)
         self.model.fit(
             df_get_features(train_df),
             df_get_labels(train_df),
         )
-        y_df = self.predict(df).with_columns(
-            df.get_column(ACTUAL),
-            df.get_column(BOUT_ID),
+        # Calibrate pcutoff on the full-resolution validation experiments.
+        y_val_df = self.predict(val_df).with_columns(
+            val_df.get_column(ACTUAL),
+            val_df.get_column(BOUT_ID),
         )
-        y_val_df = y_df.gather(val_idx)
         y_val_bouts_df = agg_eval_df_by_bouts(y_val_df)
         _, recall, thresholds = precision_recall_curve(
             y_val_bouts_df.get_column(ACTUAL),
@@ -179,9 +191,7 @@ class SklearnAdapter(BaseAdapter):
             raise ValueError(msg)
         # Predict
         frame = df.get_column(FRAME)
-        prob = pl.Series(
-            self.model.predict_proba(df_get_features(df, label_col=ACTUAL))[:, 1]
-        )
+        prob = pl.Series(self.model.predict_proba(df_get_features(df))[:, 1])
         # Get experiment column if it exists
         experiment = None
         if EXPERIMENT in df.columns:
@@ -259,7 +269,7 @@ class TabpfnAdapter(BaseAdapter):
 
     framework: ClassVar[str] = "tabpfn"
 
-    def __init__(self, recipe_fp: Path, **kwargs) -> None:
+    def __init__(self, recipe_fp: Path, **kwargs) -> None:  # noqa: ANN003
         """Init."""
         self.recipe_fp = recipe_fp
         # Store hyperparams
@@ -271,6 +281,14 @@ class TabpfnAdapter(BaseAdapter):
         recipe = self._read_recipe()
         df = df.sort([EXPERIMENT, FRAME])
         df = label_bouts(df, ACTUAL)
+        # Downsample the training data (bout-aware stride + grouped under-sampling).
+        df = df_stride_sample(df, recipe.stride_frames)
+        if recipe.under_sampling_strategy is not None:
+            df = df_under_sample_by_group(
+                df,
+                recipe.under_sampling_strategy,
+                seed=recipe.seed,
+            )
         self.model = TabPFNClassifier(**self.kwargs)
         self.model.fit(
             df_get_features(df),
