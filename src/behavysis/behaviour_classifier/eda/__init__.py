@@ -7,9 +7,11 @@ summary and writes a JSON report to ``data/front-rear/eda/``.
 
 __all__ = [
     "adversarial",
+    "cv_leak",
     "data_integrity",
     "experiments",
     "feature_quality",
+    "keypoint_quality",
     "sample_efficiency",
     "split_analysis",
 ]

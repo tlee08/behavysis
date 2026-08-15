@@ -56,7 +56,8 @@ LOWER_BACK = "lower_back"
 TAIL_BASE = "tail_base"
 TAIL_TIP = "tail_tip"
 
-INDIVIDUAL = "rat"
+RAT_INDIVIDUAL = "rat"
+ARENA_INDIVIDUAL = "single"
 
 ALL_BODYPARTS: list[str] = [
     NOSE,
@@ -122,7 +123,7 @@ ROLL_WINDOW_DIVISORS: list[float] = [1, 1.5, 2, 4, 7.5, 15]
 def _extract_bodypart_xy(
     keypoints_df: pl.DataFrame,
     bodypart: str,
-    individual: str = INDIVIDUAL,
+    individual: str,
 ) -> tuple[Array1D, Array1D, int]:
     """Extract (x, y) numpy arrays for a single bodypart, sorted by frame.
 
@@ -163,7 +164,7 @@ def _extract_bodypart_xy(
 def _extract_bodypart_xyl(
     keypoints_df: pl.DataFrame,
     bodypart: str,
-    individual: str = INDIVIDUAL,
+    individual: str,
 ) -> tuple[Array1D, Array1D, Array1D, int]:
     """Extract (x, y, likelihood) with NaN for missing frames — no fill."""
     bp_df = (
@@ -201,7 +202,7 @@ def _extract_bodypart_xyl(
 def _get_bodypart_xy_dict(
     keypoints_df: pl.DataFrame,
     bodyparts: list[str],
-    individual: str = INDIVIDUAL,
+    individual: str,
 ) -> dict[str, tuple[Array1D, Array1D]]:
     """Return {bodypart: (x_array, y_array)} for a list of bodyparts."""
     result: dict[str, tuple[Array1D, Array1D]] = {}

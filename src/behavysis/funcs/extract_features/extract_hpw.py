@@ -34,6 +34,7 @@ from ._helper import (
     _VY_PEAK_WINDOW_SEC,
     ALL_BODYPARTS,
     ARENA_BPTS,
+    ARENA_INDIVIDUAL,
     HIND_HEEL_L,
     HIND_HEEL_R,
     HIND_KNEE_L,
@@ -42,6 +43,7 @@ from ._helper import (
     HIND_TOE_R,
     LOWER_BACK,
     MID_BACK,
+    RAT_INDIVIDUAL,
     TAIL_BASE,
     TAIL_TIP,
     _acceleration_from_velocity,
@@ -389,9 +391,9 @@ def hpw_compute(
     pl.DataFrame
         Wide features DataFrame with ``frame`` column + all feature columns.
     """
-    xy = _get_bodypart_xy_dict(keypoints_df, ALL_BODYPARTS)
+    xy = _get_bodypart_xy_dict(keypoints_df, ALL_BODYPARTS, RAT_INDIVIDUAL)
 
-    arena_xy = _get_bodypart_xy_dict(keypoints_df, ARENA_BPTS)
+    arena_xy = _get_bodypart_xy_dict(keypoints_df, ARENA_BPTS, ARENA_INDIVIDUAL)
     floor_y = _estimate_floor_y(arena_xy, xy, fps)
 
     features: dict[str, Array1D] = {}

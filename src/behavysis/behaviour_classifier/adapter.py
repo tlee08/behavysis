@@ -140,10 +140,10 @@ class SklearnAdapter(BaseAdapter):
         self.search.fit(
             df_get_features(df),
             df_get_labels(df),
-            groups=df.get_column(BOUT_ID).to_numpy(),
+            groups=df.get_column(EXPERIMENT).to_numpy(),
         )
         train_idx, val_idx = stratified_split_by_group(
-            df, recipe.val_split, BOUT_ID, recipe.seed
+            df, recipe.val_split, EXPERIMENT, recipe.seed
         )
         train_df = df.gather(train_idx)
         self.model = clone(self.search.estimator).set_params(**self.search.best_params_)

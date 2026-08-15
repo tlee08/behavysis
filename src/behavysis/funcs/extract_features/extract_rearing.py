@@ -27,6 +27,7 @@ from ._helper import (
     _EPS,
     ALL_BODYPARTS,
     ARENA_BPTS,
+    ARENA_INDIVIDUAL,
     EAR_L,
     EAR_R,
     FRONT_TOE_L,
@@ -36,6 +37,7 @@ from ._helper import (
     LOWER_BACK,
     MID_BACK,
     NOSE,
+    RAT_INDIVIDUAL,
     _angle_from_horizontal_deg,
     _compute_bottom_reference,
     _compute_rolling_aggregates,
@@ -181,9 +183,9 @@ def rearing_compute(
     pl.DataFrame
         Wide features DataFrame with ``frame`` column + all feature columns.
     """
-    xy = _get_bodypart_xy_dict(keypoints_df, ALL_BODYPARTS)
+    xy = _get_bodypart_xy_dict(keypoints_df, ALL_BODYPARTS, RAT_INDIVIDUAL)
 
-    arena_xy = _get_bodypart_xy_dict(keypoints_df, ARENA_BPTS)
+    arena_xy = _get_bodypart_xy_dict(keypoints_df, ARENA_BPTS, ARENA_INDIVIDUAL)
     floor_y = _estimate_floor_y(arena_xy, xy, fps)
 
     bottom_x, bottom_y = _compute_bottom_reference(keypoints_df, pcutoff)
