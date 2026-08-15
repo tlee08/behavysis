@@ -3,10 +3,6 @@
 from collections.abc import Callable
 from pathlib import Path
 
-from imblearn.over_sampling import RandomOverSampler
-from imblearn.pipeline import Pipeline as ImbPipeline
-from imblearn.under_sampling import RandomUnderSampler
-from sklearn.calibration import CalibratedClassifierCV
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_selection import VarianceThreshold
 from sklearn.linear_model import LogisticRegression
@@ -21,7 +17,8 @@ from xgboost import XGBClassifier
 
 from behavysis.utils import get_gpu_device
 
-from .adapter import BaseAdapter, SklearnAdapter, TabpfnAdapter
+from .adapter import BaseAdapter, SklearnAdapter, TabpfnAdapter, TorchAdapter
+from .torch.architectures import CNN
 
 # -- registry ---------------------------------------------------------
 
@@ -59,7 +56,6 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
                 "var_filter__threshold": [0.0],
                 "clf__n_estimators": [200, 500],
                 "clf__max_depth": [4, 8, 16],
-                "clf__class_weight": ["balanced", None],
             },
             n_iter=5,
             scoring="average_precision",
@@ -72,10 +68,8 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
     "logreg": lambda recipe_fp: SklearnAdapter(
         recipe_fp,
         search=RandomizedSearchCV(
-            ImbPipeline(
+            Pipeline(
                 [
-                    ("undersampler", RandomUnderSampler(sampling_strategy=0.2)),
-                    ("oversampler", RandomOverSampler(sampling_strategy=0.4)),
                     ("var_filter", VarianceThreshold()),
                     ("clf", LogisticRegression(random_state=42, verbose=1)),
                 ]
@@ -83,7 +77,6 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
             {
                 "var_filter__threshold": [0.0],
                 "clf__C": [0.1, 1.0, 10.0, 100.0],
-                "clf__penalty": ["l1", "l2"],
                 "clf__max_iter": [1000],
             },
             n_iter=30,
@@ -122,92 +115,8 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
                 "clf__colsample_bytree": [0.3, 0.5, 0.7],
                 "clf__reg_lambda": [1.0, 3.0, 10.0],
                 "clf__reg_alpha": [0, 0.1, 1.0],
-                "clf__scale_pos_weight": [5, 10, 20],
             },
             n_iter=120,
-            scoring="average_precision",
-            cv=StratifiedGroupKFold(n_splits=3, shuffle=True, random_state=42),
-            random_state=42,
-            n_jobs=1,
-            verbose=3,
-        ),
-    ),
-    "xgb_dart": lambda recipe_fp: SklearnAdapter(
-        recipe_fp,
-        search=RandomizedSearchCV(
-            Pipeline(
-                [
-                    ("var_filter", VarianceThreshold(threshold=0.0)),
-                    (
-                        "clf",
-                        XGBClassifier(
-                            booster="dart",
-                            tree_method="hist",
-                            device=get_gpu_device(),
-                            eval_metric="aucpr",
-                            n_jobs=-1,
-                            random_state=42,
-                            verbosity=2,
-                        ),
-                    ),
-                ]
-            ),
-            {
-                "clf__n_estimators": [800, 1200],
-                "clf__learning_rate": [0.02, 0.05, 0.1],
-                "clf__max_depth": [4, 6, 8, 10],
-                "clf__min_child_weight": [10, 30, 50],
-                "clf__subsample": [0.6, 0.8],
-                "clf__colsample_bytree": [0.3, 0.5, 0.7],
-                "clf__reg_lambda": [1.0, 3.0, 10.0],
-                "clf__reg_alpha": [0, 0.1, 1.0],
-                "clf__scale_pos_weight": [5, 10, 20],
-                "clf__rate_drop": [0.05, 0.1, 0.2],
-                "clf__skip_drop": [0.3, 0.5, 0.7],
-            },
-            n_iter=100,
-            scoring="average_precision",
-            cv=StratifiedGroupKFold(n_splits=3, shuffle=True, random_state=42),
-            random_state=42,
-            n_jobs=1,
-            verbose=3,
-        ),
-    ),
-    "xgb_calibrated": lambda recipe_fp: SklearnAdapter(
-        recipe_fp,
-        search=RandomizedSearchCV(
-            Pipeline(
-                [
-                    ("var_filter", VarianceThreshold(threshold=0.0)),
-                    (
-                        "clf",
-                        CalibratedClassifierCV(
-                            estimator=XGBClassifier(
-                                tree_method="hist",
-                                device=get_gpu_device(),
-                                eval_metric="aucpr",
-                                n_jobs=-1,
-                                random_state=42,
-                                verbosity=2,
-                            ),
-                            cv=3,
-                            n_jobs=-1,
-                        ),
-                    ),
-                ]
-            ),
-            {
-                "clf__method": ["isotonic", "sigmoid"],
-                "clf__estimator__n_estimators": [800, 1200],
-                "clf__estimator__learning_rate": [0.02, 0.05, 0.1],
-                "clf__estimator__max_depth": [4, 6, 8, 10],
-                "clf__estimator__min_child_weight": [10, 30, 50],
-                "clf__estimator__subsample": [0.6, 0.8],
-                "clf__estimator__colsample_bytree": [0.3, 0.5, 0.7],
-                "clf__estimator__reg_lambda": [1.0, 3.0, 10.0],
-                "clf__estimator__scale_pos_weight": [5, 10, 20],
-            },
-            n_iter=40,
             scoring="average_precision",
             cv=StratifiedGroupKFold(n_splits=3, shuffle=True, random_state=42),
             random_state=42,
@@ -227,17 +136,12 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
             "SUBSAMPLE_SAMPLES": 100_000,
         },
     ),
-    "tabpfn-large": lambda recipe_fp: TabpfnAdapter(
+    "cnn": lambda recipe_fp: TorchAdapter(
         recipe_fp=recipe_fp,
-        n_estimators=16,
-        balance_probabilities=True,
-        device=get_gpu_device(),
-        ignore_pretraining_limits=True,
-        fit_mode="fit_with_cache",
-        random_state=42,
-        inference_config={
-            "SUBSAMPLE_SAMPLES": 100_000,
-        },
+        model_cls=CNN,
+        window_frames=25,
+        batch_size=256,
+        epochs=15,
     ),
 }
 
