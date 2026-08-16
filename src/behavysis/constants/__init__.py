@@ -55,7 +55,7 @@ from .pipeline import (
     STAGES,
 )
 from .plot import PLOT_DPI, PLOT_STYLE
-from .types import Array1D, Array2D
+from .types import Array1D, Array1DInt, Array2D
 
 __all__ = [
     "AGG",
@@ -110,6 +110,7 @@ __all__ = [
     "UNSURE",
     "VALUE",
     "Array1D",
+    "Array1DInt",
     "Array2D",
     "X",
     "Y",

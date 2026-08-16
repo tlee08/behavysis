@@ -17,7 +17,7 @@ from behavysis.constants import (
     PROB,
     TRUE_NEG,
     TRUE_POS,
-    Array1D,
+    Array1DInt,
 )
 from behavysis.transforms import label_bouts
 
@@ -89,7 +89,7 @@ def stratified_split_by_group(
     random_state: int = 42,
     *,
     label_col: str = ACTUAL,
-) -> tuple[Array1D, Array1D]:
+) -> tuple[Array1DInt, Array1DInt]:
     """Split into train/test, grouping contiguous label runs together."""
     idx = np.arange(len(df))
     y = df.get_column(label_col).to_numpy()
