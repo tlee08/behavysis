@@ -11,6 +11,7 @@ from loguru import logger
 from sklearn.metrics import (
     average_precision_score,
     classification_report,
+    fbeta_score,
     precision_recall_curve,
     roc_auc_score,
     roc_curve,
@@ -128,6 +129,7 @@ def _report(
         "precision": report[BEHAV]["precision"],
         "recall": report[BEHAV]["recall"],
         "f1": report[BEHAV]["f1-score"],
+        "f2": fbeta_score(y_true, y_pred, beta=2),
         "accuracy": report["accuracy"],
         "tp": tp,
         "fp": fp,

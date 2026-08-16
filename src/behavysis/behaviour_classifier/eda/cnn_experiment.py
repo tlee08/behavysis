@@ -3,6 +3,8 @@
 Trains the ``CNN`` architecture via ``TorchAdapter`` on the held-out-video
 split, then reports frame-level and bout-level PR-AUC on the test set
 (against the XGB/TabPFN baseline of ~0.80 frame / ~0.84 bout).
+
+Follows the same train/val/downsample/optimise contract as ``train_model``.
 """
 
 from __future__ import annotations
@@ -12,7 +14,13 @@ from sklearn.metrics import average_precision_score, roc_auc_score
 
 from behavysis.behaviour_classifier.adapter import TorchAdapter
 from behavysis.behaviour_classifier.config import ModelRecipe
-from behavysis.behaviour_classifier.data import ACTUAL, agg_eval_df_by_bouts
+from behavysis.behaviour_classifier.data import (
+    ACTUAL,
+    agg_eval_df_by_bouts,
+    df_stride_sample,
+    df_under_sample_by_group,
+    stratified_split_by_group,
+)
 from behavysis.behaviour_classifier.torch.architectures import CNN
 from behavysis.constants import BOUT_ID, EXPERIMENT
 from behavysis.funcs.extract_features.extract_rearing import REARING_FEATURES
@@ -29,7 +37,7 @@ def main() -> None:
     test_exps = set(load_model_eval("xgb", "test")[EXPERIMENT].unique().to_list())
     # Use only the primitive features: the CNN learns temporal context itself,
     # replacing the hand-crafted rolling aggregates the tabular models need.
-    train = df.filter(~pl.col(EXPERIMENT).is_in(test_exps)).select(
+    trainval = df.filter(~pl.col(EXPERIMENT).is_in(test_exps)).select(
         _META + REARING_FEATURES
     )
     test = df.filter(pl.col(EXPERIMENT).is_in(test_exps)).select(
@@ -37,13 +45,28 @@ def main() -> None:
     )
 
     recipe_fp = EDA_OUT_DIR / "cnn_recipe.yaml"
-    ModelRecipe(
+    recipe = ModelRecipe(
         behaviour_name=BEHAVIOUR,
         model_name="cnn",
         model_type="torch",
         stride_frames=1,
         under_sampling_strategy=1.0,
-    ).write_yaml(recipe_fp)
+    )
+    recipe.write_yaml(recipe_fp)
+
+    # Split val from the train experiments, then downsample the train rows.
+    train_idx, val_idx = stratified_split_by_group(
+        trainval, recipe.val_split, EXPERIMENT, recipe.seed
+    )
+    idx_df = (
+        trainval.gather(train_idx).select(EXPERIMENT, ACTUAL, BOUT_ID).with_row_index()
+    )
+    idx_df = df_stride_sample(idx_df, recipe.stride_frames)
+    if recipe.under_sampling_strategy is not None:
+        idx_df = df_under_sample_by_group(
+            idx_df, recipe.under_sampling_strategy, seed=recipe.seed
+        )
+    train_downsample_idx = train_idx[idx_df.get_column("index").to_numpy()]
 
     adapter = TorchAdapter(
         recipe_fp,
@@ -52,9 +75,11 @@ def main() -> None:
         batch_size=512,
         epochs=10,
     )
-    history = adapter.fit(train)
+    history = adapter.fit(trainval.gather(train_downsample_idx))
     print("training loss per epoch:")  # noqa: T201
     print(history.to_string())  # noqa: T201
+
+    adapter.optimise_postprocessing_parameters(trainval.gather(val_idx))
 
     y_test = adapter.predict(test).with_columns(
         test.get_column(ACTUAL),
