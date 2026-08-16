@@ -25,7 +25,6 @@ FEATURE = "feature"
 
 # Behaviour
 
-OUTCOME = "outcome"
 BEHAVIOUR = "behaviour"
 
 PROB = "prob"

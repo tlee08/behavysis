@@ -5,6 +5,7 @@ from pathlib import Path
 import polars as pl
 
 from behavysis.constants import (
+    BEHAVIOUR,
     DF_IO_FORMAT,
     FBF,
     FRAME,
@@ -53,11 +54,9 @@ def analyse_behaviour(
 
     analysis_df = (
         pl.concat(rows)
-        .rename({MEASURE: INDIVIDUAL})
-        .with_columns(
-            pl.col(INDIVIDUAL),
-            pl.col(VALUE).cast(pl.Float64),
-        )
+        .with_columns(pl.lit(BEHAVIOUR).alias(INDIVIDUAL))
+        .select(FRAME, INDIVIDUAL, MEASURE, VALUE)
+        .with_columns(pl.col(VALUE).cast(pl.Float64))
     )
 
     return [

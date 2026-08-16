@@ -76,6 +76,7 @@ def train_model(
     model_name: str,
     *,
     overwrite: bool,
+    recipe_kwargs: dict[str, object] | None = None,
     factory: Callable[[Path], BaseAdapter] | None = None,
 ) -> Path:
     """Train.
@@ -86,7 +87,9 @@ def train_model(
         model_name (str):
             model name (also used for `MODEL_REGISTRY` if factory not given).
         overwrite (bool, optional):
-            Allow retraining an existing model. Defaults to False.
+            Allow retraining an existing model.
+        recipe_kwargs (dict[str, object] | None, optional):
+            Keyword arguments for the model recipe.
         factory (Callable[[Path], BaseAdapter] | None, optional):
             Override registry. Defaults to None.
 
@@ -104,14 +107,23 @@ def train_model(
     # Load adapter
     factory = factory or MODEL_REGISTRY[model_name]
     adapter = factory(recipe_fp)
-    # Write recipe if not exists
-    if not recipe_fp.exists():
-        ModelRecipe(
+    # Resolve recipe: existing recipe (if any) overlaid with kwargs, else defaults.
+    recipe_kwargs = recipe_kwargs or {}
+    unknown = set(recipe_kwargs) - set(ModelRecipe.model_fields)
+    if unknown:
+        msg = f"Unknown recipe kwargs for {model_name}: {sorted(unknown)}"
+        raise ValueError(msg)
+    recipe = (
+        ModelRecipe.read_yaml(recipe_fp)
+        if recipe_fp.exists()
+        else ModelRecipe(
             behaviour_name=clf.contract().behaviour_name,
             model_name=model_name,
             model_type=MODEL_TYPES_TO_STRING[type(adapter)],
-        ).write_yaml(recipe_fp)
-    # Get recipe data
+        )
+    )
+    recipe = recipe.model_copy(update=recipe_kwargs)
+    recipe.write_yaml(recipe_fp)
     recipe = ModelRecipe.read_yaml(recipe_fp)
 
     # Load and align data
@@ -158,13 +170,19 @@ def train_model(
     return model_dir
 
 
-def train_all_models(contract_fp: Path, *, overwrite: bool) -> list[Path]:
+def train_all_models(
+    contract_fp: Path,
+    *,
+    overwrite: bool,
+    recipe_kwargs: dict[str, object] | None = None,
+) -> list[Path]:
     """Train the routine model set."""
     return [
         pass_exception(trace(train_model))(
             contract_fp=contract_fp,
             model_name=model_name,
             overwrite=overwrite,
+            recipe_kwargs=recipe_kwargs,
         )
         for model_name in MODEL_REGISTRY
     ]
