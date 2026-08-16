@@ -2,14 +2,13 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable  # noqa: TC003
+from pathlib import Path  # noqa: TC003
 from typing import TYPE_CHECKING, Protocol
 
 from pydantic import BaseModel
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
-    from pathlib import Path
-
     from behavysis.models import ExperimentConfig, ExperimentMetadata
 
 
