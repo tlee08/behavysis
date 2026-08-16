@@ -2,7 +2,6 @@
 
 from .behaviour_classifier import (
     list_models,
-    make_eval_result_choose_model,
     predict,
     promote_best,
     train_all_models,
@@ -27,7 +26,6 @@ __all__ = [
     "list_models",
     "load_all_data",
     "make_eval_result",
-    "make_eval_result_choose_model",
     "predict",
     "promote_best",
     "stratified_split_by_group",

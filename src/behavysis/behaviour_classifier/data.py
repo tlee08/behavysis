@@ -61,7 +61,7 @@ def load_all_data(
             continue
         pieces.append(aligned.with_columns(pl.lit(name).alias(EXPERIMENT)))
 
-    return pl.concat(pieces, how="diagonal_relaxed")
+    return pl.concat(pieces, how="diagonal_relaxed").sort([EXPERIMENT, FRAME])
 
 
 # ── X and y extracting ───────────────────────────────────────────────
@@ -138,12 +138,13 @@ def df_stride_sample(
     run of the label inside an experiment), so every bout contributes at
     least one frame and short bouts are never dropped.  Assumes ``df`` is
     already bout-labelled (has a ``BOUT_ID`` column).
+
+    Assumes ``df`` is sorted by ``EXPERIMENT`` and ``FRAME``.
     """
     if stride_frames <= 1:
         return df
     return (
-        df.sort([EXPERIMENT, FRAME])
-        .with_columns(pl.int_range(pl.len()).over([EXPERIMENT, BOUT_ID]).alias("_i"))
+        df.with_columns(pl.int_range(pl.len()).over([EXPERIMENT, BOUT_ID]).alias("_i"))
         .filter(pl.col("_i") % stride_frames == 0)
         .drop("_i")
     )
@@ -165,6 +166,8 @@ def df_under_sample_by_group(
     ratio of the minority class over the majority class after sampling).
     Grouping guarantees no group (experiment) is under-represented after
     sampling.  Groups with no minority keep a single majority sample.
+
+    Assumes ``df`` is sorted by ``group_col`` and ``FRAME``.
     """
     if strategy is None:
         return df
@@ -180,4 +183,4 @@ def df_under_sample_by_group(
                 rng.choice(majority.height, size=n_keep, replace=False)
             )
         pieces.append(pl.concat([minority, majority]))
-    return pl.concat(pieces).sort([group_col, FRAME], maintain_order=True)
+    return pl.concat(pieces)

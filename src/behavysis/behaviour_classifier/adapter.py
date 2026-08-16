@@ -10,15 +10,13 @@ import numpy as np
 import pandas as pd
 import polars as pl
 import torch
-from sklearn.base import clone
-from sklearn.metrics import precision_recall_curve
+from sklearn.metrics import precision_score, recall_score
 from sklearn.pipeline import Pipeline
 from tabpfn import TabPFNClassifier, load_fitted_tabpfn_model, save_fitted_tabpfn_model
 from xgboost import XGBClassifier
 
 from behavysis.constants import (
     BEHAVIOUR,
-    BOUT_ID,
     EXPERIMENT,
     FRAME,
     PRED,
@@ -37,10 +35,6 @@ from .data import (
     agg_eval_df_by_bouts,
     df_get_features,
     df_get_labels,
-    df_stride_sample,
-    df_under_sample_by_group,
-    label_bouts,
-    stratified_split_by_group,
 )
 from .torch.architectures import MODEL_TYPES
 
@@ -51,6 +45,39 @@ if TYPE_CHECKING:
     from sklearn.model_selection._search import BaseSearchCV
 
     from .torch.base import TorchModel
+
+
+# -- post-processing optimisation ------------------------------------------
+
+_SMOOTHING_GRID = (0, 1, 2, 3, 5, 8, 12)
+_MIN_GAP_GRID = (0, 2, 4, 8, 16, 32)
+_MIN_BOUT_GRID = (0, 2, 4, 8, 16, 32)
+_N_PCUTOFF = 20
+_MIN_PCUTOFF = 1e-6
+
+
+def _best_pcutoff(
+    smoothed: pl.DataFrame,
+    min_gap: int,
+    min_bout: int,
+    pcutoffs: np.ndarray,
+    target_recall: float,
+) -> tuple[float, float]:
+    """Best pcutoff (max precision at bout recall >= target) for one morphology."""
+    best_pcutoff = float(pcutoffs[0])
+    best_precision = -1.0
+    for pcutoff in pcutoffs:
+        pred_df = smoothed.with_columns(
+            (pl.col(PROB) > pcutoff).cast(pl.Int64).alias(PRED)
+        )
+        pred_df = smooth_pred_bout(pred_df, min_gap=min_gap, min_bout=min_bout)
+        bouts_df = agg_eval_df_by_bouts(pred_df)
+        precision = precision_score(bouts_df[ACTUAL], bouts_df[PRED], zero_division=0)
+        recall = recall_score(bouts_df[ACTUAL], bouts_df[PRED], zero_division=0)
+        if recall >= target_recall and precision > best_precision:
+            best_precision = precision
+            best_pcutoff = float(pcutoff)
+    return best_pcutoff, max(best_precision, 0.0)
 
 
 class BaseAdapter(ABC):
@@ -74,36 +101,73 @@ class BaseAdapter(ABC):
         Returns per-epoch history (empty for sklearn).
         """
 
+    def optimise_postprocessing_parameters(self, val_df: pl.DataFrame) -> ModelRecipe:
+        """Optimise smoothing/gap/bout/pcutoff on validation data.
+
+        Sweeps the post-processing parameter grid and selects the combination
+        that maximises bout-level precision subject to bout-level recall >=
+        ``target_recall``.  Writes the result to the recipe and returns it.
+        """
+        recipe = self._read_recipe()
+        raw = self.predict_raw(val_df).join(
+            val_df.select([FRAME, EXPERIMENT, ACTUAL]),
+            on=[FRAME, EXPERIMENT],
+            how="left",
+        )
+        pcutoffs = np.unique(
+            np.quantile(
+                raw.get_column(PROB).to_numpy(),
+                np.linspace(0.0, 1.0, _N_PCUTOFF),
+            )
+        )
+        best_precision = -1.0
+        best = (0, 0, 0, 0.0)
+        for smoothing_frames in _SMOOTHING_GRID:
+            smoothed = smooth_prob(
+                raw, smoothing_frames=smoothing_frames, agg_func="median"
+            )
+            for min_gap in _MIN_GAP_GRID:
+                for min_bout in _MIN_BOUT_GRID:
+                    pcutoff, precision = _best_pcutoff(
+                        smoothed, min_gap, min_bout, pcutoffs, recipe.target_recall
+                    )
+                    if precision > best_precision:
+                        best_precision = precision
+                        best = (smoothing_frames, min_gap, min_bout, pcutoff)
+        smoothing_frames, min_gap, min_bout, pcutoff = best
+        recipe.smoothing_frames = smoothing_frames
+        recipe.min_gap_frames = min_gap
+        recipe.min_bout_frames = min_bout
+        recipe.pcutoff = max(float(pcutoff), _MIN_PCUTOFF)
+        self._write_recipe(recipe)
+        return recipe
+
     @abstractmethod
+    def predict_raw(self, df: pl.DataFrame) -> pl.DataFrame:
+        """Return raw per-frame probabilities (frame, behaviour, prob, experiment).
+
+        No smoothing, thresholding or bout morphology.
+        """
+
     def predict(self, df: pl.DataFrame) -> pl.DataFrame:
         """Return predicted probabilities + binary preds with smoothing."""
+        return self._predict_postprocess(self.predict_raw(df))
 
-    def _predict_postprocess(
-        self, prob: pl.Series, frame: pl.Series, experiment: pl.Series | None = None
-    ) -> pl.DataFrame:
-        # Get recipe
+    def _predict_postprocess(self, raw_df: pl.DataFrame) -> pl.DataFrame:
+        """Smooth, threshold and merge bouts on a raw prediction frame."""
         recipe = self._read_recipe()
-        # Construct df
-        df = pl.DataFrame(
-            {
-                FRAME: frame,
-                BEHAVIOUR: recipe.behaviour_name,
-                PROB: prob,
-            },
-        )
-        # Add experiment column if given
-        if experiment is not None:
-            df = df.with_columns(experiment.alias(EXPERIMENT))
         # Smooth frames with median filter
         df = smooth_prob(
-            df, smoothing_frames=recipe.smoothing_frames, agg_func="median"
+            raw_df, smoothing_frames=recipe.smoothing_frames, agg_func="median"
         )
         # Make pred from prob cutoff
         df = df.with_columns((pl.col(PROB) > recipe.pcutoff).cast(pl.Int64).alias(PRED))
         # Smooth bouts by merging 3-frames-close, then dropping 3-frames large
-        df = smooth_pred_bout(df, min_gap=recipe.min_gap, min_bout=recipe.min_bout)
+        df = smooth_pred_bout(
+            df, min_gap=recipe.min_gap_frames, min_bout=recipe.min_bout_frames
+        )
         # Return
-        if experiment is not None:
+        if EXPERIMENT in df.columns:
             return pl.DataFrame(
                 df.select(list(BEHAVIOUR_BATCHED_PREDICTED_SCHEMA)),
                 BEHAVIOUR_BATCHED_PREDICTED_SCHEMA,
@@ -136,77 +200,36 @@ class SklearnAdapter(BaseAdapter):
 
     def fit(self, df: pl.DataFrame) -> pd.DataFrame:
         """Fit."""
-        recipe = self._read_recipe()
-        df = df.sort([EXPERIMENT, FRAME])
-        df = label_bouts(df, label_col=ACTUAL)
-        # Split full-resolution data into train/val experiments (for pcutoff).
-        train_idx, val_idx = stratified_split_by_group(
-            df, recipe.val_split, EXPERIMENT, recipe.seed
-        )
-        train_df = df.gather(train_idx)
-        val_df = df.gather(val_idx)
-        # Downsample the training data
-        train_df = df_stride_sample(train_df, recipe.stride_frames)
-        if recipe.under_sampling_strategy is not None:
-            train_df = df_under_sample_by_group(
-                train_df,
-                recipe.under_sampling_strategy,
-                seed=recipe.seed,
-            )
-        self.search.refit = False
         self.search.fit(
-            df_get_features(train_df),
-            df_get_labels(train_df),
-            groups=train_df.get_column(EXPERIMENT).to_numpy(),
+            df_get_features(df),
+            df_get_labels(df),
+            groups=df.get_column(EXPERIMENT).to_numpy(),
         )
-        self.model = clone(self.search.estimator).set_params(**self.search.best_params_)
-        self.model.fit(
-            df_get_features(train_df),
-            df_get_labels(train_df),
-        )
-        # Calibrate pcutoff on the full-resolution validation experiments.
-        y_val_df = self.predict(val_df).with_columns(
-            val_df.get_column(ACTUAL),
-            val_df.get_column(BOUT_ID),
-        )
-        y_val_bouts_df = agg_eval_df_by_bouts(y_val_df)
-        _, recall, thresholds = precision_recall_curve(
-            y_val_bouts_df.get_column(ACTUAL),
-            y_val_bouts_df.get_column(PROB),
-            drop_intermediate=True,
-        )
-        recipe.pcutoff = float(
-            thresholds[(recall[:-1] >= recipe.target_recall)][-1]
-            if np.any(recall[:-1] >= recipe.target_recall)
-            else 0.001
-        )
-        self._write_recipe(recipe)
-        # Return
+        self.model = self.search.best_estimator_
         return pd.DataFrame(columns=pd.Index(["loss", "vloss"]))
 
-    def predict(self, df: pl.DataFrame) -> pl.DataFrame:
-        """Return predicted probabilities + binary preds with smoothing."""
-        # Check model exists
+    def predict_raw(self, df: pl.DataFrame) -> pl.DataFrame:
+        """Return raw per-frame probabilities (frame, behaviour, prob, experiment)."""
         if self.model is None:
             msg = "model not yet trained."
             raise ValueError(msg)
-        # Predict
-        frame = df.get_column(FRAME)
-        prob = pl.Series(self.model.predict_proba(df_get_features(df))[:, 1])
-        # Get experiment column if it exists
-        experiment = None
+        recipe = self._read_recipe()
+        raw_df = pl.DataFrame(
+            {
+                FRAME: df.get_column(FRAME),
+                BEHAVIOUR: recipe.behaviour_name,
+                PROB: pl.Series(self.model.predict_proba(df_get_features(df))[:, 1]),
+            }
+        )
         if EXPERIMENT in df.columns:
-            experiment = df.get_column(EXPERIMENT)
-        # Postprocess and return
-        return self._predict_postprocess(prob, frame, experiment)
+            raw_df = raw_df.with_columns(df.get_column(EXPERIMENT).alias(EXPERIMENT))
+        return raw_df
 
     def save(self) -> None:
         """Save."""
-        # Check model exists
         if self.model is None:
             msg = "model not yet trained."
             raise ValueError(msg)
-        # Save
         self.recipe_fp.parent.mkdir(parents=True, exist_ok=True)
         joblib.dump(self.search, self.recipe_fp.with_name("search.joblib"))
         joblib.dump(self.model, self.recipe_fp.with_name("model.joblib"))
@@ -233,7 +256,6 @@ class XgboostAdapter(SklearnAdapter):
 
         Must save XGBoost model as a .ubj so it serialisable to all machines.
         """
-        # Check model exists
         if self.model is None:
             msg = "model not yet trained."
             raise ValueError(msg)
@@ -279,47 +301,29 @@ class TabpfnAdapter(BaseAdapter):
 
     def fit(self, df: pl.DataFrame) -> pd.DataFrame:
         """Fit."""
-        recipe = self._read_recipe()
-        df = df.sort([EXPERIMENT, FRAME])
-        df = label_bouts(df, ACTUAL)
-        # Downsample the training data (bout-aware stride + grouped under-sampling).
-        df = df_stride_sample(df, recipe.stride_frames)
-        if recipe.under_sampling_strategy is not None:
-            df = df_under_sample_by_group(
-                df,
-                recipe.under_sampling_strategy,
-                seed=recipe.seed,
-            )
         self.model = TabPFNClassifier(**self.kwargs)
-        self.model.fit(
-            df_get_features(df),
-            df_get_labels(df),
-        )
-        # 5. Set pcutoff as hardcoded 0.5 (tabpfn sorts itself out)
-        recipe.pcutoff = 0.5
-        self._write_recipe(recipe)
-        # Return
+        self.model.fit(df_get_features(df), df_get_labels(df))
         return pd.DataFrame(columns=pd.Index(["loss", "vloss"]))
 
-    def predict(self, df: pl.DataFrame) -> pl.DataFrame:
-        """Return predicted probabilities + binary preds with smoothing."""
-        # Check model exists
+    def predict_raw(self, df: pl.DataFrame) -> pl.DataFrame:
+        """Return raw per-frame probabilities (frame, behaviour, prob, experiment)."""
         if self.model is None:
             msg = "model not yet trained."
             raise ValueError(msg)
-        # Predict
-        frame = df.get_column(FRAME)
-        prob = pl.Series(self.model.predict_proba(df_get_features(df))[:, 1])
-        # Get experiment column if it exists
-        experiment = None
+        recipe = self._read_recipe()
+        raw_df = pl.DataFrame(
+            {
+                FRAME: df.get_column(FRAME),
+                BEHAVIOUR: recipe.behaviour_name,
+                PROB: pl.Series(self.model.predict_proba(df_get_features(df))[:, 1]),
+            }
+        )
         if EXPERIMENT in df.columns:
-            experiment = df.get_column(EXPERIMENT)
-        # Postprocess and return
-        return self._predict_postprocess(prob, frame, experiment)
+            raw_df = raw_df.with_columns(df.get_column(EXPERIMENT).alias(EXPERIMENT))
+        return raw_df
 
     def save(self) -> None:
         """Save."""
-        # Check model exists
         if self.model is None:
             msg = "model not yet trained."
             raise ValueError(msg)
@@ -368,67 +372,36 @@ class TorchAdapter(BaseAdapter):
 
     def fit(self, df: pl.DataFrame) -> pd.DataFrame:
         """Fit the model and calibrate pcutoff on held-out experiments."""
-        recipe = self._read_recipe()
-        df = df.sort([EXPERIMENT, FRAME])
-        df = label_bouts(df, label_col=ACTUAL)
-        # Split full-resolution data into train/val experiments (for pcutoff).
-        train_idx, val_idx = stratified_split_by_group(
-            df, recipe.val_split, EXPERIMENT, recipe.seed
-        )
-        train_df = df.gather(train_idx)
-        val_df = df.gather(val_idx)
-        # Downsample the training data.
-        train_df = df_stride_sample(train_df, recipe.stride_frames)
-        if recipe.under_sampling_strategy is not None:
-            train_df = df_under_sample_by_group(
-                train_df,
-                recipe.under_sampling_strategy,
-                seed=recipe.seed,
-            )
         # Per-experiment arrays, standardised with NaN -> mean imputation.
-        self.feature_cols = [
-            c
-            for c in train_df.columns
-            if c not in (EXPERIMENT, FRAME, ACTUAL, BOUT_ID, BEHAVIOUR)
-        ]
-        x_ls, y_ls = self._to_arrays(train_df)
+        self.feature_cols = df_get_features(df).columns
+        x_ls, y_ls = self._to_arrays(df)
         self._fit_scaler(x_ls)
         x_ls = [self._transform(x) for x in x_ls]
         # Train.
         self.model = self.model_cls(len(self.feature_cols), self.window_frames)
-        history = self.model.fit(x_ls, y_ls, self.batch_size, self.epochs)
-        # Calibrate pcutoff on the full-resolution validation experiments.
-        y_val_df = self.predict(val_df).with_columns(
-            val_df.get_column(ACTUAL),
-            val_df.get_column(BOUT_ID),
-        )
-        y_val_bouts_df = agg_eval_df_by_bouts(y_val_df)
-        _, recall, thresholds = precision_recall_curve(
-            y_val_bouts_df.get_column(ACTUAL),
-            y_val_bouts_df.get_column(PROB),
-            drop_intermediate=True,
-        )
-        recipe.pcutoff = float(
-            thresholds[(recall[:-1] >= recipe.target_recall)][-1]
-            if np.any(recall[:-1] >= recipe.target_recall)
-            else 0.001
-        )
-        self._write_recipe(recipe)
-        return history
+        return self.model.fit(x_ls, y_ls, self.batch_size, self.epochs)
 
-    def predict(self, df: pl.DataFrame) -> pl.DataFrame:
-        """Return predicted probabilities + binary preds with smoothing."""
+    def predict_raw(self, df: pl.DataFrame) -> pl.DataFrame:
+        """Return raw per-frame probabilities (frame, behaviour, prob, experiment)."""
         if self.model is None:
             msg = "model not yet trained."
             raise ValueError(msg)
+        recipe = self._read_recipe()
         df = (
             df.sort([EXPERIMENT, FRAME]) if EXPERIMENT in df.columns else df.sort(FRAME)
         )
         x_ls = [self._transform(x) for x in self._to_x_ls(df)]
         prob = self.model.predict(x_ls, batch_size=self.batch_size)
-        frame = df.get_column(FRAME)
-        experiment = df.get_column(EXPERIMENT) if EXPERIMENT in df.columns else None
-        return self._predict_postprocess(pl.Series(prob), frame, experiment)
+        raw_df = pl.DataFrame(
+            {
+                FRAME: df.get_column(FRAME),
+                BEHAVIOUR: recipe.behaviour_name,
+                PROB: pl.Series(prob),
+            }
+        )
+        if EXPERIMENT in df.columns:
+            raw_df = raw_df.with_columns(df.get_column(EXPERIMENT).alias(EXPERIMENT))
+        return raw_df
 
     def save(self) -> None:
         """Save model state, scaler and feature metadata."""

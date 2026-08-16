@@ -14,13 +14,20 @@ import polars as pl
 import yaml
 from loguru import logger
 
-from behavysis.constants import BOUT, EXPERIMENT, FRAME
+from behavysis.constants import BOUT, BOUT_ID, EXPERIMENT
 from behavysis.utils import clean_memory, pass_exception, trace
 
 from .adapter import MODEL_TYPES_TO_CLASS, MODEL_TYPES_TO_STRING, BaseAdapter
 from .config import ActiveModel, ClassifierContract, ModelRecipe
-from .data import ACTUAL, label_bouts, load_all_data, stratified_split_by_group
-from .evaluation import EvalResult, make_eval_result
+from .data import (
+    ACTUAL,
+    df_stride_sample,
+    df_under_sample_by_group,
+    label_bouts,
+    load_all_data,
+    stratified_split_by_group,
+)
+from .evaluation import make_eval_result
 from .registry import MODEL_REGISTRY
 from .storage import ClassifierPaths
 
@@ -132,16 +139,35 @@ def train_model(
     )
     df = label_bouts(df, ACTUAL)
 
-    # Split into train / test (experiment-level grouping)
-    train_idx, test_idx = stratified_split_by_group(
+    # Split into train / val / test (experiment-level grouping)
+    trainval_idx, test_idx = stratified_split_by_group(
         df, recipe.test_split, EXPERIMENT, recipe.seed
     )
-    train_df = df.gather(train_idx).sort([EXPERIMENT, FRAME])
-    test_df = df.gather(test_idx).sort([EXPERIMENT, FRAME])
+    _train_idx, _val_idx = stratified_split_by_group(
+        df.gather(trainval_idx), recipe.val_split, EXPERIMENT, recipe.seed
+    )
+    train_idx = trainval_idx[_train_idx]
+    val_idx = trainval_idx[_val_idx]
+
+    # Downsample the training data
+    _train_downsample_idx_df = (
+        df.gather(train_idx).select(EXPERIMENT, ACTUAL, BOUT_ID).with_row_index()
+    )
+    _train_downsample_idx_df = df_stride_sample(
+        _train_downsample_idx_df, recipe.stride_frames
+    )
+    if recipe.under_sampling_strategy is not None:
+        _train_downsample_idx_df = df_under_sample_by_group(
+            _train_downsample_idx_df,
+            recipe.under_sampling_strategy,
+            seed=recipe.seed,
+        )
+    _train_downsample_idx = _train_downsample_idx_df.get_column("index").to_numpy()
+    train_downsample_idx = train_idx[_train_downsample_idx]
 
     # Train
     logger.info("Training {}", clf.contract().behaviour_name)
-    adapter.fit(train_df)
+    adapter.fit(df.gather(train_downsample_idx))
 
     # Save model
     adapter.save()
@@ -149,17 +175,27 @@ def train_model(
     # Load model from save
     adapter = adapter.load(recipe_fp)
 
-    # Evaluate
-    eval_dir.mkdir(parents=True, exist_ok=True)
+    # Get optimised postprocessing parameters (if required)
+    if recipe.calibrate_params:
+        adapter.optimise_postprocessing_parameters(df.gather(val_idx))
+
     # Predictions
-    adapter.predict(train_df).with_columns(
-        train_df.get_column(EXPERIMENT), train_df.get_column(ACTUAL)
-    ).write_parquet(eval_dir / "train_eval.parquet")
-    adapter.predict(test_df).with_columns(
-        test_df.get_column(EXPERIMENT), test_df.get_column(ACTUAL)
-    ).write_parquet(eval_dir / "test_eval.parquet")
+    eval_dir.mkdir(parents=True, exist_ok=True)
+    y_df = adapter.predict(df)
+    y_df = y_df.with_columns(df.get_column(EXPERIMENT), df.get_column(ACTUAL))
+    y_df.gather(train_downsample_idx).write_parquet(eval_dir / "train_eval.parquet")
+    y_df.gather(val_idx).write_parquet(eval_dir / "val_eval.parquet")
+    y_df.gather(test_idx).write_parquet(eval_dir / "test_eval.parquet")
+
     # Further evaluation
-    res = make_eval_result_choose_model(clf.contract_fp(), model_name)
+    res = make_eval_result(
+        {
+            "train": pl.read_parquet(eval_dir / "train_eval.parquet"),
+            "val": pl.read_parquet(eval_dir / "val_eval.parquet"),
+            "test": pl.read_parquet(eval_dir / "test_eval.parquet"),
+        }
+    )
+
     # Save. Only report and charts, not df
     for _name, _report in res["report"].items():
         (eval_dir / f"{_name}.yaml").write_text(yaml.dump(_report))
@@ -262,18 +298,3 @@ def predict(contract_fp: Path, x_df: pl.DataFrame) -> pl.DataFrame:
     clf = ClassifierPaths(contract_fp)
     active = ActiveModel.read_yaml(clf.active_fp())
     return predict_choose_model(contract_fp, active.model_name, x_df)
-
-
-# -- other helpers -------------------------------------------------
-
-
-def make_eval_result_choose_model(contract_fp: Path, model_name: str) -> EvalResult:
-    """Run make_eval_report by giving a model's filepath."""
-    clf = ClassifierPaths(contract_fp)
-    eval_dir = clf.eval_dir(model_name)
-    return make_eval_result(
-        {
-            "train": pl.read_parquet(eval_dir / "train_eval.parquet"),
-            "test": pl.read_parquet(eval_dir / "test_eval.parquet"),
-        }
-    )

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path  # noqa: TC003
 
-from pydantic import PositiveFloat, PositiveInt  # noqa: TC002
+from pydantic import NonNegativeInt, PositiveFloat, PositiveInt  # noqa: TC002
 
 from behavysis.models.base import YamlModel
 
@@ -53,10 +53,11 @@ class ModelRecipe(YamlModel):
     under_sampling_strategy: PositiveFloat | None = 1.0
 
     # Pcutoff calibration (affects the pcutoff value used at inference time)
+    calibrate_params: bool = True
     target_recall: float = 0.98
 
-    # Prediction post-processing parameters
+    # Prediction post-processing parameters (auto-set)
     pcutoff: PositiveFloat = 0.2
-    smoothing_frames: PositiveInt = 2
-    min_gap: PositiveInt = 3
-    min_bout: PositiveInt = 3
+    smoothing_frames: NonNegativeInt = 2
+    min_gap_frames: NonNegativeInt = 3
+    min_bout_frames: NonNegativeInt = 3

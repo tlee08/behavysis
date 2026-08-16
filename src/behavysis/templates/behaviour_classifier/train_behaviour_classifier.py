@@ -15,7 +15,7 @@ with app.setup:
     from behavysis.behaviour_classifier import (
         ClassifierPaths,
         list_models,
-        make_eval_result_choose_model,
+        make_eval_result,
         promote_best,
         train_all_models,
         write_contract,
@@ -165,7 +165,12 @@ def _(contract_fp, clf, trained_models):
         if (_eval_dir / "train_eval.parquet").exists() and (
             _eval_dir / "test_eval.parquet"
         ).exists():
-            eval_all[_model] = make_eval_result_choose_model(contract_fp, _model)
+            eval_all[_model] = make_eval_result(
+                {
+                    "train": pl.read_parquet(_eval_dir / "train_eval.parquet"),
+                    "test": pl.read_parquet(_eval_dir / "test_eval.parquet"),
+                }
+            )
     return (eval_all,)
 
 
