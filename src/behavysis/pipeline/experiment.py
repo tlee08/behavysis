@@ -46,7 +46,7 @@ from behavysis.schemas import (
     write_df,
 )
 from behavysis.transforms import predicted_to_scored
-from behavysis.utils import has_output_files, missing_input_files, trace
+from behavysis.utils import has_output_files, missing_input_files, select_kwargs, trace
 
 
 def _get_frame(vid_fp: Path, metadata: ExperimentMetadata) -> np.ndarray:
@@ -286,11 +286,9 @@ class Experiment:
             kwargs["vid_frame"] = _get_frame(self.get_fp(FORMATTED_VIDEO_DIR), metadata)
         if self.get_fp(BEHAVIOUR_SCORED_DIR).is_file():
             kwargs["behaviour_df"] = read_df(self.get_fp(BEHAVIOUR_SCORED_DIR))
-            if config.classify_behaviour is not None:
-                kwargs["classify_behaviour"] = config.classify_behaviour
         for func in funcs:
             dst_dir = self.root_dir / ANALYSIS_DIR / func.__name__
-            for result in func(config, metadata, **kwargs):
+            for result in func(config, metadata, **select_kwargs(func, kwargs)):
                 result.save(dst_dir)
 
     @trace

@@ -9,6 +9,7 @@ from .misc_utils import (
     has_output_files,
     missing_input_files,
     pass_exception,
+    select_kwargs,
 )
 from .template_utils import confirm, render_template, save_template
 
@@ -24,5 +25,6 @@ __all__ = [
     "pass_exception",
     "render_template",
     "save_template",
+    "select_kwargs",
     "trace",
 ]

@@ -2,6 +2,7 @@
 
 import contextlib
 import gc
+import inspect
 from collections.abc import Callable
 from functools import wraps
 from pathlib import Path
@@ -27,6 +28,12 @@ def pass_exception(
 
     # Allow both @pass_exception and @pass_exception(exception=...)
     return decorator(_func) if _func else decorator
+
+
+def select_kwargs(func: Callable, kwargs: dict[str, object]) -> dict[str, object]:
+    """Return only the kwargs that ``func``'s signature declares."""
+    accepted = set(inspect.signature(func).parameters)
+    return {k: v for k, v in kwargs.items() if k in accepted}
 
 
 def has_output_files(*fp_ls: Path) -> bool:

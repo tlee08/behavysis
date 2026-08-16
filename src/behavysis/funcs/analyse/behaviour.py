@@ -14,7 +14,7 @@ from behavysis.constants import (
     TRUE_POS,
     VALUE,
 )
-from behavysis.models import ClassifierRef, ExperimentConfig, ExperimentMetadata
+from behavysis.models import ExperimentConfig, ExperimentMetadata
 from behavysis.schemas import ANALYSIS_SCHEMA, write_df
 
 from ._helper import AnalysisResult
@@ -26,13 +26,12 @@ def analyse_behaviour(
     metadata: ExperimentMetadata,
     *,
     behaviour_df: pl.DataFrame,
-    classify_behaviour: dict[str, ClassifierRef],
 ) -> list[AnalysisResult]:
     """Takes a wide-format behaviour df and generates summary + binned analysis."""
     name = metadata.require_name()
 
     rows: list[pl.DataFrame] = []
-    for behaviour, ref in classify_behaviour.items():
+    for behaviour, ref in config.require_classify_behaviour().items():
         behaviour_vals = behaviour_df.select(
             FRAME,
             pl.when(pl.col(behaviour) == TRUE_POS)
