@@ -16,7 +16,7 @@ from behavysis.constants import (
     BINNED,
     DF_IO_FORMAT,
     EXPERIMENT,
-    INDIVIDUAL,
+    GROUP,
     KEYPOINTS_DIR,
     MEASURE,
     SUMMARY,
@@ -243,13 +243,13 @@ class Project:
                 combined_csv_df = combined_df.to_pandas()
                 if BINNED in data_dir.stem:
                     # If binned
-                    _cols = [EXPERIMENT, INDIVIDUAL, MEASURE, AGG]
+                    _cols = [EXPERIMENT, MEASURE, GROUP, AGG]
                     combined_csv_df = combined_csv_df.set_index([BIN_SEC, *_cols])[
                         VALUE
                     ].unstack(_cols)
                 elif SUMMARY in data_dir.stem:
                     # If summary
-                    _cols = [INDIVIDUAL, MEASURE, AGG]
+                    _cols = [MEASURE, GROUP, AGG]
                     combined_csv_df = combined_csv_df.set_index([EXPERIMENT, *_cols])[
                         VALUE
                     ].unstack(_cols)

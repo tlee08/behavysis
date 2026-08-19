@@ -92,8 +92,8 @@ class ClassifierRef(BaseModel):
 class AnalyseConfig(SubfuncModel):
     """AnalyseConfig."""
 
-    bins_sec_ls: list[PositiveInt] = [30, 60, 120]
-    custom_bins_sec_ls: list[PositiveInt] = [60, 120, 300, 600]
+    bins_sec_ls: list[PositiveFloat] = [30, 60, 120]
+    custom_bins_sec_ls: list[PositiveFloat] = [60, 120, 300, 600]
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

@@ -16,6 +16,7 @@ from behavysis.constants import (
     BODYPART,
     EXPERIMENT,
     FRAME,
+    GROUP,
     INDIVIDUAL,
     LIKELIHOOD,
     MEASURE,
@@ -88,27 +89,27 @@ def make_batched_scored_schema(
     return schema
 
 
-"""One row per (frame, individual, measure) value. Frame-by-frame analysis."""
+"""One row per (frame, measure, group) value. Frame-by-frame analysis."""
 ANALYSIS_SCHEMA: SchemaDict = {
     FRAME: pl.Int64,
-    INDIVIDUAL: pl.Utf8,
     MEASURE: pl.Utf8,
+    GROUP: pl.Utf8,
     VALUE: pl.Float64,
 }
 
-"""One row per (individual, measure, aggregation) statistic."""
+"""One row per (measure, group, aggregation) statistic."""
 SUMMARY_SCHEMA: SchemaDict = {
-    INDIVIDUAL: pl.Utf8,
     MEASURE: pl.Utf8,
+    GROUP: pl.Utf8,
     AGG: pl.Utf8,
     VALUE: pl.Float64,
 }
 
-"""One row per (bin_sec, individual, measure, aggregation) time slice."""
+"""One row per (bin_sec, measure, group, aggregation) time slice."""
 BINNED_SCHEMA: SchemaDict = {
     BIN_SEC: pl.Float64,
-    INDIVIDUAL: pl.Utf8,
     MEASURE: pl.Utf8,
+    GROUP: pl.Utf8,
     AGG: pl.Utf8,
     VALUE: pl.Float64,
 }
@@ -117,16 +118,16 @@ BINNED_SCHEMA: SchemaDict = {
 COMBINED_ANALYSIS_SCHEMA: SchemaDict = {
     FRAME: pl.Int64,
     ANALYSIS: pl.Utf8,
-    INDIVIDUAL: pl.Utf8,
     MEASURE: pl.Utf8,
+    GROUP: pl.Utf8,
     VALUE: pl.Float64,
 }
 
 """SummaryDf collated across experiments with an ``experiment`` column."""
 COLLATED_SUMMARY_SCHEMA: SchemaDict = {
     EXPERIMENT: pl.Utf8,
-    INDIVIDUAL: pl.Utf8,
     MEASURE: pl.Utf8,
+    GROUP: pl.Utf8,
     AGG: pl.Utf8,
     VALUE: pl.Float64,
 }
@@ -135,8 +136,8 @@ COLLATED_SUMMARY_SCHEMA: SchemaDict = {
 COLLATED_BINNED_SCHEMA: SchemaDict = {
     BIN_SEC: pl.Float64,
     EXPERIMENT: pl.Utf8,
-    INDIVIDUAL: pl.Utf8,
     MEASURE: pl.Utf8,
+    GROUP: pl.Utf8,
     AGG: pl.Utf8,
     VALUE: pl.Float64,
 }

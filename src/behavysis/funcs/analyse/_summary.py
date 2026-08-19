@@ -11,13 +11,17 @@ import numpy as np
 import polars as pl
 
 from behavysis.constants import (
+    AGG,
     BIN_SEC,
     BINNED,
     CUSTOM,
     DF_IO_FORMAT,
-    INDIVIDUAL,
+    DUR,
+    FRAME,
+    GROUP,
     MEASURE,
     SUMMARY,
+    VALUE,
 )
 from behavysis.schemas import BINNED_SCHEMA, SUMMARY_SCHEMA, write_df
 from behavysis.transforms import vect2bouts
@@ -42,20 +46,20 @@ def agg_quantitative(df: pl.DataFrame, fps: float) -> pl.DataFrame:
     """
     _ = fps
     return (
-        df.group_by(INDIVIDUAL, MEASURE)
+        df.group_by(MEASURE, GROUP)
         .agg(
             [
-                # pl.col("value").mean().alias("mean"),  # noqa: ERA001
-                # pl.col("value").std(ddof=0).alias("std"),  # noqa: ERA001
-                # pl.col("value").min().alias("min"),  # noqa: ERA001
-                # pl.col("value").quantile(0.25).alias("Q1"),  # noqa: ERA001
-                # pl.col("value").median().alias("median"),  # noqa: ERA001
-                # pl.col("value").quantile(0.75).alias("Q3"),  # noqa: ERA001
-                # pl.col("value").max().alias("max"),  # noqa: ERA001
-                pl.col("value").sum().alias("sum"),
+                # pl.col(VALUE).mean().alias("mean"),  # noqa: ERA001
+                # pl.col(VALUE).std(ddof=0).alias("std"),  # noqa: ERA001
+                # pl.col(VALUE).min().alias("min"),  # noqa: ERA001
+                # pl.col(VALUE).quantile(0.25).alias("Q1"),  # noqa: ERA001
+                # pl.col(VALUE).median().alias("median"),  # noqa: ERA001
+                # pl.col(VALUE).quantile(0.75).alias("Q3"),  # noqa: ERA001
+                # pl.col(VALUE).max().alias("max"),  # noqa: ERA001
+                pl.col(VALUE).sum().alias("sum"),
             ],
         )
-        .unpivot(index=[INDIVIDUAL, MEASURE], variable_name="agg", value_name="value")
+        .unpivot(index=[MEASURE, GROUP], variable_name=AGG, value_name=VALUE)
     )
 
 
@@ -76,17 +80,17 @@ def agg_behaviour(df: pl.DataFrame, fps: float) -> pl.DataFrame:
     """
     results = []
 
-    for (indiv, measure), group in df.group_by([INDIVIDUAL, MEASURE]):
-        vect = group.sort("frame").select("value").to_series()
+    for (measure, grp), frame_group in df.group_by([MEASURE, GROUP]):
+        vect = frame_group.sort(FRAME).select(VALUE).to_series()
         bouts = vect2bouts(vect == 1)
-        dur_sec = bouts.select(pl.col("dur") / fps).to_series()
+        dur_sec = bouts.select(pl.col(DUR) / fps).to_series()
 
         bout_freq = float(bouts.height)
         if len(dur_sec) == 0:
             dur_sec = pl.Series([0.0])
 
         stats = {
-            INDIVIDUAL: indiv,
+            GROUP: grp,
             MEASURE: measure,
             "bout_freq": bout_freq,
             "bout_dur_total": float(dur_sec.sum()),
@@ -104,9 +108,9 @@ def agg_behaviour(df: pl.DataFrame, fps: float) -> pl.DataFrame:
         return pl.DataFrame(schema=SUMMARY_SCHEMA)
 
     return pl.DataFrame(results).unpivot(
-        index=[INDIVIDUAL, MEASURE],
-        variable_name="agg",
-        value_name="value",
+        index=[MEASURE, GROUP],
+        variable_name=AGG,
+        value_name=VALUE,
     )
 
 
@@ -135,7 +139,7 @@ def make_binned(
         BINNED_SCHEMA DataFrame.
     """
     timestamps = analysis_df.select(
-        (pl.col("frame") / fps).alias("timestamp"),
+        (pl.col(FRAME) / fps).alias("timestamp"),
     ).to_series()
     t_max = float(timestamps.max())
 
@@ -163,15 +167,15 @@ def make_binned(
     if not results:
         return pl.DataFrame(schema=BINNED_SCHEMA)
 
-    return pl.concat(results).select([BIN_SEC, INDIVIDUAL, MEASURE, "agg", "value"])
+    return pl.concat(results).select([BIN_SEC, MEASURE, GROUP, AGG, VALUE])
 
 
 def summary_binned_quantitative(
     analysis_df: pl.DataFrame,
     name: str,
     fps: float,
-    bins_ls: list[int],
-    cbins_ls: list[int],
+    bins_ls: list[float],
+    cbins_ls: list[float],
 ) -> list[AnalysisResult]:
     """Generate binned summary for quantitative data."""
     return summary_binned(
@@ -188,8 +192,8 @@ def summary_binned_behaviour(
     analysis_df: pl.DataFrame,
     name: str,
     fps: float,
-    bins_sec_ls: list[int],
-    custom_bins_sec_ls: list[int],
+    bins_sec_ls: list[float],
+    custom_bins_sec_ls: list[float],
 ) -> list[AnalysisResult]:
     """Generate binned summary for behavioural data including latency."""
     results = summary_binned(
@@ -208,22 +212,22 @@ def summary_binned_behaviour(
 
 
 def _compute_latency(analysis_df: pl.DataFrame, fps: float) -> list[dict]:
-    """Compute latency: time to first positive value per (individual, measure)."""
+    """Compute latency: time to first positive value per (measure, group)."""
     latency_rows = []
-    for (indiv, measure), group in analysis_df.group_by([INDIVIDUAL, MEASURE]):
-        sorted_group = group.sort("frame")
-        vect = sorted_group.select("value").to_series()
-        frame = sorted_group.select("frame").to_series()
+    for (measure, grp), group in analysis_df.group_by([MEASURE, GROUP]):
+        sorted_group = group.sort(FRAME)
+        vect = sorted_group.select(VALUE).to_series()
+        frame = sorted_group.select(FRAME).to_series()
         latency_val = -1.0
         if vect.sum() > 0:
             first_idx = (vect == 1).arg_true().item(0)
             latency_val = float(frame[first_idx]) / fps
         latency_rows.append(
             {
-                INDIVIDUAL: indiv,
+                GROUP: grp,
                 MEASURE: measure,
-                "agg": "latency",
-                "value": latency_val,
+                AGG: "latency",
+                VALUE: latency_val,
             },
         )
     return latency_rows
@@ -234,8 +238,8 @@ def summary_binned(  # noqa: PLR0913
     name: str,
     fps: float,
     summary_func: Callable[[pl.DataFrame, float], pl.DataFrame],
-    bins_ls: list[int],
-    cbins_ls: list[int],
+    bins_ls: list[float],
+    cbins_ls: list[float],
 ) -> list[AnalysisResult]:
     """Return AnalysisResult objects for summary + binned DataFrames.
 
@@ -249,14 +253,14 @@ def summary_binned(  # noqa: PLR0913
         Frames per second.
     summary_func : Callable
         Summary function (agg_quantitative or agg_behaviour).
-    bins_ls : list[int]
+    bins_ls : list[float]
         Standard bin sizes in seconds.
-    cbins_ls : list[int]
+    cbins_ls : list[float]
         Custom bin sizes in seconds.
     """
-    min_frame = analysis_df.select("frame").min().item()
+    min_frame = analysis_df.select(FRAME).min().item()
     analysis_df = analysis_df.with_columns(
-        (pl.col("frame") - min_frame).alias("frame"),
+        (pl.col(FRAME) - min_frame).alias(FRAME),
     )
 
     summary_df = summary_func(analysis_df, fps)
@@ -269,7 +273,7 @@ def summary_binned(  # noqa: PLR0913
     ]
 
     timestamps = analysis_df.select(
-        (pl.col("frame") / fps).alias("timestamp"),
+        (pl.col(FRAME) / fps).alias("timestamp"),
     ).to_series()
     t_max = float(timestamps.max())
 
@@ -278,7 +282,7 @@ def summary_binned(  # noqa: PLR0913
         binned_df = make_binned(analysis_df, fps, bins, summary_func)
         results.append(
             AnalysisResult(
-                relative_path=Path(f"{BINNED}_{bin_sec}") / f"{name}.{DF_IO_FORMAT}",
+                relative_path=Path(f"{BINNED}_{bin_sec:g}") / f"{name}.{DF_IO_FORMAT}",
                 result=binned_df,
                 save_func=lambda fp, obj: write_df(obj, fp, BINNED_SCHEMA),
             ),

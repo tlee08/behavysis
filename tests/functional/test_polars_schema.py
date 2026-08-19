@@ -302,7 +302,7 @@ class TestAnalysisSchema:
         df = pl.DataFrame(
             {
                 "frame": [0, 0, 1, 1, 0, 1],
-                "individual": ["m1", "m2", "m1", "m2", "m1", "m1"],
+                "group": ["m1", "m2", "m1", "m2", "m1", "m1"],
                 "measure": ["speed", "speed", "speed", "speed", "dist", "dist"],
                 "value": [10.0, 12.0, 11.0, 13.0, 5.0, 6.0],
             },
@@ -311,17 +311,17 @@ class TestAnalysisSchema:
 
         # Filter for m1 speed
         m1_speed = df.filter(
-            pl.col("individual") == "m1",
+            pl.col("group") == "m1",
             pl.col("measure") == "speed",
         )
         assert m1_speed.height == 2
         assert m1_speed.select("value").to_series().to_list() == [10.0, 11.0]
 
-        # Group by individual and measure
-        agg = df.group_by("individual", "measure").agg(pl.col("value").mean())
+        # Group by group and measure
+        agg = df.group_by("group", "measure").agg(pl.col("value").mean())
         assert (
             agg.filter(pl.col("measure") == "speed")
-            .filter(pl.col("individual") == "m1")
+            .filter(pl.col("group") == "m1")
             .select("value")
             .item()
             == 10.5
@@ -331,7 +331,7 @@ class TestAnalysisSchema:
         """SummaryDf long form should represent aggregations naturally."""
         df = pl.DataFrame(
             {
-                "individual": ["m1", "m1", "m2", "m2"],
+                "group": ["m1", "m1", "m2", "m2"],
                 "measure": ["speed", "speed", "speed", "speed"],
                 "agg": ["mean", "std", "mean", "std"],
                 "value": [10.5, 0.5, 12.5, 0.5],
@@ -341,7 +341,7 @@ class TestAnalysisSchema:
 
         # Pivot for display: wide summary
         wide = df.pivot(
-            index=["individual", "measure"],
+            index=["group", "measure"],
             on="agg",
             values="value",
         )
@@ -353,7 +353,7 @@ class TestAnalysisSchema:
         df = pl.DataFrame(
             {
                 "bin_sec": [0.0, 0.0, 30.0, 30.0],
-                "individual": ["m1", "m2", "m1", "m2"],
+                "group": ["m1", "m2", "m1", "m2"],
                 "measure": ["speed", "speed", "speed", "speed"],
                 "agg": ["mean", "mean", "mean", "mean"],
                 "value": [10.0, 12.0, 9.0, 11.0],
@@ -363,7 +363,7 @@ class TestAnalysisSchema:
 
         # Pivot for plotting
         wide = df.pivot(
-            index=["bin_sec", "individual"],
+            index=["bin_sec", "group"],
             on="measure",
             values="value",
         )

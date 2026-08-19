@@ -12,7 +12,7 @@ from behavysis.constants import (
     DF_IO_FORMAT,
     FBF,
     FRAME,
-    INDIVIDUAL,
+    GROUP,
     MEASURE,
     VALUE,
     X,
@@ -122,12 +122,16 @@ def _compute_movement(
             )
         )
 
-        dist_long = dist.select(
-            pl.col(FRAME),
-            pl.lit(indiv).alias(INDIVIDUAL),
-            pl.col("DistMM"),
-            pl.col("DistMMSmoothed"),
-        ).unpivot(index=[FRAME, INDIVIDUAL], variable_name=MEASURE, value_name=VALUE)
+        dist_long = (
+            dist.select(
+                pl.col(FRAME),
+                pl.lit(indiv).alias(GROUP),
+                pl.col("DistMM"),
+                pl.col("DistMMSmoothed"),
+            )
+            .unpivot(index=[FRAME, GROUP], variable_name=MEASURE, value_name=VALUE)
+            .select(FRAME, MEASURE, GROUP, VALUE)
+        )
 
         results.append(dist_long)
 

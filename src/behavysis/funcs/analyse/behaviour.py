@@ -9,7 +9,7 @@ from behavysis.constants import (
     DF_IO_FORMAT,
     FBF,
     FRAME,
-    INDIVIDUAL,
+    GROUP,
     MEASURE,
     TRUE_NEG,
     TRUE_POS,
@@ -54,8 +54,8 @@ def analyse_behaviour(
 
     analysis_df = (
         pl.concat(rows)
-        .with_columns(pl.lit(BEHAVIOUR).alias(INDIVIDUAL))
-        .select(FRAME, INDIVIDUAL, MEASURE, VALUE)
+        .with_columns(pl.lit(BEHAVIOUR).alias(GROUP))
+        .select(FRAME, MEASURE, GROUP, VALUE)
         .with_columns(pl.col(VALUE).cast(pl.Float64))
     )
 

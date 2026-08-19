@@ -3,6 +3,7 @@
 # General
 
 FRAME = "frame"
+EXPERIMENT = "experiment"
 
 # Keypoints
 
@@ -45,12 +46,12 @@ DUR = "dur"
 # Analysis
 
 ANALYSIS = "analysis"
-EXPERIMENT = "experiment"
 MEASURE = "measure"
+GROUP = "group"
 VALUE = "value"
+
 AGG = "agg"
 BIN_SEC = "bin_sec"
-
 
 FBF = "fbf"
 

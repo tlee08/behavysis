@@ -12,7 +12,7 @@ from behavysis.constants import (
     DF_IO_FORMAT,
     FBF,
     FRAME,
-    INDIVIDUAL,
+    GROUP,
     MEASURE,
     VALUE,
     X,
@@ -86,15 +86,16 @@ def social_distance(
         dist.join(dist_smoothed, on=FRAME)
         .select(
             pl.col(FRAME),
-            pl.lit(pair_name).alias(INDIVIDUAL),
+            pl.lit(pair_name).alias(GROUP),
             pl.col("DistMM"),
             pl.col("DistMMSmoothed"),
         )
         .unpivot(
-            index=[FRAME, INDIVIDUAL],
+            index=[FRAME, GROUP],
             variable_name=MEASURE,
             value_name=VALUE,
         )
+        .select(FRAME, MEASURE, GROUP, VALUE)
     )
 
     return [

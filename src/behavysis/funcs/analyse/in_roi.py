@@ -15,7 +15,7 @@ from behavysis.constants import (
     DF_IO_FORMAT,
     FBF,
     FRAME,
-    INDIVIDUAL,
+    GROUP,
     LIKELIHOOD,
     MEASURE,
     VALUE,
@@ -127,7 +127,7 @@ def in_roi(
                 all_analysis_rows.append(
                     {
                         FRAME: int(f),
-                        INDIVIDUAL: indiv,
+                        GROUP: indiv,
                         MEASURE: roi_name,
                         VALUE: float(val),
                     },
@@ -252,7 +252,7 @@ def _draw_scatter_points(
 
     in_roi_mask = (
         analysis_df.filter(
-            pl.col(INDIVIDUAL) == indiv,
+            pl.col(GROUP) == indiv,
             pl.col(MEASURE) == roi_name,
         )
         .sort(FRAME)
