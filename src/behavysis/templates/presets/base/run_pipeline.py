@@ -67,8 +67,8 @@ def _(names_ls, nprocs, proj_dir):
 
 
 @app.cell
-def _(config_fp, proj):
-    proj.update_config(default_config_fp=config_fp)
+def _(config_fp, overwrite, proj):
+    proj.update_config(default_config_fp=config_fp, overwrite=overwrite)
     return
 
 
