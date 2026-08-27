@@ -280,6 +280,7 @@ def summary_binned(
     timestamps = analysis_df.select(
         (pl.col("frame") / fps).alias("timestamp"),
     ).to_series()
+    logger.info(f"{timestamps}")
     t_max = float(timestamps.max())
 
     for bin_sec in bins_ls:
