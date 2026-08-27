@@ -108,7 +108,7 @@ _EPS: float = 1e-6
 # Rolling window parameters
 # ═══════════════════════════════════════════════════════════════════════════════
 
-ROLL_WINDOW_SECONDS: list[float] = [1.0, 0.5, 0.25, 0.2, 0.15, 0.1]
+ROLL_WINDOW_SECONDS: list[float] = [1.0, 0.5, 0.25, 0.2, 0.1]
 
 
 def _rolling_windows(
