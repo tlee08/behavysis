@@ -9,6 +9,7 @@ from pathlib import Path
 
 import numpy as np
 import polars as pl
+from loguru import logger
 
 from behavysis.constants import (
     BIN_SEC,
@@ -222,7 +223,10 @@ def _compute_latency(analysis_df: pl.DataFrame, fps: float) -> list[dict]:
         latency_val = -1.0
         if vect.sum() > 0:
             first_idx = (vect == 1).arg_true().item(0)
-            latency_val = float(frame[first_idx] - min_frame) / fps
+            logger.info(
+                min_frame, frame[first_idx], float(frame[first_idx] - min_frame)
+            )
+            latency_val = (frame[first_idx] - min_frame) / fps
         latency_rows.append(
             {
                 INDIVIDUAL: indiv,
