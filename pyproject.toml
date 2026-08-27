@@ -63,7 +63,7 @@ build-backend = "uv_build"
 
 [tool.ruff]
 include = ["src/**/*.py"]
-extend-exclude = ["src/behavysis/templates/*.py"]
+# extend-exclude = ["src/behavysis/templates/*.py"]
 
 [tool.ruff.lint]
 select = ["ALL"]

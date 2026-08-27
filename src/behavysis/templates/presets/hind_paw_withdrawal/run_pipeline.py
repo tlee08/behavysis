@@ -13,13 +13,15 @@ with app.setup:
         analyse_behaviour,
         distance,
         dur_frames_from_likelihood,
+        extract_hpw,
+        extract_rearing,
         in_roi,
         interpolate,
         px_per_mm,
+        social_distance,
         start_frame_from_likelihood,
         start_stop_trim,
         stop_frame_from_dur,
-        social_distance,
     )
     from behavysis.models import ExperimentConfig
     from behavysis.utils import configure_logger
@@ -39,7 +41,6 @@ def _():
     depending on the machine.
     * Add you videos to the `1_raw_videos` folder.
     """)
-    return
 
 
 @app.cell
@@ -70,25 +71,21 @@ def _(names_ls, nprocs, proj_dir):
 @app.cell
 def _(config_fp, overwrite, proj):
     proj.update_config(default_config_fp=config_fp, overwrite=overwrite)
-    return
 
 
 @app.cell
 def _(overwrite, proj):
     proj.format_video(overwrite=overwrite)
-    return
 
 
 @app.cell
 def _(proj):
     proj.get_video_metadata()
-    return
 
 
 @app.cell
 def _(overwrite, proj):
     proj.run_dlc(gputouse=None, overwrite=overwrite)
-    return
 
 
 @app.cell
@@ -101,7 +98,6 @@ def _(proj):
             px_per_mm,
         ),
     )
-    return
 
 
 @app.cell
@@ -110,15 +106,14 @@ def _(overwrite, proj):
         funcs=(start_stop_trim, interpolate),
         overwrite=overwrite,
     )
-    return
 
 
 @app.cell
 def _(overwrite, proj):
     proj.extract_features(
+        funcs=(extract_rearing, extract_hpw),
         overwrite=overwrite,
     )
-    return
 
 
 @app.cell
@@ -126,7 +121,6 @@ def _(overwrite, proj):
     proj.classify_behaviour(
         overwrite=overwrite,
     )
-    return
 
 
 @app.cell
@@ -134,7 +128,6 @@ def _(overwrite, proj):
     proj.export_behaviour(
         overwrite=overwrite,
     )
-    return
 
 
 @app.cell(hide_code=True)
@@ -145,7 +138,6 @@ def _():
     Run `behavysis-viewer-app` to verify and correct automated classifications
     before proceeding to behaviour analysis.
     """)
-    return
 
 
 @app.cell
@@ -153,14 +145,12 @@ def _(proj):
     proj.analyse(
         funcs=(analyse_behaviour, distance, in_roi, social_distance),
     )
-    return
 
 
 @app.cell
 def _(proj):
     proj.combine_analysis()
     proj.collate_analysis()
-    return
 
 
 if __name__ == "__main__":
