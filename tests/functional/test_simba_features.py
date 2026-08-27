@@ -5,6 +5,7 @@ output for the classic 2-animal, 8-bodypart configuration and for
 alternative bodypoint configs.
 """
 
+import re
 from pathlib import Path
 
 import numpy as np
@@ -137,15 +138,37 @@ class TestGenericFeatures2x8:
             f"Expected 10+ rolling cols, got {len(rolling_cols)}"
         )
 
-    def test_rolling_windows_deduplicated(self, features_df_2x8):
-        """Rolling windows are distinct integer frame counts."""
-        windows = {
-            c.split("_w", 1)[1].split("_", 1)[0]
-            for c in features_df_2x8.columns
-            if "_mean_w" in c or "_median_w" in c
-        }
-        assert all(w.isdigit() for w in windows), windows
-        assert len(windows) > 0, f"No rolling windows found"
+    def test_rolling_windows_seconds(self, features_df_2x8):
+        """Rolling windows are labelled by duration in seconds."""
+        suffix_re = re.compile(r"_w\d+(?:\.\d+)?s$")
+        rolling = [
+            c for c in features_df_2x8.columns if "_mean_w" in c or "_median_w" in c
+        ]
+        assert rolling and all(suffix_re.search(c) for c in rolling)
+        windows = {c.rsplit("_w", 1)[1] for c in rolling}
+        assert windows == {"1s", "0.5s", "0.25s", "0.2s", "0.15s", "0.1s"}
+
+    def test_rolling_windows_fps_agnostic(self, keypoints_df, features_df_2x8):
+        """Rolling window column names do not change with fps."""
+        from behavysis.funcs.extract_features import compute_features
+
+        other = compute_features(
+            keypoints_df,
+            individuals=INDIVS_2,
+            bodyparts=BPTS_8,
+            angles=[],
+            fps=60.0,
+            px_per_mm=4.0,
+        )
+
+        def windows(df):
+            return {
+                c.rsplit("_w", 1)[1]
+                for c in df.columns
+                if "_mean_w" in c or "_median_w" in c
+            }
+
+        assert windows(features_df_2x8) == windows(other)
 
     def test_no_rolling_sum(self, features_df_2x8):
         assert not [c for c in features_df_2x8.columns if "_sum_w" in c]

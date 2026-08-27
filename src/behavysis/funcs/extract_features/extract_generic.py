@@ -20,7 +20,12 @@ from scipy.spatial.distance import pdist
 
 from behavysis.transforms import check_bpts_exist
 
-from ._helper import _euclidean, _ffill_bfill_2d
+from ._helper import (
+    ROLL_WINDOW_SECONDS,
+    _euclidean,
+    _ffill_bfill_2d,
+    _rolling_windows,
+)
 
 if TYPE_CHECKING:
     from behavysis.constants import Array1D, Array2D
@@ -40,16 +45,8 @@ class ExtractGenericConfig(BaseModel):
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# Rolling window divisors
+# Rolling window aggregation prefixes/suffixes
 # ═══════════════════════════════════════════════════════════════════════════════
-
-ROLL_WINDOW_DIVISORS: list[float] = [
-    2,
-    5,
-    6,
-    7.5,
-    15,
-]
 
 AGG_PREFIXES = (
     "movement_sum_",
@@ -239,9 +236,7 @@ def generic_compute(  # noqa: PLR0913
     """
     n_frames = keypoints_df.select("frame").n_unique()
 
-    roll_windows: list[int] = sorted(
-        {w for d in ROLL_WINDOW_DIVISORS if (w := max(2, int(fps / d))) <= n_frames / 2}
-    )
+    roll_windows = _rolling_windows(ROLL_WINDOW_SECONDS, fps, n_frames)
 
     arrs, arr_prob = _pivot_to_wide(keypoints_df, individuals, bodyparts)
 
@@ -578,11 +573,11 @@ def _compute_tortuosity(
     arrs: dict[str, Array2D],
     individuals: list[str],
     bodyparts: list[str],
-    roll_windows: list[int],
+    roll_windows: list[tuple[str, int]],
 ) -> dict[str, Array1D]:
     """Path tortuosity of each bodypart's trajectory per individual.
 
-    Columns: ``{indiv}_{bp}_tortuosity_w{frames}``.
+    Columns: ``{indiv}_{bp}_tortuosity_w{seconds}``.
 
     Measures how much a tracked bodypart's path winds/curves within each
     rolling time window. Normalised by 2π — 0 means perfectly straight,
@@ -600,7 +595,7 @@ def _compute_tortuosity(
             # turn_angles has length n-2; turn_angles[k] corresponds to
             # frame triplet (k, k+1, k+2), vertex at k+1.
             cum = np.insert(turn_angles, 0, 0.0).cumsum()
-            for wf in roll_windows:
+            for label, wf in roll_windows:
                 if wf < 3:  # noqa: PLR2004
                     continue
                 win = wf - 2  # number of turn angles in a wf-frame window
@@ -608,7 +603,7 @@ def _compute_tortuosity(
                 tort = rolling_sum / (2.0 * np.pi)
                 result = np.full(n, tort[-1], dtype=np.float64)
                 result[: len(tort)] = tort
-                f[f"{indiv}_{bp}_tortuosity_w{wf}"] = result
+                f[f"{indiv}_{bp}_tortuosity_w{label}"] = result
     return f
 
 
@@ -669,11 +664,11 @@ def _compute_probability(arr_prob: Array2D) -> dict[str, Array1D]:
 
 def _compute_rolling(
     features: dict[str, Array1D],
-    roll_windows: list[int],
+    roll_windows: list[tuple[str, int]],
 ) -> dict[str, Array1D]:
     """Rolling window median/mean for all base numeric features.
 
-    Columns: ``{base_name}_median/mean_w{frames}``.
+    Columns: ``{base_name}_median/mean_w{seconds}``.
 
     Rolling is restricted to aggregate features (totals, hull stats, cdist
     summaries). Per-bodypart-pair distances and individual bodypart movements
@@ -692,11 +687,11 @@ def _compute_rolling(
         )
     ]
 
-    for wf in roll_windows:
+    for label, wf in roll_windows:
         for key in base_keys:
             stats = _roll_median_mean(features[key], wf)
-            aggs[f"{key}_median_w{wf}"] = stats["_median"]
-            aggs[f"{key}_mean_w{wf}"] = stats["_mean"]
+            aggs[f"{key}_median_w{label}"] = stats["_median"]
+            aggs[f"{key}_mean_w{label}"] = stats["_mean"]
 
     return aggs
 

@@ -214,6 +214,7 @@ def summary_binned_behaviour(
 def _compute_latency(analysis_df: pl.DataFrame, fps: float) -> list[dict]:
     """Compute latency: time to first positive value per (measure, group)."""
     latency_rows = []
+    min_frame = analysis_df.select(FRAME).min().item()
     for (measure, grp), group in analysis_df.group_by([MEASURE, GROUP]):
         sorted_group = group.sort(FRAME)
         vect = sorted_group.select(VALUE).to_series()
@@ -221,7 +222,7 @@ def _compute_latency(analysis_df: pl.DataFrame, fps: float) -> list[dict]:
         latency_val = -1.0
         if vect.sum() > 0:
             first_idx = (vect == 1).arg_true().item(0)
-            latency_val = float(frame[first_idx]) / fps
+            latency_val = float(frame[first_idx] - min_frame) / fps
         latency_rows.append(
             {
                 GROUP: grp,

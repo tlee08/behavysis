@@ -108,7 +108,25 @@ _EPS: float = 1e-6
 # Rolling window parameters
 # ═══════════════════════════════════════════════════════════════════════════════
 
-ROLL_WINDOW_DIVISORS: list[float] = [1, 1.5, 2, 4, 7.5, 15]
+ROLL_WINDOW_SECONDS: list[float] = [1.0, 0.5, 0.25, 0.2, 0.15, 0.1]
+
+
+def _rolling_windows(
+    roll_window_seconds: list[float],
+    fps: float,
+    n_frames: int,
+) -> list[tuple[str, int]]:
+    """Window ``(label, frames)`` pairs that fit the video.
+
+    Label is the window duration in seconds (fps-agnostic);
+    ``frames`` is the nearest integer frame count for the given fps.
+    """
+    return [
+        (f"{s:g}s", max(2, round(fps * s)))
+        for s in roll_window_seconds
+        if max(2, round(fps * s)) <= n_frames / 2
+    ]
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Helpers — DataFrame → numpy extraction
@@ -491,21 +509,17 @@ def _compute_rolling_aggregates(
 ) -> dict[str, Array1D]:
     """Rolling-window mean, std, min, max for each primitive feature.
 
-    Applies the same ``ROLL_WINDOW_DIVISORS`` convention as the generic
+    Applies the same ``ROLL_WINDOW_SECONDS`` convention as the generic
     feature battery. All features are aggregate-level signals,
     so every feature gets rolling aggregates (no filtering needed).
 
-    Returns rolling feature arrays keyed as ``{name}_{stat}_w{frames}``.
+    Returns rolling feature arrays keyed as ``{name}_{stat}_w{seconds}``.
     """
-    roll_windows = sorted(
-        {w for d in ROLL_WINDOW_DIVISORS if (w := max(2, int(fps / d))) <= n_frames / 2}
-    )
-
     aggs: dict[str, Array1D] = {}
-    for wf in roll_windows:
+    for label, wf in _rolling_windows(ROLL_WINDOW_SECONDS, fps, n_frames):
         for key, arr in features.items():
             stats = _rolling_window_stats(arr, wf)
             for stat_name in ("_mean", "_std", "_min", "_max"):
-                aggs[f"{key}{stat_name}_w{wf}"] = stats[stat_name]
+                aggs[f"{key}{stat_name}_w{label}"] = stats[stat_name]
 
     return aggs
