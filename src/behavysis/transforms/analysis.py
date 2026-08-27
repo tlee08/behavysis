@@ -224,7 +224,7 @@ def _compute_latency(analysis_df: pl.DataFrame, fps: float) -> list[dict]:
         if vect.sum() > 0:
             first_idx = (vect == 1).arg_true().item(0)
             logger.info(
-                min_frame, frame[first_idx], float(frame[first_idx] - min_frame)
+                f"{min_frame}, {frame[first_idx]}, {float(frame[first_idx] - min_frame)}"
             )
             latency_val = (frame[first_idx] - min_frame) / fps
         latency_rows.append(
