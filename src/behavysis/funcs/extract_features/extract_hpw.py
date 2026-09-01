@@ -399,9 +399,7 @@ def hpw_compute(
     features: dict[str, Array1D] = {}
     features |= _compute_withdrawal_features(xy, floor_y, px_per_mm, fps)
 
-    n_frames = features[next(iter(features))].shape[0]
-
-    features |= _compute_rolling_aggregates(features, fps, n_frames)
+    features |= _compute_rolling_aggregates(features, fps)
     features |= _compute_cross_features(
         features,
         body_stillness_frames=max(2, int(fps / 5)),

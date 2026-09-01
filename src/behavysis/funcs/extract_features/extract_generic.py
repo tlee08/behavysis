@@ -234,9 +234,7 @@ def generic_compute(  # noqa: PLR0913
     pl.DataFrame
         Wide features DataFrame with frame index.
     """
-    n_frames = keypoints_df.select("frame").n_unique()
-
-    roll_windows = _rolling_windows(ROLL_WINDOW_SECONDS, fps, n_frames)
+    roll_windows = _rolling_windows(ROLL_WINDOW_SECONDS, fps)
 
     arrs, arr_prob = _pivot_to_wide(keypoints_df, individuals, bodyparts)
 
@@ -596,9 +594,7 @@ def _compute_tortuosity(
             # frame triplet (k, k+1, k+2), vertex at k+1.
             cum = np.insert(turn_angles, 0, 0.0).cumsum()
             for label, wf in roll_windows:
-                if wf < 3:  # noqa: PLR2004
-                    continue
-                win = wf - 2  # number of turn angles in a wf-frame window
+                win = max(1, min(wf - 2, n - 2))
                 rolling_sum = cum[win:] - cum[:-win]  # len = n - win
                 tort = rolling_sum / (2.0 * np.pi)
                 result = np.full(n, tort[-1], dtype=np.float64)

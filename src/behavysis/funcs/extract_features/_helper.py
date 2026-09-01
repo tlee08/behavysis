@@ -112,20 +112,13 @@ ROLL_WINDOW_SECONDS: list[float] = [1.0, 0.5, 0.25, 0.2, 0.1]
 
 
 def _rolling_windows(
-    roll_window_seconds: list[float],
-    fps: float,
-    n_frames: int,
+    roll_window_seconds: list[float], fps: float
 ) -> list[tuple[str, int]]:
-    """Window ``(label, frames)`` pairs that fit the video.
+    """Window ``(label, frames)`` pairs.
 
-    Label is the window duration in seconds (fps-agnostic);
-    ``frames`` is the nearest integer frame count for the given fps.
+    Label is the window duration in seconds (fps-agnostic).
     """
-    return [
-        (f"{s:g}s", max(2, round(fps * s)))
-        for s in roll_window_seconds
-        if max(2, round(fps * s)) <= n_frames / 2
-    ]
+    return [(f"{s:g}s", max(2, round(fps * s))) for s in roll_window_seconds]
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -503,9 +496,7 @@ def _rolling_window_stats(
 
 
 def _compute_rolling_aggregates(
-    features: dict[str, Array1D],
-    fps: float,
-    n_frames: int,
+    features: dict[str, Array1D], fps: float
 ) -> dict[str, Array1D]:
     """Rolling-window mean, std, min, max for each primitive feature.
 
@@ -516,7 +507,7 @@ def _compute_rolling_aggregates(
     Returns rolling feature arrays keyed as ``{name}_{stat}_w{seconds}``.
     """
     aggs: dict[str, Array1D] = {}
-    for label, wf in _rolling_windows(ROLL_WINDOW_SECONDS, fps, n_frames):
+    for label, wf in _rolling_windows(ROLL_WINDOW_SECONDS, fps):
         for key, arr in features.items():
             stats = _rolling_window_stats(arr, wf)
             for stat_name in ("_mean", "_std", "_min", "_max"):

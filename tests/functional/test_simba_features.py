@@ -146,7 +146,7 @@ class TestGenericFeatures2x8:
         ]
         assert rolling and all(suffix_re.search(c) for c in rolling)
         windows = {c.rsplit("_w", 1)[1] for c in rolling}
-        assert windows == {"1s", "0.5s", "0.25s", "0.2s", "0.15s", "0.1s"}
+        assert windows == {"1s", "0.5s", "0.25s", "0.2s", "0.1s"}
 
     def test_rolling_windows_fps_agnostic(self, keypoints_df, features_df_2x8):
         """Rolling window column names do not change with fps."""

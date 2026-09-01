@@ -201,9 +201,7 @@ def rearing_compute(
         fps,
     )
 
-    n_frames = features[next(iter(features))].shape[0]
-
-    features |= _compute_rolling_aggregates(features, fps, n_frames)
+    features |= _compute_rolling_aggregates(features, fps)
 
     frames = keypoints_df.select("frame").unique().sort("frame").to_series().to_numpy()
 
