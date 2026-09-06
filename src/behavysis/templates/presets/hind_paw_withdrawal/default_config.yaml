@@ -77,7 +77,10 @@ extract_features:
     angles:
       - [hind_toe_r, hind_heel_r, hind_knee_r]
       - [hind_toe_l, hind_heel_l, hind_knee_l]
-  extract_hpw: {}
+  extract_hpw:
+    pcutoff: 0.6
+  extract_rearing:
+    pcutoff: 0.6
 
 classify_behaviour:
   hpw:

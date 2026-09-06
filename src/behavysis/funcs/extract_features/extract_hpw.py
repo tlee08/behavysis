@@ -55,6 +55,7 @@ from ._helper import (
     _get_bodypart_xy_dict,
     _horizontal_velocity,
     _local_peak,
+    _nanmean,
     _smooth_uniform,
     _vertical_velocity,
 )
@@ -354,7 +355,7 @@ def _compute_withdrawal_features(
 
     # -- Hind body vertical velocity (control signal: what the body is doing) --
     body_y_arrays = [xy[bp][1] for bp in [MID_BACK, LOWER_BACK, TAIL_BASE, TAIL_TIP]]
-    hind_body_y = np.mean(np.column_stack(body_y_arrays), axis=1)
+    hind_body_y = _nanmean(body_y_arrays)
     f[W15_HIND_BODY_VERTICAL_V_MM_S] = _vertical_velocity(hind_body_y, px_per_mm, fps)
 
     # -- Paw velocity relative to body (paw minus body = isolated paw movement) --
@@ -374,6 +375,7 @@ def hpw_compute(
     keypoints_df: pl.DataFrame,
     fps: float,
     px_per_mm: float,
+    pcutoff: float = 0.6,
 ) -> pl.DataFrame:
     """Compute hind paw withdrawal features from keypoints.
 
@@ -385,13 +387,17 @@ def hpw_compute(
         Frames per second.
     px_per_mm : float
         Pixels per mm scale factor.
+    pcutoff : float
+        Likelihood threshold for bodypart presence. Positions whose
+        likelihood is below ``pcutoff`` (or missing) become NaN so
+        low-confidence/occluded detections propagate as unknown.
 
     Returns:
     -------
     pl.DataFrame
         Wide features DataFrame with ``frame`` column + all feature columns.
     """
-    xy = _get_bodypart_xy_dict(keypoints_df, ALL_BODYPARTS, RAT_INDIVIDUAL)
+    xy = _get_bodypart_xy_dict(keypoints_df, ALL_BODYPARTS, RAT_INDIVIDUAL, pcutoff)
 
     arena_xy = _get_bodypart_xy_dict(keypoints_df, ARENA_BPTS, ARENA_INDIVIDUAL)
     floor_y = _estimate_floor_y(arena_xy, xy, fps)
@@ -415,12 +421,14 @@ def hpw_compute(
 
 def extract_hpw(
     keypoints_df: pl.DataFrame,
-    config: ExperimentConfig,  # noqa: ARG001
+    config: ExperimentConfig,
     metadata: ExperimentMetadata,
 ) -> pl.DataFrame:
     """Protocol-compliant wrapper for HPW feature extraction."""
+    cfg = config.require_extract_features().require("extract_hpw", ExtractHpwConfig)
     return hpw_compute(
         keypoints_df,
         fps=metadata.require_fps(),
         px_per_mm=metadata.require_px_per_mm(),
+        pcutoff=cfg.pcutoff,
     )

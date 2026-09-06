@@ -43,6 +43,7 @@ from ._helper import (
     _compute_rolling_aggregates,
     _estimate_floor_y,
     _get_bodypart_xy_dict,
+    _nanmean,
     _vertical_velocity,
 )
 
@@ -88,12 +89,6 @@ REARING_FEATURES: list[str] = [
 # ═══════════════════════════════════════════════════════════════════════════════
 # Rearing feature computation
 # ═══════════════════════════════════════════════════════════════════════════════
-
-
-def _nanmean(arrays: list[Array1D]) -> Array1D:
-    """Column-wise mean of stacked 1D arrays, ignoring NaN."""
-    with np.errstate(all="ignore"):
-        return np.nanmean(np.column_stack(arrays), axis=1)
 
 
 def _compute_rearing_features(  # noqa: PLR0913

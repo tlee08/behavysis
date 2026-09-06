@@ -269,6 +269,19 @@ def _ffill_bfill_2d(arr: Array2D) -> Array2D:
     return arr
 
 
+def _nanmean(arrays: list[Array1D]) -> Array1D:
+    """Column-wise mean of stacked 1D arrays, ignoring NaN.
+
+    Returns NaN where an entire row is NaN. Computed as ``nansum / count``
+    rather than ``np.nanmean``, which emits a "Mean of empty slice"
+    RuntimeWarning for all-NaN rows.
+    """
+    stacked = np.column_stack(arrays)
+    count = np.count_nonzero(~np.isnan(stacked), axis=1)
+    mean = np.nansum(stacked, axis=1) / np.maximum(count, 1)
+    return np.where(count > 0, mean, np.nan)
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # Helpers — kinematics
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -342,6 +355,9 @@ def _local_peak(
 
     Produces a smoothed envelope that captures local peak intensity
     of the signal -- useful for detecting transient spikes (e.g. paw flinch).
+
+    NaN-aware: NaN values are ignored within each window; an all-NaN window
+    yields NaN.
     """
     half = window_frames // 2
     n = len(signal)
@@ -349,7 +365,8 @@ def _local_peak(
     for i in range(n):
         lo = max(0, i - half)
         hi = min(n, i + half + 1)
-        result[i] = np.max(signal[lo:hi])
+        window = signal[lo:hi]
+        result[i] = np.nanmax(window) if not np.isnan(window).all() else np.nan
     return result
 
 
