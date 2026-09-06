@@ -17,7 +17,13 @@ from xgboost import XGBClassifier
 
 from behavysis.utils import get_gpu_device
 
-from .adapter import BaseAdapter, SklearnAdapter, TabpfnAdapter, TorchAdapter
+from .adapter import (
+    BaseAdapter,
+    SklearnAdapter,
+    TabpfnAdapter,
+    TorchAdapter,
+    XgboostAdapter,
+)
 from .torch.architectures import CNN
 
 # -- registry ---------------------------------------------------------
@@ -87,7 +93,7 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
             verbose=3,
         ),
     ),
-    "xgb": lambda recipe_fp: SklearnAdapter(
+    "xgb": lambda recipe_fp: XgboostAdapter(
         recipe_fp,
         search=RandomizedSearchCV(
             Pipeline(

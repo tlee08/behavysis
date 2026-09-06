@@ -493,7 +493,3 @@ MODEL_TYPES_TO_CLASS: dict[str, type[BaseAdapter]] = {
     "tabpfn": TabpfnAdapter,
     "torch": TorchAdapter,
 }
-
-MODEL_TYPES_TO_STRING: dict[type[BaseAdapter], str] = {
-    v: k for k, v in MODEL_TYPES_TO_CLASS.items()
-}

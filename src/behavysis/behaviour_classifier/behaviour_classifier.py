@@ -17,7 +17,7 @@ from loguru import logger
 from behavysis.constants import BOUT, BOUT_ID, EXPERIMENT
 from behavysis.utils import clean_memory, pass_exception, trace
 
-from .adapter import MODEL_TYPES_TO_CLASS, MODEL_TYPES_TO_STRING, BaseAdapter
+from .adapter import MODEL_TYPES_TO_CLASS, BaseAdapter
 from .config import ActiveModel, ClassifierContract, ModelRecipe
 from .data import (
     ACTUAL,
@@ -126,7 +126,7 @@ def train_model(
         else ModelRecipe(
             behaviour_name=clf.contract().behaviour_name,
             model_name=model_name,
-            model_type=MODEL_TYPES_TO_STRING[type(adapter)],
+            model_type=adapter.framework,
         )
     )
     recipe = recipe.model_copy(update=recipe_kwargs)
