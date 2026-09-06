@@ -8,22 +8,21 @@ import numpy as np
 import polars as pl
 from loguru import logger
 
-from behavysis.behaviour_classifier import ClassifierContract, ClassifierPaths
+from behavysis.behaviour_classifier import ClassifierPaths
 from behavysis.constants import (
     ANALYSIS_COMBINED_DIR,
     ANALYSIS_DIR,
+    BEHAVIOUR,
+    BEHAVIOUR_PREDICTED_DIR,
+    BEHAVIOUR_SCORED_DIR,
     CONFIG_DIR,
+    FEATURES_EXTRACTED_DIR,
     FORMATTED_VIDEO_DIR,
     KEYPOINTS_DIR,
     METADATA_DIR,
+    PREPROCESSED_DIR,
     RAW_VIDEO_DIR,
     STAGES,
-)
-from behavysis.constants.pipeline import (
-    BEHAVIOUR_PREDICTED_DIR,
-    BEHAVIOUR_SCORED_DIR,
-    FEATURES_EXTRACTED_DIR,
-    PREPROCESSED_DIR,
 )
 from behavysis.funcs import (
     AnalyseFunc,
@@ -234,13 +233,20 @@ class Experiment:
         if not overwrite and has_output_files(self.get_fp(BEHAVIOUR_PREDICTED_DIR)):
             return
         behaviour_df_ls = []
-        for ref in self.read_config().require_classify_behaviour().values():
+        for name, ref in self.read_config().require_classify_behaviour().items():
             contract_fp = ref.contract_fp
             clf = ClassifierPaths(contract_fp)
+            contract_name = clf.contract().behaviour_name
+            if name != contract_name:
+                logger.warning(
+                    f"Behaviour key '{name}' overrides contract name '{contract_name}'"
+                )
             if missing_input_files(self.get_features_fp(clf.contract().feature_set)):
                 continue
             features_df = read_df(self.get_features_fp(clf.contract().feature_set))
-            behaviour_df_ls.append(classify_behaviour_func(contract_fp, features_df))
+            behaviour_i_df = classify_behaviour_func(contract_fp, features_df)
+            behaviour_i_df = behaviour_i_df.with_columns(pl.lit(name).alias(BEHAVIOUR))
+            behaviour_df_ls.append(behaviour_i_df)
         write_df(
             pl.concat(behaviour_df_ls)
             if behaviour_df_ls
@@ -260,12 +266,6 @@ class Experiment:
             self.get_fp(BEHAVIOUR_PREDICTED_DIR), BEHAVIOUR_PREDICTED_SCHEMA
         )
         classify_behaviour = self.read_config().require_classify_behaviour()
-        for name, ref in classify_behaviour.items():
-            contract_name = ClassifierContract.read_yaml(ref.contract_fp).behaviour_name
-            if name != contract_name:
-                logger.warning(
-                    f"Behaviour key '{name}' overrides contract name '{contract_name}'"
-                )
         behaviour_scored_df = predicted_to_scored(
             behaviour_predicted_df, classify_behaviour
         )

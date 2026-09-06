@@ -10,7 +10,9 @@ import numpy as np
 import pandas as pd
 import polars as pl
 import torch
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import precision_score, recall_score
+from sklearn.model_selection import GridSearchCV
 from sklearn.pipeline import Pipeline
 from tabpfn import TabPFNClassifier, load_fitted_tabpfn_model, save_fitted_tabpfn_model
 from xgboost import XGBClassifier
@@ -275,7 +277,11 @@ class XgboostAdapter(SklearnAdapter):
         Must load XGBoost model as a .ubj so it serialisable to all machines.
         """
         # Instatiate
-        inst = cls(recipe_fp, joblib.load(recipe_fp.with_name("search.joblib")))
+        # Note: not loading search object, as ita) is not needed for inference
+        # and b) xgboost can't be serialised across machines
+        # search = joblib.load(recipe_fp.with_name("search.joblib"))
+        search = GridSearchCV(Pipeline([("clf", RandomForestClassifier())]), {}, cv=3)
+        inst = cls(recipe_fp, search)
         # Load pipelin
         preprocess: Pipeline = joblib.load(recipe_fp.with_name("preprocess.joblib"))
         # Load model
