@@ -214,6 +214,7 @@ def _compute_latency(analysis_df: pl.DataFrame, fps: float) -> pl.DataFrame:
     """Compute latency: time to first positive value per (measure, group)."""
     latency_rows = []
     min_frame = analysis_df.select(FRAME).min().item()
+    analysis_df = analysis_df.with_columns((pl.col(FRAME) - min_frame).alias(FRAME))
     for (measure, grp), group_df in analysis_df.group_by([MEASURE, GROUP]):
         latency_val = -1.0
         if (group_df.get_column(VALUE) == TRUE_POS).any():
@@ -222,7 +223,6 @@ def _compute_latency(analysis_df: pl.DataFrame, fps: float) -> pl.DataFrame:
                 .filter(pl.col(VALUE) == TRUE_POS)
                 .get_column(FRAME)
                 .item(0)
-                - min_frame
             ) / fps
         latency_rows.append(
             {
@@ -261,9 +261,7 @@ def summary_binned(  # noqa: PLR0913
         Custom bin sizes in seconds.
     """
     min_frame = analysis_df.select(FRAME).min().item()
-    analysis_df = analysis_df.with_columns(
-        (pl.col(FRAME) - min_frame).alias(FRAME),
-    )
+    analysis_df = analysis_df.with_columns((pl.col(FRAME) - min_frame).alias(FRAME))
 
     summary_df = summary_func(analysis_df, fps)
     results = [
