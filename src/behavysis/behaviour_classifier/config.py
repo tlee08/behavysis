@@ -49,15 +49,15 @@ class ModelRecipe(YamlModel):
     val_split: float = 0.2
 
     # Sub-sampling parameters
-    stride_frames: PositiveInt = 8
+    stride_frames: PositiveInt = 2
     under_sampling_strategy: PositiveFloat | None = 1.0
 
     # Pcutoff calibration (affects the pcutoff value used at inference time)
     calibrate_params: bool = True
-    target_recall: float = 0.98
+    target_recall: float = 0.95
 
     # Prediction post-processing parameters (auto-set)
-    pcutoff: PositiveFloat = 0.2
+    pcutoff: PositiveFloat = 0.1
     smoothing_frames: NonNegativeInt = 2
     min_gap_frames: NonNegativeInt = 3
     min_bout_frames: NonNegativeInt = 3

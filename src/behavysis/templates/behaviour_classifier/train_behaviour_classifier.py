@@ -77,9 +77,9 @@ def _():
     training_data_dir = Path("path/to/behavysis_project")
     feature_set = "extract_generic"
     names_ls = [i.stem for i in (training_data_dir / "1_raw_videos").iterdir()]
-    
+
     # Recipe kwargs
-    recipe_kwargs={
+    recipe_kwargs = {
         "stride_frames": 1,
         "under_sampling_strategy": 0.5,
     }
@@ -136,7 +136,11 @@ def _(contract_fp):
 
 @app.cell
 def _(contract_fp, overwrite, recipe_kwargs):
-    train_all_models(contract_fp, overwrite=overwrite, recipe_kwargs=recipe_kwargs)
+    train_all_models(
+        contract_fp,
+        overwrite=overwrite,
+        recipe_kwargs=recipe_kwargs,
+    )
 
 
 @app.cell
