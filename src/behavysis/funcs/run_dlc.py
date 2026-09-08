@@ -48,9 +48,9 @@ def _run_dlc_subproc(
     will be logged to the console and the process will continue to the next video.
     """
     # Saving the script to a file.
-    script_fp = temp_dir / f"dlc_subproc_{gputouse}.py"
+    script_fp = temp_dir / "dlc_subproc.py"
     save_template(
-        "dlc/dlc_subproc.py",
+        Path("dlc") / "dlc_subproc.py",
         script_fp,
         vid_fp_ls=[str(_i) for _i in vid_fp_ls],
         model_fp=dlc_config_fp,
