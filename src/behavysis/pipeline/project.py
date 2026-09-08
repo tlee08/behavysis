@@ -5,7 +5,7 @@ from pathlib import Path
 
 import dask
 import polars as pl
-from dask.distributed import LocalCluster
+from dask.distributed import LocalCluster, Nanny, SpecCluster
 from loguru import logger
 from natsort import natsorted
 
@@ -143,11 +143,10 @@ class Project:
         with each process assigned to a specific GPU.
         If gputouse is None,
         it will automatically detect available GPUs and
-        assign them to processes in a round-robin fashion.
+        one worker per GPU.
         """
-        gputouse_ls = get_gpu_device_ids() if gputouse is None else [gputouse]
-        gputouse_ls = gputouse_ls or [None]
-        nprocs = len(gputouse_ls)
+        gpu_ls = get_gpu_device_ids() if gputouse is None else [gputouse]
+        gpu_ls = gpu_ls or [None]
         # Get list of experiment to run
         exp_ls = self.experiments
         if not overwrite:
@@ -155,14 +154,29 @@ class Project:
         if not exp_ls:
             return
         # Running DLC
-        with cluster_process(LocalCluster(n_workers=nprocs, threads_per_worker=1)):
+        workers = {
+            str(_i): {
+                "cls": Nanny,
+                "options": {
+                    "nthreads": 1,
+                    **(
+                        {"env": {"CUDA_VISIBLE_DEVICES": str(_gpu)}}
+                        if _gpu is not None
+                        else {}
+                    ),
+                },
+            }
+            for _i, _gpu in enumerate(gpu_ls)
+        }
+
+        with cluster_process(SpecCluster(workers=workers)):
             delayed_tasks = [
                 dask.delayed(pass_exception(Experiment.run_dlc))(
-                    exp,
-                    gputouse=gputouse_ls[i % nprocs],
+                    _exp,
+                    gputouse=None,
                     overwrite=overwrite,
                 )
-                for i, exp in enumerate(exp_ls)
+                for _exp in exp_ls
             ]
             list(dask.compute(*delayed_tasks))
 
