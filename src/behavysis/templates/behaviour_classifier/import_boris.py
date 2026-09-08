@@ -11,12 +11,7 @@ with app.setup:
     import polars as pl
     from loguru import logger
 
-    from behavysis.constants import (
-        BEHAVIOUR,
-        FRAME,
-        TRUE_NEG,
-        TRUE_POS,
-    )
+    from behavysis.constants import BEHAVIOUR, FRAME, TRUE_NEG, TRUE_POS
     from behavysis.models import ExperimentMetadata
     from behavysis.schemas import write_df
     from behavysis.utils import configure_logger, has_output_files
@@ -34,13 +29,11 @@ def _():
 
     Output is fully-wide format: one row per frame, one column per behaviour.
     """)
-    return
 
 
 @app.cell
 def _():
     mo.md(r"""## Configure""")
-    return
 
 
 @app.cell
@@ -49,8 +42,7 @@ def _():
     dst_dir = Path("/path/to/scored_output")
     behaviour_ls = ["behaviour1", "behaviour2"]
     overwrite = False
-    point_window_sec = 0.0
-    fps = 50
+    point_window_sec = 0.5
 
     metadata = ExperimentMetadata()
     mo.accordion(
@@ -60,10 +52,9 @@ def _():
             "behaviour_ls": behaviour_ls,
             "overwrite": overwrite,
             "point_window_sec": point_window_sec,
-            "fps": fps,
         }
     )
-    return behaviour_ls, boris_dir, dst_dir, fps, metadata, overwrite, point_window_sec
+    return behaviour_ls, boris_dir, dst_dir, metadata, overwrite, point_window_sec
 
 
 @app.function
@@ -74,7 +65,7 @@ def import_boris_csv(
     stop_frame: int,
     fps: int,
     *,
-    point_window_sec: float = 0.0,
+    point_window_sec: float = 0.5,
     pos_value: int = TRUE_POS,
 ) -> pl.DataFrame:
     """Import BORIS CSV to fully-wide scored DataFrame.
@@ -127,7 +118,7 @@ def import_boris_csv(
 
 
 @app.cell
-def _(behaviour_ls, boris_dir, dst_dir, fps, metadata, overwrite, point_window_sec):
+def _(behaviour_ls, boris_dir, dst_dir, metadata, overwrite, point_window_sec):
     dst_dir.mkdir(parents=True, exist_ok=True)
     for csv_fp in sorted(boris_dir.glob("*.csv")):
         name = csv_fp.stem
@@ -139,7 +130,7 @@ def _(behaviour_ls, boris_dir, dst_dir, fps, metadata, overwrite, point_window_s
             behaviour_ls,
             metadata.require_start_frame(),
             metadata.require_stop_frame() + 1,
-            fps=fps,
+            fps=metadata.require_fps(),
             point_window_sec=point_window_sec,
         )
         write_df(df, dst_fp)
