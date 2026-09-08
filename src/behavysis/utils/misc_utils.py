@@ -3,12 +3,15 @@
 import contextlib
 import gc
 import inspect
+import shutil
 from collections.abc import Callable
 from functools import wraps
 from pathlib import Path
 
 import torch
 from loguru import logger
+
+from behavysis.constants import CACHE_DIR
 
 
 def pass_exception(
@@ -90,3 +93,14 @@ def clean_memory(_func: Callable) -> Callable:
         return res
 
     return wrapper
+
+
+def clear_disk_cache() -> None:
+    """Clear behavysis temporary files from the disk cache."""
+    for fp in CACHE_DIR.iterdir():
+        if not fp.name.startswith("tmp"):
+            continue
+        if fp.is_dir():
+            shutil.rmtree(fp)
+        else:
+            fp.unlink()
