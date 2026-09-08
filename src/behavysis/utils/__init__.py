@@ -1,6 +1,6 @@
 """Utils."""
 
-from .dask_utils import cluster_process
+from .dask_utils import cluster_process, gpu_cluster
 from .logger_utils import configure_logger, trace
 from .misc_utils import (
     clean_memory,
@@ -22,6 +22,7 @@ __all__ = [
     "confirm",
     "get_gpu_device",
     "get_gpu_device_ids",
+    "gpu_cluster",
     "has_output_files",
     "missing_input_files",
     "pass_exception",

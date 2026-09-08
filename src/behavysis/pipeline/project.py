@@ -5,7 +5,7 @@ from pathlib import Path
 
 import dask
 import polars as pl
-from dask.distributed import LocalCluster, Nanny, SpecCluster
+from dask.distributed import LocalCluster
 from loguru import logger
 from natsort import natsorted
 
@@ -30,7 +30,12 @@ from behavysis.funcs import (
 )
 from behavysis.pipeline import Experiment
 from behavysis.schemas import read_df, write_df
-from behavysis.utils import cluster_process, get_gpu_device_ids, pass_exception
+from behavysis.utils import (
+    cluster_process,
+    get_gpu_device_ids,
+    gpu_cluster,
+    pass_exception,
+)
 
 
 class Project:
@@ -136,14 +141,11 @@ class Project:
         )
 
     def run_dlc(self, gputouse: int | None = None, *, overwrite: bool) -> None:
-        """Run DLC on all experiments with GPU batching.
+        """Run DLC on all experiments, one worker per GPU.
 
-        Unique from other methods,
-        this method runs DLC in parallel using dask,
-        with each process assigned to a specific GPU.
-        If gputouse is None,
-        it will automatically detect available GPUs and
-        one worker per GPU.
+        Unlike other methods, this runs DLC in parallel with dask,
+        pinning each worker to a single GPU via CUDA_VISIBLE_DEVICES.
+        If gputouse is None, it automatically uses all available GPUs.
         """
         gpu_ls = get_gpu_device_ids() if gputouse is None else [gputouse]
         gpu_ls = gpu_ls or [None]
@@ -154,21 +156,7 @@ class Project:
         if not exp_ls:
             return
         # Running DLC
-        workers = {
-            str(_i): {
-                "cls": Nanny,
-                "options": {
-                    "nthreads": 1,
-                    **(
-                        {"env": {"CUDA_VISIBLE_DEVICES": str(_gpu)}}
-                        if _gpu is not None
-                        else {}
-                    ),
-                },
-            }
-            for _i, _gpu in enumerate(gpu_ls)
-        }
-        with cluster_process(SpecCluster(workers=workers)):
+        with cluster_process(gpu_cluster(gpu_ls)):
             delayed_tasks = [
                 dask.delayed(pass_exception(Experiment.run_dlc))(
                     _exp,

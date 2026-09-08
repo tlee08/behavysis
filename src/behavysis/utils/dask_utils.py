@@ -1,7 +1,7 @@
 import contextlib
 from collections.abc import Generator
 
-from dask.distributed import Client, SpecCluster
+from dask.distributed import Client, Nanny, SpecCluster
 from loguru import logger
 
 
@@ -19,3 +19,14 @@ def cluster_process(cluster: SpecCluster) -> Generator:
     finally:
         client.close()
         cluster.close()
+
+
+def gpu_cluster(gpu_ls: list[int | None]) -> SpecCluster:
+    """One worker per GPU, each pinned to its own GPU via CUDA_VISIBLE_DEVICES."""
+    workers = {}
+    for i, gpu in enumerate(gpu_ls):
+        options = {"nthreads": 1}
+        if gpu is not None:
+            options["env"] = {"CUDA_VISIBLE_DEVICES": str(gpu)}
+        workers[str(i)] = {"cls": Nanny, "options": options}
+    return SpecCluster(workers=workers)
