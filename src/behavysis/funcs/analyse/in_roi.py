@@ -23,7 +23,12 @@ from behavysis.constants import (
     Y,
 )
 from behavysis.schemas import ANALYSIS_SCHEMA, write_df
-from behavysis.transforms import bodypart_avg_xy, check_bpts_exist, get_indivs_bpts
+from behavysis.transforms import (
+    bodypart_avg_xy,
+    check_bpts_exist,
+    check_bpts_have_data,
+    get_indivs_bpts,
+)
 
 from ._helper import AnalysisResult
 from ._summary import summary_binned_behaviour
@@ -33,13 +38,18 @@ if TYPE_CHECKING:
 
 
 class InRoiConfig(BaseModel):
-    """InRoiConfig."""
+    """InRoiConfig.
+
+    ``roi_corners`` must be listed in polygon order (consecutive vertices, no
+    self-intersections), as the point-in-polygon test assumes ordered corners.
+    """
 
     roi_corners: list[str]
     bodyparts: list[str]
     roi_name: str
-    is_in: bool = True
     padding_mm: float
+    is_in: bool = True
+    example_frame_index: int = 150
 
 
 SPACING = 30
@@ -59,7 +69,7 @@ def in_roi(
     metadata: ExperimentMetadata,
     *,
     keypoints_df: pl.DataFrame,
-    vid_frame: np.ndarray,
+    formatted_vid_fp: Path,
 ) -> list[AnalysisResult]:
     """Determines frames where subject is inside ROI from average bpts."""
     name = metadata.require_name()
@@ -71,7 +81,7 @@ def in_roi(
     all_analysis_rows = []
     all_corners_rows = []
     roi_names = []
-    avg_positions_by_indiv: dict[str, pl.DataFrame] = {}
+    avg_positions_by_roi_indiv: dict[tuple[str, str], pl.DataFrame] = {}
 
     for cfg in cfg_ls:
         roi_name = cfg.roi_name
@@ -84,6 +94,8 @@ def in_roi(
 
         check_bpts_exist(keypoints_df, bpts)
         check_bpts_exist(keypoints_df, roi_corners)
+        check_bpts_have_data(keypoints_df, bpts)
+        check_bpts_have_data(keypoints_df, roi_corners)
 
         corners_rows = []
         for pt in roi_corners:
@@ -113,9 +125,7 @@ def in_roi(
 
         for indiv in indivs:
             avg = bodypart_avg_xy(keypoints_df, indiv, bpts)
-            avg_positions_by_indiv[indiv] = avg
 
-            frames = avg.select(FRAME).to_series().to_numpy()
             xs = avg.select(X).to_series().to_numpy()
             ys = avg.select(Y).to_series().to_numpy()
 
@@ -123,7 +133,14 @@ def in_roi(
             if not is_in:
                 in_roi_mask = ~in_roi_mask
 
-            for f, val in zip(frames, in_roi_mask, strict=True):
+            avg = avg.with_columns(pl.Series(VALUE, in_roi_mask.astype(np.float64)))
+            avg_positions_by_roi_indiv[(roi_name, indiv)] = avg
+
+            for f, val in zip(
+                avg.select(FRAME).to_series().to_numpy(),
+                in_roi_mask,
+                strict=True,
+            ):
                 all_analysis_rows.append(
                     {
                         FRAME: int(f),
@@ -146,10 +163,11 @@ def in_roi(
     analysis_df = pl.DataFrame(all_analysis_rows, schema=ANALYSIS_SCHEMA)
     corners_df = pl.DataFrame(all_corners_rows)
 
+    example_frame_index = cfg_ls[0].example_frame_index if cfg_ls else 150
+    vid_frame = _get_frame(formatted_vid_fp, metadata, example_frame_index)
     scatter_img = _make_location_scatterplot(
-        analysis_df,
         corners_df,
-        avg_positions_by_indiv,
+        avg_positions_by_roi_indiv,
         vid_frame,
         roi_names,
         indivs,
@@ -186,10 +204,25 @@ def in_roi(
     return results
 
 
-def _make_location_scatterplot(  # noqa: PLR0913
-    analysis_df: pl.DataFrame,
+def _get_frame(
+    vid_fp: Path, metadata: ExperimentMetadata, frame_index: int
+) -> np.ndarray:
+    """Extract specified frame for background plots, or black frame."""
+    cap = cv2.VideoCapture(str(vid_fp))
+    cap.set(cv2.CAP_PROP_POS_FRAMES, frame_index)
+    ret, frame = cap.read()
+    cap.release()
+    if not ret:
+        return np.zeros(
+            (metadata.require_height_px(), metadata.require_width_px(), 3),
+            dtype=np.uint8,
+        )
+    return frame
+
+
+def _make_location_scatterplot(
     corners_df: pl.DataFrame,
-    avg_positions: dict[str, pl.DataFrame],
+    avg_positions: dict[tuple[str, str], pl.DataFrame],
     bg_frame: np.ndarray,
     roi_names: list[str],
     indivs: list[str],
@@ -215,9 +248,7 @@ def _make_location_scatterplot(  # noqa: PLR0913
             x0 = SPACING + ci * (fw + SPACING)
 
             cell = bg_frame.copy()
-            labels = _draw_scatter_points(
-                cell, analysis_df, avg_positions, indiv, roi_name
-            )
+            labels = _draw_scatter_points(cell, avg_positions, indiv, roi_name)
             labels += _draw_roi_polygon(cell, corners_df, roi_name)
 
             canvas[y0 : y0 + fh, x0 : x0 + fw] = cell
@@ -240,40 +271,28 @@ def _make_location_scatterplot(  # noqa: PLR0913
 
 def _draw_scatter_points(
     img: np.ndarray,
-    analysis_df: pl.DataFrame,
-    avg_positions: dict[str, pl.DataFrame],
+    avg_positions: dict[tuple[str, str], pl.DataFrame],
     indiv: str,
     roi_name: str,
 ) -> list[str]:
     """Draw scatter points for one individual colored by in/out status."""
-    if indiv not in avg_positions:
+    pos = avg_positions.get((roi_name, indiv))
+    if pos is None:
         return []
-    pos = avg_positions[indiv]
-
-    in_roi_mask = (
-        analysis_df.filter(
-            pl.col(GROUP) == indiv,
-            pl.col(MEASURE) == roi_name,
-        )
-        .sort(FRAME)
-        .select(VALUE)
-        .to_series()
-        .to_numpy()
-    )
-
-    frames_pos = pos.select(FRAME).to_series().to_numpy()
-    xs = pos.select(X).to_series().to_numpy()
-    ys = pos.select(Y).to_series().to_numpy()
 
     label_set = set()
     overlay = img.copy()
-    for i in range(len(xs)):
-        f = frames_pos[i]
-        if f >= len(in_roi_mask):
-            break
-        color = GREEN if in_roi_mask[f] == 1 else ORANGE
-        label_set.add("In ROI" if in_roi_mask[f] == 1 else "Out of ROI")
-        cv2.circle(overlay, (int(xs[i]), int(ys[i])), POINT_RADIUS, color, thickness=-1)
+    for row in pos.iter_rows(named=True):
+        is_in = row[VALUE] == 1
+        color = GREEN if is_in else ORANGE
+        label_set.add("In ROI" if is_in else "Out of ROI")
+        cv2.circle(
+            overlay,
+            (int(row[X]), int(row[Y])),
+            POINT_RADIUS,
+            color,
+            thickness=-1,
+        )
     cv2.addWeighted(overlay, POINT_ALPHA, img, 1 - POINT_ALPHA, 0, dst=img)
     return list(label_set)
 
@@ -295,27 +314,15 @@ def _draw_roi_polygon(
     return [roi_name]
 
 
-def _pt_in_roi(pt_x: float, pt_y: float, corners_df: pl.DataFrame) -> bool:
-    """Check if point is inside polygon using ray casting algorithm."""
-    crossings = 0
-    n = corners_df.height
-    for i in range(n):
-        c1 = corners_df.row(i, named=True)
-        c2 = corners_df.row((i + 1) % n, named=True)
-        y_between = (c1[Y] > pt_y) != (c2[Y] > pt_y)
-        if y_between:
-            x_int = (c2[X] - c1[X]) * (pt_y - c1[Y]) / (c2[Y] - c1[Y]) + c1[X]
-            if pt_x < x_int:
-                crossings += 1
-    return crossings % 2 == 1
-
-
 def _pts_in_roi(
     px_arr: np.ndarray,
     py_arr: np.ndarray,
     corners_df: pl.DataFrame,
 ) -> np.ndarray:
-    """Vectorized point-in-polygon using ray casting on numpy arrays."""
+    """Vectorized point-in-polygon using ray casting on numpy arrays.
+
+    Assumes ``corners_df`` rows are in polygon order (consecutive vertices).
+    """
     n = corners_df.height
     cx = corners_df.select(X).to_numpy()
     cy = corners_df.select(Y).to_numpy()

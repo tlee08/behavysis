@@ -3,7 +3,6 @@
 import shutil
 from pathlib import Path
 
-import cv2
 import numpy as np
 import polars as pl
 from loguru import logger
@@ -46,20 +45,6 @@ from behavysis.schemas import (
 )
 from behavysis.transforms import predicted_to_scored
 from behavysis.utils import has_output_files, missing_input_files, select_kwargs, trace
-
-
-def _get_frame(vid_fp: Path, metadata: ExperimentMetadata) -> np.ndarray:
-    """Extract frame 150 (0-indexed 149) for background plots, or black frame."""
-    cap = cv2.VideoCapture(str(vid_fp))
-    cap.set(cv2.CAP_PROP_POS_FRAMES, 149)
-    ret, frame = cap.read()
-    cap.release()
-    if not ret:
-        return np.zeros(
-            (metadata.require_height_px(), metadata.require_width_px(), 3),
-            dtype=np.uint8,
-        )
-    return frame
 
 
 class Experiment:
@@ -283,7 +268,7 @@ class Experiment:
                 self.get_fp(PREPROCESSED_DIR), KEYPOINTS_SCHEMA
             )
         if self.get_fp(FORMATTED_VIDEO_DIR).is_file():
-            kwargs["vid_frame"] = _get_frame(self.get_fp(FORMATTED_VIDEO_DIR), metadata)
+            kwargs["formatted_vid_fp"] = self.get_fp(FORMATTED_VIDEO_DIR)
         if self.get_fp(BEHAVIOUR_SCORED_DIR).is_file():
             kwargs["behaviour_df"] = read_df(self.get_fp(BEHAVIOUR_SCORED_DIR))
         for func in funcs:
