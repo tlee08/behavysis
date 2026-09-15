@@ -272,9 +272,16 @@ class Experiment:
         if self.get_fp(BEHAVIOUR_SCORED_DIR).is_file():
             kwargs["behaviour_df"] = read_df(self.get_fp(BEHAVIOUR_SCORED_DIR))
         for func in funcs:
-            dst_dir = self.root_dir / ANALYSIS_DIR / func.__name__
-            for result in func(config, metadata, **select_kwargs(func, kwargs)):
-                result.save(dst_dir)
+            try:
+                dst_dir = self.root_dir / ANALYSIS_DIR / func.__name__
+                for result in func(config, metadata, **select_kwargs(func, kwargs)):
+                    result.save(dst_dir)
+            except Exception as e:
+                logger.error(
+                    "Error running analysis function '{}': {}",
+                    func.__name__,
+                    e,
+                )
 
     @trace
     def combine_analysis(self) -> None:
