@@ -8,10 +8,9 @@ with app.setup:
 
     import marimo as mo
     import pandas as pd
-    import polars as pl
 
-    from behavysis.schemas import KEYPOINTS_SCHEMA, write_df
     from behavysis.funcs.run_dlc import convert_raw_dlc_to_keypoints
+    from behavysis.schemas import KEYPOINTS_SCHEMA, write_df
     from behavysis.utils import configure_logger
 
     configure_logger()
@@ -25,13 +24,11 @@ def _():
     Converts old-format keypoints parquet files to the new long-form schema
     expected by the current pipeline.
     """)
-    return
 
 
 @app.cell
 def _():
     mo.md(r"""## Configure""")
-    return
 
 
 @app.cell

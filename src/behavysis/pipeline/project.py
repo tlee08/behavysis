@@ -156,7 +156,7 @@ class Project:
         if not exp_ls:
             return
         # Running DLC
-        with cluster_process(gpu_cluster(gpu_ls)):
+        with cluster_process(gpu_cluster(gpu_ls)):  # ty: ignore[invalid-argument-type]
             delayed_tasks = [
                 dask.delayed(pass_exception(Experiment.run_dlc))(
                     _exp,
@@ -261,5 +261,5 @@ class Project:
                 csv_fp = analysis_dir / f"all_{data_dir.stem}.csv"
                 try:
                     combined_csv_df.to_csv(csv_fp)
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001
                     logger.exception(e)

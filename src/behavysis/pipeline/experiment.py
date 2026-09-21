@@ -276,7 +276,7 @@ class Experiment:
                 dst_dir = self.root_dir / ANALYSIS_DIR / func.__name__
                 for result in func(config, metadata, **select_kwargs(func, kwargs)):
                     result.save(dst_dir)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 logger.error(
                     "Error running analysis function '{}': {}",
                     func.__name__,
