@@ -5,6 +5,7 @@ from pathlib import Path
 
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_selection import VarianceThreshold
+from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import (
     GridSearchCV,
@@ -12,6 +13,7 @@ from sklearn.model_selection import (
     StratifiedGroupKFold,
 )
 from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
 from sklearn.tree import DecisionTreeClassifier
 from xgboost import XGBClassifier
 
@@ -77,6 +79,8 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
             Pipeline(
                 [
                     ("var_filter", VarianceThreshold()),
+                    ("imputer", SimpleImputer(strategy="median")),
+                    ("scaler", StandardScaler()),
                     ("clf", LogisticRegression(random_state=42, verbose=1)),
                 ]
             ),
@@ -85,7 +89,7 @@ MODEL_REGISTRY: dict[str, Callable[[Path], BaseAdapter]] = {
                 "clf__C": [0.1, 1.0, 10.0, 100.0],
                 "clf__max_iter": [1000],
             },
-            n_iter=30,
+            n_iter=4,
             scoring="average_precision",
             cv=StratifiedGroupKFold(n_splits=3, shuffle=True, random_state=42),
             random_state=42,
