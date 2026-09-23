@@ -25,7 +25,7 @@ def render_template(template_fp: Path, **kwargs: object) -> str:
         loader=PackageLoader("behavysis", "templates"),
         autoescape=False,  # noqa: S701
     )
-    return env.get_template(str(template_fp)).render(**kwargs)
+    return env.get_template(template_fp.as_posix()).render(**kwargs)
 
 
 def save_template(template_fp: Path, dst: Path, **kwargs: object) -> None:
