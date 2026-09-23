@@ -40,11 +40,11 @@ def _():
 def _():
     boris_dir = Path("/path/to/boris_csvs")
     dst_dir = Path("/path/to/scored_output")
+    metadata_dir = Path("/path/to/metadata")
     behaviour_ls = ["behaviour1", "behaviour2"]
     overwrite = False
     point_window_sec = 0.5
 
-    metadata = ExperimentMetadata()
     mo.accordion(
         {
             "boris_dir": str(boris_dir),
@@ -54,7 +54,7 @@ def _():
             "point_window_sec": point_window_sec,
         }
     )
-    return behaviour_ls, boris_dir, dst_dir, metadata, overwrite, point_window_sec
+    return behaviour_ls, boris_dir, dst_dir, metadata_dir, overwrite, point_window_sec
 
 
 @app.function
@@ -63,7 +63,7 @@ def import_boris_csv(
     behaviour_ls: list[str],
     start_frame: int,
     stop_frame: int,
-    fps: int,
+    fps: float,
     *,
     point_window_sec: float = 0.5,
     pos_value: int = TRUE_POS,
@@ -91,7 +91,7 @@ def import_boris_csv(
             boris_behaviours,
         )
 
-    window = int(point_window_sec * fps)
+    window = round(point_window_sec * fps)
     frame_count = stop_frame - start_frame
     frames = np.arange(start_frame, stop_frame, dtype=np.int64)
 
@@ -118,11 +118,12 @@ def import_boris_csv(
 
 
 @app.cell
-def _(behaviour_ls, boris_dir, dst_dir, metadata, overwrite, point_window_sec):
+def _(behaviour_ls, boris_dir, dst_dir, metadata_dir, overwrite, point_window_sec):
     dst_dir.mkdir(parents=True, exist_ok=True)
     for csv_fp in sorted(boris_dir.glob("*.csv")):
         name = csv_fp.stem
         dst_fp = dst_dir / f"{name}.parquet"
+        metadata = ExperimentMetadata.read_yaml(metadata_dir / f"{name}.yaml")
         if not overwrite and has_output_files(dst_fp):
             continue
         df = import_boris_csv(
@@ -130,7 +131,7 @@ def _(behaviour_ls, boris_dir, dst_dir, metadata, overwrite, point_window_sec):
             behaviour_ls,
             metadata.require_start_frame(),
             metadata.require_stop_frame() + 1,
-            fps=metadata.require_fps(),
+            metadata.require_fps(),
             point_window_sec=point_window_sec,
         )
         write_df(df, dst_fp)
