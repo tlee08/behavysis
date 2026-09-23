@@ -73,6 +73,7 @@ def import_boris_csv(
     Returns a DataFrame with ``FRAME`` + one column per behaviour,
     each Int64 (TRUE_POS / TRUE_NEG values).
     """
+    # Can either use "Time" column or "Image index"
     df_boris = (
         pl.read_csv(fp)
         .rename({"Behavior": BEHAVIOUR})
