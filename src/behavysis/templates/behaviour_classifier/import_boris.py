@@ -66,6 +66,7 @@ def import_boris_csv(
     fps: float,
     *,
     point_window_sec: float = 0.5,
+    centre: bool = True,
     pos_value: int = TRUE_POS,
 ) -> pl.DataFrame:
     """Import BORIS CSV to fully-wide scored DataFrame.
@@ -93,6 +94,7 @@ def import_boris_csv(
         )
 
     window = round(point_window_sec * fps)
+    window_centre = round(window / 2)
     frame_count = stop_frame - start_frame
     frames = np.arange(start_frame, stop_frame, dtype=np.int64)
 
@@ -109,8 +111,12 @@ def import_boris_csv(
                 val = pos_value if typ == "START" else TRUE_NEG
                 vals[f - start_frame :] = val
             elif typ == "POINT":
-                lo = max(f - window, start_frame)
-                hi = min(f + window, stop_frame - 1)
+                if centre:
+                    lo = max(f - window_centre, start_frame)
+                    hi = min(f + window_centre, stop_frame - 1)
+                else:
+                    lo = f
+                    hi = min(f + window, stop_frame - 1)
                 vals[lo - start_frame : hi - start_frame + 1] = pos_value
 
         result = result.with_columns(pl.Series(behaviour, vals, dtype=pl.Int64))

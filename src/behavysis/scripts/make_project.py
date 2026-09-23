@@ -3,7 +3,7 @@
 import argparse
 import shutil
 import sys
-from importlib.resources import files
+from importlib.resources import as_file, files
 from pathlib import Path
 
 from behavysis.constants import (
@@ -17,7 +17,7 @@ from behavysis.constants import (
 from behavysis.templates.presets import PRESET_DESCRIPTIONS
 from behavysis.utils import confirm
 
-_PRESETS_ROOT = Path(str(files("behavysis"))) / "presets"
+_PRESETS_ROOT = files("behavysis").joinpath("templates", "presets")
 
 
 def main() -> None:
@@ -78,11 +78,11 @@ def _copy_preset(name: str, dst_dir: Path) -> None:
     dst_dir.mkdir(parents=True, exist_ok=True)
     # Copy run_pipeline.py and default_config.yaml
     for _i in [RUN_PIPELINE_FP, DEFAULT_CONFIG_FP]:
-        _preset_fp = _PRESETS_ROOT / name / _i
         _dst_fp = dst_dir / _i
         if _dst_fp.exists() and not confirm(f"Overwrite {_i}?"):
             continue
-        shutil.copy2(_preset_fp, _dst_fp)
+        with as_file(_PRESETS_ROOT.joinpath(name, _i)) as _preset_fp:
+            shutil.copy2(_preset_fp, _dst_fp)
 
 
 def _print_presets() -> None:
