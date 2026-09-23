@@ -12,6 +12,7 @@ with app.setup:
     from loguru import logger
 
     from behavysis.constants import BEHAVIOUR, FRAME, TRUE_NEG, TRUE_POS
+    from behavysis.funcs import dur_frames_from_likelihood, px_per_mm
     from behavysis.models import ExperimentMetadata
     from behavysis.schemas import write_df
     from behavysis.utils import configure_logger, has_output_files
@@ -143,6 +144,46 @@ def _(behaviour_ls, boris_dir, dst_dir, metadata_dir, overwrite, point_window_se
         )
         write_df(df, dst_fp)
     sorted(p.name for p in dst_dir.iterdir())
+
+
+@app.cell
+def _():
+    mo.md(r"""## Scratch for metadata setup""")
+
+
+@app.cell
+def _(proj):
+    proj.calculate_parameters(
+        funcs=(
+            # start_frame_from_likelihood,
+            # stop_frame_from_dur,
+            dur_frames_from_likelihood,
+            px_per_mm,
+        ),
+    )
+
+
+@app.cell
+def _(proj, proj_dir):
+    for _exp in proj.experiments:
+        _metadata = _exp.read_metadata()
+        _boris_fp = proj_dir / "boris_scoring_fr" / f"{_exp.name[:-2]}.csv"
+        _boris_fp = _boris_fp if "-a" in _exp.name else Path("abcd")
+        print(_exp.name)
+        if _boris_fp.exists():
+            print(_boris_fp)
+            _boris_df = pl.read_csv(_boris_fp)
+            _start_frame = (
+                _boris_df.filter(pl.col("Behavior") == "start")
+                .get_column("Image index")
+                .item(0)
+            )
+            _metadata.start_frame = _start_frame
+            _metadata.stop_frame = _start_frame + 120 * _metadata.require_fps()
+        else:
+            _metadata.start_frame = 0
+            _metadata.stop_frame = _metadata.require_total_frames()
+        _exp.write_metadata(_metadata)
 
 
 if __name__ == "__main__":
