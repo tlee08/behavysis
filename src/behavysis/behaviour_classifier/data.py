@@ -169,8 +169,6 @@ def df_under_sample_by_group(
 
     Assumes ``df`` is sorted by ``group_col`` and ``FRAME``.
     """
-    if strategy is None:
-        return df
     rng = np.random.default_rng(seed)
     pieces: list[pl.DataFrame] = []
     for sub in df.partition_by([group_col], maintain_order=True):

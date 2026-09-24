@@ -179,7 +179,7 @@ def _(proj, proj_dir):
                 .item(0)
             )
             _metadata.start_frame = _start_frame
-            _metadata.stop_frame = _start_frame + 120 * _metadata.require_fps()
+            _metadata.stop_frame = round(_start_frame + 120 * _metadata.require_fps())
         else:
             _metadata.start_frame = 0
             _metadata.stop_frame = _metadata.require_total_frames()

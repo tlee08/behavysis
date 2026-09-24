@@ -87,6 +87,7 @@ class BaseAdapter(ABC):
 
     framework: ClassVar[str]
     recipe_fp: Path
+    model: object | None
 
     def _read_recipe(self) -> ModelRecipe:
         """Read recipe."""
@@ -95,6 +96,11 @@ class BaseAdapter(ABC):
     def _write_recipe(self, recipe: ModelRecipe) -> None:
         """Write recipe."""
         return recipe.write_yaml(self.recipe_fp)
+
+    def _check_model_trained(self) -> None:
+        if self.model is None:
+            msg = "model not yet trained."
+            raise ValueError(msg)
 
     @abstractmethod
     def fit(self, df: pl.DataFrame) -> pd.DataFrame:
@@ -193,12 +199,13 @@ class SklearnAdapter(BaseAdapter):
     """Sklearn adapter."""
 
     framework: ClassVar[str] = "sklearn"
+    model: Pipeline | None
 
     def __init__(self, recipe_fp: Path, search: BaseSearchCV) -> None:
         """Init."""
         self.recipe_fp = recipe_fp
         self.search = search
-        self.model: Pipeline | None = None
+        self.model = None
 
     def fit(self, df: pl.DataFrame) -> pd.DataFrame:
         """Fit."""
@@ -212,15 +219,13 @@ class SklearnAdapter(BaseAdapter):
 
     def predict_raw(self, df: pl.DataFrame) -> pl.DataFrame:
         """Return raw per-frame probabilities (frame, behaviour, prob, experiment)."""
-        if self.model is None:
-            msg = "model not yet trained."
-            raise ValueError(msg)
+        self._check_model_trained()
         recipe = self._read_recipe()
         raw_df = pl.DataFrame(
             {
                 FRAME: df.get_column(FRAME),
                 BEHAVIOUR: recipe.behaviour_name,
-                PROB: pl.Series(self.model.predict_proba(df_get_features(df))[:, 1]),
+                PROB: pl.Series(self.model.predict_proba(df_get_features(df))[:, 1]),  # ty: ignore[unresolved-attribute]
             }
         )
         if EXPERIMENT in df.columns:
@@ -229,9 +234,7 @@ class SklearnAdapter(BaseAdapter):
 
     def save(self) -> None:
         """Save."""
-        if self.model is None:
-            msg = "model not yet trained."
-            raise ValueError(msg)
+        self._check_model_trained()
         self.recipe_fp.parent.mkdir(parents=True, exist_ok=True)
         joblib.dump(self.search, self.recipe_fp.with_name("search.joblib"))
         joblib.dump(self.model, self.recipe_fp.with_name("model.joblib"))
@@ -258,12 +261,10 @@ class XgboostAdapter(SklearnAdapter):
 
         Must save XGBoost model as a .ubj so it serialisable to all machines.
         """
-        if self.model is None:
-            msg = "model not yet trained."
-            raise ValueError(msg)
+        self._check_model_trained()
         # clf is XGBoost, must first move to CPU before serialising
-        preprocess: Pipeline = self.model[:-1]
-        clf: XGBClassifier = self.model.steps[-1][1]
+        preprocess: Pipeline = self.model[:-1]  # ty: ignore[not-subscriptable]
+        clf: XGBClassifier = self.model.steps[-1][1]  # ty: ignore[unresolved-attribute]
         # Save
         self.recipe_fp.parent.mkdir(parents=True, exist_ok=True)
         joblib.dump(self.search, self.recipe_fp.with_name("search.joblib"))
@@ -297,13 +298,14 @@ class TabpfnAdapter(BaseAdapter):
     """Adapter for TabPFN."""
 
     framework: ClassVar[str] = "tabpfn"
+    model: TabPFNClassifier | None
 
     def __init__(self, recipe_fp: Path, **kwargs) -> None:  # noqa: ANN003
         """Init."""
         self.recipe_fp = recipe_fp
         # Store hyperparams
         self.kwargs = kwargs
-        self.model: TabPFNClassifier | None = None
+        self.model = None
 
     def fit(self, df: pl.DataFrame) -> pd.DataFrame:
         """Fit."""
@@ -313,15 +315,13 @@ class TabpfnAdapter(BaseAdapter):
 
     def predict_raw(self, df: pl.DataFrame) -> pl.DataFrame:
         """Return raw per-frame probabilities (frame, behaviour, prob, experiment)."""
-        if self.model is None:
-            msg = "model not yet trained."
-            raise ValueError(msg)
+        self._check_model_trained()
         recipe = self._read_recipe()
         raw_df = pl.DataFrame(
             {
                 FRAME: df.get_column(FRAME),
                 BEHAVIOUR: recipe.behaviour_name,
-                PROB: pl.Series(self.model.predict_proba(df_get_features(df))[:, 1]),
+                PROB: pl.Series(self.model.predict_proba(df_get_features(df))[:, 1]),  # ty: ignore[unresolved-attribute]
             }
         )
         if EXPERIMENT in df.columns:
@@ -330,13 +330,12 @@ class TabpfnAdapter(BaseAdapter):
 
     def save(self) -> None:
         """Save."""
-        if self.model is None:
-            msg = "model not yet trained."
-            raise ValueError(msg)
+        self._check_model_trained()
         # Save model
         self.recipe_fp.parent.mkdir(parents=True, exist_ok=True)
         save_fitted_tabpfn_model(
-            self.model, self.recipe_fp.with_name("model.tabpfn_fit")
+            self.model,  # ty: ignore[invalid-argument-type]
+            self.recipe_fp.with_name("model.tabpfn_fit"),
         )
 
     @classmethod
@@ -345,7 +344,7 @@ class TabpfnAdapter(BaseAdapter):
         # Instatiate
         inst = cls(recipe_fp)
         # Load model
-        inst.model = load_fitted_tabpfn_model(
+        inst.model = load_fitted_tabpfn_model(  # ty: ignore[invalid-assignment]
             recipe_fp.with_name("model.tabpfn_fit"), device=get_gpu_device()
         )
         # Return
@@ -356,6 +355,7 @@ class TorchAdapter(BaseAdapter):
     """Adapter for PyTorch sequence models (1D temporal CNN)."""
 
     framework: ClassVar[str] = "torch"
+    model: TorchModel | None
 
     def __init__(
         self,
@@ -371,7 +371,7 @@ class TorchAdapter(BaseAdapter):
         self.window_frames = window_frames
         self.batch_size = batch_size
         self.epochs = epochs
-        self.model: TorchModel | None = None
+        self.model = None
         self.feature_cols: list[str] = []
         self._mean: np.ndarray | None = None
         self._std: np.ndarray | None = None
@@ -389,15 +389,13 @@ class TorchAdapter(BaseAdapter):
 
     def predict_raw(self, df: pl.DataFrame) -> pl.DataFrame:
         """Return raw per-frame probabilities (frame, behaviour, prob, experiment)."""
-        if self.model is None:
-            msg = "model not yet trained."
-            raise ValueError(msg)
+        self._check_model_trained()
         recipe = self._read_recipe()
         df = (
             df.sort([EXPERIMENT, FRAME]) if EXPERIMENT in df.columns else df.sort(FRAME)
         )
         x_ls = [self._transform(x) for x in self._to_x_ls(df)]
-        prob = self.model.predict(x_ls, batch_size=self.batch_size)
+        prob = self.model.predict(x_ls, batch_size=self.batch_size)  # ty: ignore[unresolved-attribute]
         raw_df = pl.DataFrame(
             {
                 FRAME: df.get_column(FRAME),
@@ -411,15 +409,13 @@ class TorchAdapter(BaseAdapter):
 
     def save(self) -> None:
         """Save model state, scaler and feature metadata."""
-        if self.model is None:
-            msg = "model not yet trained."
-            raise ValueError(msg)
+        self._check_model_trained()
         self.recipe_fp.parent.mkdir(parents=True, exist_ok=True)
         torch.save(
             {
                 "model_type": self.model_cls.__name__,
                 "window_frames": self.window_frames,
-                "state_dict": self.model.state_dict(),
+                "state_dict": self.model.state_dict(),  # ty: ignore[unresolved-attribute]
                 "mean": self._mean,
                 "std": self._std,
                 "feature_cols": self.feature_cols,
