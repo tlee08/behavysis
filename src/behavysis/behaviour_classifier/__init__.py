@@ -2,6 +2,7 @@
 
 from .behaviour_classifier import (
     list_models,
+    load_adapter,
     predict,
     promote_best,
     train_all_models,
@@ -24,6 +25,7 @@ __all__ = [
     "ClassifierPaths",
     "ModelRecipe",
     "list_models",
+    "load_adapter",
     "load_all_data",
     "make_eval_result",
     "predict",
