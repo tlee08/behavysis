@@ -3,10 +3,19 @@
 from __future__ import annotations
 
 from pathlib import Path  # noqa: TC003
+from typing import Literal
 
-from pydantic import NonNegativeInt, PositiveFloat, PositiveInt  # noqa: TC002
+from pydantic import (  # noqa: TC002
+    NonNegativeFloat,
+    NonNegativeInt,
+    PositiveFloat,
+    PositiveInt,
+)
 
 from behavysis.models.base import YamlModel
+
+FRAME_AWARE = "frame-aware"
+HYSTERESIS = "hysteresis"
 
 
 class ClassifierContract(YamlModel):
@@ -28,6 +37,36 @@ class ActiveModel(YamlModel):
     """Stores which model to use."""
 
     model_name: str
+
+
+class FrameAwarePostprocessing(YamlModel):
+    """Frame-level post-processing: smooth, threshold, then tidy bouts.
+
+    Applies, in order: median smoothing (``smooth_prob``), a probability
+    threshold (``prob > pcutoff``), then gap-filling and short-bout dropping
+    (``smooth_pred_bout``).
+    """
+
+    pcutoff: PositiveFloat = 0.1
+    smoothing_frames: NonNegativeInt = 2
+    min_gap_frames: NonNegativeInt = 3
+    min_bout_frames: NonNegativeInt = 3
+
+
+class HysteresisPostprocessing(YamlModel):
+    """Hysteresis post-processing: two thresholds, then drop short bouts.
+
+    A frame is positive if ``prob > pcutoff`` (strong) or if ``prob >
+    low_threshold`` (weak) and connected to a strong frame through weak frames.
+    Then positive runs <= ``min_bout_frames`` are dropped.
+
+    Merges brief dips (fragmentation) while keeping true separations, where
+    ``prob`` falls below ``low_threshold``, as distinct bouts.
+    """
+
+    pcutoff: PositiveFloat = 0.1
+    low_threshold: NonNegativeFloat = 0.01
+    min_bout_frames: NonNegativeInt = 3
 
 
 class ModelRecipe(YamlModel):
@@ -52,12 +91,11 @@ class ModelRecipe(YamlModel):
     stride_frames: PositiveInt = 2
     under_sampling_strategy: PositiveFloat | None = 1.0
 
-    # Pcutoff calibration (affects the pcutoff value used at inference time)
+    # Post-processing calibration (affects the parameters used at inference time)
     calibrate_params: bool = True
     target_recall: float = 0.95
+    postprocessing_step: Literal[FRAME_AWARE, HYSTERESIS] = FRAME_AWARE
 
     # Prediction post-processing parameters (auto-set)
-    pcutoff: PositiveFloat = 0.1
-    smoothing_frames: NonNegativeInt = 2
-    min_gap_frames: NonNegativeInt = 3
-    min_bout_frames: NonNegativeInt = 3
+    frame_aware: FrameAwarePostprocessing = FrameAwarePostprocessing()
+    hysteresis: HysteresisPostprocessing = HysteresisPostprocessing()

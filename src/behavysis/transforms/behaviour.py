@@ -99,6 +99,36 @@ def smooth_pred_bout(
     return df.drop(BOUT_ID)
 
 
+def hysteresis(
+    df: pl.DataFrame,
+    *,
+    pcutoff: float,
+    low_threshold: float,
+) -> pl.DataFrame:
+    """Hysteresis thresholding on ``prob`` (adds a ``PRED`` column).
+
+    A frame is positive if ``prob > pcutoff`` (strong) or if ``prob >
+    low_threshold`` (weak) and connected, through weak frames, to a strong
+    frame. Frames with ``prob <= low_threshold`` are always negative.
+
+    Implemented by labelling the runs where ``prob > low_threshold`` and keeping
+    a run only if it contains a strong frame (``prob > pcutoff``).
+    """
+    cand_df = df.with_columns(
+        (pl.col(PROB) > low_threshold).cast(pl.Int64).alias("_candidate")
+    )
+    cand_df = label_bouts(cand_df, "_candidate")
+    out = cand_df.with_columns(
+        (
+            (pl.col("_candidate") == TRUE_POS)
+            & (pl.col(PROB).max().over(BOUT_ID) > pcutoff)
+        )
+        .cast(pl.Int64)
+        .alias(PRED)
+    )
+    return out.drop(["_candidate", BOUT_ID])
+
+
 def vect2bouts(vect: pl.Series, offset: int = 0) -> pl.DataFrame:
     """Convert boolean vector to bouts DataFrame with start, stop, dur columns."""
     if vect.is_empty():

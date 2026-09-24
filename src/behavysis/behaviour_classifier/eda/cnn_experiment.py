@@ -79,7 +79,7 @@ def main() -> None:
     print("training loss per epoch:")  # noqa: T201
     print(history.to_string())  # noqa: T201
 
-    adapter.optimise_postprocessing_parameters(trainval.gather(val_idx))
+    adapter.optimise_postprocessing(trainval.gather(val_idx))
 
     y_test = adapter.predict(test).with_columns(
         test.get_column(ACTUAL),

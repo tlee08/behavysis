@@ -39,11 +39,41 @@ The same model at a sane threshold already reaches the useful point:
 | ~0.032 | ≥ 0.95 | **0.21** | ~0.90 |
 | 2.5e-5 (stored) | 1.00 | 0.08 | 1.00 |
 
-**Fix applied** (`adapter.py: _best_pcutoff`): maximise *frame-level* precision subject
-to bout-level recall ≥ target, instead of bout-level precision. Verified: the sweep now
-picks `pcutoff ≈ 0.032`, `min_bout = 8`, giving frame precision 0.21 vs 0.08 — a ~2.6×
-improvement at no recall cost. `scale_pos_weight` does *not* fix this (tested); the
-objective was the bug.
+**Fix applied** (`adapter.py`, `config.py`, `transforms/behaviour.py`): the post-processing
+is now **merge-aware** and has two selectable steps (see "Actions taken"). The objective
+is to minimise ``(hidden events, predicted bouts)`` lexicographically — first do not merge
+distinct events (a bout spanning ``k>=2`` real bouts hides ``k-1``), then minimise review
+burden — subject to bout recall ≥ target. Verified: the sweep now picks `pcutoff ≈ 0.032`
+instead of collapsing to 0. `scale_pos_weight` does *not* fix this (tested).
+
+### 6. Post-processing design: merge-aware objective + hysteresis
+
+The review app counts one event per bout, so a predicted bout spanning ≥2 real bouts
+**hides** the extras (undercount). The objective therefore minimises hidden events first,
+then predicted bouts. Merging fragments/noise (which hide nothing) is still rewarded;
+merging distinct events is forbidden.
+
+Label scales that bound the grids:
+
+| quantity | frames | seconds |
+|---|---|---|
+| real bout length (min / median) | 12 / 17 | 0.24 / 0.34 |
+| gap between real bouts (p5 / p10 / median) | 7 / 12 / 100 | 0.14 / 0.24 / 2.0 |
+
+Two post-processing steps, chosen by `recipe.postprocessing_step`:
+
+- **frame-aware**: `smooth_prob` → `prob > pcutoff` → `smooth_pred_bout(min_gap, min_bout)`.
+- **hysteresis**: two thresholds (`pcutoff` strong, `low_threshold` weak continuation),
+  then drop short bouts. The probability between distinct events drops to ~0 while a
+  fragment only dips to ~0.02, so hysteresis merges fragments without merging distinct
+  events.
+
+Validated on the val set (both land near the "no additional merges" baseline):
+
+| step | pcutoff | other | recall | hidden | pred bouts |
+|---|---|---|---|---|---|
+| frame-aware | 0.032 | min_bout=8 | 0.952 | 77 | 560 |
+| hysteresis | 0.056 | low=0.03, min_bout=8 | 0.952 | 78 | 558 |
 
 ### 2. Split leaks animals, but does not inflate PR-AUC — leave as-is
 
@@ -96,8 +126,15 @@ should straddle the point with more room after it. Suggested `before=5, after=10
 
 ## Actions taken
 
-1. **Calibration fix** — `src/behavysis/behaviour_classifier/adapter.py`: `_best_pcutoff`
-   now optimises frame-level precision at target bout recall. Validated (pcutoff 0.032).
+1. **Post-processing rework** (merge-aware objective + two selectable steps):
+   - `config.py`: `ModelRecipe` now has `postprocessing_step: Literal[FRAME_AWARE,
+     HYSTERESIS]` plus nested `FrameAwarePostprocessing` and `HysteresisPostprocessing`
+     models (the flat `pcutoff/smoothing/min_gap/min_bout` fields are gone).
+   - `transforms/behaviour.py`: added `hysteresis` (two-threshold, signal-aware merging).
+   - `parameter_optimisation.py`: the sweep logic; minimises `(hidden events, predicted
+     bouts)` lexicographically subject to recall ≥ target. Single public entry point
+     `optimise_postprocessing(recipe, raw)`.
+   - `adapter.py`: `_predict_postprocess` dispatches on `postprocessing_step`;
 2. **Label window API** — `import_boris_csv` now takes `frames_window_before` /
    `frames_window_after` (was `point_window_sec`). Updated in:
    - `data/training_data_hpw/prepare_boris_to_labels.py`
@@ -106,7 +143,7 @@ should straddle the point with more room after it. Suggested `before=5, after=10
 
 ## Next steps (recommended order)
 
-1. Retrain with the fixed calibration (retrain model → re-run `optimise_postprocessing_parameters`).
+1. Retrain with the fixed post-processing (retrain model → re-run `optimise_postprocessing_parameters`).
 2. Regenerate labels with `frames_window_before=5, frames_window_after=10` and re-evaluate.
 3. Improve DLC on hind knee/heel (outlier extraction + refine + retrain).
 4. Recalibrate `px_per_mm` / `dist_mm` (still `TODO: 100`), then re-extract features and retrain.

@@ -11,33 +11,22 @@ import pandas as pd
 import polars as pl
 import torch
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import precision_score, recall_score
 from sklearn.model_selection import GridSearchCV
 from sklearn.pipeline import Pipeline
 from tabpfn import TabPFNClassifier, load_fitted_tabpfn_model, save_fitted_tabpfn_model
 from xgboost import XGBClassifier
 
-from behavysis.constants import (
-    BEHAVIOUR,
-    EXPERIMENT,
-    FRAME,
-    PRED,
-    PROB,
-)
+from behavysis.constants import BEHAVIOUR, EXPERIMENT, FRAME, PRED, PROB
 from behavysis.schemas import (
     BEHAVIOUR_BATCHED_PREDICTED_SCHEMA,
     BEHAVIOUR_PREDICTED_SCHEMA,
 )
-from behavysis.transforms import smooth_pred_bout, smooth_prob
+from behavysis.transforms import hysteresis, smooth_pred_bout, smooth_prob
 from behavysis.utils import get_gpu_device
 
-from .config import ModelRecipe
-from .data import (
-    ACTUAL,
-    agg_eval_df_by_bouts,
-    df_get_features,
-    df_get_labels,
-)
+from .config import FRAME_AWARE, HYSTERESIS, ModelRecipe
+from .data import ACTUAL, df_get_features, df_get_labels
+from .parameter_optimisation import optimise_postprocessing
 from .torch.architectures import MODEL_TYPES
 
 if TYPE_CHECKING:
@@ -47,50 +36,6 @@ if TYPE_CHECKING:
     from sklearn.model_selection._search import BaseSearchCV
 
     from .torch.base import TorchModel
-
-
-# -- post-processing optimisation ------------------------------------------
-
-_SMOOTHING_GRID = (0, 1, 2, 3, 5, 8, 12)
-_MIN_GAP_GRID = (0, 2, 4, 8, 16, 32)
-_MIN_BOUT_GRID = (0, 2, 4, 8, 16, 32)
-_N_PCUTOFF = 20
-_MIN_PCUTOFF = 1e-6
-
-
-def _best_pcutoff(
-    smoothed: pl.DataFrame,
-    min_gap: int,
-    min_bout: int,
-    pcutoffs: np.ndarray,
-    target_recall: float,
-) -> tuple[float, float]:
-    """Best pcutoff for one bout morphology.
-
-    Maximises *frame-level* precision (the fraction of flagged frames that are
-    true positives) subject to catching at least ``target_recall`` of real bouts.
-
-    Frame precision is monotonic in ``pcutoff``, so the sweep lands on a sane
-    operating point. The previous bout-level precision was non-monotonic (it
-    stayed flat ~0.49 and peaked at the lowest pcutoff), which collapsed the
-    optimisation to ``pcutoff ≈ 0``.
-    """
-    best_pcutoff = float(pcutoffs[0])
-    best_precision = -1.0
-    for pcutoff in pcutoffs:
-        pred_df = smoothed.with_columns(
-            (pl.col(PROB) > pcutoff).cast(pl.Int64).alias(PRED)
-        )
-        pred_df = smooth_pred_bout(pred_df, min_gap=min_gap, min_bout=min_bout)
-        bouts_df = agg_eval_df_by_bouts(pred_df)
-        recall = recall_score(bouts_df[ACTUAL], bouts_df[PRED], zero_division=0)
-        if recall < target_recall:
-            continue
-        precision = precision_score(pred_df[ACTUAL], pred_df[PRED], zero_division=0)
-        if precision > best_precision:
-            best_precision = precision
-            best_pcutoff = float(pcutoff)
-    return best_pcutoff, max(best_precision, 0.0)
 
 
 class BaseAdapter(ABC):
@@ -120,12 +65,12 @@ class BaseAdapter(ABC):
         Returns per-epoch history (empty for sklearn).
         """
 
-    def optimise_postprocessing_parameters(self, val_df: pl.DataFrame) -> ModelRecipe:
-        """Optimise smoothing/gap/bout/pcutoff on validation data.
+    def optimise_postprocessing(self, val_df: pl.DataFrame) -> ModelRecipe:
+        """Optimise post-processing parameters on validation data.
 
-        Sweeps the post-processing parameter grid and selects the combination
-        that maximises frame-level precision subject to bout-level recall >=
-        ``target_recall``.  Writes the result to the recipe and returns it.
+        Selects the parameters of ``recipe.postprocessing_step`` that minimise the
+        review cost (hidden events first, then predicted bouts) subject to bout-level
+        recall >= ``target_recall``. Writes the result to the recipe and returns it.
         """
         recipe = self._read_recipe()
         raw = self.predict_raw(val_df).join(
@@ -133,37 +78,13 @@ class BaseAdapter(ABC):
             on=[FRAME, EXPERIMENT],
             how="left",
         )
-        pcutoffs = np.unique(
-            np.quantile(
-                raw.get_column(PROB).to_numpy(),
-                np.linspace(0.0, 1.0, _N_PCUTOFF),
-            )
-        )
-        best_precision = -1.0
-        best = (0, 0, 0, 0.0)
-        for smoothing_frames in _SMOOTHING_GRID:
-            smoothed = smooth_prob(
-                raw, smoothing_frames=smoothing_frames, agg_func="median"
-            )
-            for min_gap in _MIN_GAP_GRID:
-                for min_bout in _MIN_BOUT_GRID:
-                    pcutoff, precision = _best_pcutoff(
-                        smoothed, min_gap, min_bout, pcutoffs, recipe.target_recall
-                    )
-                    if precision > best_precision:
-                        best_precision = precision
-                        best = (smoothing_frames, min_gap, min_bout, pcutoff)
-        smoothing_frames, min_gap, min_bout, pcutoff = best
-        recipe.smoothing_frames = smoothing_frames
-        recipe.min_gap_frames = min_gap
-        recipe.min_bout_frames = min_bout
-        recipe.pcutoff = max(float(pcutoff), _MIN_PCUTOFF)
+        recipe = optimise_postprocessing(recipe, raw)
         self._write_recipe(recipe)
         return recipe
 
     @abstractmethod
     def predict_raw(self, df: pl.DataFrame) -> pl.DataFrame:
-        """Return raw per-frame probabilities (frame, behaviour, prob, experiment).
+        """Return raw per-frame probabilities (frame, behaviour, prob[, experiment]).
 
         No smoothing, thresholding or bout morphology.
         """
@@ -173,19 +94,25 @@ class BaseAdapter(ABC):
         return self._predict_postprocess(self.predict_raw(df))
 
     def _predict_postprocess(self, raw_df: pl.DataFrame) -> pl.DataFrame:
-        """Smooth, threshold and merge bouts on a raw prediction frame."""
+        """Apply the configured post-processing to a raw prediction frame."""
         recipe = self._read_recipe()
-        # Smooth frames with median filter
-        df = smooth_prob(
-            raw_df, smoothing_frames=recipe.smoothing_frames, agg_func="median"
-        )
-        # Make pred from prob cutoff
-        df = df.with_columns((pl.col(PROB) > recipe.pcutoff).cast(pl.Int64).alias(PRED))
-        # Smooth bouts by merging 3-frames-close, then dropping 3-frames large
-        df = smooth_pred_bout(
-            df, min_gap=recipe.min_gap_frames, min_bout=recipe.min_bout_frames
-        )
-        # Return
+        if recipe.postprocessing_step == FRAME_AWARE:
+            cfg = recipe.frame_aware
+            df = smooth_prob(
+                raw_df, smoothing_frames=cfg.smoothing_frames, agg_func="median"
+            )
+            df = df.with_columns(
+                (pl.col(PROB) > cfg.pcutoff).cast(pl.Int64).alias(PRED)
+            )
+            df = smooth_pred_bout(
+                df, min_gap=cfg.min_gap_frames, min_bout=cfg.min_bout_frames
+            )
+        elif recipe.postprocessing_step == HYSTERESIS:
+            cfg = recipe.hysteresis
+            df = hysteresis(
+                raw_df, pcutoff=cfg.pcutoff, low_threshold=cfg.low_threshold
+            )
+            df = smooth_pred_bout(df, min_gap=0, min_bout=cfg.min_bout_frames)
         if EXPERIMENT in df.columns:
             return pl.DataFrame(
                 df.select(list(BEHAVIOUR_BATCHED_PREDICTED_SCHEMA)),
@@ -291,7 +218,7 @@ class XgboostAdapter(SklearnAdapter):
         # Instatiate
         # Note: not loading search object, as ita) is not needed for inference
         # and b) xgboost can't be serialised across machines
-        # search = joblib.load(recipe_fp.with_name("search.joblib"))
+        # search = joblib.load(recipe_fp.with_name("search.joblib"))  # noqa: ERA001
         search = GridSearchCV(Pipeline([("clf", RandomForestClassifier())]), {}, cv=3)
         inst = cls(recipe_fp, search)
         # Load pipelin

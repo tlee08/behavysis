@@ -3,6 +3,7 @@
 from .behaviour import (
     bouts2frames,
     frames2bouts,
+    hysteresis,
     label_bouts,
     predicted_to_scored,
     smooth_pred_bout,
@@ -23,6 +24,7 @@ __all__ = [
     "check_bpts_have_data",
     "frames2bouts",
     "get_indivs_bpts",
+    "hysteresis",
     "label_bouts",
     "predicted_to_scored",
     "smooth_pred_bout",

@@ -177,7 +177,7 @@ def train_model(
 
     # Get optimised postprocessing parameters (if required)
     if recipe.calibrate_params:
-        adapter.optimise_postprocessing_parameters(df.gather(val_idx))
+        adapter.optimise_postprocessing(df.gather(val_idx))
 
     # Predictions
     eval_dir.mkdir(parents=True, exist_ok=True)
