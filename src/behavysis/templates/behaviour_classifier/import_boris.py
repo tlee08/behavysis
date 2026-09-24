@@ -44,7 +44,8 @@ def _():
     metadata_dir = Path("/path/to/metadata")
     behaviour_ls = ["behaviour1", "behaviour2"]
     overwrite = False
-    point_window_sec = 0.5
+    frames_window_before = 5
+    frames_window_after = 10
 
     mo.accordion(
         {
@@ -52,10 +53,19 @@ def _():
             "dst_dir": str(dst_dir),
             "behaviour_ls": behaviour_ls,
             "overwrite": overwrite,
-            "point_window_sec": point_window_sec,
+            "frames_window_before": frames_window_before,
+            "frames_window_after": frames_window_after,
         }
     )
-    return behaviour_ls, boris_dir, dst_dir, metadata_dir, overwrite, point_window_sec
+    return (
+        behaviour_ls,
+        boris_dir,
+        dst_dir,
+        metadata_dir,
+        overwrite,
+        frames_window_before,
+        frames_window_after,
+    )
 
 
 @app.function
@@ -66,11 +76,14 @@ def import_boris_csv(
     stop_frame: int,
     fps: float,
     *,
-    point_window_sec: float = 0.5,
-    centre: bool = True,
+    frames_window_before: int = 5,
+    frames_window_after: int = 10,
     pos_value: int = TRUE_POS,
 ) -> pl.DataFrame:
     """Import BORIS CSV to fully-wide scored DataFrame.
+
+    Each POINT event at frame ``f`` becomes a positive window
+    ``[f - frames_window_before, f + frames_window_after]``.
 
     Returns a DataFrame with ``FRAME`` + one column per behaviour,
     each Int64 (TRUE_POS / TRUE_NEG values).
@@ -94,8 +107,6 @@ def import_boris_csv(
             boris_behaviours,
         )
 
-    window = round(point_window_sec * fps)
-    window_centre = round(window / 2)
     frame_count = stop_frame - start_frame
     frames = np.arange(start_frame, stop_frame, dtype=np.int64)
 
@@ -112,12 +123,8 @@ def import_boris_csv(
                 val = pos_value if typ == "START" else TRUE_NEG
                 vals[f - start_frame :] = val
             elif typ == "POINT":
-                if centre:
-                    lo = max(f - window_centre, start_frame)
-                    hi = min(f + window_centre, stop_frame - 1)
-                else:
-                    lo = f
-                    hi = min(f + window, stop_frame - 1)
+                lo = max(f - frames_window_before, start_frame)
+                hi = min(f + frames_window_after, stop_frame - 1)
                 vals[lo - start_frame : hi - start_frame + 1] = pos_value
 
         result = result.with_columns(pl.Series(behaviour, vals, dtype=pl.Int64))
@@ -126,7 +133,15 @@ def import_boris_csv(
 
 
 @app.cell
-def _(behaviour_ls, boris_dir, dst_dir, metadata_dir, overwrite, point_window_sec):
+def _(
+    behaviour_ls,
+    boris_dir,
+    dst_dir,
+    metadata_dir,
+    overwrite,
+    frames_window_before,
+    frames_window_after,
+):
     dst_dir.mkdir(parents=True, exist_ok=True)
     for csv_fp in sorted(boris_dir.glob("*.csv")):
         name = csv_fp.stem
@@ -140,7 +155,8 @@ def _(behaviour_ls, boris_dir, dst_dir, metadata_dir, overwrite, point_window_se
             metadata.require_start_frame(),
             metadata.require_stop_frame() + 1,
             metadata.require_fps(),
-            point_window_sec=point_window_sec,
+            frames_window_before=frames_window_before,
+            frames_window_after=frames_window_after,
         )
         write_df(df, dst_fp)
     sorted(p.name for p in dst_dir.iterdir())

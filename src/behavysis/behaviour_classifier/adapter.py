@@ -65,7 +65,16 @@ def _best_pcutoff(
     pcutoffs: np.ndarray,
     target_recall: float,
 ) -> tuple[float, float]:
-    """Best pcutoff (max precision at bout recall >= target) for one morphology."""
+    """Best pcutoff for one bout morphology.
+
+    Maximises *frame-level* precision (the fraction of flagged frames that are
+    true positives) subject to catching at least ``target_recall`` of real bouts.
+
+    Frame precision is monotonic in ``pcutoff``, so the sweep lands on a sane
+    operating point. The previous bout-level precision was non-monotonic (it
+    stayed flat ~0.49 and peaked at the lowest pcutoff), which collapsed the
+    optimisation to ``pcutoff ≈ 0``.
+    """
     best_pcutoff = float(pcutoffs[0])
     best_precision = -1.0
     for pcutoff in pcutoffs:
@@ -74,9 +83,11 @@ def _best_pcutoff(
         )
         pred_df = smooth_pred_bout(pred_df, min_gap=min_gap, min_bout=min_bout)
         bouts_df = agg_eval_df_by_bouts(pred_df)
-        precision = precision_score(bouts_df[ACTUAL], bouts_df[PRED], zero_division=0)
         recall = recall_score(bouts_df[ACTUAL], bouts_df[PRED], zero_division=0)
-        if recall >= target_recall and precision > best_precision:
+        if recall < target_recall:
+            continue
+        precision = precision_score(pred_df[ACTUAL], pred_df[PRED], zero_division=0)
+        if precision > best_precision:
             best_precision = precision
             best_pcutoff = float(pcutoff)
     return best_pcutoff, max(best_precision, 0.0)
@@ -113,7 +124,7 @@ class BaseAdapter(ABC):
         """Optimise smoothing/gap/bout/pcutoff on validation data.
 
         Sweeps the post-processing parameter grid and selects the combination
-        that maximises bout-level precision subject to bout-level recall >=
+        that maximises frame-level precision subject to bout-level recall >=
         ``target_recall``.  Writes the result to the recipe and returns it.
         """
         recipe = self._read_recipe()
