@@ -42,7 +42,7 @@ class SubfuncModel(BaseModel):
         # Check that subconfig is of the correct type
         value_key = getattr(self, name)
         # Return subconfig
-        return model_cls.model_validate(value_key)
+        return model_cls.model_validate(value_key, extra="forbid")
 
     def require_list[T: BaseModel](self, name: str, model_cls: type[T]) -> list[T]:
         """Require and validate a list sub-config (e.g. in_roi)."""
@@ -51,11 +51,16 @@ class SubfuncModel(BaseModel):
             msg = f"analyse.{name}"
             raise ConfigNotConfiguredError(msg)
         value_key_ls = getattr(self, name)
-        return [model_cls.model_validate(value_key) for value_key in value_key_ls]
+        return [
+            model_cls.model_validate(value_key, extra="forbid")
+            for value_key in value_key_ls
+        ]
 
 
 class FormatVideoConfig(BaseModel):
     """FormatVidConfig."""
+
+    model_config = ConfigDict(extra="forbid")
 
     width_px: PositiveInt | None = None
     height_px: PositiveInt | None = None
@@ -66,6 +71,8 @@ class FormatVideoConfig(BaseModel):
 
 class RunDlcConfig(BaseModel):
     """RunDlcConfig."""
+
+    model_config = ConfigDict(extra="forbid")
 
     model_fp: Path = Path("path") / "to" / "DEEPLABCUT_model" / "config.yaml"
 
@@ -84,6 +91,8 @@ class ExtractFeaturesConfig(SubfuncModel):
 
 class ClassifierRef(BaseModel):
     """Pointer to a classifier's contract.yaml."""
+
+    model_config = ConfigDict(extra="forbid")
 
     contract_fp: Path = Path("path") / "to" / "model" / "contract.yaml"
     sub_behaviour: list[str] = []

@@ -1,16 +1,12 @@
 """Unit tests for ExperimentConfig and related models."""
 
-import pytest
-
-from behavysis.models import (
-    ClassifierRef,
-    ExtractFeaturesConfig,
-)
+from behavysis.funcs.extract_features.extract_generic import ExtractGenericConfig
+from behavysis.models import ClassifierRef
 
 
-class TestExtractFeaturesConfig:
+class TestExtractGenericConfig:
     def test_individuals_and_bodyparts_required(self):
-        cfg = ExtractFeaturesConfig(
+        cfg = ExtractGenericConfig(
             individuals=["mouse1marked", "mouse2unmarked"],
             bodyparts=["Nose", "LeftEar", "TailBase1"],
             angles=[],

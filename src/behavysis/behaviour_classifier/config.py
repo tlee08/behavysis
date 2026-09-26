@@ -70,12 +70,7 @@ class HysteresisPostprocessing(YamlModel):
 
 
 class ModelRecipe(YamlModel):
-    """Human-authored model recipe (recipe.yaml).
-
-    Model-specific hyperparameters live in ``hyperparameters``. Every value
-    must be a list — even single-option entries (e.g. ``random_state: [42]``).
-    All values are grid-searched via ``GridSearchCV`` at fit time.
-    """
+    """Human-authored model recipe (recipe.yaml)."""
 
     behaviour_name: str
 
@@ -94,7 +89,7 @@ class ModelRecipe(YamlModel):
     # Post-processing calibration (affects the parameters used at inference time)
     calibrate_params: bool = True
     target_recall: float = 0.95
-    postprocessing_step: Literal[FRAME_AWARE, HYSTERESIS] = FRAME_AWARE
+    postprocessing_step: Literal[FRAME_AWARE, HYSTERESIS] = FRAME_AWARE  # ty: ignore[invalid-type-form]
 
     # Prediction post-processing parameters (auto-set)
     frame_aware: FrameAwarePostprocessing = FrameAwarePostprocessing()

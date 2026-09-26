@@ -27,6 +27,8 @@ class MetadataNotReadyError(ValueError):
 class VideoMetadata(BaseModel):
     """VidMetadata."""
 
+    model_config = ConfigDict(extra="forbid")
+
     width_px: PositiveInt | None = None
     height_px: PositiveInt | None = None
     fps: PositiveFloat | None = None
@@ -35,8 +37,6 @@ class VideoMetadata(BaseModel):
 
 class ExperimentMetadata(YamlModel):
     """Experiment Metadata."""
-
-    model_config = ConfigDict(extra="forbid")
 
     name: str | None = None
     px_per_mm: PositiveFloat | None = None
